@@ -1,0 +1,45 @@
+[project]
+name = "garay-tours"
+version = "0.1.0"
+description = "Sistema unificado de tiquetera, comprobantes y conciliacion para Garay Tours"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/garay"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+# N818 exige el sufijo "Error" en excepciones (convencion inglesa). Nuestro dominio usa
+# lenguaje ubicuo en espanol, donde se lee "ErrorDeDominio" / "MontoInvalido".
+ignore = ["N818"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra -q"
