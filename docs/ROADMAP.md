@@ -44,9 +44,9 @@
 | 2.4 | Redondeo y cuadre: Decimal · invariante suma(comisiones)+agencia==total | ⬜ | Residuo de redondeo va a agencia |
 | 2.5 | Tests exhaustivos TDD: un test por tipo cliente · combinaciones · invariante | ⬜ | |
 
-> ⚠️ **Preguntas de negocio abiertas** (bloquean 2.2):
-> - ¿20% punto 4 sale de bruto o de lo que queda para agencia?
-> - ¿% digital es rango fijo o tecleado por venta?
+> ✅ **Reglas de negocio confirmadas:**
+> - Capa de punto sale de la **ganancia** (no del bruto).
+> - Digital: 20% vendedor+cerrador / 80% agencia — configurable en DB, no hardcodeado.
 
 ---
 
