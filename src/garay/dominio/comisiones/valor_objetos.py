@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from garay.dominio.comisiones.snapshot import SnapshotReglas
 from garay.dominio.comun.dinero import Dinero
 
 
@@ -12,3 +13,4 @@ class DesgloseComision:
     punto_de_venta: Dinero
     referido: Dinero
     agencia: Dinero
+    snapshot: SnapshotReglas

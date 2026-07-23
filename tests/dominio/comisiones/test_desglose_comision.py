@@ -1,9 +1,26 @@
 from __future__ import annotations
 
+import uuid
+from decimal import Decimal
+
 import pytest
 
+from garay.dominio.comisiones.reglas import ReglasComision
+from garay.dominio.comisiones.snapshot import SnapshotReglas
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.tipos import TipoCliente
+
+
+def _snapshot() -> SnapshotReglas:
+    reglas = ReglasComision(
+        id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("20"),
+        porcentaje_cerrador=Decimal("20"),
+        porcentaje_referido_maximo=Decimal("10"),
+    )
+    return SnapshotReglas.desde_reglas(reglas, None)
 
 
 def _desglose(**kwargs: object) -> DesgloseComision:
@@ -13,6 +30,7 @@ def _desglose(**kwargs: object) -> DesgloseComision:
         "punto_de_venta": Dinero(3_000),
         "referido": Dinero(2_000),
         "agencia": Dinero(1_000),
+        "snapshot": _snapshot(),
     }
     defaults.update(kwargs)
     return DesgloseComision(**defaults)  # type: ignore[arg-type]

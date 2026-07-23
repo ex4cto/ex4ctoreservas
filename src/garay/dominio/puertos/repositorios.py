@@ -4,6 +4,8 @@ import uuid
 from abc import ABC, abstractmethod
 
 from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.comisiones.reglas import ReglasComision
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.conciliacion.entidades import Conciliacion, Egreso, Ingreso
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
@@ -97,3 +99,11 @@ class PuntoDeVentaRepository(ABC):
 
     @abstractmethod
     def listar(self) -> list[PuntoDeVenta]: ...
+
+
+class ReglasComisionRepository(ABC):
+    @abstractmethod
+    def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None: ...
+
+    @abstractmethod
+    def guardar(self, reglas: ReglasComision) -> None: ...
