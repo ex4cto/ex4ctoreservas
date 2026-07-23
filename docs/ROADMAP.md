@@ -19,17 +19,17 @@
 
 ---
 
-## Etapa 1 — Modelo de Dominio Central 🔄
-*Disciplina: cero líneas de Telegram o FastAPI en esta etapa.*
+## Etapa 1 — Modelo de Dominio Central ✅
+*Commits: `9c3a31d` (UW1) · `f5f99d3` (UW2)*
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
 | 1.1 | Lenguaje ubicuo + glosario | ✅ | Formalizado en ESTANDARES.md y entidades |
-| 1.2 | Value Objects: Dinero, Participantes | ✅ | Commit `215acfd` + `9c3a31d` |
-| 1.3 | Entidades core: Freelancer · PuntoDeVenta · Servicio · Cliente + TipoCliente | ✅ | Commit `9c3a31d` · 30 tests |
-| 1.4 | Agregados transaccionales: Venta ✅ · Tiquetera · Ingreso · Egreso · Conciliacion | 🔄 | Venta hecha; resto = UW2 |
-| 1.5 | Puertos del dominio: repositorios + ExtractorIA + NotificadorGrupo | ⬜ | UW2 |
-| 1.6 | Servicios de dominio (esqueleto): MotorComisiones · MotorConciliacion | ⬜ | UW2 |
+| 1.2 | Value Objects: Dinero, Participantes, DatosExtraidos, DesgloseComision | ✅ | |
+| 1.3 | Entidades core: Freelancer · PuntoDeVenta · Servicio · Cliente + TipoCliente | ✅ | |
+| 1.4 | Agregados transaccionales: Venta · Tiquetera · Ingreso · Egreso · Conciliacion | ✅ | |
+| 1.5 | Puertos del dominio: 9 repositorios + ExtractorIA + NotificadorGrupo | ✅ | |
+| 1.6 | Servicios de dominio (esqueleto): MotorComisionesBase · MotorConciliacionBase | ✅ | Stubs — lógica en Etapas 2 y 6 |
 
 ---
 
@@ -147,10 +147,10 @@
 
 ```
 Etapa 0  ████████████████████  100%  ✅
-Etapa 1  ███████░░░░░░░░░░░░░   35%  🔄
+Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
 Etapa 3  ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
 Etapas 4-10  ░░░░░░░░░░░░░░░░░  0%  ⬜
 ```
 
-**Tests:** 56 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 87 · **mypy:** strict clean (78 archivos) · **ruff:** clean
