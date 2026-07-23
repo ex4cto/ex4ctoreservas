@@ -1,0 +1,76 @@
+"""Tests de la entidad Venta (aggregate root del modulo ventas)."""
+
+from __future__ import annotations
+
+import datetime
+import uuid
+
+import pytest
+
+from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
+from garay.dominio.ventas.entidades import Venta
+from garay.dominio.ventas.errores import GananciaNegativa, MonedaIncompatible, ValorVentaInvalido
+from garay.dominio.ventas.valor_objetos import Participantes
+
+
+def _venta(
+    valor_venta: Dinero | None = None,
+    neto: Dinero | None = None,
+    id: uuid.UUID | None = None,
+) -> Venta:
+    return Venta(
+        id=id or uuid.uuid4(),
+        valor_venta=valor_venta or Dinero(1_000_000),
+        neto=neto or Dinero(900_000),
+        servicio_id=uuid.uuid4(),
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2024, 1, 15),
+        participantes=Participantes(),
+    )
+
+
+class TestGanancia:
+    def test_ganancia_calculada_correctamente(self) -> None:
+        venta = _venta(Dinero(1_000_000), Dinero(900_000))
+        assert venta.ganancia == Dinero(100_000)
+
+    def test_ganancia_cero_cuando_venta_igual_neto(self) -> None:
+        venta = _venta(Dinero(500_000), Dinero(500_000))
+        assert venta.ganancia == Dinero("0")
+
+    def test_ganancia_con_decimales(self) -> None:
+        venta = _venta(Dinero("1000.75"), Dinero("900.25"))
+        assert venta.ganancia == Dinero("100.50")
+
+
+class TestValidaciones:
+    def test_neto_mayor_que_venta_levanta_ganancia_negativa(self) -> None:
+        with pytest.raises(GananciaNegativa):
+            _venta(Dinero(500_000), Dinero(600_000))
+
+    def test_valor_venta_cero_levanta_error(self) -> None:
+        with pytest.raises(ValorVentaInvalido):
+            _venta(Dinero(0), Dinero(0))
+
+    def test_monedas_incompatibles_levanta_error(self) -> None:
+        with pytest.raises(MonedaIncompatible):
+            _venta(Dinero(1_000_000, "COP"), Dinero(900_000, "USD"))
+
+
+class TestIdentidad:
+    def test_dos_ventas_con_mismo_id_son_iguales(self) -> None:
+        uid = uuid.uuid4()
+        v1 = _venta(id=uid)
+        v2 = _venta(id=uid)
+        assert v1 == v2
+
+    def test_dos_ventas_con_distinto_id_son_distintas(self) -> None:
+        assert _venta() != _venta()
+
+    def test_venta_no_es_igual_a_otro_tipo(self) -> None:
+        assert _venta() != "no soy una venta"
+
+    def test_estado_inicial_es_pendiente(self) -> None:
+        assert _venta().estado == EstadoVenta.PENDIENTE
