@@ -10,7 +10,13 @@ import pytest
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
 from garay.dominio.ventas.entidades import Venta
-from garay.dominio.ventas.errores import GananciaNegativa, MonedaIncompatible, ValorVentaInvalido
+from garay.dominio.ventas.errores import (
+    AbonoSuperaValorVenta,
+    CantidadInvalida,
+    GananciaNegativa,
+    MonedaIncompatible,
+    ValorVentaInvalido,
+)
 from garay.dominio.ventas.valor_objetos import Participantes
 
 
@@ -18,6 +24,8 @@ def _venta(
     valor_venta: Dinero | None = None,
     neto: Dinero | None = None,
     id: uuid.UUID | None = None,
+    cantidad: int = 1,
+    abono: Dinero | None = None,
 ) -> Venta:
     return Venta(
         id=id or uuid.uuid4(),
@@ -28,6 +36,8 @@ def _venta(
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2024, 1, 15),
         participantes=Participantes(),
+        cantidad=cantidad,
+        abono=abono,
     )
 
 
@@ -74,3 +84,27 @@ class TestIdentidad:
 
     def test_estado_inicial_es_pendiente(self) -> None:
         assert _venta().estado == EstadoVenta.PENDIENTE
+
+
+class TestCantidad:
+    def test_venta_cantidad_cero_invalida(self) -> None:
+        with pytest.raises(CantidadInvalida):
+            _venta(cantidad=0)
+
+    def test_venta_cantidad_negativa_invalida(self) -> None:
+        with pytest.raises(CantidadInvalida):
+            _venta(cantidad=-1)
+
+
+class TestAbono:
+    def test_venta_abono_supera_valor_invalido(self) -> None:
+        with pytest.raises(AbonoSuperaValorVenta):
+            _venta(valor_venta=Dinero(500_000), neto=Dinero(400_000), abono=Dinero(600_000))
+
+    def test_venta_abono_valido(self) -> None:
+        venta = _venta(valor_venta=Dinero(1_000_000), neto=Dinero(900_000), abono=Dinero(200_000))
+        assert venta.abono == Dinero(200_000)
+
+    def test_venta_sin_abono_es_none(self) -> None:
+        venta = _venta()
+        assert venta.abono is None

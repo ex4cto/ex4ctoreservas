@@ -12,3 +12,11 @@ class GananciaNegativa(ErrorDeDominio):
 
 class ValorVentaInvalido(ErrorDeDominio):
     """El valor de venta debe ser mayor que cero."""
+
+
+class CantidadInvalida(ErrorDeDominio):
+    """La cantidad de pasajeros debe ser al menos 1."""
+
+
+class AbonoSuperaValorVenta(ErrorDeDominio):
+    """El abono no puede superar el valor de la venta."""

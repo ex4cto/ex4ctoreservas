@@ -51,6 +51,8 @@ class RegistrarVentaService:
             tipo_cliente=cmd.tipo_cliente,
             fecha=cmd.fecha,
             participantes=cmd.participantes,
+            cantidad=cmd.cantidad,
+            abono=cmd.abono,
         )
 
         # 2. Fetch commission rules — raise if not found

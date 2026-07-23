@@ -16,6 +16,9 @@ class Cliente:
     id: uuid.UUID
     nombre: str
     tipo: TipoCliente
+    telefono: str | None = None
+    hotel: str | None = None
+    numero_habitacion: str | None = None
 
     def __post_init__(self) -> None:
         if not self.nombre.strip():

@@ -24,6 +24,8 @@ class RegistrarVentaComando:
     participantes: Participantes
     foto_referencia: str | None = None
     porcentaje_referido: Decimal = field(default_factory=lambda: Decimal("0"))
+    cantidad: int = 1
+    abono: Dinero | None = None
 
 
 @dataclass(frozen=True)

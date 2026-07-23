@@ -64,3 +64,11 @@ class TestTiquetera:
         b = Tiquetera(id=tid, venta_id=uuid.uuid4(), foto_referencia="otra.jpg")
         assert a == b
         assert hash(a) == hash(b)
+
+    def test_tiquetera_con_numero_ticket(self) -> None:
+        t = _tiquetera(numero_ticket=42)
+        assert t.numero_ticket == 42
+
+    def test_tiquetera_sin_numero_ticket_es_none(self) -> None:
+        t = _tiquetera()
+        assert t.numero_ticket is None

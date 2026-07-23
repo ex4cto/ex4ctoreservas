@@ -67,6 +67,7 @@ def _cmd(
         ),
         foto_referencia=foto_referencia,
         porcentaje_referido=porcentaje_referido,
+        cantidad=2,
     )
 
 
