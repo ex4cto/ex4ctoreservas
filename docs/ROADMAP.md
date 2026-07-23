@@ -33,20 +33,16 @@
 
 ---
 
-## Etapa 2 — Motor de Comisiones ⬜
-*TDD obligatorio. El core del dinero — todo lo demás lo consume.*
+## Etapa 2 — Motor de Comisiones ✅
+*Commit: `8c723e2`*
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
-| 2.1 | Reglas como datos: tabla splits por tipo cliente · capas de punto · excepciones | ⬜ | Versionado: snapshot por venta (históricos inmutables) |
-| 2.2 | Pipeline por capas: punto (off-top) → referido (off-top) → split base → ajuste | ⬜ | Orden de capas a confirmar con Garay |
-| 2.3 | Roles y multi-participante: vendedor/cerrador/ambos · caso digital | ⬜ | |
-| 2.4 | Redondeo y cuadre: Decimal · invariante suma(comisiones)+agencia==total | ⬜ | Residuo de redondeo va a agencia |
-| 2.5 | Tests exhaustivos TDD: un test por tipo cliente · combinaciones · invariante | ⬜ | |
-
-> ✅ **Reglas de negocio confirmadas:**
-> - Capa de punto sale de la **ganancia** (no del bruto).
-> - Digital: 20% vendedor+cerrador / 80% agencia — configurable en DB, no hardcodeado.
+| 2.1 | Reglas como datos: `ReglasComision` en DB · `SnapshotReglas` por venta | ✅ | Históricos inmutables |
+| 2.2 | Pipeline: capa punto → splits vendedor/cerrador → agencia residual → referido (bruto) | ✅ | |
+| 2.3 | Comisión por participación: rol vacío → 0, agencia absorbe el residuo | ✅ | |
+| 2.4 | Redondeo: agencia = ganancia − resto (invariante exacto, sin pérdida de centavos) | ✅ | |
+| 2.5 | Tests TDD: caso Garay real (1M/900k) · digital · participación parcial · referido · invariante | ✅ | 23 tests |
 
 ---
 
@@ -148,9 +144,9 @@
 ```
 Etapa 0  ████████████████████  100%  ✅
 Etapa 1  ████████████████████  100%  ✅
-Etapa 2  ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
+Etapa 2  ████████████████████  100%  ✅
 Etapa 3  ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
 Etapas 4-10  ░░░░░░░░░░░░░░░░░  0%  ⬜
 ```
 
-**Tests:** 87 · **mypy:** strict clean (78 archivos) · **ruff:** clean
+**Tests:** 110 · **mypy:** strict clean (85 archivos) · **ruff:** clean
