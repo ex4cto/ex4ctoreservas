@@ -1,0 +1,99 @@
+from __future__ import annotations
+
+import uuid
+from abc import ABC, abstractmethod
+
+from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.conciliacion.entidades import Conciliacion, Egreso, Ingreso
+from garay.dominio.freelancers.entidades import Freelancer
+from garay.dominio.puntos_venta.entidades import PuntoDeVenta
+from garay.dominio.servicios.entidades import Servicio
+from garay.dominio.tiquetera.entidades import Tiquetera
+from garay.dominio.ventas.entidades import Venta
+
+
+class VentaRepository(ABC):
+    @abstractmethod
+    def guardar(self, venta: Venta) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Venta | None: ...
+
+    @abstractmethod
+    def listar(self) -> list[Venta]: ...
+
+
+class IngresoRepository(ABC):
+    @abstractmethod
+    def guardar(self, ingreso: Ingreso) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Ingreso | None: ...
+
+    @abstractmethod
+    def listar_sin_clasificar(self) -> list[Ingreso]: ...
+
+
+class EgresoRepository(ABC):
+    @abstractmethod
+    def guardar(self, egreso: Egreso) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Egreso | None: ...
+
+
+class TiqueteraRepository(ABC):
+    @abstractmethod
+    def guardar(self, tiquetera: Tiquetera) -> None: ...
+
+    @abstractmethod
+    def buscar_por_venta_id(self, venta_id: uuid.UUID) -> Tiquetera | None: ...
+
+
+class ConciliacionRepository(ABC):
+    @abstractmethod
+    def guardar(self, conciliacion: Conciliacion) -> None: ...
+
+    @abstractmethod
+    def buscar_por_ingreso_id(self, ingreso_id: uuid.UUID) -> Conciliacion | None: ...
+
+
+class FreelancerRepository(ABC):
+    @abstractmethod
+    def guardar(self, freelancer: Freelancer) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Freelancer | None: ...
+
+    @abstractmethod
+    def listar_activos(self) -> list[Freelancer]: ...
+
+
+class ClienteRepository(ABC):
+    @abstractmethod
+    def guardar(self, cliente: Cliente) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Cliente | None: ...
+
+
+class ServicioRepository(ABC):
+    @abstractmethod
+    def guardar(self, servicio: Servicio) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Servicio | None: ...
+
+    @abstractmethod
+    def listar(self) -> list[Servicio]: ...
+
+
+class PuntoDeVentaRepository(ABC):
+    @abstractmethod
+    def guardar(self, punto: PuntoDeVenta) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> PuntoDeVenta | None: ...
+
+    @abstractmethod
+    def listar(self) -> list[PuntoDeVenta]: ...
