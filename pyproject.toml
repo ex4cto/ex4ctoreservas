@@ -6,6 +6,9 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
 ]
 
 [dependency-groups]
@@ -27,6 +30,8 @@ packages = ["src/garay"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# Alembic genera env.py y plantillas con su propio estilo; no las lintar.
+extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
