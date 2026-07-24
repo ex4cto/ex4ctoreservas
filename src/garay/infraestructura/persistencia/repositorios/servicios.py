@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+
+from garay.dominio.puertos.repositorios import ServicioRepository
+from garay.dominio.servicios.entidades import Servicio
+from garay.infraestructura.persistencia.modelos import ServicioModel
+
+
+def to_orm(s: Servicio) -> ServicioModel:
+    return ServicioModel(
+        id=s.id,
+        numero=s.numero,
+        nombre=s.nombre,
+        descripcion=s.descripcion,
+        activo=s.activo,
+    )
+
+
+def to_domain(m: ServicioModel) -> Servicio:
+    return Servicio(
+        id=m.id,
+        numero=m.numero,
+        nombre=m.nombre,
+        descripcion=m.descripcion,
+        activo=m.activo,
+    )
+
+
+class SQLAServicioRepository(ServicioRepository):
+    def __init__(self, sf: sessionmaker[Session]) -> None:
+        self._sf = sf
+
+    def guardar(self, servicio: Servicio) -> None:
+        with self._sf.begin() as session:
+            session.merge(to_orm(servicio))
+
+    def buscar_por_id(self, id: uuid.UUID) -> Servicio | None:
+        with self._sf.begin() as session:
+            m = session.get(ServicioModel, id)
+            return to_domain(m) if m else None
+
+    def listar(self) -> list[Servicio]:
+        with self._sf.begin() as session:
+            rows = session.execute(select(ServicioModel)).scalars().all()
+            return [to_domain(r) for r in rows]

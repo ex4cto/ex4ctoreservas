@@ -71,6 +71,9 @@ class FreelancerRepository(ABC):
     @abstractmethod
     def listar_activos(self) -> list[Freelancer]: ...
 
+    @abstractmethod
+    def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None: ...
+
 
 class ClienteRepository(ABC):
     @abstractmethod

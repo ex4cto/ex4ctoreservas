@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy.orm import Session, sessionmaker
+
+from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.puertos.repositorios import ClienteRepository
+from garay.infraestructura.persistencia.modelos import ClienteModel
+
+
+def to_orm(c: Cliente) -> ClienteModel:
+    return ClienteModel(
+        id=c.id,
+        nombre=c.nombre,
+        tipo=str(c.tipo),
+        telefono=c.telefono,
+        hotel=c.hotel,
+        numero_habitacion=c.numero_habitacion,
+    )
+
+
+def to_domain(m: ClienteModel) -> Cliente:
+    return Cliente(
+        id=m.id,
+        nombre=m.nombre,
+        tipo=TipoCliente(m.tipo),
+        telefono=m.telefono,
+        hotel=m.hotel,
+        numero_habitacion=m.numero_habitacion,
+    )
+
+
+class SQLAClienteRepository(ClienteRepository):
+    def __init__(self, sf: sessionmaker[Session]) -> None:
+        self._sf = sf
+
+    def guardar(self, cliente: Cliente) -> None:
+        with self._sf.begin() as session:
+            session.merge(to_orm(cliente))
+
+    def buscar_por_id(self, id: uuid.UUID) -> Cliente | None:
+        with self._sf.begin() as session:
+            m = session.get(ClienteModel, id)
+            return to_domain(m) if m else None
