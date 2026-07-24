@@ -24,19 +24,21 @@ def _venta(
     valor_venta: Dinero | None = None,
     neto: Dinero | None = None,
     id: uuid.UUID | None = None,
-    cantidad: int = 1,
+    adultos: int = 1,
+    ninos: int = 0,
     abono: Dinero | None = None,
 ) -> Venta:
     return Venta(
         id=id or uuid.uuid4(),
         valor_venta=valor_venta or Dinero(1_000_000),
         neto=neto or Dinero(900_000),
-        servicio_id=uuid.uuid4(),
+        servicio_ids=[uuid.uuid4()],
         cliente_id=uuid.uuid4(),
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2024, 1, 15),
         participantes=Participantes(),
-        cantidad=cantidad,
+        adultos=adultos,
+        ninos=ninos,
         abono=abono,
     )
 
@@ -86,14 +88,18 @@ class TestIdentidad:
         assert _venta().estado == EstadoVenta.PENDIENTE
 
 
-class TestCantidad:
-    def test_venta_cantidad_cero_invalida(self) -> None:
+class TestPax:
+    def test_adultos_cero_invalido(self) -> None:
         with pytest.raises(CantidadInvalida):
-            _venta(cantidad=0)
+            _venta(adultos=0)
 
-    def test_venta_cantidad_negativa_invalida(self) -> None:
+    def test_adultos_negativo_invalido(self) -> None:
         with pytest.raises(CantidadInvalida):
-            _venta(cantidad=-1)
+            _venta(adultos=-1)
+
+    def test_ninos_negativo_invalido(self) -> None:
+        with pytest.raises(CantidadInvalida):
+            _venta(ninos=-1)
 
 
 class TestAbono:

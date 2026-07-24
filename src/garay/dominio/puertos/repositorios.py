@@ -4,6 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 
 from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.conciliacion.entidades import Conciliacion, Egreso, Ingreso
@@ -107,3 +108,11 @@ class ReglasComisionRepository(ABC):
 
     @abstractmethod
     def guardar(self, reglas: ReglasComision) -> None: ...
+
+
+class ComisionRegistradaRepository(ABC):
+    @abstractmethod
+    def guardar(self, comision: ComisionRegistrada) -> None: ...
+
+    @abstractmethod
+    def buscar_por_venta_id(self, venta_id: uuid.UUID) -> ComisionRegistrada | None: ...

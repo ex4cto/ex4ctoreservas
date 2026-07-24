@@ -2,21 +2,20 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from garay.aplicacion.tiquetera.fsm import (
-    ContextoVenta,
-    EstadoFSM,
-    FSMTiquetera,
-    SalidaFSM,
-)
+from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
+from garay.dominio.ventas.contexto import ContextoVenta
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 
 logger = logging.getLogger(__name__)
 
-_fsm = FSMTiquetera()
+# TODO(UW5): inject servicios and puntos_venta from the repository at startup.
+_fsm: FSMTiquetera = FSMTiquetera(servicios=[], puntos_venta=[])
 
 
 def _teclado(opciones: list[str]) -> InlineKeyboardMarkup | None:
@@ -71,7 +70,7 @@ async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return await _enviar_salida(update, context, salida)
 
 
-def _make_handler(estado: EstadoFSM):  # type: ignore[return]
+def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
     """Factory: creates an async handler for a given FSM state."""
 
     async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -85,8 +84,11 @@ def _make_handler(estado: EstadoFSM):  # type: ignore[return]
         salida = _fsm.procesar(estado, entrada, ctx)
         if salida.listo:
             # TODO(UW5): call servicio.ejecutar(cmd) here once repos are wired.
-            # NotificadorGrupoTelegram is ready — service wiring happens in infraestructura layer.
-            logger.info("Venta lista para registrar (service wiring pendiente): %s", salida.contexto)
+            # NotificadorGrupoTelegram is ready — wiring happens in infraestructura layer.
+            logger.info(
+                "Venta lista para registrar (service wiring pendiente): %s",
+                salida.contexto,
+            )
         return await _enviar_salida(update, context, salida)
 
     handler.__name__ = f"handle_{estado.value}"

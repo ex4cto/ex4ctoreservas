@@ -12,6 +12,7 @@ import pytest
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, ResultadoRegistrarVenta
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
+from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -33,6 +34,7 @@ def _build_service(
     puntos_repo: MagicMock | None = None,
     motor: MagicMock | None = None,
     notificador: MagicMock | None = None,
+    comisiones_repo: MagicMock | None = None,
 ) -> RegistrarVentaService:
     return RegistrarVentaService(
         ventas=ventas or MagicMock(),
@@ -42,6 +44,7 @@ def _build_service(
         motor=motor or MagicMock(),
         notificador=notificador or MagicMock(),
         grupo_id=_GRUPO_ID,
+        comisiones_repo=comisiones_repo or MagicMock(),
     )
 
 
@@ -56,7 +59,7 @@ def _cmd(
     return RegistrarVentaComando(
         valor_venta=_VALOR_VENTA,
         neto=_NETO,
-        servicio_id=_SERVICIO_ID,
+        servicio_ids=[_SERVICIO_ID],
         cliente_id=_CLIENTE_ID,
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=_FECHA,
@@ -65,9 +68,10 @@ def _cmd(
             cerrador_nombre=cerrador_nombre,
             punto_de_venta_id=punto_de_venta_id,
         ),
+        adultos=2,
+        ninos=0,
         foto_referencia=foto_referencia,
         porcentaje_referido=porcentaje_referido,
-        cantidad=2,
     )
 
 
@@ -167,3 +171,21 @@ class TestRegistrarVentaRaisesSimReglas:
 
         with pytest.raises(ReglasComisionNoEncontradas):
             service.ejecutar(cmd)
+
+
+class TestRegistrarVentaPersistsComision:
+    def test_comision_guardada_con_venta_id_correcto(self) -> None:
+        comisiones_repo = MagicMock()
+        motor = MagicMock()
+        fake_desglose = MagicMock()
+        motor.calcular.return_value = fake_desglose
+
+        service = _build_service(motor=motor, comisiones_repo=comisiones_repo)
+        cmd = _cmd()
+
+        resultado = service.ejecutar(cmd)
+
+        comisiones_repo.guardar.assert_called_once()
+        saved = comisiones_repo.guardar.call_args.args[0]
+        assert isinstance(saved, ComisionRegistrada)
+        assert saved.venta_id == resultado.venta_id

@@ -27,12 +27,13 @@ class Venta:
     id: uuid.UUID
     valor_venta: Dinero
     neto: Dinero
-    servicio_id: uuid.UUID
+    servicio_ids: list[uuid.UUID]
     cliente_id: uuid.UUID
     tipo_cliente: TipoCliente
     fecha: datetime.date
     participantes: Participantes
-    cantidad: int = 1
+    adultos: int = 1
+    ninos: int = 0
     abono: Dinero | None = None
     estado: EstadoVenta = field(default=EstadoVenta.PENDIENTE)
 
@@ -50,8 +51,10 @@ class Venta:
             raise GananciaNegativa(
                 f"El neto ({self.neto}) no puede superar el valor de venta ({self.valor_venta})."
             )
-        if self.cantidad < 1:
-            raise CantidadInvalida("La cantidad de pasajeros debe ser al menos 1.")
+        if self.adultos < 1:
+            raise CantidadInvalida("Debe haber al menos 1 adulto.")
+        if self.ninos < 0:
+            raise CantidadInvalida("El número de niños no puede ser negativo.")
         if self.abono is not None and self.abono > self.valor_venta:
             raise AbonoSuperaValorVenta("El abono no puede superar el valor de la venta.")
 

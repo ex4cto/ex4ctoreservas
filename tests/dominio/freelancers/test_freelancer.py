@@ -29,3 +29,11 @@ class TestFreelancer:
         f2 = Freelancer(id=uid, nombre="Otro")
         assert f1 == f2
         assert hash(f1) == hash(f2)
+
+    def test_telegram_user_id_opcional(self) -> None:
+        f = Freelancer(id=uuid.uuid4(), nombre="Carlos")
+        assert f.telegram_user_id is None
+
+    def test_telegram_user_id_asignable(self) -> None:
+        f = Freelancer(id=uuid.uuid4(), nombre="Carlos", telegram_user_id=123456789)
+        assert f.telegram_user_id == 123456789

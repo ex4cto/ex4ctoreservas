@@ -17,15 +17,17 @@ from garay.dominio.ventas.valor_objetos import Participantes
 class RegistrarVentaComando:
     valor_venta: Dinero
     neto: Dinero
-    servicio_id: uuid.UUID
+    servicio_ids: list[uuid.UUID]
     cliente_id: uuid.UUID
     tipo_cliente: TipoCliente
     fecha: datetime.date
     participantes: Participantes
+    adultos: int
+    ninos: int
     foto_referencia: str | None = None
     porcentaje_referido: Decimal = field(default_factory=lambda: Decimal("0"))
-    cantidad: int = 1
     abono: Dinero | None = None
+    numero_ticket: int | None = None
 
 
 @dataclass(frozen=True)

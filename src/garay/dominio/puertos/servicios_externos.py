@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from garay.dominio.tiquetera.valor_objetos import DatosExtraidos
+from garay.dominio.ventas.contexto import ContextoVenta
 
 
 class ExtractorIA(ABC):
@@ -13,3 +14,8 @@ class ExtractorIA(ABC):
 class NotificadorGrupo(ABC):
     @abstractmethod
     def notificar(self, mensaje: str, grupo_id: str) -> None: ...
+
+
+class ExtractorReserva(ABC):
+    @abstractmethod
+    def extraer_de_foto(self, foto_bytes: bytes) -> ContextoVenta: ...

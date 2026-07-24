@@ -6,8 +6,10 @@ import uuid
 
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, ResultadoRegistrarVenta
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
+from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.puertos.repositorios import (
+    ComisionRegistradaRepository,
     PuntoDeVentaRepository,
     ReglasComisionRepository,
     TiqueteraRepository,
@@ -31,6 +33,7 @@ class RegistrarVentaService:
         motor: MotorComisiones,
         notificador: NotificadorGrupo,
         grupo_id: str,
+        comisiones_repo: ComisionRegistradaRepository,
     ) -> None:
         self._ventas = ventas
         self._reglas_repo = reglas_repo
@@ -39,6 +42,7 @@ class RegistrarVentaService:
         self._motor = motor
         self._notificador = notificador
         self._grupo_id = grupo_id
+        self._comisiones_repo = comisiones_repo
 
     def ejecutar(self, cmd: RegistrarVentaComando) -> ResultadoRegistrarVenta:
         # 1. Create the Venta aggregate
@@ -46,12 +50,13 @@ class RegistrarVentaService:
             id=uuid.uuid4(),
             valor_venta=cmd.valor_venta,
             neto=cmd.neto,
-            servicio_id=cmd.servicio_id,
+            servicio_ids=cmd.servicio_ids,
             cliente_id=cmd.cliente_id,
             tipo_cliente=cmd.tipo_cliente,
             fecha=cmd.fecha,
             participantes=cmd.participantes,
-            cantidad=cmd.cantidad,
+            adultos=cmd.adultos,
+            ninos=cmd.ninos,
             abono=cmd.abono,
         )
 
@@ -72,6 +77,14 @@ class RegistrarVentaService:
 
         # 5. Persist the sale
         self._ventas.guardar(venta)
+
+        # 5b. Persist commission record
+        comision = ComisionRegistrada(
+            venta_id=venta.id,
+            desglose=desglose,
+            fecha=venta.fecha,
+        )
+        self._comisiones_repo.guardar(comision)
 
         # 6. Create tiquetera if a reference photo was provided
         if cmd.foto_referencia is not None:

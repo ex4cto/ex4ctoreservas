@@ -11,6 +11,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.ventas.contexto import ContextoVenta
 
 
 class EstadoFSM(StrEnum):
@@ -34,54 +35,6 @@ class EstadoFSM(StrEnum):
     CONFIRMACION = "confirmacion"
     TERMINADO = "terminado"
     CANCELADO = "cancelado"
-
-
-_DESTINOS: list[str] = [
-    "playa_blanca",
-    "islas_de_rosario",
-    "playa_tranquila",
-    "cholon",
-    "playa_linda",
-    "cuatro_islas",
-    "cinco_islas",
-    "palmerito_beach",
-    "rumba_en_chiva",
-    "punta_arena",
-    "tours_bahia",
-    "playa_cristal_full_day",
-    "playa_cristal",
-    "baru_mapache_snorkel",
-    "otros",
-]
-
-_PUNTOS_VENTA: list[str] = [
-    "Marie Real",
-    "Mama Waldi",
-    "Dora Hostal",
-    "Crespo",
-    "Sin punto",
-]
-
-
-@dataclass
-class ContextoVenta:
-    tipo_cliente: TipoCliente | None = None
-    punto_de_venta_nombre: str | None = None
-    destinos: list[str] = field(default_factory=list)
-    cliente_nombre: str | None = None
-    cliente_telefono: str | None = None
-    cliente_hotel: str | None = None
-    cliente_habitacion: str | None = None
-    fecha_salida: datetime.datetime | None = None
-    adultos: int = 0
-    ninos: int = 0
-    numero_ticket: int | None = None
-    valor: Decimal | None = None
-    abono: Decimal | None = None
-    neto: Decimal | None = None
-    participante_nombre: str | None = None
-    participante_rol: str | None = None
-    participante_otro_nombre: str | None = None
 
 
 @dataclass(frozen=True)
@@ -119,7 +72,6 @@ def _parsear_fecha(texto: str) -> datetime.datetime | None:
             return datetime.datetime.strptime(texto, fmt)
         except ValueError:
             continue
-    # DD/MM without year: inject current year before parsing to avoid Python 3.15 deprecation
     try:
         return datetime.datetime.strptime(f"{texto}/{now.year}", "%d/%m/%Y")
     except ValueError:
@@ -127,22 +79,16 @@ def _parsear_fecha(texto: str) -> datetime.datetime | None:
     return None
 
 
-def _destinos_mensaje(destinos_sel: list[str]) -> str:
-    lineas = []
-    for d in _DESTINOS:
-        marca = "✅" if d in destinos_sel else "⬜"
-        lineas.append(f"{marca} {d.replace('_', ' ').title()}")
-    return "Seleccioná los destinos (podés elegir varios):\n" + "\n".join(lineas)
-
-
-def _opciones_destino() -> list[str]:
-    opciones = [f"toggle:{d}" for d in _DESTINOS]
-    opciones.append("confirmar")
-    return opciones
-
-
 class FSMTiquetera:
     """Pure finite state machine for the Telegram sale-registration conversation."""
+
+    def __init__(
+        self,
+        servicios: list[tuple[int, str]],  # (numero, nombre)
+        puntos_venta: list[str],
+    ) -> None:
+        self._servicios = servicios
+        self._puntos_venta = puntos_venta
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
@@ -196,6 +142,20 @@ class FSMTiquetera:
             contexto=ctx,
         )
 
+    # ── private helpers ─────────────────────────────────────────────────────
+
+    def _destinos_mensaje(self, destinos_sel: list[int]) -> str:
+        lineas = []
+        for numero, nombre in self._servicios:
+            marca = "✅" if numero in destinos_sel else "⬜"
+            lineas.append(f"{marca} {numero} — {nombre}")
+        return "Seleccioná los destinos (podés elegir varios):\n" + "\n".join(lineas)
+
+    def _opciones_destino(self) -> list[str]:
+        opciones = [f"toggle:{n}" for n, _ in self._servicios]
+        opciones.append("confirmar")
+        return opciones
+
     # ── private handlers ────────────────────────────────────────────────────
 
     def _handle_tipo_reserva(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
@@ -217,7 +177,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PUNTO_DE_VENTA,
             mensaje="¿Cuál es el punto de venta?",
-            opciones=list(_PUNTOS_VENTA),
+            opciones=list(self._puntos_venta),
             contexto=ctx,
         )
 
@@ -229,32 +189,41 @@ class FSMTiquetera:
             ctx.punto_de_venta_nombre = entrada.strip()
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=_destinos_mensaje(ctx.destinos),
-            opciones=_opciones_destino(),
+            mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+            opciones=self._opciones_destino(),
             contexto=ctx,
         )
 
     def _handle_destino(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         if entrada.startswith("toggle:"):
-            clave = entrada[len("toggle:"):]
-            if clave in ctx.destinos:
-                ctx.destinos.remove(clave)
+            clave_str = entrada[len("toggle:"):]
+            try:
+                clave = int(clave_str)
+            except ValueError:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.DESTINO,
+                    mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+                    opciones=self._opciones_destino(),
+                    contexto=ctx,
+                )
+            if clave in ctx.destinos_numeros:
+                ctx.destinos_numeros.remove(clave)
             else:
-                ctx.destinos.append(clave)
+                ctx.destinos_numeros.append(clave)
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=_destinos_mensaje(ctx.destinos),
-                opciones=_opciones_destino(),
+                mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+                opciones=self._opciones_destino(),
                 contexto=ctx,
             )
         if entrada.strip() == "confirmar":
-            if not ctx.destinos:
+            if not ctx.destinos_numeros:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
                     mensaje="Tenés que seleccionar al menos un destino.\n"
-                    + _destinos_mensaje(ctx.destinos),
-                    opciones=_opciones_destino(),
+                    + self._destinos_mensaje(ctx.destinos_numeros),
+                    opciones=self._opciones_destino(),
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -264,8 +233,8 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=_destinos_mensaje(ctx.destinos),
-            opciones=_opciones_destino(),
+            mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+            opciones=self._opciones_destino(),
             contexto=ctx,
         )
 
@@ -363,27 +332,24 @@ class FSMTiquetera:
         ctx.ninos = n
         return SalidaFSM(
             nuevo_estado=EstadoFSM.NUMERO_TICKET,
-            mensaje="¿Cuál es el número de ticket?",
+            mensaje="¿Cuál es el número de tiquetera? (ingresá 0 si no tenés el número)",
             contexto=ctx,
         )
 
     def _handle_numero_ticket(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        try:
-            n = int(entrada.strip())
-        except ValueError:
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.NUMERO_TICKET,
-                mensaje="Número inválido. Ingresá un entero positivo.",
-                contexto=ctx,
-            )
-        if n <= 0:
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.NUMERO_TICKET,
-                mensaje="El número de ticket debe ser mayor a 0.",
-                contexto=ctx,
-            )
-        ctx.numero_ticket = n
+        limpio = entrada.strip()
+        if limpio == "0" or limpio.lower() in ("sin número", "sin numero", ""):
+            ctx.numero_ticket = None
+        else:
+            try:
+                ctx.numero_ticket = int(limpio)
+            except ValueError:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.NUMERO_TICKET,
+                    mensaje="Número inválido. Ingresá el número de tiquetera o 0 si no lo tenés.",
+                    contexto=ctx,
+                )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_VALOR,
             mensaje="¿Cuál es el valor total de la venta?",
@@ -440,40 +406,44 @@ class FSMTiquetera:
         ctx.neto = monto
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_NOMBRE,
-            mensaje="¿Cuál es tu nombre (quien registra la venta)?",
+            mensaje="¿Cuál es tu nombre?",
             contexto=ctx,
         )
 
     def _handle_participante_nombre(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        ctx.participante_nombre = entrada.strip()
+        ctx.vendedor_nombre = entrada.strip()
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-            mensaje="¿Cuál es tu rol en esta venta?",
-            opciones=["Solo vendedor", "Solo cerrador", "Ambos"],
+            mensaje="¿Cuál fue tu rol en esta venta?",
+            opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
             contexto=ctx,
         )
 
     def _handle_participante_rol(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        entrada_limpia = entrada.strip()
-        if entrada_limpia == "Ambos":
-            ctx.participante_rol = "ambos"
+        opcion = entrada.strip()
+        if opcion == "Ambos":
+            ctx.cerrador_nombre = ctx.vendedor_nombre
+            ctx.rol_registrante = "ambos"
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
                 opciones=["✅ Confirmar", "❌ Cancelar"],
                 contexto=ctx,
             )
-        if entrada_limpia == "Solo vendedor":
-            ctx.participante_rol = "vendedor"
+        if opcion == "Solo vendedor":
+            ctx.rol_registrante = "vendedor"
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
                 mensaje="¿Cuál es el nombre del cerrador?",
                 contexto=ctx,
             )
-        if entrada_limpia == "Solo cerrador":
-            ctx.participante_rol = "cerrador"
+        if opcion == "Solo cerrador":
+            ctx.rol_registrante = "cerrador"
+            # swap: quien se registró es el cerrador, pedimos el vendedor
+            ctx.cerrador_nombre = ctx.vendedor_nombre
+            ctx.vendedor_nombre = None
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
                 mensaje="¿Cuál es el nombre del vendedor?",
@@ -481,14 +451,17 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-            mensaje="Opción inválida. Elegí: Solo vendedor, Solo cerrador o Ambos.",
-            opciones=["Solo vendedor", "Solo cerrador", "Ambos"],
+            mensaje="Opción inválida. Elegí: Ambos, Solo vendedor, o Solo cerrador.",
+            opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
             contexto=ctx,
         )
 
     def _handle_participante_otro(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        ctx.participante_otro_nombre = entrada.strip()
+        if ctx.rol_registrante == "vendedor":
+            ctx.cerrador_nombre = entrada.strip()
+        else:  # cerrador
+            ctx.vendedor_nombre = entrada.strip()
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
@@ -513,7 +486,9 @@ class FSMTiquetera:
 
     @staticmethod
     def _construir_resumen(ctx: ContextoVenta) -> str:
-        destinos_str = ", ".join(ctx.destinos) if ctx.destinos else "—"
+        destinos_str = (
+            ", ".join(str(n) for n in ctx.destinos_numeros) if ctx.destinos_numeros else "—"
+        )
         fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
         return (
             "📋 *Resumen de la venta:*\n"
@@ -525,12 +500,12 @@ class FSMTiquetera:
             f"Hotel: {ctx.cliente_hotel or '—'}\n"
             f"Habitación: {ctx.cliente_habitacion or '—'}\n"
             f"Fecha salida: {fecha_str}\n"
+            f"Ticket N°: {ctx.numero_ticket or '—'}\n"
             f"Adultos: {ctx.adultos} | Niños: {ctx.ninos}\n"
-            f"Ticket #: {ctx.numero_ticket or '—'}\n"
             f"Valor: {ctx.valor or '—'}\n"
             f"Abono: {ctx.abono or '—'}\n"
             f"Neto: {ctx.neto or '—'}\n"
-            f"Registrado por: {ctx.participante_nombre or '—'} ({ctx.participante_rol or '—'})\n"
-            f"Otro participante: {ctx.participante_otro_nombre or '—'}\n\n"
+            f"Vendedor: {ctx.vendedor_nombre or '—'}\n"
+            f"Cerrador: {ctx.cerrador_nombre or '—'}\n\n"
             "¿Confirmamos?"
         )

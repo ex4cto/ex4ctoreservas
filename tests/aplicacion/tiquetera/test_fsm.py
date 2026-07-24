@@ -1,6 +1,8 @@
 """Tests for the pure FSM — Telegram-free, import-only garay.aplicacion.tiquetera.fsm."""
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from garay.aplicacion.tiquetera.fsm import (
@@ -9,10 +11,17 @@ from garay.aplicacion.tiquetera.fsm import (
     FSMTiquetera,
 )
 
+SERVICIOS_TEST: list[tuple[int, str]] = [
+    (1, "Tour Playa Blanca"),
+    (2, "Tour Isla"),
+    (3, "City Tour"),
+]
+PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi", "Sin punto"]
+
 
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
-    return FSMTiquetera()
+    return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
 
 @pytest.fixture()
@@ -45,14 +54,14 @@ class TestDestino:
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         # Toggle adds
-        s1 = fsm.procesar(EstadoFSM.DESTINO, "toggle:playa_blanca", ctx)
+        s1 = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", ctx)
         assert s1.nuevo_estado == EstadoFSM.DESTINO
-        assert "playa_blanca" in s1.contexto.destinos
+        assert 1 in s1.contexto.destinos_numeros
 
         # Toggle same item removes it
-        s2 = fsm.procesar(EstadoFSM.DESTINO, "toggle:playa_blanca", s1.contexto)
+        s2 = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", s1.contexto)
         assert s2.nuevo_estado == EstadoFSM.DESTINO
-        assert "playa_blanca" not in s2.contexto.destinos
+        assert 1 not in s2.contexto.destinos_numeros
 
     def test_destino_confirmar_sin_seleccion_devuelve_error(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -63,7 +72,7 @@ class TestDestino:
     def test_destino_confirmar_con_seleccion_avanza(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        ctx_con_destino = ContextoVenta(destinos=["playa_blanca"])
+        ctx_con_destino = ContextoVenta(destinos_numeros=[1])
         salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx_con_destino)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
 
@@ -94,25 +103,64 @@ class TestMonto:
     def test_monto_neto_supera_valor_devuelve_error(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        from decimal import Decimal
-
         ctx_con_valor = ContextoVenta(valor=Decimal("100000"))
         salida = fsm.procesar(EstadoFSM.MONTO_NETO, "200000", ctx_con_valor)
         assert salida.nuevo_estado == EstadoFSM.MONTO_NETO
 
 
-class TestParticipante:
-    def test_rol_ambos_salta_participante_otro(
+class TestNumeroTicket:
+    def test_numero_valido_avanza_a_monto_valor(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
-        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "42", ctx)
+        assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
+        assert s.contexto.numero_ticket == 42
 
-    def test_rol_vendedor_pide_cerrador(
+    def test_cero_guarda_none(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "0", ctx)
+        assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
+        assert s.contexto.numero_ticket is None
+
+    def test_texto_invalido_devuelve_error(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "abc", ctx)
+        assert s.nuevo_estado == EstadoFSM.NUMERO_TICKET
+
+
+class TestParticipante:
+    def test_nombre_avanza_a_rol(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_NOMBRE, "Maria Lopez", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s.contexto.vendedor_nombre == "Maria Lopez"
+
+    def test_rol_ambos_salta_a_confirmacion(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        ctx_con_nombre = ContextoVenta(vendedor_nombre="Maria")
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx_con_nombre)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert s.contexto.cerrador_nombre == "Maria"
+
+    def test_rol_solo_vendedor_pide_cerrador(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+
+    def test_rol_solo_cerrador_pide_vendedor(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+
+    def test_participante_otro_como_vendedor_completa(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        ctx_prep = ContextoVenta(vendedor_nombre="Maria", rol_registrante="vendedor")
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Pedro", ctx_prep)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert s.contexto.cerrador_nombre == "Pedro"
+
+    def test_participante_otro_como_cerrador_completa(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        ctx_prep = ContextoVenta(cerrador_nombre="Maria", rol_registrante="cerrador")
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Juan", ctx_prep)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert s.contexto.vendedor_nombre == "Juan"
 
 
 class TestConfirmacion:
@@ -148,7 +196,7 @@ class TestFlujoCompleto:
         ctx = s.contexto
 
         # DESTINO — toggle then confirm
-        s = fsm.procesar(EstadoFSM.DESTINO, "toggle:playa_blanca", ctx)
+        s = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", ctx)
         ctx = s.contexto
         s = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE

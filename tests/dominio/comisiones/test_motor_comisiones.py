@@ -29,7 +29,7 @@ def _venta(
         id=uuid.uuid4(),
         valor_venta=Dinero(valor_venta),
         neto=Dinero(neto),
-        servicio_id=uuid.uuid4(),
+        servicio_ids=[uuid.uuid4()],
         cliente_id=uuid.uuid4(),
         tipo_cliente=tipo_cliente,
         fecha=datetime.date(2026, 7, 1),

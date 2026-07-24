@@ -15,6 +15,7 @@ class Freelancer:
     id: uuid.UUID
     nombre: str
     activo: bool = field(default=True)
+    telegram_user_id: int | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.nombre.strip():
