@@ -20,9 +20,9 @@ class PuntoDeVenta:
     def __post_init__(self) -> None:
         if not self.nombre.strip():
             raise NombrePuntoVacio("El nombre del punto de venta no puede estar vacio.")
-        if self.porcentaje_capa <= Decimal(0) or self.porcentaje_capa > Decimal(100):
+        if self.porcentaje_capa < Decimal(0) or self.porcentaje_capa > Decimal(100):
             raise PorcentajeCapaInvalido(
-                f"El porcentaje de capa debe estar entre 1 y 100. Recibido: {self.porcentaje_capa}."
+                f"El porcentaje de capa debe estar entre 0 y 100. Recibido: {self.porcentaje_capa}."
             )
 
     def __eq__(self, other: object) -> bool:

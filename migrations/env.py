@@ -15,6 +15,7 @@ from sqlalchemy import engine_from_config, pool
 
 from garay.config import obtener_settings
 from garay.infraestructura.persistencia.base import Base
+from garay.infraestructura.persistencia import modelos  # noqa: F401 — registers all ORM models
 
 config = context.config
 

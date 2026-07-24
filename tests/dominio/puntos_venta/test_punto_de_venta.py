@@ -17,9 +17,14 @@ class TestPuntoDeVenta:
         assert pdv.nombre == "Oficina Central"
         assert pdv.porcentaje_capa == Decimal("20")
 
-    def test_porcentaje_cero_invalido(self) -> None:
+    def test_porcentaje_cero_valido(self) -> None:
+        # 0% es válido: puntos sin capa (Marie Real, Mama Waldi, Dora Hostal).
+        pdv = PuntoDeVenta(id=uuid.uuid4(), nombre="Punto A", porcentaje_capa=Decimal("0"))
+        assert pdv.porcentaje_capa == Decimal("0")
+
+    def test_porcentaje_negativo_invalido(self) -> None:
         with pytest.raises(PorcentajeCapaInvalido):
-            PuntoDeVenta(id=uuid.uuid4(), nombre="Punto A", porcentaje_capa=Decimal("0"))
+            PuntoDeVenta(id=uuid.uuid4(), nombre="Punto A", porcentaje_capa=Decimal("-1"))
 
     def test_porcentaje_mayor_cien_invalido(self) -> None:
         with pytest.raises(PorcentajeCapaInvalido):
