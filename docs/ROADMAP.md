@@ -46,16 +46,18 @@
 
 ---
 
-## Etapa 3 — Tiquetera / Registro de ventas (Telegram) ⬜
+## Etapa 3 — Tiquetera / Registro de ventas (Telegram) 🔄
 *Hito 2 de pago (30%). Mata el Excel de Sharimel.*
+*Commits: `fdf42aa` (UW0.5 dominio) · `6ccd8cc` (UW1 servicio) · `9b9da7a` (UW2 FSM+Telegram)*
 
-| # | Fase | Estado |
-|---|------|--------|
-| 3.1 | Flujo determinista con botones: árbol de estados, máquina de estados explícita | ⬜ |
-| 3.2 | Extracción IA (foto/audio→campos): puerto ExtractorIA, confirmación humana siempre | ⬜ |
-| 3.3 | Registro venta + MotorComisiones + snapshot de regla aplicada | ⬜ |
-| 3.4 | Salida a grupo WhatsApp: puerto NotificadorGrupo | ⬜ |
-| 3.5 | Dashboard ventas: reemplaza Excel · comparar con Reservas Julio.xlsx | ⬜ |
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 3.0 | Extensión dominio con campos reales (cantidad, abono, numero_ticket, telefono, hotel, habitacion) | ✅ | UW0.5 — extraído del Excel + fotos tiqueteras |
+| 3.1 | Flujo determinista con botones: 18 estados, FSMTiquetera pura + adaptador PTB | ✅ | UW2 — 15 tests, python-telegram-bot v21 |
+| 3.2 | Extracción IA (foto→campos): ExtractorOllama (llava), parser robusto, confirmación humana | 🔄 | UW3 en curso |
+| 3.3 | Registro venta + MotorComisiones + snapshot de regla aplicada | ✅ | UW1 — RegistrarVentaService, 5 tests |
+| 3.4 | Notificación a grupo Telegram (NotificadorGrupo → Telegram, no WhatsApp por ahora) | ⬜ | UW4 pendiente |
+| 3.5 | Dashboard ventas: reemplaza Excel · estructura extraída de Reservas Julio.xlsx | ⬜ | |
 
 ---
 
@@ -145,8 +147,8 @@
 Etapa 0  ████████████████████  100%  ✅
 Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ████████████████████  100%  ✅
-Etapa 3  ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
-Etapas 4-10  ░░░░░░░░░░░░░░░░░  0%  ⬜
+Etapa 3  ████████████░░░░░░░░   60%  🔄  (3.0+3.1+3.3 ✅ · 3.2 🔄 · 3.4+3.5 ⬜)
+Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 110 · **mypy:** strict clean (85 archivos) · **ruff:** clean
+**Tests:** 139+ · **mypy:** strict clean · **ruff:** clean
