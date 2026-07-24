@@ -19,7 +19,10 @@ def _dinero_to_str(d: Dinero | None) -> str | None:
 
 
 def _str_to_dinero(s: object) -> Dinero | None:
-    return Dinero(str(s)) if isinstance(s, str) else None
+    # Accepts str, int, or float from JSON — any non-None value is coerced via Decimal.
+    if s is None:
+        return None
+    return Dinero(Decimal(str(s)))
 
 
 def _datos_to_dict(d: DatosExtraidos) -> dict[str, object]:
@@ -98,22 +101,26 @@ def _dict_to_datos(raw: dict[str, object]) -> DatosExtraidos:
         adultos=adultos,
         ninos=ninos,
         numero_ticket=numero_ticket,
-        confianza=Decimal(str(raw.get("confianza", "0"))),
+        confianza=Decimal(str(raw.get("confianza") or "0")),
     )
 
 
 def to_orm(t: Tiquetera) -> TiqueteraModel:
-    return TiqueteraModel(
+    m = TiqueteraModel(
         id=t.id,
         venta_id=t.venta_id,
         foto_referencia=t.foto_referencia,
         numero_fisico=t.numero_fisico,
-        numero_ticket=t.numero_ticket,
         procesada=t.procesada,
         datos_extraidos=(
             _datos_to_dict(t.datos_extraidos) if t.datos_extraidos is not None else None
         ),
     )
+    # Only set numero_ticket when the entity already has one (post-persist).
+    # Omitting it on first INSERT lets the DB Sequence fire; passing None would store NULL.
+    if t.numero_ticket is not None:
+        m.numero_ticket = t.numero_ticket
+    return m
 
 
 def to_domain(m: TiqueteraModel) -> Tiquetera:
@@ -136,7 +143,12 @@ class SQLATiqueteraRepository(TiqueteraRepository):
 
     def guardar(self, tiquetera: Tiquetera) -> None:
         with self._sf.begin() as session:
-            session.merge(to_orm(tiquetera))
+            model = session.merge(to_orm(tiquetera))
+            if tiquetera.numero_ticket is None:
+                # Flush so the DB Sequence fires, then refresh to read the assigned value.
+                session.flush()
+                session.refresh(model)
+                tiquetera.numero_ticket = model.numero_ticket
 
     def buscar_por_venta_id(self, venta_id: uuid.UUID) -> Tiquetera | None:
         with self._sf.begin() as session:

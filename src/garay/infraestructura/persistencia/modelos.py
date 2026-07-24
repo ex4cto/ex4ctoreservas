@@ -112,7 +112,7 @@ class TiqueteraModel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     venta_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=False, unique=True
     )
     foto_referencia: Mapped[str] = mapped_column(String, nullable=False)
     # Physical paper number entered by the user; optional.
