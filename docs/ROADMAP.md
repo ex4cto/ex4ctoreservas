@@ -46,18 +46,19 @@
 
 ---
 
-## Etapa 3 — Tiquetera / Registro de ventas (Telegram) 🔄
+## Etapa 3 — Tiquetera / Registro de ventas (Telegram) ✅
 *Hito 2 de pago (30%). Mata el Excel de Sharimel.*
-*Commits: `fdf42aa` (UW0.5 dominio) · `6ccd8cc` (UW1 servicio) · `9b9da7a` (UW2 FSM+Telegram)*
+*Commits: `fdf42aa` (UW0.5) · `6ccd8cc` (UW1) · `9b9da7a` (UW2) · `137269d` (UW3) · `6054569` (UW4)*
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
-| 3.0 | Extensión dominio con campos reales (cantidad, abono, numero_ticket, telefono, hotel, habitacion) | ✅ | UW0.5 — extraído del Excel + fotos tiqueteras |
-| 3.1 | Flujo determinista con botones: 18 estados, FSMTiquetera pura + adaptador PTB | ✅ | UW2 — 15 tests, python-telegram-bot v21 |
-| 3.2 | Extracción IA (foto→campos): ExtractorOllama (llava), parser robusto, confirmación humana | 🔄 | UW3 en curso |
-| 3.3 | Registro venta + MotorComisiones + snapshot de regla aplicada | ✅ | UW1 — RegistrarVentaService, 5 tests |
-| 3.4 | Notificación a grupo Telegram (NotificadorGrupo → Telegram, no WhatsApp por ahora) | ⬜ | UW4 pendiente |
-| 3.5 | Dashboard ventas: reemplaza Excel · estructura extraída de Reservas Julio.xlsx | ⬜ | |
+| 3.0 | Extensión dominio con campos reales (cantidad, abono, numero_ticket, telefono, hotel, habitacion) | ✅ | Extraído del Excel + fotos tiqueteras |
+| 3.1 | Flujo determinista con botones: 18 estados, FSMTiquetera pura + adaptador PTB | ✅ | 15 tests, python-telegram-bot v21 |
+| 3.2 | Extracción IA (foto→campos): ExtractorOllama (llava), parser robusto, confirmación humana | ✅ | 6 tests, urllib puro, fallback confianza=0 |
+| 3.3 | Registro venta + MotorComisiones + snapshot de regla aplicada | ✅ | RegistrarVentaService, 5 tests |
+| 3.4 | Notificación grupo Telegram: NotificadorGrupoTelegram (Telegram por ahora, WhatsApp en Etapa 8) | ✅ | 5 tests, urllib puro |
+| 3.5 | Wiring real (repos SQLAlchemy + inyección deps en main.py) | ⬜ | Depende de repos infra — deferred to Etapa 5 |
+| 3.6 | Dashboard ventas: reemplaza Excel · estructura ya analizada | ⬜ | |
 
 ---
 
@@ -147,8 +148,8 @@
 Etapa 0  ████████████████████  100%  ✅
 Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ████████████████████  100%  ✅
-Etapa 3  ████████████░░░░░░░░   60%  🔄  (3.0+3.1+3.3 ✅ · 3.2 🔄 · 3.4+3.5 ⬜)
+Etapa 3  ████████████████████  100%  ✅  (wiring real + dashboard deferred to Etapa 5+)
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 139+ · **mypy:** strict clean · **ruff:** clean
+**Tests:** 150 · **mypy:** strict clean · **ruff:** clean
