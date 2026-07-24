@@ -7,21 +7,33 @@ import uuid
 import pytest
 
 from garay.dominio.servicios.entidades import Servicio
-from garay.dominio.servicios.errores import NombreServicioVacio
+from garay.dominio.servicios.errores import NombreServicioVacio, NumeroServicioInvalido
 
 
 class TestServicio:
     def test_creacion_valida(self) -> None:
-        s = Servicio(id=uuid.uuid4(), nombre="Tour Ciudad")
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Ciudad")
         assert s.nombre == "Tour Ciudad"
 
     def test_nombre_vacio_levanta_error(self) -> None:
         with pytest.raises(NombreServicioVacio):
-            Servicio(id=uuid.uuid4(), nombre="")
+            Servicio(id=uuid.uuid4(), numero=1, nombre="")
 
     def test_descripcion_opcional(self) -> None:
-        s = Servicio(id=uuid.uuid4(), nombre="Tour", descripcion="Un tour especial")
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour", descripcion="Un tour especial")
         assert s.descripcion == "Un tour especial"
 
-        s2 = Servicio(id=uuid.uuid4(), nombre="Tour")
+        s2 = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
         assert s2.descripcion == ""
+
+    def test_activo_por_defecto(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
+        assert s.activo is True
+
+    def test_numero_invalido_levanta_error(self) -> None:
+        with pytest.raises(NumeroServicioInvalido):
+            Servicio(id=uuid.uuid4(), numero=0, nombre="Tour")
+
+    def test_numero_valido(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=137, nombre="Tour")
+        assert s.numero == 137

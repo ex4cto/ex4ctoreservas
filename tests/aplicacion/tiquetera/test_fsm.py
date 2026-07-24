@@ -114,12 +114,12 @@ class TestNumeroTicket:
     ) -> None:
         s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "42", ctx)
         assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
-        assert s.contexto.numero_ticket == 42
+        assert s.contexto.numero_fisico == 42
 
     def test_cero_guarda_none(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "0", ctx)
         assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
-        assert s.contexto.numero_ticket is None
+        assert s.contexto.numero_fisico is None
 
     def test_texto_invalido_devuelve_error(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "abc", ctx)

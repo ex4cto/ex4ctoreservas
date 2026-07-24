@@ -92,6 +92,7 @@ class RegistrarVentaService:
                 id=uuid.uuid4(),
                 venta_id=venta.id,
                 foto_referencia=cmd.foto_referencia,
+                numero_fisico=cmd.numero_fisico,
                 procesada=False,
             )
             self._tiqueteras.guardar(tiquetera)

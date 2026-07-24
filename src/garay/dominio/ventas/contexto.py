@@ -26,5 +26,5 @@ class ContextoVenta:
     vendedor_nombre: str | None = None
     cerrador_nombre: str | None = None
     referido_nombre: str | None = None
-    numero_ticket: int | None = None
+    numero_fisico: int | None = None
     rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"

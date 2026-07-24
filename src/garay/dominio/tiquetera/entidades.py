@@ -12,7 +12,8 @@ class Tiquetera:
     id: uuid.UUID
     venta_id: uuid.UUID
     foto_referencia: str
-    numero_ticket: int | None = None
+    numero_fisico: int | None = None  # papel fisico, ingresado por el usuario
+    numero_ticket: int | None = None  # asignado por DB (Sequence), None antes de persistir
     procesada: bool = field(default=False)
     datos_extraidos: DatosExtraidos | None = field(default=None)
 

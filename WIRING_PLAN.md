@@ -187,20 +187,26 @@ Usar `TipoDinero` para columnas monetarias.
 
 | Modelo ORM | Tabla | Campos clave |
 |---|---|---|
-| `VentaModel` | `ventas` | id, valor_venta, neto, abono, servicio_ids (ARRAY o JSON), cliente_id FK, tipo_cliente, fecha, adultos, ninos, vendedor_nombre, cerrador_nombre, punto_de_venta_id FK nullable, referido_nombre, estado |
+| `VentaModel` | `ventas` | id, valor_venta, neto, abono, servicio_ids (JSON — compatible SQLite/Postgres), cliente_id FK, tipo_cliente, fecha, adultos, ninos, vendedor_nombre, cerrador_nombre, punto_de_venta_id FK nullable, referido_nombre, estado |
 | `ClienteModel` | `clientes` | id, nombre, tipo, telefono, hotel, numero_habitacion |
 | `FreelancerModel` | `freelancers` | id, nombre, activo, telegram_user_id (BIGINT nullable) |
-| `ServicioModel` | `servicios` | id, nombre, numero (INT, del seed JSON), descripcion |
+| `ServicioModel` | `servicios` | id, numero (INT, unique), nombre, descripcion, activo (BOOLEAN) |
 | `PuntoDeVentaModel` | `puntos_venta` | id, nombre, porcentaje_capa |
 | `ReglasComisionModel` | `reglas_comision` | id, tipo_cliente, porcentaje_vendedor, porcentaje_cerrador, porcentaje_referido_maximo |
-| `TiqueteraModel` | `tiqueteras` | id, venta_id FK, foto_referencia, numero_ticket (BIGINT, de Sequence "ticket_seq"), procesada, datos_extraidos (JSON) |
-| `ComisionRegistradaModel` | `comisiones_registradas` | venta_id (PK=FK), vendedor, cerrador, punto_de_venta, referido, agencia (todos TipoDinero), fecha |
+| `TiqueteraModel` | `tiqueteras` | id, venta_id FK, foto_referencia, numero_fisico (BIGINT nullable — papel físico ingresado por usuario), numero_ticket (BIGINT — Sequence "ticket_seq", asignado por DB), procesada, datos_extraidos (JSON) |
+| `ComisionRegistradaModel` | `comisiones_registradas` | venta_id (PK=FK), vendedor, cerrador, punto_de_venta, referido, agencia (todos TipoDinero), snapshot_json (JSON — serialización de SnapshotReglas para historial inmutable), fecha |
 | `IngresoModel` | `ingresos` | id, banco, monto, fecha, referencia, remitente, clasificado, venta_id FK nullable |
 | `EgresoModel` | `egresos` | id, descripcion, monto, fecha, categoria, tipo |
 | `ConciliacionModel` | `conciliaciones` | id, ingreso_id FK, venta_id FK nullable, estado, notas |
 
 > CRÍTICO: `Sequence("ticket_seq")` debe declararse explícitamente con `CreateSequence` en Alembic.
 > NO confiar en autogenerate para esto.
+>
+> DECISIONES TOMADAS:
+> - `servicio_ids` usa JSON (no ARRAY de Postgres) → compatible con SQLite para tests de repos
+> - `TiqueteraModel.numero_fisico` = papel físico (usuario); `numero_ticket` = sistema (Sequence DB)
+> - `ComisionRegistradaModel.snapshot_json` guarda el SnapshotReglas serializado para inmutabilidad histórica
+> - `ServicioModel.numero` es UNIQUE (un número por tour)
 
 ---
 

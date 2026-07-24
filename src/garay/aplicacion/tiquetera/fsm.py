@@ -340,10 +340,10 @@ class FSMTiquetera:
         ctx = _clonar(contexto)
         limpio = entrada.strip()
         if limpio == "0" or limpio.lower() in ("sin número", "sin numero", ""):
-            ctx.numero_ticket = None
+            ctx.numero_fisico = None
         else:
             try:
-                ctx.numero_ticket = int(limpio)
+                ctx.numero_fisico = int(limpio)
             except ValueError:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.NUMERO_TICKET,
@@ -500,7 +500,7 @@ class FSMTiquetera:
             f"Hotel: {ctx.cliente_hotel or '—'}\n"
             f"Habitación: {ctx.cliente_habitacion or '—'}\n"
             f"Fecha salida: {fecha_str}\n"
-            f"Ticket N°: {ctx.numero_ticket or '—'}\n"
+            f"Ticket N°: {ctx.numero_fisico or '—'}\n"
             f"Adultos: {ctx.adultos} | Niños: {ctx.ninos}\n"
             f"Valor: {ctx.valor or '—'}\n"
             f"Abono: {ctx.abono or '—'}\n"
