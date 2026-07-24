@@ -84,8 +84,9 @@ def _make_handler(estado: EstadoFSM):  # type: ignore[return]
         ctx = _get_contexto(context)
         salida = _fsm.procesar(estado, entrada, ctx)
         if salida.listo:
-            # Notify via stub — real notifier wired in UW4
-            logger.info("Venta lista para registrar: %s", salida.contexto)
+            # TODO(UW5): call servicio.ejecutar(cmd) here once repos are wired.
+            # NotificadorGrupoTelegram is ready — service wiring happens in infraestructura layer.
+            logger.info("Venta lista para registrar (service wiring pendiente): %s", salida.contexto)
         return await _enviar_salida(update, context, salida)
 
     handler.__name__ = f"handle_{estado.value}"
