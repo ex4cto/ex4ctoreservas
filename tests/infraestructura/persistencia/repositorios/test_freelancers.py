@@ -43,3 +43,25 @@ def test_buscar_por_telegram_id(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.nombre == "Carlos"
     assert repo.buscar_por_telegram_id(0) is None
+
+
+def test_guardar_y_buscar_es_admin(sf: sessionmaker[Session]) -> None:
+    """Freelancer with es_admin=True round-trips correctly."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(
+        id=uuid.uuid4(), nombre="Admin User", activo=True, telegram_user_id=None, es_admin=True
+    )
+    repo.guardar(f)
+    resultado = repo.buscar_por_id(f.id)
+    assert resultado is not None
+    assert resultado.es_admin is True
+
+
+def test_es_admin_default_false(sf: sessionmaker[Session]) -> None:
+    """Freelancer created without es_admin defaults to False."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(id=uuid.uuid4(), nombre="Normal User", activo=True, telegram_user_id=None)
+    repo.guardar(f)
+    resultado = repo.buscar_por_id(f.id)
+    assert resultado is not None
+    assert resultado.es_admin is False

@@ -82,6 +82,11 @@ FREELANCERS: list[str] = [
     "Kike",
 ]
 
+FREELANCERS_ADMIN: list[tuple[str, int | None]] = [
+    ("Garay", None),  # TODO: set real Telegram ID
+    ("Sharimel", None),  # TODO: set real Telegram ID
+]
+
 
 # ---------------------------------------------------------------------------
 # Seed functions
@@ -150,6 +155,20 @@ def seed_freelancers(session: Session) -> None:
         )
 
 
+def seed_freelancers_admin(session: Session) -> None:
+    """Insert admin freelancers with es_admin=True."""
+    for nombre, telegram_user_id in FREELANCERS_ADMIN:
+        session.merge(
+            FreelancerModel(
+                id=seed_id(f"freelancer:{nombre}"),
+                nombre=nombre,
+                activo=True,
+                telegram_user_id=telegram_user_id,
+                es_admin=True,
+            )
+        )
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -170,6 +189,7 @@ def main() -> None:
         seed_puntos_de_venta(session)
         seed_reglas_comision(session)
         seed_freelancers(session)
+        seed_freelancers_admin(session)
 
     print("Seed completed.")
 

@@ -86,6 +86,8 @@ def main() -> None:
         "servicio_repo": servicio_repo,
         "pdv_repo": pdv_repo,
         "cliente_repo": cliente_repo,
+        "venta_repo": ventas_repo,
+        "comision_registrada_repo": comisiones_repo,
         "registrar_venta_service": servicio,
         "extractor_reserva": extractor_reserva,
     })

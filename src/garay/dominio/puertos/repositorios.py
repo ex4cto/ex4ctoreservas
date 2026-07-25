@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from datetime import date
 
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.entidades import ComisionRegistrada
@@ -24,6 +25,14 @@ class VentaRepository(ABC):
 
     @abstractmethod
     def listar(self) -> list[Venta]: ...
+
+    @abstractmethod
+    def listar_por_freelancer_y_periodo(
+        self, nombre: str, desde: date, hasta: date
+    ) -> list[Venta]: ...
+
+    @abstractmethod
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]: ...
 
 
 class IngresoRepository(ABC):
@@ -119,3 +128,6 @@ class ComisionRegistradaRepository(ABC):
 
     @abstractmethod
     def buscar_por_venta_id(self, venta_id: uuid.UUID) -> ComisionRegistrada | None: ...
+
+    @abstractmethod
+    def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[ComisionRegistrada]: ...

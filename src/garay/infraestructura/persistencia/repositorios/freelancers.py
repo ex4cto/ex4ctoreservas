@@ -16,6 +16,7 @@ def to_orm(f: Freelancer) -> FreelancerModel:
         nombre=f.nombre,
         activo=f.activo,
         telegram_user_id=f.telegram_user_id,
+        es_admin=f.es_admin,
     )
 
 
@@ -25,6 +26,7 @@ def to_domain(m: FreelancerModel) -> Freelancer:
         nombre=m.nombre,
         activo=m.activo,
         telegram_user_id=m.telegram_user_id,
+        es_admin=m.es_admin,
     )
 
 

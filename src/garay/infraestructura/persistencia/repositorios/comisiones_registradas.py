@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.comisiones.entidades import ComisionRegistrada
@@ -73,3 +74,11 @@ class SQLAComisionRegistradaRepository(ComisionRegistradaRepository):
         with self._sf.begin() as session:
             m = session.get(ComisionRegistradaModel, venta_id)
             return to_domain(m) if m else None
+
+    def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[ComisionRegistrada]:
+        if not ids:
+            return []
+        with self._sf.begin() as session:
+            stmt = select(ComisionRegistradaModel).where(ComisionRegistradaModel.venta_id.in_(ids))
+            rows = session.execute(stmt).scalars().all()
+            return [to_domain(r) for r in rows]

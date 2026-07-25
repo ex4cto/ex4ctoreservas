@@ -57,8 +57,8 @@
 | 3.2 | Extracción IA (foto→campos): ExtractorOllama (llava), parser robusto, confirmación humana | ✅ | 6 tests, urllib puro, fallback confianza=0 |
 | 3.3 | Registro venta + MotorComisiones + snapshot de regla aplicada | ✅ | RegistrarVentaService, 5 tests |
 | 3.4 | Notificación grupo Telegram: NotificadorGrupoTelegram (Telegram por ahora, WhatsApp en Etapa 8) | ✅ | 5 tests, urllib puro |
-| 3.5 | Wiring real (repos SQLAlchemy + inyección deps en main.py) | ⬜ | Depende de repos infra — deferred to Etapa 5 |
-| 3.6 | Dashboard ventas: reemplaza Excel · estructura ya analizada | ⬜ | |
+| 3.5 | Wiring real (repos SQLAlchemy + inyección deps en main.py + handler foto AI) | ✅ | Commit `9169722` — 9 pasos, 257 tests |
+| 3.6 | Comandos Telegram `/mis_ventas` + `/resumen_empresa`, es_admin, repos periodo | ✅ | 272 tests |
 
 ---
 
@@ -148,8 +148,8 @@
 Etapa 0  ████████████████████  100%  ✅
 Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ████████████████████  100%  ✅
-Etapa 3  ████████████████████  100%  ✅  (wiring real + dashboard deferred to Etapa 5+)
+Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 150 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 272 · **mypy:** strict clean · **ruff:** clean

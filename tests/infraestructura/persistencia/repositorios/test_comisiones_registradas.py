@@ -72,3 +72,71 @@ def test_guardar_y_buscar_round_trip(sf: sessionmaker[Session]) -> None:
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAComisionRegistradaRepository(sf)
     assert repo.buscar_por_venta_id(uuid.uuid4()) is None
+
+
+def test_listar_por_venta_ids_vacio() -> None:
+    """listar_por_venta_ids([]) returns [] WITHOUT touching DB."""
+    # No sf fixture needed — guard must fire before any DB access
+    from unittest.mock import MagicMock
+    mock_sf = MagicMock()
+    repo = SQLAComisionRegistradaRepository(mock_sf)
+    result = repo.listar_por_venta_ids([])
+    assert result == []
+    mock_sf.begin.assert_not_called()
+
+
+def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
+    """listar_por_venta_ids returns all comisiones for given ids."""
+    venta_id1 = _make_venta(sf)
+    venta_id2 = _make_venta(sf)
+    repo = SQLAComisionRegistradaRepository(sf)
+    snapshot = SnapshotReglas(
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("20.00"),
+        porcentaje_cerrador=Decimal("10.00"),
+        porcentaje_referido_maximo=Decimal("5.00"),
+        porcentaje_capa_punto=Decimal("8.00"),
+    )
+    for venta_id in (venta_id1, venta_id2):
+        desglose = DesgloseComision(
+            vendedor=Dinero("100000"),
+            cerrador=Dinero("50000"),
+            punto_de_venta=Dinero("40000"),
+            referido=Dinero("0"),
+            agencia=Dinero("310000"),
+            snapshot=snapshot,
+        )
+        repo.guardar(ComisionRegistrada(
+            venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
+        ))
+    results = repo.listar_por_venta_ids([venta_id1, venta_id2])
+    assert len(results) == 2
+
+
+def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
+    """listar_por_venta_ids with subset of ids returns only matching ones."""
+    venta_id1 = _make_venta(sf)
+    venta_id2 = _make_venta(sf)
+    repo = SQLAComisionRegistradaRepository(sf)
+    snapshot = SnapshotReglas(
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("20.00"),
+        porcentaje_cerrador=Decimal("10.00"),
+        porcentaje_referido_maximo=Decimal("5.00"),
+        porcentaje_capa_punto=Decimal("8.00"),
+    )
+    for venta_id in (venta_id1, venta_id2):
+        desglose = DesgloseComision(
+            vendedor=Dinero("100000"),
+            cerrador=Dinero("50000"),
+            punto_de_venta=Dinero("40000"),
+            referido=Dinero("0"),
+            agencia=Dinero("310000"),
+            snapshot=snapshot,
+        )
+        repo.guardar(ComisionRegistrada(
+            venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
+        ))
+    results = repo.listar_por_venta_ids([venta_id1])
+    assert len(results) == 1
+    assert results[0].venta_id == venta_id1

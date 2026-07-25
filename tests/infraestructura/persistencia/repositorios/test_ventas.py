@@ -90,3 +90,108 @@ def test_listar(sf: sessionmaker[Session]) -> None:
         )
         repo.guardar(v)
     assert len(repo.listar()) == 2
+
+
+def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> None:
+    """Freelancer as vendedor — should be returned."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 15),
+        participantes=Participantes(
+            vendedor_nombre="Carlos", cerrador_nombre=None,
+            punto_de_venta_id=None, referido_nombre=None,
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+    assert len(results) == 1
+    assert results[0].id == v.id
+
+
+def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> None:
+    """Freelancer as cerrador (OR logic) — should also be returned."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("300000"),
+        neto=Dinero("270000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 10),
+        participantes=Participantes(
+            vendedor_nombre="OtroVendedor", cerrador_nombre="Carlos",
+            punto_de_venta_id=None, referido_nombre=None,
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+    assert len(results) == 1
+
+
+def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) -> None:
+    """Venta outside date range — should NOT be returned."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("200000"),
+        neto=Dinero("180000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 6, 1),
+        participantes=Participantes(
+            vendedor_nombre="Carlos", cerrador_nombre=None,
+            punto_de_venta_id=None, referido_nombre=None,
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+    assert len(results) == 0
+
+
+def test_listar_por_periodo(sf: sessionmaker[Session]) -> None:
+    """listar_por_periodo returns all ventas within the date range."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    for day in (10, 20):
+        v = Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero("100000"),
+            neto=Dinero("90000"),
+            servicio_ids=[],
+            cliente_id=cliente_id,
+            tipo_cliente=TipoCliente.INTERNO,
+            fecha=datetime.date(2026, 7, day),
+            participantes=Participantes(),
+        )
+        repo.guardar(v)
+    # One outside range
+    v_out = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("100000"),
+        neto=Dinero("90000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.INTERNO,
+        fecha=datetime.date(2026, 6, 1),
+        participantes=Participantes(),
+    )
+    repo.guardar(v_out)
+    results = repo.listar_por_periodo(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+    assert len(results) == 2

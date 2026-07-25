@@ -50,3 +50,43 @@ def requiere_rol(
         return await handler(update, context)
 
     return wrapper
+
+
+def requiere_admin(
+    handler: Callable[..., Coroutine[Any, Any, int | None]],
+) -> Callable[..., Coroutine[Any, Any, int | None]]:
+    """Guard para CommandHandlers standalone — solo admins.
+
+    Returns ``None`` on deny (not ``ConversationHandler.END``) because
+    these are standalone CommandHandlers, not ConversationHandler entry points.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        user = update.effective_user
+        if user is None:
+            return None
+
+        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        if repo is None:
+            logger.error("freelancer_repo not found in bot_data — wiring error")
+            return None
+
+        freelancer = repo.buscar_por_telegram_id(user.id)
+        if freelancer is None:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    "No estás registrado como freelancer."
+                )
+            return None
+
+        if not freelancer.es_admin:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    "Este comando es solo para administradores."
+                )
+            return None
+
+        return await handler(update, context)
+
+    return wrapper

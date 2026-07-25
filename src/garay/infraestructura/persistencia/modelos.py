@@ -11,6 +11,7 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -62,6 +63,7 @@ class FreelancerModel(Base):
     nombre: Mapped[str] = mapped_column(String, nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True)
+    es_admin: Mapped[bool] = mapped_column(Boolean, server_default=sa.text("false"), nullable=False)
 
 
 class PuntoDeVentaModel(Base):

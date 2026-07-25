@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 import pytest
 
@@ -23,6 +24,14 @@ class TestVentaRepository:
                 return None
 
             def listar(self) -> list[Venta]:
+                return []
+
+            def listar_por_freelancer_y_periodo(
+                self, nombre: str, desde: date, hasta: date
+            ) -> list[Venta]:
+                return []
+
+            def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]:
                 return []
 
         assert isinstance(_Impl(), VentaRepository)

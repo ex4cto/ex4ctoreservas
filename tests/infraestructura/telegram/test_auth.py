@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from telegram import Update
 from telegram.ext import ConversationHandler
 
-from garay.infraestructura.telegram.auth import requiere_rol
+from garay.infraestructura.telegram.auth import requiere_admin, requiere_rol
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -110,3 +110,62 @@ def test_functools_wraps_preserva_nombre() -> None:
     """@functools.wraps: decorated handler keeps __name__ of the original."""
     wrapped = requiere_rol(_dummy_handler)
     assert wrapped.__name__ == _dummy_handler.__name__
+
+
+# ---------------------------------------------------------------------------
+# Tests for requiere_admin
+# ---------------------------------------------------------------------------
+
+
+def _make_repo_admin(found: bool = True, es_admin: bool = False) -> MagicMock:
+    repo = MagicMock()
+    if found:
+        freelancer = MagicMock()
+        freelancer.es_admin = es_admin
+        repo.buscar_por_telegram_id.return_value = freelancer
+    else:
+        repo.buscar_por_telegram_id.return_value = None
+    return repo
+
+
+async def test_requiere_admin_no_freelancer() -> None:
+    """buscar_por_telegram_id returns None → reply + return None."""
+    repo = _make_repo_admin(found=False)
+    update = _make_update(user_id=123)
+    context = _make_context(repo=repo)
+
+    wrapped = requiere_admin(_dummy_handler)
+    result = await wrapped(update, context)
+
+    update.effective_message.reply_text.assert_called_once_with(
+        "No estás registrado como freelancer."
+    )
+    assert result is None
+
+
+async def test_requiere_admin_no_es_admin() -> None:
+    """Freelancer found but es_admin=False → reply + return None."""
+    repo = _make_repo_admin(found=True, es_admin=False)
+    update = _make_update(user_id=123)
+    context = _make_context(repo=repo)
+
+    wrapped = requiere_admin(_dummy_handler)
+    result = await wrapped(update, context)
+
+    update.effective_message.reply_text.assert_called_once_with(
+        "Este comando es solo para administradores."
+    )
+    assert result is None
+
+
+async def test_requiere_admin_ok() -> None:
+    """Freelancer found and es_admin=True → handler called and return value propagates."""
+    repo = _make_repo_admin(found=True, es_admin=True)
+    update = _make_update(user_id=123)
+    context = _make_context(repo=repo)
+
+    wrapped = requiere_admin(_dummy_handler)
+    result = await wrapped(update, context)
+
+    repo.buscar_por_telegram_id.assert_called_once_with(123)
+    assert result == 42

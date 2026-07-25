@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -70,4 +71,27 @@ class SQLAVentaRepository(VentaRepository):
     def listar(self) -> list[Venta]:
         with self._sf.begin() as session:
             rows = session.execute(select(VentaModel)).scalars().all()
+            return [to_domain(r) for r in rows]
+
+    def listar_por_freelancer_y_periodo(self, nombre: str, desde: date, hasta: date) -> list[Venta]:
+        with self._sf.begin() as session:
+            stmt = (
+                select(VentaModel)
+                .where(
+                    (VentaModel.vendedor_nombre == nombre) | (VentaModel.cerrador_nombre == nombre)
+                )
+                .where(VentaModel.fecha >= desde)
+                .where(VentaModel.fecha <= hasta)
+            )
+            rows = session.execute(stmt).scalars().all()
+            return [to_domain(r) for r in rows]
+
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]:
+        with self._sf.begin() as session:
+            stmt = (
+                select(VentaModel)
+                .where(VentaModel.fecha >= desde)
+                .where(VentaModel.fecha <= hasta)
+            )
+            rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]
