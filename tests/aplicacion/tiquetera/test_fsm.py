@@ -50,18 +50,27 @@ class TestTipoReserva:
 
 
 class TestDestino:
-    def test_destino_toggle_agrega_y_quita(
+    def test_destino_numero_agrega(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        # Toggle adds
-        s1 = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", ctx)
+        s1 = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
         assert s1.nuevo_estado == EstadoFSM.DESTINO
         assert 1 in s1.contexto.destinos_numeros
 
-        # Toggle same item removes it
-        s2 = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.DESTINO
-        assert 1 not in s2.contexto.destinos_numeros
+    def test_destino_multiples_numeros(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        s = fsm.procesar(EstadoFSM.DESTINO, "1, 2", ctx)
+        assert s.nuevo_estado == EstadoFSM.DESTINO
+        assert 1 in s.contexto.destinos_numeros
+        assert 2 in s.contexto.destinos_numeros
+
+    def test_destino_numero_invalido_devuelve_error(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        s = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
+        assert s.nuevo_estado == EstadoFSM.DESTINO
+        assert 9999 not in s.contexto.destinos_numeros
 
     def test_destino_confirmar_sin_seleccion_devuelve_error(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -200,16 +209,18 @@ class TestDestinoDesdeIA:
         assert 1 in salida.contexto.destinos_numeros
 
     def test_encabezado_ia_detectado_aparece_con_match(self, fsm: FSMTiquetera) -> None:
-        """5.3A — mensaje incluye encabezado cuando al menos un nombre matchea."""
+        """5.3A — cuando nombre matchea, el número se pre-selecciona y aparece en Seleccionados."""
         ctx = ContextoVenta(destinos_nombres=["Tour Playa Blanca"])
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert "La IA detectó" in salida.mensaje
+        assert 1 in salida.contexto.destinos_numeros
+        assert "Seleccionados" in salida.mensaje
 
-    def test_sin_match_no_hay_encabezado_ia(self, fsm: FSMTiquetera) -> None:
-        """5.3A — mensaje NO incluye encabezado cuando ningún nombre matchea."""
+    def test_sin_match_muestra_hint_para_ingresar_numero(self, fsm: FSMTiquetera) -> None:
+        """5.3A — cuando nombre no matchea, muestra hint para ingresar el número manualmente."""
         ctx = ContextoVenta(destinos_nombres=["Destino Inventado"])
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert "La IA detectó" not in salida.mensaje
+        assert salida.contexto.destinos_numeros == []
+        assert "La IA detectó" in salida.mensaje
 
     def test_nombres_sin_match_no_agregan_numeros(self, fsm: FSMTiquetera) -> None:
         """5.3B — nombres sin match no agregan números al contexto."""
@@ -233,8 +244,8 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.DESTINO
         ctx = s.contexto
 
-        # DESTINO — toggle then confirm
-        s = fsm.procesar(EstadoFSM.DESTINO, "toggle:1", ctx)
+        # DESTINO — enter number then confirm
+        s = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
         ctx = s.contexto
         s = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE

@@ -177,24 +177,23 @@ class FSMTiquetera:
     # ── private helpers ─────────────────────────────────────────────────────
 
     def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
-        nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
-        nombres_con_match = [
-            nombre for _, nombre in self._servicios
-            if nombre.lower().strip() in nombres_norm
-        ]
-        lineas = []
-        if nombres_con_match:
-            lineas.append(f"La IA detectó: {', '.join(nombres_con_match)}")
-            lineas.append("")
-        for numero, nombre in self._servicios:
-            marca = "✅" if numero in ctx.destinos_numeros else "⬜"
-            lineas.append(f"{marca} {numero} — {nombre}")
-        return "Seleccioná los destinos (podés elegir varios):\n" + "\n".join(lineas)
+        lineas = ["Ingresá el número del tour (podés poner varios separados por coma, ej: *15* o *15, 23*)."]
+        if ctx.destinos_numeros:
+            seleccionados = []
+            num_map = dict(self._servicios)
+            for n in ctx.destinos_numeros:
+                nombre = num_map.get(n, str(n))
+                seleccionados.append(f"{n} — {nombre}")
+            lineas.append(f"Seleccionados: {', '.join(seleccionados)}")
+            lineas.append("Agregá más números o escribí *confirmar* para continuar.")
+        else:
+            if ctx.destinos_nombres:
+                lineas.append(f"La IA detectó: {', '.join(ctx.destinos_nombres)} (ingresá los números correspondientes).")
+            lineas.append("Aún no seleccionaste ningún tour.")
+        return "\n".join(lineas)
 
     def _opciones_destino(self) -> list[str]:
-        opciones = [f"toggle:{n}" for n, _ in self._servicios]
-        opciones.append("confirmar")
-        return opciones
+        return ["confirmar"]
 
     # ── private handlers ────────────────────────────────────────────────────
 
@@ -241,33 +240,13 @@ class FSMTiquetera:
 
     def _handle_destino(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        if entrada.startswith("toggle:"):
-            clave_str = entrada[len("toggle:"):]
-            try:
-                clave = int(clave_str)
-            except ValueError:
-                return SalidaFSM(
-                    nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje=self._destinos_mensaje(ctx),
-                    opciones=self._opciones_destino(),
-                    contexto=ctx,
-                )
-            if clave in ctx.destinos_numeros:
-                ctx.destinos_numeros.remove(clave)
-            else:
-                ctx.destinos_numeros.append(clave)
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=self._destinos_mensaje(ctx),
-                opciones=self._opciones_destino(),
-                contexto=ctx,
-            )
-        if entrada.strip() == "confirmar":
+        texto = entrada.strip()
+
+        if texto.lower() in ("confirmar", "listo"):
             if not ctx.destinos_numeros:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje="Tenés que seleccionar al menos un destino.\n"
-                    + self._destinos_mensaje(ctx),
+                    mensaje="Tenés que ingresar al menos un número de tour.\n" + self._destinos_mensaje(ctx),
                     opciones=self._opciones_destino(),
                     contexto=ctx,
                 )
@@ -276,6 +255,29 @@ class FSMTiquetera:
                 mensaje="¿Cuál es el nombre del cliente?",
                 contexto=ctx,
             )
+
+        numeros_validos = {n for n, _ in self._servicios}
+        partes = [p.strip() for p in texto.replace(",", " ").split() if p.strip()]
+        invalidos: list[str] = []
+        for parte in partes:
+            try:
+                n = int(parte)
+                if n in numeros_validos:
+                    if n not in ctx.destinos_numeros:
+                        ctx.destinos_numeros.append(n)
+                else:
+                    invalidos.append(parte)
+            except ValueError:
+                invalidos.append(parte)
+
+        if invalidos and not ctx.destinos_numeros:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.DESTINO,
+                mensaje=f"Número(s) no encontrado(s): {', '.join(invalidos)}. Revisá el catálogo.\n" + self._destinos_mensaje(ctx),
+                opciones=self._opciones_destino(),
+                contexto=ctx,
+            )
+
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
             mensaje=self._destinos_mensaje(ctx),
