@@ -1,29 +1,99 @@
-"""Entry point for the Telegram bot.
-
-Repository and service wiring will be completed in Etapa 5 (infrastructure adapters).
-Until then, dependencies raise NotImplementedError as stubs.
-"""
+"""Entry point for the Telegram bot."""
 from __future__ import annotations
 
 import logging
 
-from garay.aplicacion.tiquetera.servicio import RegistrarVentaService  # noqa: F401
-from garay.infraestructura.telegram.bot import crear_aplicacion  # noqa: F401
+from garay.aplicacion.tiquetera.fsm import FSMTiquetera
+from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
+from garay.config.settings import obtener_settings
+from garay.dominio.comisiones.motor import MotorComisiones
+from garay.infraestructura.ia.extractor_ollama import ExtractorOllama
+from garay.infraestructura.ia.extractor_reserva_ollama import ExtractorReservaOllama
+from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
+from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
+    SQLAComisionRegistradaRepository,
+)
+from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
+from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
+    SQLAPuntoDeVentaRepository,
+)
+from garay.infraestructura.persistencia.repositorios.reglas_comision import (
+    SQLAReglasComisionRepository,
+)
+from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
+from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
+from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
+from garay.infraestructura.telegram.bot import crear_aplicacion
+from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
-    # TODO (Etapa 5): load token from settings and wire real repositories
-    raise NotImplementedError(
-        "main() not yet wired — complete infrastructure adapters in Etapa 5."
+    settings = obtener_settings()
+
+    if not settings.grupo_id:
+        raise RuntimeError(
+            "GARAY_GRUPO_ID is not configured — set it in the environment before starting"
+        )
+
+    engine = crear_engine(settings.database_url)
+    sf = crear_fabrica_sesiones(engine)
+
+    freelancer_repo = SQLAFreelancerRepository(sf)
+    servicio_repo = SQLAServicioRepository(sf)
+    pdv_repo = SQLAPuntoDeVentaRepository(sf)
+    cliente_repo = SQLAClienteRepository(sf)
+    ventas_repo = SQLAVentaRepository(sf)
+    reglas_repo = SQLAReglasComisionRepository(sf)
+    tiqueteras_repo = SQLATiqueteraRepository(sf)
+    comisiones_repo = SQLAComisionRegistradaRepository(sf)
+
+    servicios = [(s.numero, s.nombre) for s in servicio_repo.listar()]
+    puntos_venta = [p.nombre for p in pdv_repo.listar()]
+
+    if not servicios:
+        raise RuntimeError(
+            "No services found in DB — seed the database before starting the bot"
+        )
+    if not puntos_venta:
+        raise RuntimeError(
+            "No puntos_de_venta found in DB — seed the database before starting the bot"
+        )
+
+    fsm = FSMTiquetera(servicios=servicios, puntos_venta=puntos_venta)
+
+    extractor_ia = ExtractorOllama(url=settings.ollama_url, modelo=settings.ollama_modelo)
+    extractor_reserva = ExtractorReservaOllama(extractor_ia)
+
+    notificador = NotificadorGrupoTelegram(settings.telegram_bot_token)
+    servicio = RegistrarVentaService(
+        ventas=ventas_repo,
+        reglas_repo=reglas_repo,
+        tiqueteras=tiqueteras_repo,
+        puntos_repo=pdv_repo,
+        motor=MotorComisiones(),
+        notificador=notificador,
+        grupo_id=settings.grupo_id,
+        comisiones_repo=comisiones_repo,
     )
 
-    # Skeleton for reference (unreachable until Etapa 5):
-    # from garay.config.settings import get_settings
-    # settings = get_settings()
-    # servicio: RegistrarVentaService = ...  # wire real repos here
-    # crear_aplicacion(settings.telegram_token, servicio).run_polling()
+    app = crear_aplicacion(settings.telegram_bot_token)
+    app.bot_data.update({
+        "fsm": fsm,
+        "freelancer_repo": freelancer_repo,
+        "servicio_repo": servicio_repo,
+        "pdv_repo": pdv_repo,
+        "cliente_repo": cliente_repo,
+        "registrar_venta_service": servicio,
+        "extractor_reserva": extractor_reserva,
+    })
+
+    try:
+        app.run_polling()
+    finally:
+        engine.dispose()
 
 
 if __name__ == "__main__":

@@ -13,13 +13,14 @@ class ContextoVenta:
     tipo_cliente: TipoCliente | None = None
     punto_de_venta_nombre: str | None = None
     destinos_numeros: list[int] = field(default_factory=list)
+    destinos_nombres: list[str] = field(default_factory=list)
     cliente_nombre: str | None = None
     cliente_telefono: str | None = None
     cliente_hotel: str | None = None
     cliente_habitacion: str | None = None
     fecha_salida: datetime.datetime | None = None
-    adultos: int = 0
-    ninos: int = 0
+    adultos: int | None = None
+    ninos: int | None = None
     valor: Decimal | None = None
     abono: Decimal | None = None
     neto: Decimal | None = None

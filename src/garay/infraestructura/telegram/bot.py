@@ -11,10 +11,11 @@ from telegram.ext import (
 )
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
-from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
+    _foto_en_conversacion,
     cmd_cancelar,
+    cmd_foto,
     cmd_start,
     handle_cliente_habitacion,
     handle_cliente_hotel,
@@ -27,7 +28,6 @@ from garay.infraestructura.telegram.handlers import (
     handle_monto_neto,
     handle_monto_valor,
     handle_numero_ticket,
-    handle_participante_nombre,
     handle_participante_otro,
     handle_participante_rol,
     handle_pax_adultos,
@@ -40,14 +40,18 @@ _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
 
 
-def crear_aplicacion(token: str, servicio: RegistrarVentaService) -> Application:  # type: ignore[type-arg]
+def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     """Build and return the configured PTB Application."""
     app = Application.builder().token(token).build()
 
     estados = ESTADO_PTB
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", cmd_start)],
+        entry_points=[
+            CommandHandler("start", cmd_start),
+            MessageHandler(filters.PHOTO, cmd_foto),
+            MessageHandler(filters.Document.IMAGE, cmd_foto),
+        ],
         states={
             estados[EstadoFSM.TIPO_RESERVA]: [
                 _CB(handle_tipo_reserva),
@@ -94,9 +98,6 @@ def crear_aplicacion(token: str, servicio: RegistrarVentaService) -> Application
             estados[EstadoFSM.MONTO_NETO]: [
                 MessageHandler(_TEXT, handle_monto_neto),
             ],
-            estados[EstadoFSM.PARTICIPANTE_NOMBRE]: [
-                MessageHandler(_TEXT, handle_participante_nombre),
-            ],
             estados[EstadoFSM.PARTICIPANTE_ROL]: [
                 _CB(handle_participante_rol),
                 MessageHandler(_TEXT, handle_participante_rol),
@@ -109,7 +110,10 @@ def crear_aplicacion(token: str, servicio: RegistrarVentaService) -> Application
                 MessageHandler(_TEXT, handle_confirmacion),
             ],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            MessageHandler(filters.PHOTO | filters.Document.IMAGE, _foto_en_conversacion),
+        ],
     )
 
     app.add_handler(conv_handler)

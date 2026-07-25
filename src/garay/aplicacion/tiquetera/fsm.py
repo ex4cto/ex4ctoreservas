@@ -29,7 +29,6 @@ class EstadoFSM(StrEnum):
     MONTO_VALOR = "monto_valor"
     MONTO_ABONO = "monto_abono"
     MONTO_NETO = "monto_neto"
-    PARTICIPANTE_NOMBRE = "participante_nombre"
     PARTICIPANTE_ROL = "participante_rol"
     PARTICIPANTE_OTRO = "participante_otro"
     CONFIRMACION = "confirmacion"
@@ -46,8 +45,27 @@ class SalidaFSM:
     contexto: ContextoVenta = field(default_factory=ContextoVenta)
 
 
+_ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset({
+    EstadoFSM.CLIENTE_NOMBRE,
+    EstadoFSM.CLIENTE_TELEFONO,
+    EstadoFSM.CLIENTE_HOTEL,
+    EstadoFSM.CLIENTE_HABITACION,
+    EstadoFSM.FECHA_SALIDA,
+    EstadoFSM.PAX_ADULTOS,
+    EstadoFSM.PAX_NINOS,
+    EstadoFSM.NUMERO_TICKET,
+    EstadoFSM.MONTO_VALOR,
+    EstadoFSM.MONTO_ABONO,
+})
+
+
 def _clonar(ctx: ContextoVenta) -> ContextoVenta:
     return copy.deepcopy(ctx)
+
+
+def _tú_si(rol: str | None, *roles: str) -> str:
+    """Return '(tú)' when `rol` is in `roles`, otherwise '—'."""
+    return "(tú)" if rol in roles else "—"
 
 
 def _parsear_monto(texto: str) -> Decimal | None:
@@ -119,7 +137,6 @@ class FSMTiquetera:
             EstadoFSM.MONTO_VALOR: self._handle_monto_valor,
             EstadoFSM.MONTO_ABONO: self._handle_monto_abono,
             EstadoFSM.MONTO_NETO: self._handle_monto_neto,
-            EstadoFSM.PARTICIPANTE_NOMBRE: self._handle_participante_nombre,
             EstadoFSM.PARTICIPANTE_ROL: self._handle_participante_rol,
             EstadoFSM.PARTICIPANTE_OTRO: self._handle_participante_otro,
             EstadoFSM.CONFIRMACION: self._handle_confirmacion,
@@ -134,6 +151,21 @@ class FSMTiquetera:
             )
         return handler(entrada, contexto)
 
+    def procesar_foto(
+        self,
+        estado: EstadoFSM,
+        entrada: str,
+        ctx: ContextoVenta,
+    ) -> SalidaFSM:
+        """Like procesar() but auto-advances through photo-prefilled states."""
+        salida = self.procesar(estado, entrada, ctx)
+        while salida.nuevo_estado in _ESTADOS_FOTO_AVANZAR:
+            valor = self._get_valor_prefilled(salida.nuevo_estado, salida.contexto)
+            if valor is None:
+                break
+            salida = self.procesar(salida.nuevo_estado, valor, salida.contexto)
+        return salida
+
     def cancelar(self, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         return SalidaFSM(
@@ -144,10 +176,18 @@ class FSMTiquetera:
 
     # ── private helpers ─────────────────────────────────────────────────────
 
-    def _destinos_mensaje(self, destinos_sel: list[int]) -> str:
+    def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
+        nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
+        nombres_con_match = [
+            nombre for _, nombre in self._servicios
+            if nombre.lower().strip() in nombres_norm
+        ]
         lineas = []
+        if nombres_con_match:
+            lineas.append(f"La IA detectó: {', '.join(nombres_con_match)}")
+            lineas.append("")
         for numero, nombre in self._servicios:
-            marca = "✅" if numero in destinos_sel else "⬜"
+            marca = "✅" if numero in ctx.destinos_numeros else "⬜"
             lineas.append(f"{marca} {numero} — {nombre}")
         return "Seleccioná los destinos (podés elegir varios):\n" + "\n".join(lineas)
 
@@ -187,9 +227,14 @@ class FSMTiquetera:
             ctx.punto_de_venta_nombre = None
         else:
             ctx.punto_de_venta_nombre = entrada.strip()
+        if ctx.destinos_nombres:
+            nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
+            for numero, nombre in self._servicios:
+                if nombre.lower().strip() in nombres_norm and numero not in ctx.destinos_numeros:
+                    ctx.destinos_numeros.append(numero)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+            mensaje=self._destinos_mensaje(ctx),
             opciones=self._opciones_destino(),
             contexto=ctx,
         )
@@ -203,7 +248,7 @@ class FSMTiquetera:
             except ValueError:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+                    mensaje=self._destinos_mensaje(ctx),
                     opciones=self._opciones_destino(),
                     contexto=ctx,
                 )
@@ -213,7 +258,7 @@ class FSMTiquetera:
                 ctx.destinos_numeros.append(clave)
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+                mensaje=self._destinos_mensaje(ctx),
                 opciones=self._opciones_destino(),
                 contexto=ctx,
             )
@@ -222,7 +267,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
                     mensaje="Tenés que seleccionar al menos un destino.\n"
-                    + self._destinos_mensaje(ctx.destinos_numeros),
+                    + self._destinos_mensaje(ctx),
                     opciones=self._opciones_destino(),
                     contexto=ctx,
                 )
@@ -233,7 +278,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=self._destinos_mensaje(ctx.destinos_numeros),
+            mensaje=self._destinos_mensaje(ctx),
             opciones=self._opciones_destino(),
             contexto=ctx,
         )
@@ -405,15 +450,6 @@ class FSMTiquetera:
             )
         ctx.neto = monto
         return SalidaFSM(
-            nuevo_estado=EstadoFSM.PARTICIPANTE_NOMBRE,
-            mensaje="¿Cuál es tu nombre?",
-            contexto=ctx,
-        )
-
-    def _handle_participante_nombre(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
-        ctx = _clonar(contexto)
-        ctx.vendedor_nombre = entrada.strip()
-        return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
             mensaje="¿Cuál fue tu rol en esta venta?",
             opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
@@ -424,7 +460,6 @@ class FSMTiquetera:
         ctx = _clonar(contexto)
         opcion = entrada.strip()
         if opcion == "Ambos":
-            ctx.cerrador_nombre = ctx.vendedor_nombre
             ctx.rol_registrante = "ambos"
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
@@ -441,9 +476,6 @@ class FSMTiquetera:
             )
         if opcion == "Solo cerrador":
             ctx.rol_registrante = "cerrador"
-            # swap: quien se registró es el cerrador, pedimos el vendedor
-            ctx.cerrador_nombre = ctx.vendedor_nombre
-            ctx.vendedor_nombre = None
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
                 mensaje="¿Cuál es el nombre del vendedor?",
@@ -460,8 +492,14 @@ class FSMTiquetera:
         ctx = _clonar(contexto)
         if ctx.rol_registrante == "vendedor":
             ctx.cerrador_nombre = entrada.strip()
-        else:  # cerrador
+        elif ctx.rol_registrante == "cerrador":
             ctx.vendedor_nombre = entrada.strip()
+        else:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
+                mensaje="Error interno: rol no definido. Escribí /cancelar y comenzá de nuevo.",
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
@@ -485,10 +523,37 @@ class FSMTiquetera:
         )
 
     @staticmethod
+    def _get_valor_prefilled(estado: EstadoFSM, ctx: ContextoVenta) -> str | None:
+        if estado == EstadoFSM.CLIENTE_NOMBRE:
+            return ctx.cliente_nombre
+        if estado == EstadoFSM.CLIENTE_TELEFONO:
+            return ctx.cliente_telefono
+        if estado == EstadoFSM.CLIENTE_HOTEL:
+            return ctx.cliente_hotel
+        if estado == EstadoFSM.CLIENTE_HABITACION:
+            return ctx.cliente_habitacion
+        if estado == EstadoFSM.FECHA_SALIDA:
+            return ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else None
+        if estado == EstadoFSM.PAX_ADULTOS:
+            return str(ctx.adultos) if ctx.adultos is not None and ctx.adultos >= 1 else None
+        if estado == EstadoFSM.PAX_NINOS:
+            return str(ctx.ninos) if ctx.ninos is not None else None
+        if estado == EstadoFSM.NUMERO_TICKET:
+            return str(ctx.numero_fisico) if ctx.numero_fisico is not None else None
+        if estado == EstadoFSM.MONTO_VALOR:
+            return str(ctx.valor) if ctx.valor is not None else None
+        if estado == EstadoFSM.MONTO_ABONO:
+            return str(ctx.abono) if ctx.abono is not None else None
+        return None
+
+    @staticmethod
     def _construir_resumen(ctx: ContextoVenta) -> str:
-        destinos_str = (
-            ", ".join(str(n) for n in ctx.destinos_numeros) if ctx.destinos_numeros else "—"
-        )
+        if ctx.destinos_numeros:
+            destinos_str = ", ".join(str(n) for n in ctx.destinos_numeros)
+        elif ctx.destinos_nombres:
+            destinos_str = ", ".join(ctx.destinos_nombres) + " (pendiente confirmar)"
+        else:
+            destinos_str = "—"
         fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
         return (
             "📋 *Resumen de la venta:*\n"
@@ -501,11 +566,12 @@ class FSMTiquetera:
             f"Habitación: {ctx.cliente_habitacion or '—'}\n"
             f"Fecha salida: {fecha_str}\n"
             f"Ticket N°: {ctx.numero_fisico or '—'}\n"
-            f"Adultos: {ctx.adultos} | Niños: {ctx.ninos}\n"
+            f"Adultos: {ctx.adultos or 0} | Niños: {ctx.ninos or 0}\n"
             f"Valor: {ctx.valor or '—'}\n"
             f"Abono: {ctx.abono or '—'}\n"
             f"Neto: {ctx.neto or '—'}\n"
-            f"Vendedor: {ctx.vendedor_nombre or '—'}\n"
-            f"Cerrador: {ctx.cerrador_nombre or '—'}\n\n"
+            f"Vendedor: {ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'vendedor')}\n"
+            "Cerrador: "
+            f"{ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'cerrador')}\n\n"
             "¿Confirmamos?"
         )

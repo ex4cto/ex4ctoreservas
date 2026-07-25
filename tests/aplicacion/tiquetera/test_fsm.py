@@ -127,16 +127,10 @@ class TestNumeroTicket:
 
 
 class TestParticipante:
-    def test_nombre_avanza_a_rol(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_NOMBRE, "Maria Lopez", ctx)
-        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
-        assert s.contexto.vendedor_nombre == "Maria Lopez"
-
     def test_rol_ambos_salta_a_confirmacion(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        ctx_con_nombre = ContextoVenta(vendedor_nombre="Maria")
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx_con_nombre)
+        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
-        assert s.contexto.cerrador_nombre == "Maria"
+        assert s.contexto.rol_registrante == "ambos"
 
     def test_rol_solo_vendedor_pide_cerrador(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
@@ -149,7 +143,7 @@ class TestParticipante:
     def test_participante_otro_como_vendedor_completa(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        ctx_prep = ContextoVenta(vendedor_nombre="Maria", rol_registrante="vendedor")
+        ctx_prep = ContextoVenta(rol_registrante="vendedor")
         s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Pedro", ctx_prep)
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
         assert s.contexto.cerrador_nombre == "Pedro"
@@ -157,7 +151,7 @@ class TestParticipante:
     def test_participante_otro_como_cerrador_completa(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        ctx_prep = ContextoVenta(cerrador_nombre="Maria", rol_registrante="cerrador")
+        ctx_prep = ContextoVenta(rol_registrante="cerrador")
         s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Juan", ctx_prep)
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
         assert s.contexto.vendedor_nombre == "Juan"
@@ -178,6 +172,50 @@ class TestCancelar:
     ) -> None:
         salida = fsm.cancelar(ctx)
         assert salida.nuevo_estado == EstadoFSM.CANCELADO
+
+
+class TestDestinoDesdeIA:
+    """Tests for IA-seeded destinos_nombres pre-population and UI hints."""
+
+    def test_contexto_venta_tiene_campo_destinos_nombres(self) -> None:
+        """5.1 — ContextoVenta must have destinos_nombres field defaulting to []."""
+        ctx = ContextoVenta()
+        assert ctx.destinos_nombres == []
+
+    def test_destinos_nombres_se_puede_inicializar(self) -> None:
+        """5.1 — destinos_nombres can be set on construction."""
+        ctx = ContextoVenta(destinos_nombres=["Tour Playa Blanca"])
+        assert ctx.destinos_nombres == ["Tour Playa Blanca"]
+
+    def test_prepoblacion_exacta(self, fsm: FSMTiquetera) -> None:
+        """5.3B — nombre exacto matchea y pre-popula destinos_numeros."""
+        ctx = ContextoVenta(destinos_nombres=["Tour Playa Blanca"])
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert 1 in salida.contexto.destinos_numeros
+
+    def test_prepoblacion_case_insensitive(self, fsm: FSMTiquetera) -> None:
+        """5.3B — match es case-insensitive."""
+        ctx = ContextoVenta(destinos_nombres=["tour playa blanca"])
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert 1 in salida.contexto.destinos_numeros
+
+    def test_encabezado_ia_detectado_aparece_con_match(self, fsm: FSMTiquetera) -> None:
+        """5.3A — mensaje incluye encabezado cuando al menos un nombre matchea."""
+        ctx = ContextoVenta(destinos_nombres=["Tour Playa Blanca"])
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert "La IA detectó" in salida.mensaje
+
+    def test_sin_match_no_hay_encabezado_ia(self, fsm: FSMTiquetera) -> None:
+        """5.3A — mensaje NO incluye encabezado cuando ningún nombre matchea."""
+        ctx = ContextoVenta(destinos_nombres=["Destino Inventado"])
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert "La IA detectó" not in salida.mensaje
+
+    def test_nombres_sin_match_no_agregan_numeros(self, fsm: FSMTiquetera) -> None:
+        """5.3B — nombres sin match no agregan números al contexto."""
+        ctx = ContextoVenta(destinos_nombres=["Destino Inventado"])
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.contexto.destinos_numeros == []
 
 
 class TestFlujoCompleto:
@@ -254,11 +292,6 @@ class TestFlujoCompleto:
 
         # MONTO_NETO
         s = fsm.procesar(EstadoFSM.MONTO_NETO, "450000", ctx)
-        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_NOMBRE
-        ctx = s.contexto
-
-        # PARTICIPANTE_NOMBRE
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_NOMBRE, "Maria Lopez", ctx)
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         ctx = s.contexto
 
@@ -271,3 +304,71 @@ class TestFlujoCompleto:
         s = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.TERMINADO
         assert s.listo is True
+
+
+class TestProcesarFoto:
+    """Tests for procesar_foto() — photo AI pre-filled auto-advance logic."""
+
+    def test_procesar_foto_sin_ctx_se_comporta_igual_que_procesar(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """Empty ctx: procesar_foto behaves identical to procesar."""
+        salida_proc = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
+        salida_foto = fsm.procesar_foto(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
+        assert salida_proc.nuevo_estado == salida_foto.nuevo_estado
+
+    def test_procesar_foto_auto_avanza_cliente_nombre_prefilled(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """ctx with cliente_nombre set: after DESTINO→confirmar reaches CLIENTE_TELEFONO."""
+        ctx = ContextoVenta(destinos_numeros=[1], cliente_nombre="Juan")
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
+        # DESTINO→confirmar → CLIENTE_NOMBRE → auto-advance to CLIENTE_TELEFONO
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
+        assert salida.contexto.cliente_nombre == "Juan"
+
+    def test_procesar_foto_no_avanza_sin_valor(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """ctx without cliente_nombre: stays at CLIENTE_NOMBRE."""
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+
+    def test_procesar_foto_pax_adultos_cero_no_avanza(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """adultos=0 should NOT auto-advance PAX_ADULTOS (business rule: min 1)."""
+        import datetime
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            cliente_nombre="Juan",
+            cliente_telefono="300",
+            cliente_hotel="Hotel",
+            cliente_habitacion="101",
+            fecha_salida=datetime.datetime(2026, 12, 25, 10, 0),
+            adultos=0,
+        )
+        salida = fsm.procesar_foto(EstadoFSM.CLIENTE_HABITACION, "101", ctx)
+        # Should advance through FECHA_SALIDA (pre-filled) but stop at PAX_ADULTOS (adultos=0)
+        assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
+
+    def test_procesar_foto_pax_adultos_uno_avanza(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """adultos=1 should auto-advance PAX_ADULTOS."""
+        import datetime
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            cliente_nombre="Juan",
+            cliente_telefono="300",
+            cliente_hotel="Hotel",
+            cliente_habitacion="101",
+            fecha_salida=datetime.datetime(2026, 12, 25, 10, 0),
+            adultos=1,
+            ninos=None,
+        )
+        salida = fsm.procesar_foto(EstadoFSM.CLIENTE_HABITACION, "101", ctx)
+        # CLIENTE_HABITACION→FECHA_SALIDA (pre-filled)→PAX_ADULTOS (pre-filled, 1)
+        # →PAX_NINOS (ninos=None, stops)
+        assert salida.nuevo_estado == EstadoFSM.PAX_NINOS

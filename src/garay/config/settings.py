@@ -36,9 +36,14 @@ class Settings(BaseSettings):
     database_url: str = Field(default="")
     telegram_bot_token: str = Field(default="")
     webhook_secret: str = Field(default="")
+    grupo_id: str = Field(default="")
 
     # Moneda base del sistema.
     moneda_predeterminada: str = "COP"
+
+    # Ollama AI configuration.
+    ollama_url: str = Field(default="http://localhost:11434")
+    ollama_modelo: str = Field(default="llava")
 
 
 @lru_cache(maxsize=1)

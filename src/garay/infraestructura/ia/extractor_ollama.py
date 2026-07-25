@@ -57,9 +57,11 @@ class ExtractorOllama(ExtractorIA):
         self,
         url: str = "http://localhost:11434",
         modelo: str = "llava",
+        timeout: int = 60,
     ) -> None:
         self._url = url.rstrip("/")
         self._modelo = modelo
+        self._timeout = timeout
 
     def extraer_de_foto(self, ruta_foto: str) -> DatosExtraidos:
         with open(ruta_foto, "rb") as f:
@@ -83,7 +85,7 @@ class ExtractorOllama(ExtractorIA):
         )
 
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
                 body = resp.read()
         except ConnectionRefusedError as exc:
             raise OllamaNoDisponible("Ollama server is not reachable") from exc
