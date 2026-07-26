@@ -710,16 +710,16 @@ class TestFormatearMonto:
     """Fix 4: _formatear_monto uses dot as thousands separator."""
 
     def test_formatear_monto_entero_grande(self) -> None:
-        assert _formatear_monto(Decimal("200000")) == "200.000"
+        assert _formatear_monto(Decimal("200000")) == "$200.000"
 
     def test_formatear_monto_none(self) -> None:
         assert _formatear_monto(None) == "—"
 
     def test_formatear_monto_pequeño(self) -> None:
-        assert _formatear_monto(Decimal("500")) == "500"
+        assert _formatear_monto(Decimal("500")) == "$500"
 
     def test_formatear_monto_millon(self) -> None:
-        assert _formatear_monto(Decimal("1000000")) == "1.000.000"
+        assert _formatear_monto(Decimal("1000000")) == "$1.000.000"
 
 
 class TestResumenMontos:

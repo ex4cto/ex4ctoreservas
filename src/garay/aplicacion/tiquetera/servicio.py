@@ -8,6 +8,7 @@ from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, Resultado
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     PuntoDeVentaRepository,
@@ -18,6 +19,10 @@ from garay.dominio.puertos.repositorios import (
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
+
+
+def _fmt_cop(d: Dinero) -> str:
+    return "$" + f"{int(d.monto):,}".replace(",", ".")
 
 
 class RegistrarVentaService:
@@ -104,9 +109,11 @@ class RegistrarVentaService:
             "🎉 *Nueva venta registrada*\n"
             f"Tipo: {cmd.tipo_cliente.value}\n"
             f"Fecha: {cmd.fecha.strftime('%d/%m/%Y')}\n"
-            f"Valor: {cmd.valor_venta}\n"
-            f"Neto: {cmd.neto}\n"
-            f"Ganancia agencia: {desglose.agencia}\n"
+            f"Valor: {_fmt_cop(cmd.valor_venta)}\n"
+            f"Neto: {_fmt_cop(cmd.neto)}\n"
+            f"Ganancia agencia: {_fmt_cop(desglose.agencia)}\n"
+            f"Ganancia vendedor: {_fmt_cop(desglose.vendedor)}\n"
+            f"Ganancia cerrador: {_fmt_cop(desglose.cerrador)}\n"
             f"Vendedor: {vendedor}\n"
             f"Cerrador: {cerrador}"
         )

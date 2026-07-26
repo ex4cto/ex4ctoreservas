@@ -108,10 +108,10 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
 
 
 def _formatear_monto(valor: Decimal | int | None) -> str:
-    """Format amount with dot thousands separator. E.g.: 200000 → '200.000'"""
+    """Format amount as Colombian pesos. E.g.: 200000 → '$200.000'"""
     if valor is None:
         return "—"
-    return f"{int(valor):,}".replace(",", ".")
+    return "$" + f"{int(valor):,}".replace(",", ".")
 
 
 def _clonar(ctx: ContextoVenta) -> ContextoVenta:
