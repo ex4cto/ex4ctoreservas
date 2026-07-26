@@ -173,6 +173,38 @@ class TestRegistrarVentaRaisesSimReglas:
             service.ejecutar(cmd)
 
 
+class TestMensajeNotificacion:
+    """WU-7: notification message format — no UUID, item-by-item."""
+
+    def _capturar_mensaje(self) -> tuple[RegistrarVentaService, MagicMock]:
+        notificador = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+        service = _build_service(motor=motor, notificador=notificador)
+        return service, notificador
+
+    def test_mensaje_notificacion_sin_uuid(self) -> None:
+        import re
+
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(vendedor_nombre="Ana", cerrador_nombre="Luis"))
+        mensaje = notificador.notificar.call_args.args[0]
+        uuid_pattern = re.compile(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+            re.IGNORECASE,
+        )
+        assert not uuid_pattern.search(mensaje), f"UUID found in message: {mensaje!r}"
+
+    def test_mensaje_notificacion_formato_item_por_item(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(vendedor_nombre="Ana", cerrador_nombre="Luis"))
+        mensaje = notificador.notificar.call_args.args[0]
+        # Message should contain field labels on separate lines
+        assert "Vendedor:" in mensaje
+        assert "Cerrador:" in mensaje
+        assert "Valor:" in mensaje
+
+
 class TestRegistrarVentaPersistsComision:
     def test_comision_guardada_con_venta_id_correcto(self) -> None:
         comisiones_repo = MagicMock()

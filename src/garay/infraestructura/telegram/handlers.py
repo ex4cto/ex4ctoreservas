@@ -1,4 +1,5 @@
 """PTB handler functions — thin adapter over FSMTiquetera."""
+
 from __future__ import annotations
 
 import asyncio
@@ -297,7 +298,8 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Start the FSM at TIPO_RESERVA with the pre-filled ctx
     # (photo entry skips METODO_INPUT — user already chose Foto implicitly)
     salida = SalidaFSM(
-        mensaje="\n".join(lineas) + "\n\n¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+        mensaje="\n".join(lineas)
+        + "\n\n¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
         opciones=["INTERNO", "EXTERNO", "DIGITAL"],
         nuevo_estado=EstadoFSM.TIPO_RESERVA,
         contexto=ctx,
@@ -378,9 +380,7 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if freelancer_repo is None or venta_repo is None or comision_repo is None:
         if update.effective_message:
-            await update.effective_message.reply_text(
-                "Error interno. Contactá al administrador."
-            )
+            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
         return
 
     freelancer = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user.id)
@@ -433,9 +433,7 @@ async def cmd_resumen_empresa(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if venta_repo is None or comision_repo is None:
         if update.effective_message:
-            await update.effective_message.reply_text(
-                "Error interno. Contactá al administrador."
-            )
+            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
         return
 
     hoy = date.today()

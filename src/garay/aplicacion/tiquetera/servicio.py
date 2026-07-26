@@ -101,10 +101,13 @@ class RegistrarVentaService:
         vendedor = cmd.participantes.vendedor_nombre or "—"
         cerrador = cmd.participantes.cerrador_nombre or "—"
         mensaje = (
-            f"Nueva venta registrada [{venta.id}] | "
-            f"Valor: {cmd.valor_venta} | "
-            f"Ganancia agencia: {desglose.agencia} | "
-            f"Vendedor: {vendedor} | "
+            "🎉 *Nueva venta registrada*\n"
+            f"Tipo: {cmd.tipo_cliente.value}\n"
+            f"Fecha: {cmd.fecha.strftime('%d/%m/%Y')}\n"
+            f"Valor: {cmd.valor_venta}\n"
+            f"Neto: {cmd.neto}\n"
+            f"Ganancia agencia: {desglose.agencia}\n"
+            f"Vendedor: {vendedor}\n"
             f"Cerrador: {cerrador}"
         )
         self._notificador.notificar(mensaje, self._grupo_id)

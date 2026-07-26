@@ -4,6 +4,7 @@ Serialization of complex domain types (UUIDs in JSON lists, SnapshotReglas dicts
 DatosExtraidos dicts) is the responsibility of the repository layer, NOT here.
 This module declares table structure and column types only.
 """
+
 from __future__ import annotations
 
 import datetime

@@ -1,4 +1,5 @@
 """Entry point for the Telegram bot."""
+
 from __future__ import annotations
 
 import logging
@@ -59,9 +60,7 @@ def main() -> None:
     puntos_venta = [p.nombre for p in pdv_repo.listar()]
 
     if not servicios:
-        raise RuntimeError(
-            "No services found in DB — seed the database before starting the bot"
-        )
+        raise RuntimeError("No services found in DB — seed the database before starting the bot")
     if not puntos_venta:
         raise RuntimeError(
             "No puntos_de_venta found in DB — seed the database before starting the bot"
@@ -85,17 +84,19 @@ def main() -> None:
     )
 
     app = crear_aplicacion(settings.telegram_bot_token)
-    app.bot_data.update({
-        "fsm": fsm,
-        "freelancer_repo": freelancer_repo,
-        "servicio_repo": servicio_repo,
-        "pdv_repo": pdv_repo,
-        "cliente_repo": cliente_repo,
-        "venta_repo": ventas_repo,
-        "comision_registrada_repo": comisiones_repo,
-        "registrar_venta_service": servicio,
-        "extractor_reserva": extractor_reserva,
-    })
+    app.bot_data.update(
+        {
+            "fsm": fsm,
+            "freelancer_repo": freelancer_repo,
+            "servicio_repo": servicio_repo,
+            "pdv_repo": pdv_repo,
+            "cliente_repo": cliente_repo,
+            "venta_repo": ventas_repo,
+            "comision_registrada_repo": comisiones_repo,
+            "registrar_venta_service": servicio,
+            "extractor_reserva": extractor_reserva,
+        }
+    )
 
     try:
         app.run_polling(allowed_updates=list(Update.ALL_TYPES))

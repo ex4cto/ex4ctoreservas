@@ -1,4 +1,5 @@
 """Tests for the pure FSM — Telegram-free, import-only garay.aplicacion.tiquetera.fsm."""
+
 from __future__ import annotations
 
 import datetime
@@ -53,16 +54,12 @@ class TestTipoReserva:
 
 
 class TestDestino:
-    def test_destino_numero_agrega(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_destino_numero_agrega(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         s1 = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
         assert s1.nuevo_estado == EstadoFSM.DESTINO
         assert 1 in s1.contexto.destinos_numeros
 
-    def test_destino_multiples_numeros(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_destino_multiples_numeros(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         s = fsm.procesar(EstadoFSM.DESTINO, "1, 2", ctx)
         assert s.nuevo_estado == EstadoFSM.DESTINO
         assert 1 in s.contexto.destinos_numeros
@@ -96,23 +93,17 @@ class TestFechaSalida:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "no-es-fecha", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-    def test_fecha_valida_avanza_a_pax_adultos(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_fecha_valida_avanza_a_pax_adultos(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
 
 class TestPax:
-    def test_adultos_invalido_devuelve_error(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_adultos_invalido_devuelve_error(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.PAX_ADULTOS, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-    def test_pax_ninos_avanza_a_monto_valor(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_pax_ninos_avanza_a_monto_valor(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         """After WU-3: PAX_NINOS transitions directly to MONTO_VALOR (no NUMERO_TICKET)."""
         salida = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.MONTO_VALOR
@@ -171,7 +162,9 @@ class TestFechaFormatos:
         assert salida.contexto.fecha_salida.month == 12
         assert salida.contexto.fecha_salida.day == 25
 
-    def test_fecha_dd_mm_yyyy_sigue_funcionando(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+    def test_fecha_dd_mm_yyyy_sigue_funcionando(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", ctx)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
         assert salida.contexto.fecha_salida is not None
@@ -279,16 +272,12 @@ class TestConfirmacionEditar:
         assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
         assert "INTERNO" in salida.opciones
 
-    def test_confirmacion_confirmar_termina(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_confirmacion_confirmar_termina(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.TERMINADO
         assert salida.listo is True
 
-    def test_confirmacion_cancelar_cancela(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_confirmacion_cancelar_cancela(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "❌ Cancelar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CANCELADO
 
@@ -308,9 +297,7 @@ class TestMetodoInput:
         salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Foto", ctx)
         assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
 
-    def test_metodo_input_invalido_repite(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_metodo_input_invalido_repite(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Audio", ctx)
         assert salida.nuevo_estado == EstadoFSM.METODO_INPUT
 
@@ -361,9 +348,7 @@ class TestConfirmacion:
 
 
 class TestCancelar:
-    def test_cancelar_desde_cualquier_estado(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_cancelar_desde_cualquier_estado(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.cancelar(ctx)
         assert salida.nuevo_estado == EstadoFSM.CANCELADO
 
@@ -513,9 +498,7 @@ class TestProcesarFoto:
         salida_foto = fsm.procesar_foto(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
         assert salida_proc.nuevo_estado == salida_foto.nuevo_estado
 
-    def test_procesar_foto_auto_avanza_cliente_nombre_prefilled(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_procesar_foto_auto_avanza_cliente_nombre_prefilled(self, fsm: FSMTiquetera) -> None:
         """ctx with cliente_nombre set: after DESTINO→confirmar reaches CLIENTE_TELEFONO."""
         ctx = ContextoVenta(destinos_numeros=[1], cliente_nombre="Juan")
         salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
@@ -523,17 +506,13 @@ class TestProcesarFoto:
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
         assert salida.contexto.cliente_nombre == "Juan"
 
-    def test_procesar_foto_no_avanza_sin_valor(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_procesar_foto_no_avanza_sin_valor(self, fsm: FSMTiquetera) -> None:
         """ctx without cliente_nombre: stays at CLIENTE_NOMBRE."""
         ctx = ContextoVenta(destinos_numeros=[1])
         salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
 
-    def test_procesar_foto_pax_adultos_cero_no_avanza(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_procesar_foto_pax_adultos_cero_no_avanza(self, fsm: FSMTiquetera) -> None:
         """adultos=0 should NOT auto-advance PAX_ADULTOS (business rule: min 1)."""
         ctx = ContextoVenta(
             destinos_numeros=[1],
@@ -548,9 +527,7 @@ class TestProcesarFoto:
         # Should advance through FECHA_SALIDA (pre-filled) but stop at PAX_ADULTOS (adultos=0)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-    def test_procesar_foto_pax_adultos_uno_avanza(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_procesar_foto_pax_adultos_uno_avanza(self, fsm: FSMTiquetera) -> None:
         """adultos=1 should auto-advance PAX_ADULTOS."""
         ctx = ContextoVenta(
             destinos_numeros=[1],

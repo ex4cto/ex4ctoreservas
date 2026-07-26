@@ -2,6 +2,7 @@
 
 No Telegram imports. Fully testable in isolation.
 """
+
 from __future__ import annotations
 
 import copy
@@ -45,21 +46,29 @@ class SalidaFSM:
     contexto: ContextoVenta = field(default_factory=ContextoVenta)
 
 
-_ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset({
-    EstadoFSM.CLIENTE_NOMBRE,
-    EstadoFSM.CLIENTE_TELEFONO,
-    EstadoFSM.CLIENTE_HOTEL,
-    EstadoFSM.CLIENTE_HABITACION,
-    EstadoFSM.FECHA_SALIDA,
-    EstadoFSM.PAX_ADULTOS,
-    EstadoFSM.PAX_NINOS,
-    EstadoFSM.MONTO_VALOR,
-    EstadoFSM.MONTO_ABONO,
-})
+_ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset(
+    {
+        EstadoFSM.CLIENTE_NOMBRE,
+        EstadoFSM.CLIENTE_TELEFONO,
+        EstadoFSM.CLIENTE_HOTEL,
+        EstadoFSM.CLIENTE_HABITACION,
+        EstadoFSM.FECHA_SALIDA,
+        EstadoFSM.PAX_ADULTOS,
+        EstadoFSM.PAX_NINOS,
+        EstadoFSM.MONTO_VALOR,
+        EstadoFSM.MONTO_ABONO,
+    }
+)
 
-_SIN_HOTEL_TOKENS: frozenset[str] = frozenset({
-    "no", "no hotel", "sin hotel", "no hay", "ninguno",
-})
+_SIN_HOTEL_TOKENS: frozenset[str] = frozenset(
+    {
+        "no",
+        "no hotel",
+        "sin hotel",
+        "no hay",
+        "ninguno",
+    }
+)
 
 
 def _clonar(ctx: ContextoVenta) -> ContextoVenta:
@@ -186,7 +195,9 @@ class FSMTiquetera:
     # ── private helpers ─────────────────────────────────────────────────────
 
     def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
-        lineas = ["Ingresá el número del tour (podés poner varios separados por coma, ej: *15* o *15, 23*)."]
+        lineas = [
+            "Ingresá el número del tour (podés poner varios separados por coma, ej: *15* o *15, 23*)."
+        ]
         if ctx.destinos_numeros:
             seleccionados = []
             num_map = {n: info[0] for n, info in self._servicios.items()}
@@ -197,7 +208,9 @@ class FSMTiquetera:
             lineas.append("Agregá más números o escribí *confirmar* para continuar.")
         else:
             if ctx.destinos_nombres:
-                lineas.append(f"La IA detectó: {', '.join(ctx.destinos_nombres)} (ingresá los números correspondientes).")
+                lineas.append(
+                    f"La IA detectó: {', '.join(ctx.destinos_nombres)} (ingresá los números correspondientes)."
+                )
             lineas.append("Aún no seleccionaste ningún tour.")
         return "\n".join(lineas)
 
@@ -291,7 +304,8 @@ class FSMTiquetera:
             if not ctx.destinos_numeros:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje="Tenés que ingresar al menos un número de tour.\n" + self._destinos_mensaje(ctx),
+                    mensaje="Tenés que ingresar al menos un número de tour.\n"
+                    + self._destinos_mensaje(ctx),
                     opciones=self._opciones_destino(ctx),
                     contexto=ctx,
                 )
@@ -339,7 +353,8 @@ class FSMTiquetera:
         if invalidos and not ctx.destinos_numeros:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=f"Número(s) no encontrado(s): {', '.join(invalidos)}. Revisá el catálogo.\n" + self._destinos_mensaje(ctx),
+                mensaje=f"Número(s) no encontrado(s): {', '.join(invalidos)}. Revisá el catálogo.\n"
+                + self._destinos_mensaje(ctx),
                 opciones=self._opciones_destino(ctx),
                 contexto=ctx,
             )
@@ -628,7 +643,9 @@ class FSMTiquetera:
     def _construir_resumen(self, ctx: ContextoVenta) -> str:
         if ctx.destinos_numeros:
             nombres = [self._servicios[n][0] for n in ctx.destinos_numeros if n in self._servicios]
-            destinos_str = ", ".join(nombres) if nombres else ", ".join(str(n) for n in ctx.destinos_numeros)
+            destinos_str = (
+                ", ".join(nombres) if nombres else ", ".join(str(n) for n in ctx.destinos_numeros)
+            )
         elif ctx.destinos_nombres:
             destinos_str = ", ".join(ctx.destinos_nombres) + " (pendiente confirmar)"
         else:

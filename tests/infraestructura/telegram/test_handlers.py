@@ -1,4 +1,5 @@
 """Tests for PTB handler utilities: _get_fsm and _contexto_a_comando."""
+
 from __future__ import annotations
 
 import datetime
@@ -18,9 +19,11 @@ from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
     _get_fsm,
     cmd_foto,
+    cmd_start,
 )
 
 # ── helpers ─────────────────────────────────────────────────────────────────
+
 
 def _update(telegram_id: int = 12345) -> MagicMock:
     u = MagicMock()
@@ -92,6 +95,7 @@ def _base_bot_data(
 
 # ── TestGetFsm ───────────────────────────────────────────────────────────────
 
+
 class TestGetFsm:
     def test_returns_fsm_when_present(self) -> None:
         fsm = FSMTiquetera(servicios=[], puntos_venta=[])  # type: ignore[arg-type]
@@ -106,6 +110,7 @@ class TestGetFsm:
 
 
 # ── TestContextoAComando ─────────────────────────────────────────────────────
+
 
 class TestContextoAComando:
     def test_ambos_sets_both_names_to_freelancer(self) -> None:
@@ -359,3 +364,26 @@ class TestCmdFoto:
         result = await _foto_en_conversacion(update, context)
         assert result == ConversationHandler.END
         update.effective_message.reply_text.assert_called_once()
+
+
+class TestCmdStart:
+    """WU-6: /start returns METODO_INPUT state."""
+
+    @pytest.mark.asyncio
+    async def test_cmd_start_retorna_metodo_input(self) -> None:
+        update = MagicMock()
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        update.effective_message = update.message
+        update.effective_user = MagicMock()
+        update.effective_user.id = 12345
+
+        fsm = FSMTiquetera(servicios=[(1, "Tour", Decimal("100"), None)], puntos_venta=["PDV"])
+        fl_repo = _make_freelancer_repo(found=True)
+        context = MagicMock()
+        context.bot_data = {"fsm": fsm, "freelancer_repo": fl_repo}
+        context.user_data = {}
+
+        result = await cmd_start(update, context)
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]

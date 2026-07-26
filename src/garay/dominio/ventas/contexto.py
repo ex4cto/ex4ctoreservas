@@ -1,4 +1,5 @@
 """ContextoVenta — shared VO for the conversation FSM and extraction ports."""
+
 from __future__ import annotations
 
 import datetime
