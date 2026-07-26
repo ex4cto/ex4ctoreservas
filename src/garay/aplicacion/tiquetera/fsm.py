@@ -56,8 +56,6 @@ _ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset(
         EstadoFSM.FECHA_SALIDA,
         EstadoFSM.PAX_ADULTOS,
         EstadoFSM.PAX_NINOS,
-        EstadoFSM.MONTO_VALOR,
-        EstadoFSM.MONTO_ABONO,
     }
 )
 
