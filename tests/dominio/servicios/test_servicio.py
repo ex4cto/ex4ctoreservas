@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 import pytest
 
@@ -37,3 +38,30 @@ class TestServicio:
     def test_numero_valido(self) -> None:
         s = Servicio(id=uuid.uuid4(), numero=137, nombre="Tour")
         assert s.numero == 137
+
+    def test_servicio_con_precios(self) -> None:
+        s = Servicio(
+            id=uuid.uuid4(),
+            numero=1,
+            nombre="Tour",
+            precio_neto_adulto=Decimal("100"),
+            precio_neto_nino=Decimal("50"),
+        )
+        assert s.precio_neto_adulto == Decimal("100")
+        assert s.precio_neto_nino == Decimal("50")
+
+    def test_servicio_sin_precio_nino(self) -> None:
+        s = Servicio(
+            id=uuid.uuid4(),
+            numero=1,
+            nombre="Tour",
+            precio_neto_adulto=Decimal("100"),
+            precio_neto_nino=None,
+        )
+        assert s.precio_neto_adulto == Decimal("100")
+        assert s.precio_neto_nino is None
+
+    def test_servicio_sin_ningun_precio(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
+        assert s.precio_neto_adulto is None
+        assert s.precio_neto_nino is None

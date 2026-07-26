@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import logging
 
+from telegram import Update
+
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
@@ -24,8 +26,6 @@ from garay.infraestructura.persistencia.repositorios.reglas_comision import (
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
-from telegram import Update
-
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 

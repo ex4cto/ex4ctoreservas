@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -40,3 +41,29 @@ def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo.guardar(s2)
     lista = repo.listar()
     assert len(lista) == 2
+
+
+def test_listar_incluye_neto(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(
+        id=uuid.uuid4(),
+        numero=1,
+        nombre="Tour Con Neto",
+        precio_neto_adulto=Decimal("100000"),
+        precio_neto_nino=Decimal("50000"),
+    )
+    repo.guardar(s)
+    lista = repo.listar()
+    assert len(lista) == 1
+    assert lista[0].precio_neto_adulto == Decimal("100000")
+    assert lista[0].precio_neto_nino == Decimal("50000")
+
+
+def test_listar_neto_null(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Sin Neto")
+    repo.guardar(s)
+    lista = repo.listar()
+    assert len(lista) == 1
+    assert lista[0].precio_neto_adulto is None
+    assert lista[0].precio_neto_nino is None

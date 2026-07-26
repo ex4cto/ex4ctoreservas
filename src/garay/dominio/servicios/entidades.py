@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from garay.dominio.servicios.errores import NombreServicioVacio, NumeroServicioInvalido
 
@@ -17,6 +18,8 @@ class Servicio:
     nombre: str
     descripcion: str = field(default="")
     activo: bool = field(default=True)
+    precio_neto_adulto: Decimal | None = field(default=None)
+    precio_neto_nino: Decimal | None = field(default=None)
 
     def __post_init__(self) -> None:
         if self.numero < 1:

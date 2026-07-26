@@ -43,6 +43,8 @@ class ServicioModel(Base):
     nombre: Mapped[str] = mapped_column(String, nullable=False)
     descripcion: Mapped[str] = mapped_column(String, nullable=False, default="")
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    precio_neto_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    precio_neto_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
 
 
 class ClienteModel(Base):
