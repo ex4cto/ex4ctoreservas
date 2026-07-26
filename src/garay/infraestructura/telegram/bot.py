@@ -1,4 +1,5 @@
 """Build and return the PTB Application."""
+
 from __future__ import annotations
 
 from telegram.ext import (
@@ -25,6 +26,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_cliente_telefono,
     handle_confirmacion,
     handle_destino,
+    handle_editar_selector,
     handle_fecha_salida,
     handle_metodo_input,
     handle_monto_abono,
@@ -111,6 +113,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             estados[EstadoFSM.CONFIRMACION]: [
                 _CB(handle_confirmacion),
                 MessageHandler(_TEXT, handle_confirmacion),
+            ],
+            estados[EstadoFSM.EDITAR_SELECTOR]: [
+                _CB(handle_editar_selector),
+                MessageHandler(_TEXT, handle_editar_selector),
             ],
         },
         fallbacks=[

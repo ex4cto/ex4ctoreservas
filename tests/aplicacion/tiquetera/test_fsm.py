@@ -11,6 +11,8 @@ from garay.aplicacion.tiquetera.fsm import (
     ContextoVenta,
     EstadoFSM,
     FSMTiquetera,
+    _es_sin_hotel,
+    _formatear_monto,
 )
 
 SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
@@ -263,14 +265,14 @@ class TestResumen:
 
 
 class TestConfirmacionEditar:
-    """WU-5: Editar option from CONFIRMACION returns to TIPO_RESERVA."""
+    """Fix 3: Editar from CONFIRMACION now goes to EDITAR_SELECTOR, not TIPO_RESERVA."""
 
-    def test_confirmacion_editar_vuelve_a_tipo_reserva(
+    def test_confirmacion_editar_va_a_editar_selector(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
-        assert "INTERNO" in salida.opciones
+        assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
+        assert len(salida.opciones) > 0
 
     def test_confirmacion_confirmar_termina(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
@@ -543,3 +545,195 @@ class TestProcesarFoto:
         # CLIENTE_HABITACION→FECHA_SALIDA (pre-filled)→PAX_ADULTOS (pre-filled, 1)
         # →PAX_NINOS (ninos=None, stops)
         assert salida.nuevo_estado == EstadoFSM.PAX_NINOS
+
+
+# ─── Fix 1: destino mensaje sin instruccion cuando hay seleccion ─────────────
+
+class TestDestinoMensaje:
+    """Fix 1: instruction line hidden when tours already selected."""
+
+    def test_destinos_mensaje_sin_seleccion_muestra_instruccion(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        # No tours selected → instruction line must appear
+        salida = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
+        assert "Ingresá el número del tour" in salida.mensaje
+
+    def test_destinos_mensaje_con_seleccion_omite_instruccion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # Tours already selected → instruction line must NOT appear, only "Seleccionados:"
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "2", ctx)
+        assert "Ingresá el número del tour" not in salida.mensaje
+        assert "Seleccionados:" in salida.mensaje
+        assert "Agregá más" in salida.mensaje
+
+
+# ─── Fix 2: hotel skip detection flexible ────────────────────────────────────
+
+class TestEsSinHotel:
+    """Fix 2: _es_sin_hotel covers flexible natural-language inputs."""
+
+    def test_exacto_no(self) -> None:
+        assert _es_sin_hotel("no") is True
+
+    def test_exacto_ninguno(self) -> None:
+        assert _es_sin_hotel("ninguno") is True
+
+    def test_frase_corta_no_estoy(self) -> None:
+        assert _es_sin_hotel("no estoy en ningún hotel") is True
+
+    def test_frase_no_tengo(self) -> None:
+        assert _es_sin_hotel("no tengo hotel") is True
+
+    def test_hotel_nombre_real_no_confunde(self) -> None:
+        # A real hotel name that starts with "Hotel No" should NOT match
+        assert _es_sin_hotel("Hotel Novotel Centro") is False
+
+    def test_nombre_largo_con_no_no_confunde(self) -> None:
+        # Long sentence with "no" in it that is clearly a hotel name should not match
+        assert _es_sin_hotel("Estamos en el Novotel cerca del centro comercial gran hotel") is False
+
+
+class TestHotelSkipFlexible:
+    """Fix 2: FSM accepts flexible no-hotel phrases."""
+
+    def test_hotel_frase_completa_sin_hotel(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "no estoy en ningún hotel", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        assert salida.contexto.sin_hotel is True
+
+    def test_hotel_frase_no_tengo(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "no tengo hotel", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+
+    def test_hotel_ninguna(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "ninguna", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+
+    def test_hotel_nombre_real_no_se_confunde(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Novotel Centro", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
+
+
+# ─── Fix 3: EDITAR_SELECTOR ──────────────────────────────────────────────────
+
+class TestEditarSelector:
+    """Fix 3: field-by-field edit mode from CONFIRMACION."""
+
+    def test_editar_selector_aparece_desde_confirmacion(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
+        assert len(salida.opciones) > 0
+        assert "Cliente" in salida.opciones
+
+    def test_editar_selector_campo_invalido_repite(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "CampoQueNoExiste", ctx)
+        assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
+
+    def test_editar_selector_cliente_va_a_cliente_nombre(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+        assert salida.contexto.modo_edicion is True
+
+    def test_editar_cliente_nombre_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # modo_edicion=True → after editing a field, return to CONFIRMACION
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Nuevo Nombre", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.cliente_nombre == "Nuevo Nombre"
+
+    def test_editar_hotel_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Grand Hyatt", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_modo_edicion_se_resetea_tras_editar(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Otro", ctx)
+        assert salida.contexto.modo_edicion is False
+
+    def test_editar_tipo_reserva_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_fecha_salida_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_monto_abono_vuelve_a_confirmacion_cuando_neto_conocido(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # When neto can be auto-calculated and modo_edicion=True, go to CONFIRMACION
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0, modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_participante_rol_ambos_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+
+# ─── Fix 4: formateo de montos ───────────────────────────────────────────────
+
+class TestFormatearMonto:
+    """Fix 4: _formatear_monto uses dot as thousands separator."""
+
+    def test_formatear_monto_entero_grande(self) -> None:
+        assert _formatear_monto(Decimal("200000")) == "200.000"
+
+    def test_formatear_monto_none(self) -> None:
+        assert _formatear_monto(None) == "—"
+
+    def test_formatear_monto_pequeño(self) -> None:
+        assert _formatear_monto(Decimal("500")) == "500"
+
+    def test_formatear_monto_millon(self) -> None:
+        assert _formatear_monto(Decimal("1000000")) == "1.000.000"
+
+
+class TestResumenMontos:
+    """Fix 4: summary uses _formatear_monto for valor/abono/neto."""
+
+    def test_resumen_muestra_montos_formateados(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            rol_registrante="ambos",
+            valor=Decimal("200000"),
+            abono=Decimal("50000"),
+            neto=Decimal("100000"),
+        )
+        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
+        assert "200.000" in salida.mensaje
+        assert "50.000" in salida.mensaje
+        assert "100.000" in salida.mensaje

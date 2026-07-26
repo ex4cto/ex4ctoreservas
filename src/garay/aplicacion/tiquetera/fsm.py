@@ -33,6 +33,7 @@ class EstadoFSM(StrEnum):
     PARTICIPANTE_ROL = "participante_rol"
     PARTICIPANTE_OTRO = "participante_otro"
     CONFIRMACION = "confirmacion"
+    EDITAR_SELECTOR = "editar_selector"
     TERMINADO = "terminado"
     CANCELADO = "cancelado"
 
@@ -60,15 +61,59 @@ _ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset(
     }
 )
 
-_SIN_HOTEL_TOKENS: frozenset[str] = frozenset(
+_SIN_HOTEL_EXACTOS: frozenset[str] = frozenset(
     {
         "no",
-        "no hotel",
+        "no.",
+        "n/a",
+        "na",
         "sin hotel",
-        "no hay",
+        "no hotel",
+        "sin",
         "ninguno",
+        "ningún",
+        "ninguna",
+        "no hay",
+        "no tengo",
+        "no tiene",
+        "no estoy",
+        "no esta",
+        "no está",
+        "fuera",
+        "sin hospedaje",
     }
 )
+
+
+def _es_sin_hotel(entrada: str) -> bool:
+    """Return True when the input clearly means 'no hotel'."""
+    t = entrada.strip().lower()
+    if t in _SIN_HOTEL_EXACTOS:
+        return True
+    # Short phrase starting with "no " or "sin " is likely no-hotel
+    return len(t) <= 35 and (t.startswith("no ") or t.startswith("sin "))
+
+
+_CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
+    ("Tipo reserva", EstadoFSM.TIPO_RESERVA),
+    ("Punto de venta", EstadoFSM.PUNTO_DE_VENTA),
+    ("Destinos", EstadoFSM.DESTINO),
+    ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
+    ("Teléfono", EstadoFSM.CLIENTE_TELEFONO),
+    ("Hotel", EstadoFSM.CLIENTE_HOTEL),
+    ("Fecha", EstadoFSM.FECHA_SALIDA),
+    ("Adultos/Niños", EstadoFSM.PAX_ADULTOS),
+    ("Monto valor", EstadoFSM.MONTO_VALOR),
+    ("Abono", EstadoFSM.MONTO_ABONO),
+    ("Participantes", EstadoFSM.PARTICIPANTE_ROL),
+]
+
+
+def _formatear_monto(valor: Decimal | int | None) -> str:
+    """Format amount with dot thousands separator. E.g.: 200000 → '200.000'"""
+    if valor is None:
+        return "—"
+    return f"{int(valor):,}".replace(",", ".")
 
 
 def _clonar(ctx: ContextoVenta) -> ContextoVenta:
@@ -158,6 +203,7 @@ class FSMTiquetera:
             EstadoFSM.PARTICIPANTE_ROL: self._handle_participante_rol,
             EstadoFSM.PARTICIPANTE_OTRO: self._handle_participante_otro,
             EstadoFSM.CONFIRMACION: self._handle_confirmacion,
+            EstadoFSM.EDITAR_SELECTOR: self._handle_editar_selector,
         }
         handler = handlers.get(estado)
         if handler is None:
@@ -195,25 +241,28 @@ class FSMTiquetera:
     # ── private helpers ─────────────────────────────────────────────────────
 
     def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
-        lineas = [
-            "Ingresá el número del tour "
-            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
-        ]
         if ctx.destinos_numeros:
+            # With selection: show only what is selected + prompt to add/confirm
             seleccionados = []
             num_map = {n: info[0] for n, info in self._servicios.items()}
             for n in ctx.destinos_numeros:
                 nombre = num_map.get(n, str(n))
                 seleccionados.append(f"{n} — {nombre}")
-            lineas.append(f"Seleccionados: {', '.join(seleccionados)}")
-            lineas.append("Agregá más números o escribí *confirmar* para continuar.")
-        else:
-            if ctx.destinos_nombres:
-                nombres = ', '.join(ctx.destinos_nombres)
-                lineas.append(
-                    f"La IA detectó: {nombres} (ingresá los números correspondientes)."
-                )
-            lineas.append("Aún no seleccionaste ningún tour.")
+            return (
+                f"Seleccionados: {', '.join(seleccionados)}\n"
+                "Agregá más números o escribí *confirmar* para continuar."
+            )
+        # No selection: show instruction + optional IA hint
+        lineas = [
+            "Ingresá el número del tour "
+            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
+        ]
+        if ctx.destinos_nombres:
+            nombres = ', '.join(ctx.destinos_nombres)
+            lineas.append(
+                f"La IA detectó: {nombres} (ingresá los números correspondientes)."
+            )
+        lineas.append("Aún no seleccionaste ningún tour.")
         return "\n".join(lineas)
 
     def _opciones_destino(self, ctx: ContextoVenta) -> list[str]:
@@ -273,6 +322,14 @@ class FSMTiquetera:
             )
         ctx = _clonar(contexto)
         ctx.tipo_cliente = tipo
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PUNTO_DE_VENTA,
             mensaje="¿Cuál es el punto de venta?",
@@ -291,6 +348,14 @@ class FSMTiquetera:
             for numero, (nombre, _, _) in self._servicios.items():
                 if nombre.lower().strip() in nombres_norm and numero not in ctx.destinos_numeros:
                     ctx.destinos_numeros.append(numero)
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
             mensaje=self._destinos_mensaje(ctx),
@@ -309,6 +374,14 @@ class FSMTiquetera:
                     mensaje="Tenés que ingresar al menos un número de tour.\n"
                     + self._destinos_mensaje(ctx),
                     opciones=self._opciones_destino(ctx),
+                    contexto=ctx,
+                )
+            if ctx.modo_edicion:
+                ctx.modo_edicion = False
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.CONFIRMACION,
+                    mensaje=self._construir_resumen(ctx),
+                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -371,6 +444,14 @@ class FSMTiquetera:
     def _handle_cliente_nombre(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         ctx.cliente_nombre = entrada.strip()
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_TELEFONO,
             mensaje="¿Cuál es el teléfono del cliente?",
@@ -380,6 +461,14 @@ class FSMTiquetera:
     def _handle_cliente_telefono(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         ctx.cliente_telefono = entrada.strip()
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HOTEL,
             mensaje="¿En qué hotel está hospedado el cliente?",
@@ -388,10 +477,18 @@ class FSMTiquetera:
 
     def _handle_cliente_hotel(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        if entrada.strip().lower() in _SIN_HOTEL_TOKENS:
+        if _es_sin_hotel(entrada):
             ctx.sin_hotel = True
             ctx.cliente_hotel = None
             ctx.cliente_habitacion = None
+            if ctx.modo_edicion:
+                ctx.modo_edicion = False
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.CONFIRMACION,
+                    mensaje=self._construir_resumen(ctx),
+                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    contexto=ctx,
+                )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
                 mensaje="¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)",
@@ -399,6 +496,14 @@ class FSMTiquetera:
             )
         ctx.sin_hotel = False
         ctx.cliente_hotel = entrada.strip()
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HABITACION,
             mensaje="¿Cuál es el número de habitación?",
@@ -408,6 +513,14 @@ class FSMTiquetera:
     def _handle_cliente_habitacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         ctx.cliente_habitacion = entrada.strip()
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.FECHA_SALIDA,
             mensaje="¿Cuál es la fecha de salida? (formato: DD/MM o DD/MM/YYYY)",
@@ -424,6 +537,14 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.fecha_salida = fecha
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PAX_ADULTOS,
             mensaje="¿Cuántos adultos? (mínimo 1)",
@@ -447,6 +568,14 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.adultos = n
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PAX_NINOS,
             mensaje="¿Cuántos niños? (puede ser 0)",
@@ -470,6 +599,14 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.ninos = n
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_VALOR,
             mensaje="¿Cuál es el valor total de la venta?",
@@ -486,6 +623,14 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.valor = monto
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_ABONO,
             mensaje="¿Cuánto abonó el cliente? (0 si no hubo abono)",
@@ -511,6 +656,14 @@ class FSMTiquetera:
                     contexto=ctx,
                 )
             ctx.neto = neto
+            if ctx.modo_edicion:
+                ctx.modo_edicion = False
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.CONFIRMACION,
+                    mensaje=self._construir_resumen(ctx),
+                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    contexto=ctx,
+                )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                 mensaje="¿Cuál fue tu rol en esta venta?",
@@ -554,6 +707,7 @@ class FSMTiquetera:
         opcion = entrada.strip()
         if opcion == "Ambos":
             ctx.rol_registrante = "ambos"
+            ctx.modo_edicion = False
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
@@ -611,9 +765,9 @@ class FSMTiquetera:
             )
         if entrada.strip() == "✏️ Editar":
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.TIPO_RESERVA,
-                mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
-                opciones=["INTERNO", "EXTERNO", "DIGITAL"],
+                nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
+                mensaje="¿Qué campo querés modificar?",
+                opciones=[label for label, _ in _CAMPOS_EDITABLES],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -621,6 +775,52 @@ class FSMTiquetera:
             mensaje="Operación cancelada. Escribí /start para comenzar de nuevo.",
             contexto=ctx,
         )
+
+    def _handle_editar_selector(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        campo_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
+        estado_destino = campo_map.get(entrada.strip())
+        if estado_destino is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
+                mensaje="Opción inválida. Elegí uno de los campos.",
+                opciones=[label for label, _ in _CAMPOS_EDITABLES],
+                contexto=ctx,
+            )
+        ctx.modo_edicion = True
+        return SalidaFSM(
+            nuevo_estado=estado_destino,
+            mensaje=self._mensaje_para_estado(estado_destino, ctx),
+            opciones=self._opciones_para_estado(estado_destino, ctx),
+            contexto=ctx,
+        )
+
+    def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
+        msgs: dict[EstadoFSM, str] = {
+            EstadoFSM.TIPO_RESERVA: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+            EstadoFSM.PUNTO_DE_VENTA: "¿Cuál es el punto de venta?",
+            EstadoFSM.DESTINO: self._destinos_mensaje(ctx),
+            EstadoFSM.CLIENTE_NOMBRE: "¿Cuál es el nombre del cliente?",
+            EstadoFSM.CLIENTE_TELEFONO: "¿Cuál es el teléfono del cliente?",
+            EstadoFSM.CLIENTE_HOTEL: (
+                "¿En qué hotel está hospedado el cliente? (escribí 'no' si no aplica)"
+            ),
+            EstadoFSM.FECHA_SALIDA: "¿Cuál es la fecha de salida? (DD/MM, DD/MM/YY o DD/MM/YYYY)",
+            EstadoFSM.PAX_ADULTOS: "¿Cuántos adultos? (mínimo 1)",
+            EstadoFSM.MONTO_VALOR: "¿Cuál es el valor total de la venta?",
+            EstadoFSM.MONTO_ABONO: "¿Cuánto abonó el cliente? (0 si no hubo abono)",
+            EstadoFSM.PARTICIPANTE_ROL: "¿Cuál fue tu rol en esta venta?",
+        }
+        return msgs.get(estado, "")
+
+    def _opciones_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> list[str]:
+        opts: dict[EstadoFSM, list[str]] = {
+            EstadoFSM.TIPO_RESERVA: ["INTERNO", "EXTERNO", "DIGITAL"],
+            EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
+            EstadoFSM.DESTINO: self._opciones_destino(ctx),
+            EstadoFSM.PARTICIPANTE_ROL: ["Ambos", "Solo vendedor", "Solo cerrador"],
+        }
+        return opts.get(estado, [])
 
     def _get_valor_prefilled(self, estado: EstadoFSM, ctx: ContextoVenta) -> str | None:
         if estado == EstadoFSM.CLIENTE_NOMBRE:
@@ -669,9 +869,9 @@ class FSMTiquetera:
             f"Habitación: {hab_str}\n"
             f"Fecha salida: {fecha_str}\n"
             f"Adultos: {ctx.adultos or 0} | Niños: {ctx.ninos or 0}\n"
-            f"Valor: {ctx.valor or '—'}\n"
-            f"Abono: {ctx.abono or '—'}\n"
-            f"Neto: {ctx.neto or '—'}\n"
+            f"Valor: {_formatear_monto(ctx.valor)}\n"
+            f"Abono: {_formatear_monto(ctx.abono)}\n"
+            f"Neto: {_formatear_monto(ctx.neto)}\n"
             f"Vendedor: {ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'vendedor')}\n"
             "Cerrador: "
             f"{ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'cerrador')}\n\n"

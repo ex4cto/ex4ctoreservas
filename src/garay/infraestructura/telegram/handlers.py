@@ -364,6 +364,7 @@ handle_monto_neto = _make_handler(EstadoFSM.MONTO_NETO)
 handle_participante_rol = _make_handler(EstadoFSM.PARTICIPANTE_ROL)
 handle_participante_otro = _make_handler(EstadoFSM.PARTICIPANTE_OTRO)
 handle_confirmacion = _make_handler(EstadoFSM.CONFIRMACION)
+handle_editar_selector = _make_handler(EstadoFSM.EDITAR_SELECTOR)
 
 
 @requiere_rol

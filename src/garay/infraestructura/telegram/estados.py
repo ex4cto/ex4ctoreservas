@@ -1,4 +1,5 @@
 """Mapping from FSM states to PTB integer constants."""
+
 from __future__ import annotations
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
@@ -22,6 +23,7 @@ ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.PARTICIPANTE_ROL: 15,
     EstadoFSM.PARTICIPANTE_OTRO: 16,
     EstadoFSM.CONFIRMACION: 17,
+    EstadoFSM.EDITAR_SELECTOR: 21,
     EstadoFSM.TERMINADO: 18,
     EstadoFSM.CANCELADO: 19,
 }

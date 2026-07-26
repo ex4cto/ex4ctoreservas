@@ -31,3 +31,4 @@ class ContextoVenta:
     referido_nombre: str | None = None
     numero_fisico: int | None = None
     rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"
+    modo_edicion: bool = False
