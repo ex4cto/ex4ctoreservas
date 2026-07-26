@@ -59,6 +59,7 @@
 | 3.4 | Notificación grupo Telegram: NotificadorGrupoTelegram (Telegram por ahora, WhatsApp en Etapa 8) | ✅ | 5 tests, urllib puro |
 | 3.5 | Wiring real (repos SQLAlchemy + inyección deps en main.py + handler foto AI) | ✅ | Commit `9169722` — 9 pasos, 257 tests |
 | 3.6 | Comandos Telegram `/mis_ventas` + `/resumen_empresa`, es_admin, repos periodo | ✅ | 272 tests |
+| 3.7 | Correcciones UX/dominio: METODO_INPUT, hotel skip, neto auto-calc, editar desde resumen, seed parsing, notificación format | ✅ | 316 tests |
 
 ---
 
@@ -152,4 +153,4 @@ Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 272 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 316 · **mypy:** strict clean · **ruff:** clean
