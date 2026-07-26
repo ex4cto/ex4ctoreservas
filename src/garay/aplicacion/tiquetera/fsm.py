@@ -196,7 +196,8 @@ class FSMTiquetera:
 
     def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
         lineas = [
-            "Ingresá el número del tour (podés poner varios separados por coma, ej: *15* o *15, 23*)."
+            "Ingresá el número del tour "
+            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
         ]
         if ctx.destinos_numeros:
             seleccionados = []
@@ -208,8 +209,9 @@ class FSMTiquetera:
             lineas.append("Agregá más números o escribí *confirmar* para continuar.")
         else:
             if ctx.destinos_nombres:
+                nombres = ', '.join(ctx.destinos_nombres)
                 lineas.append(
-                    f"La IA detectó: {', '.join(ctx.destinos_nombres)} (ingresá los números correspondientes)."
+                    f"La IA detectó: {nombres} (ingresá los números correspondientes)."
                 )
             lineas.append("Aún no seleccionaste ningún tour.")
         return "\n".join(lineas)
@@ -517,7 +519,10 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_NETO,
-            mensaje="¿Cuál es el monto neto? (no se encontró precio en el catálogo para algún tour seleccionado)",
+            mensaje=(
+                "¿Cuál es el monto neto? "
+                "(no se encontró precio en el catálogo para algún tour seleccionado)"
+            ),
             contexto=ctx,
         )
 
