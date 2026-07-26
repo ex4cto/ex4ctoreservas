@@ -11,8 +11,9 @@ Idempotent: uses deterministic UUIDs (uuid5) so re-running is safe.
 from __future__ import annotations
 
 import json
+import re
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -32,6 +33,46 @@ SERVICIOS_JSON = ROOT / "servicios_seed.json"
 
 # Fixed namespace — deterministic UUIDs ensure idempotency across runs.
 SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+# ---------------------------------------------------------------------------
+# Neto string parser
+# ---------------------------------------------------------------------------
+
+_MIL_RE = re.compile(r"(\d[\d.,]*)\s*MIL", re.IGNORECASE)
+# Require at least 2 digits to avoid single-digit age numbers being treated as prices
+_NUM_RE = re.compile(r"\d[\d.,]+")
+
+
+def _parse_neto(texto: str | None) -> Decimal | None:
+    """Parse a dirty neto price string into a Decimal, or None if unparseable."""
+    if texto is None:
+        return None
+    texto = texto.strip()
+    if not texto:
+        return None
+    # Strings with no digits at all (e.g. "NO INGRESAN NIÑOS")
+    if not re.search(r"\d", texto):
+        return None
+    # "No pagan" variants — treat as 0
+    if re.search(r"no\s+pagan", texto, re.IGNORECASE):
+        return Decimal("0")
+    # "50 MIL" → 50000
+    mil_match = _MIL_RE.search(texto)
+    if mil_match:
+        base = mil_match.group(1).replace(".", "").replace(",", "")
+        try:
+            return Decimal(base) * 1000
+        except InvalidOperation:
+            return None
+    # First multi-digit number (>= 2 digits to ignore single-digit age noise)
+    num_match = _NUM_RE.search(texto)
+    if num_match:
+        limpio = num_match.group(0).replace(".", "").replace(",", "")
+        try:
+            return Decimal(limpio)
+        except InvalidOperation:
+            return None
+    return None
 
 
 def seed_id(key: str) -> uuid.UUID:
@@ -105,6 +146,8 @@ def seed_servicios(session: Session) -> None:
                 nombre=str(entry["nombre"]),
                 descripcion="",
                 activo=bool(entry["activo"]),
+                precio_neto_adulto=_parse_neto(entry.get("neto_adulto")),
+                precio_neto_nino=_parse_neto(entry.get("neto_nino")),
             )
         )
 
