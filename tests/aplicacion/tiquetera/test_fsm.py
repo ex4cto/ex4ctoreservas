@@ -1,6 +1,7 @@
 """Tests for the pure FSM — Telegram-free, import-only garay.aplicacion.tiquetera.fsm."""
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
@@ -11,10 +12,10 @@ from garay.aplicacion.tiquetera.fsm import (
     FSMTiquetera,
 )
 
-SERVICIOS_TEST: list[tuple[int, str]] = [
-    (1, "Tour Playa Blanca"),
-    (2, "Tour Isla"),
-    (3, "City Tour"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000")),
+    (2, "Tour Isla", Decimal("150000"), None),
+    (3, "City Tour", None, None),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi", "Sin punto"]
 
@@ -30,9 +31,11 @@ def ctx() -> ContextoVenta:
 
 
 class TestIniciar:
-    def test_iniciar_devuelve_estado_tipo_reserva(self, fsm: FSMTiquetera) -> None:
+    def test_iniciar_devuelve_estado_metodo_input(self, fsm: FSMTiquetera) -> None:
         salida = fsm.iniciar()
-        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        assert salida.nuevo_estado == EstadoFSM.METODO_INPUT
+        assert "Manual" in salida.opciones
+        assert "Foto" in salida.opciones
 
 
 class TestTipoReserva:
@@ -107,8 +110,23 @@ class TestPax:
         salida = fsm.procesar(EstadoFSM.PAX_ADULTOS, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
+    def test_pax_ninos_avanza_a_monto_valor(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """After WU-3: PAX_NINOS transitions directly to MONTO_VALOR (no NUMERO_TICKET)."""
+        salida = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.MONTO_VALOR
+
 
 class TestMonto:
+    def test_monto_neto_estado_acepta_valor_valido(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """MONTO_NETO fallback state still works when neto_adulto is None."""
+        ctx_con_valor = ContextoVenta(valor=Decimal("100000"))
+        salida = fsm.procesar(EstadoFSM.MONTO_NETO, "50000", ctx_con_valor)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+
     def test_monto_neto_supera_valor_devuelve_error(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
@@ -117,22 +135,189 @@ class TestMonto:
         assert salida.nuevo_estado == EstadoFSM.MONTO_NETO
 
 
-class TestNumeroTicket:
-    def test_numero_valido_avanza_a_monto_valor(
+class TestHotelSkip:
+    """WU-5: hotel skip — 'no'/'sin hotel'/etc. jumps to FECHA_SALIDA."""
+
+    def test_hotel_no_salta_fecha_salida(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "no", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        assert salida.contexto.sin_hotel is True
+
+    def test_hotel_variantes_sin_hotel(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        for variante in ("No", "no hotel", "sin hotel", "no hay"):
+            salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, variante, ctx)
+            assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA, f"Failed for: {variante!r}"
+
+    def test_hotel_con_nombre_avanza_a_habitacion(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "42", ctx)
-        assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
-        assert s.contexto.numero_fisico == 42
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Grand Hyatt", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
+        assert salida.contexto.sin_hotel is False
 
-    def test_cero_guarda_none(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "0", ctx)
-        assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
-        assert s.contexto.numero_fisico is None
+    def test_habitacion_entry_normal(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "301", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-    def test_texto_invalido_devuelve_error(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "abc", ctx)
-        assert s.nuevo_estado == EstadoFSM.NUMERO_TICKET
+
+class TestFechaFormatos:
+    """WU-5: two-digit year format support."""
+
+    def test_fecha_dd_mm_yy_valida(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/26", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
+        assert salida.contexto.fecha_salida is not None
+        assert salida.contexto.fecha_salida.year == 2026
+        assert salida.contexto.fecha_salida.month == 12
+        assert salida.contexto.fecha_salida.day == 25
+
+    def test_fecha_dd_mm_yyyy_sigue_funcionando(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
+        assert salida.contexto.fecha_salida is not None
+        assert salida.contexto.fecha_salida.year == 2026
+
+
+class TestDestinoDeseleccion:
+    """WU-5: deselection via '-N' prefix."""
+
+    def test_deseleccion_quita_numero(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "-1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.DESTINO
+        assert 1 not in salida.contexto.destinos_numeros
+
+    def test_deseleccion_numero_no_en_lista(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "-99", ctx)
+        assert 1 in salida.contexto.destinos_numeros  # list unchanged
+
+    def test_deseleccion_varios(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "-1, -2", ctx)
+        assert 1 not in salida.contexto.destinos_numeros
+        assert 2 not in salida.contexto.destinos_numeros
+
+
+class TestOpcionesDestino:
+    """WU-5: context-aware destination options."""
+
+    def test_sin_seleccion_no_tiene_confirmar(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
+        assert "confirmar" not in salida.opciones
+
+    def test_con_seleccion_tiene_confirmar(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "2", ctx)
+        assert "confirmar" in salida.opciones
+
+
+class TestNetoAutoCalculo:
+    """WU-5: automatic neto calculation from service catalog."""
+
+    def test_neto_auto_calcula_un_servicio(self, fsm: FSMTiquetera) -> None:
+        # Service 1: neto_adulto=100000, neto_nino=50000; 2 adultos, 1 nino
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=2, ninos=1)
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.contexto.neto == Decimal("250000")  # 100000*2 + 50000*1
+
+    def test_neto_auto_calcula_multi_servicio(self, fsm: FSMTiquetera) -> None:
+        # Services 1+2: (100000+150000)*2 adultos = 500000
+        ctx = ContextoVenta(destinos_numeros=[1, 2], adultos=2, ninos=0)
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.contexto.neto == Decimal("500000")
+
+    def test_neto_sin_precio_pide_manual(self, fsm: FSMTiquetera) -> None:
+        # Service 3 has neto_adulto=None → fallback to MONTO_NETO
+        ctx = ContextoVenta(destinos_numeros=[3], adultos=2, ninos=0)
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.MONTO_NETO
+
+    def test_neto_nino_none_usa_adulto_como_proxy(self, fsm: FSMTiquetera) -> None:
+        # Service 2: neto_adulto=150000, neto_nino=None; 1 adult + 1 child
+        # Business rule: neto_nino=None → use neto_adulto as proxy
+        ctx = ContextoVenta(destinos_numeros=[2], adultos=1, ninos=1)
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.contexto.neto == Decimal("300000")  # 150000*1 + 150000*1 (proxy)
+
+    def test_neto_abono_supera_calculado_error(self, fsm: FSMTiquetera) -> None:
+        # Abono > neto calculado → MONTO_ABONO with error
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0)
+        # neto calculado = 100000; abono = 200000
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "200000", ctx)
+        assert salida.nuevo_estado == EstadoFSM.MONTO_ABONO
+
+
+class TestResumen:
+    """WU-5: summary shows tour names, not numbers; no Ticket N°; sin hotel sentinel."""
+
+    def test_resumen_muestra_nombre_tour_no_numero(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            rol_registrante="ambos",
+        )
+        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
+        assert "Tour Playa Blanca" in salida.mensaje
+        assert "Destinos: 1" not in salida.mensaje
+
+    def test_resumen_sin_ticket_fisico(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(rol_registrante="ambos")
+        salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
+        assert "Ticket N°" not in salida.mensaje
+
+
+class TestConfirmacionEditar:
+    """WU-5: Editar option from CONFIRMACION returns to TIPO_RESERVA."""
+
+    def test_confirmacion_editar_vuelve_a_tipo_reserva(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        assert "INTERNO" in salida.opciones
+
+    def test_confirmacion_confirmar_termina(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.TERMINADO
+        assert salida.listo is True
+
+    def test_confirmacion_cancelar_cancela(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "❌ Cancelar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CANCELADO
+
+
+class TestMetodoInput:
+    """WU-6: METODO_INPUT is the first state returned by iniciar()."""
+
+    def test_metodo_input_manual_avanza_a_tipo_reserva(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Manual", ctx)
+        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
+
+    def test_metodo_input_foto_avanza_a_tipo_reserva(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Foto", ctx)
+        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
+
+    def test_metodo_input_invalido_repite(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Audio", ctx)
+        assert salida.nuevo_estado == EstadoFSM.METODO_INPUT
+
+    def test_metodo_input_muestra_opciones_manual_foto(self, fsm: FSMTiquetera) -> None:
+        salida = fsm.iniciar()
+        assert "Manual" in salida.opciones
+        assert "Foto" in salida.opciones
 
 
 class TestParticipante:
@@ -231,7 +416,12 @@ class TestDestinoDesdeIA:
 
 class TestFlujoCompleto:
     def test_flujo_completo_feliz(self, fsm: FSMTiquetera) -> None:
-        """Drive FSM through all states with valid inputs — must reach TERMINADO."""
+        """Drive FSM through all states with valid inputs — must reach TERMINADO.
+
+        After WU-3: PAX_NINOS → MONTO_VALOR (no NUMERO_TICKET).
+        After WU-5: MONTO_ABONO auto-calculates neto when possible → PARTICIPANTE_ROL.
+        For this test, service 3 has neto_adulto=None → fallback to MONTO_NETO.
+        """
         ctx = ContextoVenta()
 
         # TIPO_RESERVA
@@ -244,8 +434,8 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.DESTINO
         ctx = s.contexto
 
-        # DESTINO — enter number then confirm
-        s = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
+        # DESTINO — enter number then confirm (service 3 has no neto)
+        s = fsm.procesar(EstadoFSM.DESTINO, "3", ctx)
         ctx = s.contexto
         s = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
@@ -281,13 +471,8 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.PAX_NINOS
         ctx = s.contexto
 
-        # PAX_NINOS
+        # PAX_NINOS → MONTO_VALOR directly (NUMERO_TICKET removed in WU-3)
         s = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
-        assert s.nuevo_estado == EstadoFSM.NUMERO_TICKET
-        ctx = s.contexto
-
-        # NUMERO_TICKET
-        s = fsm.procesar(EstadoFSM.NUMERO_TICKET, "42", ctx)
         assert s.nuevo_estado == EstadoFSM.MONTO_VALOR
         ctx = s.contexto
 
@@ -296,7 +481,7 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.MONTO_ABONO
         ctx = s.contexto
 
-        # MONTO_ABONO
+        # MONTO_ABONO → MONTO_NETO (service 3 has no neto_adulto — fallback)
         s = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
         assert s.nuevo_estado == EstadoFSM.MONTO_NETO
         ctx = s.contexto
@@ -350,7 +535,6 @@ class TestProcesarFoto:
         self, fsm: FSMTiquetera
     ) -> None:
         """adultos=0 should NOT auto-advance PAX_ADULTOS (business rule: min 1)."""
-        import datetime
         ctx = ContextoVenta(
             destinos_numeros=[1],
             cliente_nombre="Juan",
@@ -368,7 +552,6 @@ class TestProcesarFoto:
         self, fsm: FSMTiquetera
     ) -> None:
         """adultos=1 should auto-advance PAX_ADULTOS."""
-        import datetime
         ctx = ContextoVenta(
             destinos_numeros=[1],
             cliente_nombre="Juan",

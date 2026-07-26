@@ -295,11 +295,11 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lineas.append("\nCompletemos lo que falta:")
 
     # Start the FSM at TIPO_RESERVA with the pre-filled ctx
-    inicio = fsm.iniciar()
+    # (photo entry skips METODO_INPUT — user already chose Foto implicitly)
     salida = SalidaFSM(
-        mensaje="\n".join(lineas) + "\n\n" + inicio.mensaje,
-        opciones=inicio.opciones,
-        nuevo_estado=inicio.nuevo_estado,
+        mensaje="\n".join(lineas) + "\n\n¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+        opciones=["INTERNO", "EXTERNO", "DIGITAL"],
+        nuevo_estado=EstadoFSM.TIPO_RESERVA,
         contexto=ctx,
         listo=False,
     )
@@ -345,6 +345,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
 
 
 # Pre-built handlers for each FSM state
+handle_metodo_input = _make_handler(EstadoFSM.METODO_INPUT)
 handle_tipo_reserva = _make_handler(EstadoFSM.TIPO_RESERVA)
 handle_punto_de_venta = _make_handler(EstadoFSM.PUNTO_DE_VENTA)
 handle_destino = _make_handler(EstadoFSM.DESTINO)
@@ -355,7 +356,6 @@ handle_cliente_habitacion = _make_handler(EstadoFSM.CLIENTE_HABITACION)
 handle_fecha_salida = _make_handler(EstadoFSM.FECHA_SALIDA)
 handle_pax_adultos = _make_handler(EstadoFSM.PAX_ADULTOS)
 handle_pax_ninos = _make_handler(EstadoFSM.PAX_NINOS)
-handle_numero_ticket = _make_handler(EstadoFSM.NUMERO_TICKET)
 handle_monto_valor = _make_handler(EstadoFSM.MONTO_VALOR)
 handle_monto_abono = _make_handler(EstadoFSM.MONTO_ABONO)
 handle_monto_neto = _make_handler(EstadoFSM.MONTO_NETO)

@@ -15,6 +15,7 @@ from garay.dominio.ventas.contexto import ContextoVenta
 
 
 class EstadoFSM(StrEnum):
+    METODO_INPUT = "metodo_input"
     TIPO_RESERVA = "tipo_reserva"
     PUNTO_DE_VENTA = "punto_de_venta"
     DESTINO = "destino"
@@ -25,7 +26,6 @@ class EstadoFSM(StrEnum):
     FECHA_SALIDA = "fecha_salida"
     PAX_ADULTOS = "pax_adultos"
     PAX_NINOS = "pax_ninos"
-    NUMERO_TICKET = "numero_ticket"
     MONTO_VALOR = "monto_valor"
     MONTO_ABONO = "monto_abono"
     MONTO_NETO = "monto_neto"
@@ -53,9 +53,12 @@ _ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset({
     EstadoFSM.FECHA_SALIDA,
     EstadoFSM.PAX_ADULTOS,
     EstadoFSM.PAX_NINOS,
-    EstadoFSM.NUMERO_TICKET,
     EstadoFSM.MONTO_VALOR,
     EstadoFSM.MONTO_ABONO,
+})
+
+_SIN_HOTEL_TOKENS: frozenset[str] = frozenset({
+    "no", "no hotel", "sin hotel", "no hay", "ninguno",
 })
 
 
@@ -81,10 +84,10 @@ def _parsear_monto(texto: str) -> Decimal | None:
 
 
 def _parsear_fecha(texto: str) -> datetime.datetime | None:
-    """Try DD/MM, DD/MM/YYYY, DD/MM HH:MM."""
+    """Try DD/MM, DD/MM/YY, DD/MM/YYYY, DD/MM/YYYY HH:MM."""
     texto = texto.strip()
     now = datetime.datetime.now()
-    formatos_con_año = ["%d/%m/%Y %H:%M", "%d/%m/%Y"]
+    formatos_con_año = ["%d/%m/%Y %H:%M", "%d/%m/%Y", "%d/%m/%y"]
     for fmt in formatos_con_año:
         try:
             return datetime.datetime.strptime(texto, fmt)
@@ -102,17 +105,23 @@ class FSMTiquetera:
 
     def __init__(
         self,
-        servicios: list[tuple[int, str]],  # (numero, nombre)
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None]],
         puntos_venta: list[str],
     ) -> None:
-        self._servicios = servicios
+        # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
+        self._servicios: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
+            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n in servicios
+        }
         self._puntos_venta = puntos_venta
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
-            nuevo_estado=EstadoFSM.TIPO_RESERVA,
-            mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
-            opciones=["INTERNO", "EXTERNO", "DIGITAL"],
+            nuevo_estado=EstadoFSM.METODO_INPUT,
+            mensaje=(
+                "¿Cómo querés registrar la venta?\n\n"
+                "_Podés modificar cualquier dato en el resumen antes de confirmar._"
+            ),
+            opciones=["Manual", "Foto"],
             contexto=ContextoVenta(),
         )
 
@@ -123,6 +132,7 @@ class FSMTiquetera:
         contexto: ContextoVenta,
     ) -> SalidaFSM:
         handlers = {
+            EstadoFSM.METODO_INPUT: self._handle_metodo_input,
             EstadoFSM.TIPO_RESERVA: self._handle_tipo_reserva,
             EstadoFSM.PUNTO_DE_VENTA: self._handle_punto_de_venta,
             EstadoFSM.DESTINO: self._handle_destino,
@@ -133,7 +143,6 @@ class FSMTiquetera:
             EstadoFSM.FECHA_SALIDA: self._handle_fecha_salida,
             EstadoFSM.PAX_ADULTOS: self._handle_pax_adultos,
             EstadoFSM.PAX_NINOS: self._handle_pax_ninos,
-            EstadoFSM.NUMERO_TICKET: self._handle_numero_ticket,
             EstadoFSM.MONTO_VALOR: self._handle_monto_valor,
             EstadoFSM.MONTO_ABONO: self._handle_monto_abono,
             EstadoFSM.MONTO_NETO: self._handle_monto_neto,
@@ -180,7 +189,7 @@ class FSMTiquetera:
         lineas = ["Ingresá el número del tour (podés poner varios separados por coma, ej: *15* o *15, 23*)."]
         if ctx.destinos_numeros:
             seleccionados = []
-            num_map = dict(self._servicios)
+            num_map = {n: info[0] for n, info in self._servicios.items()}
             for n in ctx.destinos_numeros:
                 nombre = num_map.get(n, str(n))
                 seleccionados.append(f"{n} — {nombre}")
@@ -192,10 +201,46 @@ class FSMTiquetera:
             lineas.append("Aún no seleccionaste ningún tour.")
         return "\n".join(lineas)
 
-    def _opciones_destino(self) -> list[str]:
-        return ["confirmar"]
+    def _opciones_destino(self, ctx: ContextoVenta) -> list[str]:
+        return ["confirmar"] if ctx.destinos_numeros else []
+
+    def _calcular_neto(self, ctx: ContextoVenta) -> Decimal | None:
+        """Sum neto across all selected services. Returns None if any service lacks pricing."""
+        if not ctx.destinos_numeros or ctx.adultos is None:
+            return None
+        total = Decimal("0")
+        for numero in ctx.destinos_numeros:
+            info = self._servicios.get(numero)
+            if info is None:
+                return None
+            _, neto_adulto, neto_nino = info
+            if neto_adulto is None:
+                return None
+            total += neto_adulto * ctx.adultos
+            if ctx.ninos and ctx.ninos > 0:
+                # Business rule: neto_nino=None → use neto_adulto as proxy price
+                efectivo_nino = neto_nino if neto_nino is not None else neto_adulto
+                total += efectivo_nino * ctx.ninos
+        return total
 
     # ── private handlers ────────────────────────────────────────────────────
+
+    def _handle_metodo_input(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        opcion = entrada.strip()
+        if opcion in ("Manual", "Foto"):
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.TIPO_RESERVA,
+                mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+                opciones=["INTERNO", "EXTERNO", "DIGITAL"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.METODO_INPUT,
+            mensaje="Opción inválida. Elegí Manual o Foto.",
+            opciones=["Manual", "Foto"],
+            contexto=ctx,
+        )
 
     def _handle_tipo_reserva(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         tipo_map = {
@@ -228,13 +273,13 @@ class FSMTiquetera:
             ctx.punto_de_venta_nombre = entrada.strip()
         if ctx.destinos_nombres:
             nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
-            for numero, nombre in self._servicios:
+            for numero, (nombre, _, _) in self._servicios.items():
                 if nombre.lower().strip() in nombres_norm and numero not in ctx.destinos_numeros:
                     ctx.destinos_numeros.append(numero)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
             mensaje=self._destinos_mensaje(ctx),
-            opciones=self._opciones_destino(),
+            opciones=self._opciones_destino(ctx),
             contexto=ctx,
         )
 
@@ -247,7 +292,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
                     mensaje="Tenés que ingresar al menos un número de tour.\n" + self._destinos_mensaje(ctx),
-                    opciones=self._opciones_destino(),
+                    opciones=self._opciones_destino(ctx),
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -256,7 +301,28 @@ class FSMTiquetera:
                 contexto=ctx,
             )
 
-        numeros_validos = {n for n, _ in self._servicios}
+        # Deselection: "-15" or "-15, 23"
+        if texto.startswith("-"):
+            partes_quitar = [
+                p.strip().lstrip("-")
+                for p in texto.replace(",", " ").split()
+                if p.strip().lstrip("-")
+            ]
+            for parte in partes_quitar:
+                try:
+                    n = int(parte)
+                    if n in ctx.destinos_numeros:
+                        ctx.destinos_numeros.remove(n)
+                except ValueError:
+                    pass
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.DESTINO,
+                mensaje=self._destinos_mensaje(ctx),
+                opciones=self._opciones_destino(ctx),
+                contexto=ctx,
+            )
+
+        numeros_validos = set(self._servicios.keys())
         partes = [p.strip() for p in texto.replace(",", " ").split() if p.strip()]
         invalidos: list[str] = []
         for parte in partes:
@@ -274,14 +340,14 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.DESTINO,
                 mensaje=f"Número(s) no encontrado(s): {', '.join(invalidos)}. Revisá el catálogo.\n" + self._destinos_mensaje(ctx),
-                opciones=self._opciones_destino(),
+                opciones=self._opciones_destino(ctx),
                 contexto=ctx,
             )
 
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
             mensaje=self._destinos_mensaje(ctx),
-            opciones=self._opciones_destino(),
+            opciones=self._opciones_destino(ctx),
             contexto=ctx,
         )
 
@@ -305,6 +371,16 @@ class FSMTiquetera:
 
     def _handle_cliente_hotel(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
+        if entrada.strip().lower() in _SIN_HOTEL_TOKENS:
+            ctx.sin_hotel = True
+            ctx.cliente_hotel = None
+            ctx.cliente_habitacion = None
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                mensaje="¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)",
+                contexto=ctx,
+            )
+        ctx.sin_hotel = False
         ctx.cliente_hotel = entrada.strip()
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HABITACION,
@@ -378,26 +454,6 @@ class FSMTiquetera:
             )
         ctx.ninos = n
         return SalidaFSM(
-            nuevo_estado=EstadoFSM.NUMERO_TICKET,
-            mensaje="¿Cuál es el número de tiquetera? (ingresá 0 si no tenés el número)",
-            contexto=ctx,
-        )
-
-    def _handle_numero_ticket(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
-        ctx = _clonar(contexto)
-        limpio = entrada.strip()
-        if limpio == "0" or limpio.lower() in ("sin número", "sin numero", ""):
-            ctx.numero_fisico = None
-        else:
-            try:
-                ctx.numero_fisico = int(limpio)
-            except ValueError:
-                return SalidaFSM(
-                    nuevo_estado=EstadoFSM.NUMERO_TICKET,
-                    mensaje="Número inválido. Ingresá el número de tiquetera o 0 si no lo tenés.",
-                    contexto=ctx,
-                )
-        return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_VALOR,
             mensaje="¿Cuál es el valor total de la venta?",
             contexto=ctx,
@@ -429,9 +485,24 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.abono = monto
+        neto = self._calcular_neto(ctx)
+        if neto is not None:
+            if ctx.abono > neto:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.MONTO_ABONO,
+                    mensaje=f"El abono ({monto}) no puede superar el neto calculado ({neto}).",
+                    contexto=ctx,
+                )
+            ctx.neto = neto
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                mensaje="¿Cuál fue tu rol en esta venta?",
+                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_NETO,
-            mensaje="¿Cuál es el monto neto?",
+            mensaje="¿Cuál es el monto neto? (no se encontró precio en el catálogo para algún tour seleccionado)",
             contexto=ctx,
         )
 
@@ -466,7 +537,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "❌ Cancelar"],
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
                 contexto=ctx,
             )
         if opcion == "Solo vendedor":
@@ -505,7 +576,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
-            opciones=["✅ Confirmar", "❌ Cancelar"],
+            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
             contexto=ctx,
         )
 
@@ -518,19 +589,27 @@ class FSMTiquetera:
                 listo=True,
                 contexto=ctx,
             )
+        if entrada.strip() == "✏️ Editar":
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.TIPO_RESERVA,
+                mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+                opciones=["INTERNO", "EXTERNO", "DIGITAL"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CANCELADO,
             mensaje="Operación cancelada. Escribí /start para comenzar de nuevo.",
             contexto=ctx,
         )
 
-    @staticmethod
-    def _get_valor_prefilled(estado: EstadoFSM, ctx: ContextoVenta) -> str | None:
+    def _get_valor_prefilled(self, estado: EstadoFSM, ctx: ContextoVenta) -> str | None:
         if estado == EstadoFSM.CLIENTE_NOMBRE:
             return ctx.cliente_nombre
         if estado == EstadoFSM.CLIENTE_TELEFONO:
             return ctx.cliente_telefono
         if estado == EstadoFSM.CLIENTE_HOTEL:
+            if ctx.sin_hotel:
+                return "no"
             return ctx.cliente_hotel
         if estado == EstadoFSM.CLIENTE_HABITACION:
             return ctx.cliente_habitacion
@@ -540,23 +619,23 @@ class FSMTiquetera:
             return str(ctx.adultos) if ctx.adultos is not None and ctx.adultos >= 1 else None
         if estado == EstadoFSM.PAX_NINOS:
             return str(ctx.ninos) if ctx.ninos is not None else None
-        if estado == EstadoFSM.NUMERO_TICKET:
-            return str(ctx.numero_fisico) if ctx.numero_fisico is not None else None
         if estado == EstadoFSM.MONTO_VALOR:
             return str(ctx.valor) if ctx.valor is not None else None
         if estado == EstadoFSM.MONTO_ABONO:
             return str(ctx.abono) if ctx.abono is not None else None
         return None
 
-    @staticmethod
-    def _construir_resumen(ctx: ContextoVenta) -> str:
+    def _construir_resumen(self, ctx: ContextoVenta) -> str:
         if ctx.destinos_numeros:
-            destinos_str = ", ".join(str(n) for n in ctx.destinos_numeros)
+            nombres = [self._servicios[n][0] for n in ctx.destinos_numeros if n in self._servicios]
+            destinos_str = ", ".join(nombres) if nombres else ", ".join(str(n) for n in ctx.destinos_numeros)
         elif ctx.destinos_nombres:
             destinos_str = ", ".join(ctx.destinos_nombres) + " (pendiente confirmar)"
         else:
             destinos_str = "—"
         fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
+        hotel_str = "Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
+        hab_str = "—" if ctx.sin_hotel else (ctx.cliente_habitacion or "—")
         return (
             "📋 *Resumen de la venta:*\n"
             f"Tipo: {ctx.tipo_cliente or '—'}\n"
@@ -564,10 +643,9 @@ class FSMTiquetera:
             f"Destinos: {destinos_str}\n"
             f"Cliente: {ctx.cliente_nombre or '—'}\n"
             f"Teléfono: {ctx.cliente_telefono or '—'}\n"
-            f"Hotel: {ctx.cliente_hotel or '—'}\n"
-            f"Habitación: {ctx.cliente_habitacion or '—'}\n"
+            f"Hotel: {hotel_str}\n"
+            f"Habitación: {hab_str}\n"
             f"Fecha salida: {fecha_str}\n"
-            f"Ticket N°: {ctx.numero_fisico or '—'}\n"
             f"Adultos: {ctx.adultos or 0} | Niños: {ctx.ninos or 0}\n"
             f"Valor: {ctx.valor or '—'}\n"
             f"Abono: {ctx.abono or '—'}\n"

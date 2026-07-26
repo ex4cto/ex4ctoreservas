@@ -52,7 +52,10 @@ def main() -> None:
     tiqueteras_repo = SQLATiqueteraRepository(sf)
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
 
-    servicios = [(s.numero, s.nombre) for s in servicio_repo.listar()]
+    servicios = [
+        (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino)
+        for s in servicio_repo.listar()
+    ]
     puntos_venta = [p.nombre for p in pdv_repo.listar()]
 
     if not servicios:

@@ -26,10 +26,10 @@ from garay.infraestructura.telegram.handlers import (
     handle_confirmacion,
     handle_destino,
     handle_fecha_salida,
+    handle_metodo_input,
     handle_monto_abono,
     handle_monto_neto,
     handle_monto_valor,
-    handle_numero_ticket,
     handle_participante_otro,
     handle_participante_rol,
     handle_pax_adultos,
@@ -51,13 +51,17 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", cmd_start),
-            MessageHandler(filters.PHOTO, cmd_foto),
-            MessageHandler(filters.Document.IMAGE, cmd_foto),
         ],
         states={
+            estados[EstadoFSM.METODO_INPUT]: [
+                _CB(handle_metodo_input),
+                MessageHandler(_TEXT, handle_metodo_input),
+            ],
             estados[EstadoFSM.TIPO_RESERVA]: [
                 _CB(handle_tipo_reserva),
                 MessageHandler(_TEXT, handle_tipo_reserva),
+                MessageHandler(filters.PHOTO, cmd_foto),
+                MessageHandler(filters.Document.IMAGE, cmd_foto),
             ],
             estados[EstadoFSM.PUNTO_DE_VENTA]: [
                 _CB(handle_punto_de_venta),
@@ -87,9 +91,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             estados[EstadoFSM.PAX_NINOS]: [
                 MessageHandler(_TEXT, handle_pax_ninos),
-            ],
-            estados[EstadoFSM.NUMERO_TICKET]: [
-                MessageHandler(_TEXT, handle_numero_ticket),
             ],
             estados[EstadoFSM.MONTO_VALOR]: [
                 MessageHandler(_TEXT, handle_monto_valor),

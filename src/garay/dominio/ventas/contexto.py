@@ -18,6 +18,7 @@ class ContextoVenta:
     cliente_telefono: str | None = None
     cliente_hotel: str | None = None
     cliente_habitacion: str | None = None
+    sin_hotel: bool = False
     fecha_salida: datetime.datetime | None = None
     adultos: int | None = None
     ninos: int | None = None
