@@ -10,6 +10,8 @@ dependencies = [
     "alembic>=1.13",
     "psycopg[binary]>=3.1",
     "python-telegram-bot>=21.0",
+    "psycopg2-binary>=2.9.12",
+    "rapidfuzz>=3.0",
 ]
 
 [dependency-groups]
@@ -19,6 +21,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "pre-commit>=3.7",
+    "openpyxl>=3.1.5",
 ]
 
 [build-system]

@@ -602,6 +602,20 @@ class TestEsSinHotel:
         # Long sentence with "no" in it that is clearly a hotel name should not match
         assert _es_sin_hotel("Estamos en el Novotel cerca del centro comercial gran hotel") is False
 
+    def test_typo_nignuno(self) -> None:
+        assert _es_sin_hotel("nignuno") is True
+
+    def test_typo_nignuna(self) -> None:
+        assert _es_sin_hotel("nignuna") is True
+
+    def test_typo_sin_htel(self) -> None:
+        assert _es_sin_hotel("sin htel") is True
+
+    def test_hotel_real_no_confunde_con_fuzzy(self) -> None:
+        # Short real hotel names must not false-positive
+        assert _es_sin_hotel("sol") is False
+        assert _es_sin_hotel("ibis") is False
+
 
 class TestHotelSkipFlexible:
     """Fix 2: FSM accepts flexible no-hotel phrases."""

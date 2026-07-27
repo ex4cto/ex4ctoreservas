@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
+from rapidfuzz import fuzz
+
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
@@ -89,7 +91,12 @@ def _es_sin_hotel(entrada: str) -> bool:
     if t in _SIN_HOTEL_EXACTOS:
         return True
     # Short phrase starting with "no " or "sin " is likely no-hotel
-    return len(t) <= 35 and (t.startswith("no ") or t.startswith("sin "))
+    if len(t) <= 35 and (t.startswith("no ") or t.startswith("sin ")):
+        return True
+    # Fuzzy match for short inputs — catches common typos (e.g. "nignuno" → "ninguno")
+    if len(t) <= 15:
+        return any(fuzz.ratio(t, known) >= 80 for known in _SIN_HOTEL_EXACTOS)
+    return False
 
 
 _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
