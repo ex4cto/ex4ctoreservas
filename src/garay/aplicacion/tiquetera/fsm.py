@@ -648,9 +648,25 @@ class FSMTiquetera:
         neto = self._calcular_neto(ctx)
         if neto is not None:
             if ctx.abono > neto:
+                abono_fmt = _formatear_monto(monto)
+                neto_fmt = _formatear_monto(neto)
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.MONTO_ABONO,
-                    mensaje=f"El abono ({monto}) no puede superar el neto calculado ({neto}).",
+                    mensaje=(
+                        f"El abono ({abono_fmt}) no puede superar "
+                        f"el neto calculado ({neto_fmt})."
+                    ),
+                    contexto=ctx,
+                )
+            if ctx.valor is not None and neto > ctx.valor:
+                neto_fmt = _formatear_monto(neto)
+                valor_fmt = _formatear_monto(ctx.valor)
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.MONTO_VALOR,
+                    mensaje=(
+                        f"El neto calculado ({neto_fmt}) supera el valor de la venta "
+                        f"({valor_fmt}). Ingresá un valor mayor o igual a {neto_fmt}."
+                    ),
                     contexto=ctx,
                 )
             ctx.neto = neto

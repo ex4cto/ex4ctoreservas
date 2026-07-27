@@ -245,6 +245,13 @@ class TestNetoAutoCalculo:
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "200000", ctx)
         assert salida.nuevo_estado == EstadoFSM.MONTO_ABONO
 
+    def test_neto_supera_valor_venta_vuelve_a_monto_valor(self, fsm: FSMTiquetera) -> None:
+        # neto auto-calculated (100000) > valor_venta (50000) → MONTO_VALOR with error
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0, valor=Decimal("50000"))
+        salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.MONTO_VALOR
+        assert "$50.000" in salida.mensaje or "$100.000" in salida.mensaje
+
 
 class TestResumen:
     """WU-5: summary shows tour names, not numbers; no Ticket N°; sin hotel sentinel."""
