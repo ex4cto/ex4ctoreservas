@@ -48,7 +48,7 @@
 
 ## Etapa 3 — Tiquetera / Registro de ventas (Telegram) ✅
 *Hito 2 de pago (30%). Mata el Excel de Sharimel.*
-*Commits: `fdf42aa` (UW0.5) · `6ccd8cc` (UW1) · `9b9da7a` (UW2) · `137269d` (UW3) · `6054569` (UW4)*
+*Commits: `fdf42aa` (UW0.5) · `6ccd8cc` (UW1) · `9b9da7a` (UW2) · `137269d` (UW3) · `6054569` (UW4) · `76dc0d0` `ff19627` `37df9ec` `cbedaf2` `19103ba` `fe31784` (UW post-testing)*
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
@@ -60,6 +60,7 @@
 | 3.5 | Wiring real (repos SQLAlchemy + inyección deps en main.py + handler foto AI) | ✅ | Commit `9169722` — 9 pasos, 257 tests |
 | 3.6 | Comandos Telegram `/mis_ventas` + `/resumen_empresa`, es_admin, repos periodo | ✅ | 272 tests |
 | 3.7 | Correcciones UX/dominio: METODO_INPUT, hotel skip, neto auto-calc, editar desde resumen, seed parsing, notificación format | ✅ | 316 tests |
+| 3.8 | Correcciones post-testing manual: freeze FSM (abono loop), typo hotel fuzzy (rapidfuzz), formato fechas unificado, validación neto≤valor, seed neto×1000 | ✅ | 354 tests |
 
 ---
 
@@ -153,4 +154,4 @@ Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 316 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 354 · **mypy:** strict clean · **ruff:** clean
