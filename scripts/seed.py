@@ -75,6 +75,17 @@ def _parse_neto(texto: str | None) -> Decimal | None:
     return None
 
 
+def _neto_semilla(texto: str | None) -> Decimal | None:
+    """Parse neto for the seed context, where plain numbers are in miles de pesos.
+
+    "180" → 180,000 COP; "80.000" and "50 MIL" already parse to ≥ 1000 and are not scaled.
+    """
+    valor = _parse_neto(texto)
+    if valor is not None and valor < 1000:
+        return valor * 1000
+    return valor
+
+
 def seed_id(key: str) -> uuid.UUID:
     """Return a deterministic UUID for the given seed key."""
     return uuid.uuid5(SEED_NS, key)
@@ -146,8 +157,8 @@ def seed_servicios(session: Session) -> None:
                 nombre=str(entry["nombre"]),
                 descripcion="",
                 activo=bool(entry["activo"]),
-                precio_neto_adulto=_parse_neto(entry.get("neto_adulto")),
-                precio_neto_nino=_parse_neto(entry.get("neto_nino")),
+                precio_neto_adulto=_neto_semilla(entry.get("neto_adulto")),
+                precio_neto_nino=_neto_semilla(entry.get("neto_nino")),
             )
         )
 

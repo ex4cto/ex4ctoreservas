@@ -1,9 +1,10 @@
 """Tests for the robust neto-string parser in scripts/seed.py."""
+
 from __future__ import annotations
 
 from decimal import Decimal
 
-from scripts.seed import _parse_neto
+from scripts.seed import _neto_semilla, _parse_neto
 
 
 class TestParseNeto:
@@ -53,3 +54,25 @@ class TestParseNeto:
 
     def test_parse_neto_no_pagan(self) -> None:
         assert _parse_neto("(0-12 AÑOS) No pagan") == Decimal("0")
+
+
+class TestNetoSemilla:
+    def test_plain_int_string_miles(self) -> None:
+        assert _neto_semilla("180") == Decimal("180000")
+
+    def test_plain_int_with_age_range(self) -> None:
+        assert _neto_semilla("105 (5-12 AÑOS)") == Decimal("105000")
+
+    def test_dot_miles_not_scaled(self) -> None:
+        # "80.000" parses to 80000 (≥ 1000) — already in COP, no extra scale
+        assert _neto_semilla("80.000") == Decimal("80000")
+
+    def test_mil_keyword_not_scaled(self) -> None:
+        # "50 MIL" → 50000 (≥ 1000) — already in COP, no extra scale
+        assert _neto_semilla("50 MIL") == Decimal("50000")
+
+    def test_no_pagan_stays_zero(self) -> None:
+        assert _neto_semilla("(0-12 AÑOS) No pagan") == Decimal("0")
+
+    def test_none_returns_none(self) -> None:
+        assert _neto_semilla(None) is None
