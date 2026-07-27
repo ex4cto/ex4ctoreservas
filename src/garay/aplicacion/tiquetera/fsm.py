@@ -528,7 +528,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.FECHA_SALIDA,
-            mensaje="¿Cuál es la fecha de salida? (formato: DD/MM o DD/MM/YYYY)",
+            mensaje="¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)",
             contexto=ctx,
         )
 
@@ -538,7 +538,7 @@ class FSMTiquetera:
         if fecha is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje="Fecha inválida. Usá el formato DD/MM o DD/MM/YYYY.",
+                mensaje="Fecha inválida. Usá el formato DD/MM, DD/MM/YY o DD/MM/YYYY.",
                 contexto=ctx,
             )
         ctx.fecha_salida = fecha
