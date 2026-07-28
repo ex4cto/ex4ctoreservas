@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,11 +42,18 @@ class Settings(BaseSettings):
     # Moneda base del sistema.
     moneda_predeterminada: str = "COP"
 
+    # Extractor selection: "ollama" (local) | "claude" (cloud API).
+    extractor: Literal["ollama", "claude"] = Field(default="ollama")
+
     # Ollama AI configuration.
     ollama_url: str = Field(default="http://localhost:11434")
     ollama_modelo: str = Field(default="llava")
     ollama_bin: str = Field(default="ollama")
     ollama_timeout: int = Field(default=300)
+
+    # Claude AI configuration.
+    anthropic_api_key: str = Field(default="")
+    claude_modelo: str = Field(default="claude-haiku-4-5-20251001")
 
 
 @lru_cache(maxsize=1)

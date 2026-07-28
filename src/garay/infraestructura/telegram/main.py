@@ -11,6 +11,8 @@ from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.puertos.servicios_externos import ExtractorIA
+from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_ollama import ExtractorOllama
 from garay.infraestructura.ia.extractor_reserva_ollama import ExtractorReservaOllama
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
@@ -50,7 +52,6 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     settings = obtener_settings()
-    _ensure_ollama_running(settings.ollama_bin)
 
     if not settings.grupo_id:
         raise RuntimeError(
@@ -84,11 +85,21 @@ def main() -> None:
 
     fsm = FSMTiquetera(servicios=servicios, puntos_venta=puntos_venta)
 
-    extractor_ia = ExtractorOllama(
-        url=settings.ollama_url,
-        modelo=settings.ollama_modelo,
-        timeout=settings.ollama_timeout,
-    )
+    extractor_ia: ExtractorIA
+    if settings.extractor == "claude":
+        extractor_ia = ExtractorClaude(
+            api_key=settings.anthropic_api_key,
+            modelo=settings.claude_modelo,
+        )
+        _logger.info("Using Claude vision extractor (model: %s)", settings.claude_modelo)
+    else:
+        _ensure_ollama_running(settings.ollama_bin)
+        extractor_ia = ExtractorOllama(
+            url=settings.ollama_url,
+            modelo=settings.ollama_modelo,
+            timeout=settings.ollama_timeout,
+        )
+        _logger.info("Using Ollama vision extractor (model: %s)", settings.ollama_modelo)
     extractor_reserva = ExtractorReservaOllama(extractor_ia)
 
     notificador = NotificadorGrupoTelegram(settings.telegram_bot_token)
