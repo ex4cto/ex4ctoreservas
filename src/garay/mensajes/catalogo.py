@@ -40,11 +40,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_numero_ticket": {Idioma.ES: "¿Cuál es el número de ticket?"},
     "pregunta_valor": {Idioma.ES: "¿Cuál es el valor total de la venta?"},
     "pregunta_abono": {Idioma.ES: "¿Cuánto abonó el cliente? (0 si no hubo abono)"},
-    "pregunta_neto": {Idioma.ES: "¿Cuál es el monto neto?"},
     "pregunta_participante_nombre": {Idioma.ES: "¿Cuál es tu nombre (quien registra la venta)?"},
-    "pregunta_rol": {
-        Idioma.ES: "¿Cuál es tu rol en esta venta?\nOpciones: Solo vendedor, Solo cerrador, Ambos"
-    },
     "pregunta_participante_otro_vendedor": {Idioma.ES: "¿Cuál es el nombre del vendedor?"},
     "pregunta_participante_otro_cerrador": {Idioma.ES: "¿Cuál es el nombre del cerrador?"},
     "error_fecha_invalida": {
@@ -62,7 +58,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "Monto inválido. Ingresá un valor positivo (ej: 500000 o 500.000)."
     },
     "error_neto_supera_valor": {Idioma.ES: "El neto no puede superar el valor total de la venta."},
-    "error_sin_destino": {Idioma.ES: "Tenés que seleccionar al menos un destino."},
     "venta_cancelada": {Idioma.ES: "Operación cancelada. Escribí /start para comenzar de nuevo."},
     "confirmacion_resumen": {
         Idioma.ES: (
