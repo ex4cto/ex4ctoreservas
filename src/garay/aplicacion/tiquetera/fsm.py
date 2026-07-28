@@ -19,6 +19,7 @@ from garay.dominio.ventas.contexto import ContextoVenta
 
 class EstadoFSM(StrEnum):
     METODO_INPUT = "metodo_input"
+    ESPERANDO_FOTO = "esperando_foto"
     TIPO_RESERVA = "tipo_reserva"
     PUNTO_DE_VENTA = "punto_de_venta"
     DESTINO = "destino"
@@ -198,6 +199,7 @@ class FSMTiquetera:
     ) -> SalidaFSM:
         handlers = {
             EstadoFSM.METODO_INPUT: self._handle_metodo_input,
+            EstadoFSM.ESPERANDO_FOTO: self._handle_esperando_foto,
             EstadoFSM.TIPO_RESERVA: self._handle_tipo_reserva,
             EstadoFSM.PUNTO_DE_VENTA: self._handle_punto_de_venta,
             EstadoFSM.DESTINO: self._handle_destino,
@@ -303,17 +305,31 @@ class FSMTiquetera:
     def _handle_metodo_input(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         opcion = entrada.strip()
-        if opcion in ("Manual", "Foto"):
+        if opcion == "Manual":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TIPO_RESERVA,
                 mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
                 opciones=["INTERNO", "EXTERNO", "DIGITAL"],
                 contexto=ctx,
             )
+        if opcion == "Foto":
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.ESPERANDO_FOTO,
+                mensaje="Enviá la foto del tiquet para extraer los datos automáticamente.",
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
             mensaje="Opción inválida. Elegí Manual o Foto.",
             opciones=["Manual", "Foto"],
+            contexto=ctx,
+        )
+
+    def _handle_esperando_foto(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.ESPERANDO_FOTO,
+            mensaje="Necesito la foto del tiquet, no texto. Enviá la imagen para continuar.",
             contexto=ctx,
         )
 

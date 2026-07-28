@@ -301,11 +301,15 @@ class TestMetodoInput:
         salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Manual", ctx)
         assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
 
-    def test_metodo_input_foto_avanza_a_tipo_reserva(
+    def test_metodo_input_foto_avanza_a_esperando_foto(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Foto", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        assert salida.nuevo_estado == EstadoFSM.ESPERANDO_FOTO
+
+    def test_esperando_foto_rechaza_texto(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.ESPERANDO_FOTO, "hola", ctx)
+        assert salida.nuevo_estado == EstadoFSM.ESPERANDO_FOTO
 
     def test_metodo_input_invalido_repite(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.METODO_INPUT, "Audio", ctx)

@@ -27,6 +27,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_confirmacion,
     handle_destino,
     handle_editar_selector,
+    handle_esperando_foto,
     handle_fecha_salida,
     handle_metodo_input,
     handle_monto_abono,
@@ -59,11 +60,14 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_metodo_input),
                 MessageHandler(_TEXT, handle_metodo_input),
             ],
+            estados[EstadoFSM.ESPERANDO_FOTO]: [
+                MessageHandler(filters.PHOTO, cmd_foto),
+                MessageHandler(filters.Document.IMAGE, cmd_foto),
+                MessageHandler(_TEXT, handle_esperando_foto),
+            ],
             estados[EstadoFSM.TIPO_RESERVA]: [
                 _CB(handle_tipo_reserva),
                 MessageHandler(_TEXT, handle_tipo_reserva),
-                MessageHandler(filters.PHOTO, cmd_foto),
-                MessageHandler(filters.Document.IMAGE, cmd_foto),
             ],
             estados[EstadoFSM.PUNTO_DE_VENTA]: [
                 _CB(handle_punto_de_venta),

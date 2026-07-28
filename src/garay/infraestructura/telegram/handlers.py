@@ -348,6 +348,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
 
 # Pre-built handlers for each FSM state
 handle_metodo_input = _make_handler(EstadoFSM.METODO_INPUT)
+handle_esperando_foto = _make_handler(EstadoFSM.ESPERANDO_FOTO)
 handle_tipo_reserva = _make_handler(EstadoFSM.TIPO_RESERVA)
 handle_punto_de_venta = _make_handler(EstadoFSM.PUNTO_DE_VENTA)
 handle_destino = _make_handler(EstadoFSM.DESTINO)

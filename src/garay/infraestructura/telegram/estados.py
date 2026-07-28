@@ -7,6 +7,7 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM
 # PTB ConversationHandler requires integer states
 ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.METODO_INPUT: 20,
+    EstadoFSM.ESPERANDO_FOTO: 22,
     EstadoFSM.TIPO_RESERVA: 0,
     EstadoFSM.PUNTO_DE_VENTA: 1,
     EstadoFSM.DESTINO: 2,
