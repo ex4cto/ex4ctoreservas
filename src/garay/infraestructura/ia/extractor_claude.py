@@ -104,10 +104,17 @@ class ExtractorClaude(ExtractorIA):
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         if not match:
             return DatosExtraidos(confianza=Decimal("0"))
+        json_str = match.group()
         try:
-            data = json.loads(match.group())
+            data = json.loads(json_str)
         except json.JSONDecodeError:
-            return DatosExtraidos(confianza=Decimal("0"))
+            # Claude sometimes writes leading zeros in numbers (e.g. 0845) which are
+            # invalid JSON. Strip them and retry once.
+            fixed = re.sub(r"([:,\[]\s*)0+(\d)", r"\1\2", json_str)
+            try:
+                data = json.loads(fixed)
+            except json.JSONDecodeError:
+                return DatosExtraidos(confianza=Decimal("0"))
 
         try:
             valor_venta: Dinero | None = None

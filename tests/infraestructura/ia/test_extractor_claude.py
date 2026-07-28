@@ -96,6 +96,28 @@ class TestExtractorClaudeExtraerDeFoto:
         assert result.nombre_cliente == "Ana Lopez"
         assert result.confianza == Decimal("0.8")
 
+    def test_numero_con_cero_inicial_se_parsea_correctamente(self, tmp_path) -> None:
+        foto = tmp_path / "ticket.jpg"
+        foto.write_bytes(b"fake-image")
+
+        raw_with_leading_zero = (
+            '```json\n{"numero_ticket": null, "nombre_cliente": null, "telefono": null,'
+            ' "cliente_hotel": null, "numero_habitacion": null, "destinos": [],'
+            ' "fecha_salida": null, "adultos": 2, "ninos": 1,'
+            ' "valor": 226000, "abono": 0845, "vendedor": null, "confianza": 0.55}\n```'
+        )
+
+        with patch("garay.infraestructura.ia.extractor_claude.anthropic.Anthropic") as mock_cls:
+            msg = MagicMock()
+            msg.content = [MagicMock(spec=TextBlock, text=raw_with_leading_zero)]
+            mock_cls.return_value.messages.create.return_value = msg
+            extractor = ExtractorClaude(api_key="sk-test")
+            result = extractor.extraer_de_foto(str(foto))
+
+        assert result.abono is not None
+        assert result.abono.monto == Decimal("845")
+        assert result.adultos == 2
+
     def test_auth_error_lanza_excepcion(self, tmp_path) -> None:
         import anthropic
 
