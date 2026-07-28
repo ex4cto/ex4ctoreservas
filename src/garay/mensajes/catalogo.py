@@ -189,6 +189,30 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_editar_cerrador": {
         Idioma.ES: "Cerrador actual: {actual}\n¿Nuevo nombre?"
     },
+    "pregunta_editar_cliente_nombre": {
+        Idioma.ES: "Nombre actual: {actual}\n¿Nuevo nombre del cliente?"
+    },
+    "pregunta_editar_cliente_telefono": {
+        Idioma.ES: "Teléfono actual: {actual}\n¿Nuevo teléfono?"
+    },
+    "pregunta_editar_cliente_hotel": {
+        Idioma.ES: "Hotel actual: {actual}\n¿Nuevo hotel? (o 'sin hotel')"
+    },
+    "pregunta_editar_cliente_habitacion": {
+        Idioma.ES: "Habitación actual: {actual}\n¿Nuevo número de habitación?"
+    },
+    "pregunta_editar_fecha_salida": {
+        Idioma.ES: "Fecha actual: {actual}\n¿Nueva fecha? (DD/MM o DD/MM/YYYY HH:MM)"
+    },
+    "pregunta_editar_adultos_ninos": {
+        Idioma.ES: "Adultos: {adultos} · Niños: {ninos}\n¿Cuántos adultos? (mínimo 1)"
+    },
+    "pregunta_editar_monto_valor": {
+        Idioma.ES: "Valor actual: {actual}\n¿Nuevo valor total?"
+    },
+    "pregunta_editar_monto_abono": {
+        Idioma.ES: "Abono actual: {actual}\n¿Nuevo abono? (0 si no hubo)"
+    },
 }
 
 

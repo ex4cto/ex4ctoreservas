@@ -1137,3 +1137,76 @@ class TestValidarDatosConfirmacion:
     ) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx_completo)
         assert salida.nuevo_estado == EstadoFSM.TERMINADO
+
+
+class TestEditarMensajesConValorActual:
+    """_handle_editar_selector shows current ctx value in the prompt."""
+
+    def test_editar_nombre_muestra_valor_actual(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_nombre = "Juan Pérez"
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx_completo)
+        assert "Juan Pérez" in salida.mensaje
+
+    def test_editar_telefono_muestra_valor_actual(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_telefono = "3001234567"
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Teléfono", ctx_completo)
+        assert "3001234567" in salida.mensaje
+
+    def test_editar_hotel_muestra_valor_actual(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_hotel = "Hotel Caribe"
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Hotel", ctx_completo)
+        assert "Hotel Caribe" in salida.mensaje
+
+    def test_editar_hotel_sin_hotel_muestra_sin_hotel(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.sin_hotel = True
+        ctx_completo.cliente_hotel = None
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Hotel", ctx_completo)
+        assert "Sin hotel" in salida.mensaje
+
+    def test_editar_habitacion_muestra_valor_actual(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_habitacion = "304"
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Habitación", ctx_completo)
+        assert "304" in salida.mensaje
+
+    def test_editar_fecha_muestra_valor_actual(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        import datetime
+        ctx_completo.fecha_salida = datetime.datetime(2026, 7, 25, 9, 0)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Fecha", ctx_completo)
+        assert "25/07/2026" in salida.mensaje
+
+    def test_editar_adultos_muestra_ambos_valores(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.adultos = 3
+        ctx_completo.ninos = 1
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Adultos/Niños", ctx_completo)
+        assert "3" in salida.mensaje
+        assert "1" in salida.mensaje
+
+    def test_editar_valor_muestra_monto_formateado(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        from decimal import Decimal
+        ctx_completo.valor = Decimal("260000")
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Monto valor", ctx_completo)
+        assert "$260.000" in salida.mensaje
+
+    def test_editar_abono_muestra_monto_formateado(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        from decimal import Decimal
+        ctx_completo.abono = Decimal("130000")
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Abono", ctx_completo)
+        assert "$130.000" in salida.mensaje

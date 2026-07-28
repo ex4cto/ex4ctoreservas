@@ -940,14 +940,31 @@ class FSMTiquetera:
             EstadoFSM.TIPO_RESERVA: obtener_mensaje("pregunta_tipo_reserva"),
             EstadoFSM.PUNTO_DE_VENTA: obtener_mensaje("pregunta_punto_de_venta"),
             EstadoFSM.DESTINO: self._destinos_mensaje(ctx),
-            EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_cliente_nombre"),
-            EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_cliente_telefono"),
-            EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_cliente_hotel"),
-            EstadoFSM.CLIENTE_HABITACION: obtener_mensaje("pregunta_cliente_habitacion"),
-            EstadoFSM.FECHA_SALIDA: obtener_mensaje("pregunta_fecha_salida"),
-            EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_adultos"),
-            EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_valor"),
-            EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_abono"),
+            EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_editar_cliente_nombre").format(
+                actual=ctx.cliente_nombre or "—"
+            ),
+            EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_editar_cliente_telefono").format(
+                actual=ctx.cliente_telefono or "—"
+            ),
+            EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_editar_cliente_hotel").format(
+                actual="Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
+            ),
+            EstadoFSM.CLIENTE_HABITACION: obtener_mensaje(
+                "pregunta_editar_cliente_habitacion"
+            ).format(actual=ctx.cliente_habitacion or "—"),
+            EstadoFSM.FECHA_SALIDA: obtener_mensaje("pregunta_editar_fecha_salida").format(
+                actual=ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else "—"
+            ),
+            EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_editar_adultos_ninos").format(
+                adultos=ctx.adultos if ctx.adultos is not None else "—",
+                ninos=ctx.ninos if ctx.ninos is not None else "—",
+            ),
+            EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_editar_monto_valor").format(
+                actual=_formatear_monto(ctx.valor)
+            ),
+            EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_editar_monto_abono").format(
+                actual=_formatear_monto(ctx.abono)
+            ),
             EstadoFSM.PARTICIPANTE_ROL: obtener_mensaje("pregunta_rol_venta"),
             EstadoFSM.EDITAR_VENDEDOR: obtener_mensaje("pregunta_editar_vendedor").format(
                 actual=ctx.vendedor_nombre or "—"
