@@ -15,6 +15,7 @@ from rapidfuzz import fuzz
 
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
+from garay.mensajes.catalogo import obtener_mensaje
 
 
 class EstadoFSM(StrEnum):
@@ -308,19 +309,19 @@ class FSMTiquetera:
         if opcion == "Manual":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TIPO_RESERVA,
-                mensaje="¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+                mensaje=obtener_mensaje("pregunta_tipo_reserva"),
                 opciones=["INTERNO", "EXTERNO", "DIGITAL"],
                 contexto=ctx,
             )
         if opcion == "Foto":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.ESPERANDO_FOTO,
-                mensaje="Enviá la foto del tiquet para extraer los datos automáticamente.",
+                mensaje=obtener_mensaje("pregunta_enviar_foto"),
                 contexto=ctx,
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
-            mensaje="Opción inválida. Elegí Manual o Foto.",
+            mensaje=obtener_mensaje("error_metodo_invalido"),
             opciones=["Manual", "Foto"],
             contexto=ctx,
         )
@@ -329,7 +330,7 @@ class FSMTiquetera:
         ctx = _clonar(contexto)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.ESPERANDO_FOTO,
-            mensaje="Necesito la foto del tiquet, no texto. Enviá la imagen para continuar.",
+            mensaje=obtener_mensaje("error_esperando_foto_texto"),
             contexto=ctx,
         )
 
@@ -518,7 +519,7 @@ class FSMTiquetera:
                 )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje="¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)",
+                mensaje=obtener_mensaje("pregunta_fecha_salida"),
                 contexto=ctx,
             )
         ctx.sin_hotel = False
@@ -550,7 +551,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.FECHA_SALIDA,
-            mensaje="¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)",
+            mensaje=obtener_mensaje("pregunta_fecha_salida"),
             contexto=ctx,
         )
 
@@ -560,7 +561,7 @@ class FSMTiquetera:
         if fecha is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje="Fecha inválida. Usá el formato DD/MM, DD/MM/YY o DD/MM/YYYY.",
+                mensaje=obtener_mensaje("error_fecha_invalida"),
                 contexto=ctx,
             )
         ctx.fecha_salida = fecha
