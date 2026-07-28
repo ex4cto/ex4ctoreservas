@@ -8,12 +8,13 @@ from decimal import Decimal
 import pytest
 
 from garay.aplicacion.tiquetera.fsm import (
-    ContextoVenta,
     EstadoFSM,
     FSMTiquetera,
     _es_sin_hotel,
     _formatear_monto,
+    _parsear_monto,
 )
+from garay.dominio.ventas.contexto import ContextoVenta
 
 SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
     (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000")),
@@ -758,3 +759,31 @@ class TestResumenMontos:
         assert "200.000" in salida.mensaje
         assert "50.000" in salida.mensaje
         assert "100.000" in salida.mensaje
+
+
+class TestParsearMonto:
+    """_parsear_monto must scale plain numbers < 1000 by x1000 (Colombian miles notation)."""
+
+    def test_plain_hundreds_scaled(self) -> None:
+        assert _parsear_monto("500") == Decimal("500000")
+
+    def test_plain_two_digits_scaled(self) -> None:
+        assert _parsear_monto("50") == Decimal("50000")
+
+    def test_dot_thousands_not_scaled(self) -> None:
+        assert _parsear_monto("500.000") == Decimal("500000")
+
+    def test_large_number_not_scaled(self) -> None:
+        assert _parsear_monto("1800000") == Decimal("1800000")
+
+    def test_dot_thousands_large_not_scaled(self) -> None:
+        assert _parsear_monto("1.800.000") == Decimal("1800000")
+
+    def test_zero_stays_zero(self) -> None:
+        assert _parsear_monto("0") == Decimal("0")
+
+    def test_invalid_returns_none(self) -> None:
+        assert _parsear_monto("abc") is None
+
+    def test_negative_returns_none(self) -> None:
+        assert _parsear_monto("-500") is None

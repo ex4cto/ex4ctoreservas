@@ -131,12 +131,18 @@ def _tú_si(rol: str | None, *roles: str) -> str:
 
 
 def _parsear_monto(texto: str) -> Decimal | None:
-    """Accept '500000', '500.000', '500,000' as thousands-separated numbers."""
+    """Parse a Colombian peso amount string.
+
+    Accepts full notation ('500000', '500.000') and miles shorthand ('500' → 500,000).
+    Plain numbers < 1000 are treated as miles de pesos (Colombian everyday convention).
+    """
     limpio = texto.strip().replace(".", "").replace(",", "")
     try:
         valor = Decimal(limpio)
         if valor < Decimal("0"):
             return None
+        if Decimal("0") < valor < Decimal("1000"):
+            valor = valor * 1000
         return valor
     except InvalidOperation:
         return None
