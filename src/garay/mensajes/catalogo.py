@@ -91,28 +91,16 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
         )
     },
-    "info_sin_tours_seleccionados": {
-        Idioma.ES: "Aún no seleccionaste ningún tour."
-    },
+    "info_sin_tours_seleccionados": {Idioma.ES: "Aún no seleccionaste ningún tour."},
     "error_tipo_reserva_invalido": {
         Idioma.ES: "Opción inválida. Elegí INTERNO, EXTERNO o DIGITAL."
     },
-    "error_sin_destino_numero": {
-        Idioma.ES: "Tenés que ingresar al menos un número de tour."
-    },
-    "error_adultos_invalido": {
-        Idioma.ES: "Número inválido. Ingresá un entero mayor a 0."
-    },
+    "error_sin_destino_numero": {Idioma.ES: "Tenés que ingresar al menos un número de tour."},
+    "error_adultos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero mayor a 0."},
     "error_adultos_minimo": {Idioma.ES: "Debe haber al menos 1 adulto."},
-    "error_ninos_invalido": {
-        Idioma.ES: "Número inválido. Ingresá un entero >= 0."
-    },
-    "error_ninos_negativo": {
-        Idioma.ES: "El número de niños no puede ser negativo."
-    },
-    "error_abono_invalido": {
-        Idioma.ES: "Monto inválido. Ingresá 0 si no hubo abono."
-    },
+    "error_ninos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero >= 0."},
+    "error_ninos_negativo": {Idioma.ES: "El número de niños no puede ser negativo."},
+    "error_abono_invalido": {Idioma.ES: "Monto inválido. Ingresá 0 si no hubo abono."},
     "pregunta_rol_venta": {Idioma.ES: "¿Cuál fue tu rol en esta venta?"},
     "pregunta_neto_sin_precio": {
         Idioma.ES: (
@@ -120,22 +108,16 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "(no se encontró precio en el catálogo para algún tour seleccionado)"
         )
     },
-    "error_neto_invalido": {
-        Idioma.ES: "Monto inválido. Ingresá un número >= 0."
-    },
+    "error_neto_invalido": {Idioma.ES: "Monto inválido. Ingresá un número >= 0."},
     "error_rol_invalido": {
         Idioma.ES: "Opción inválida. Elegí: Ambos, Solo vendedor, o Solo cerrador."
     },
     "error_interno_rol_no_definido": {
-        Idioma.ES: (
-            "Error interno: rol no definido. Escribí /cancelar y comenzá de nuevo."
-        )
+        Idioma.ES: ("Error interno: rol no definido. Escribí /cancelar y comenzá de nuevo.")
     },
     "confirmacion_venta_exitosa": {Idioma.ES: "¡Venta registrada con éxito!"},
     "pregunta_campo_editar": {Idioma.ES: "¿Qué campo querés modificar?"},
-    "error_campo_editar_invalido": {
-        Idioma.ES: "Opción inválida. Elegí uno de los campos."
-    },
+    "error_campo_editar_invalido": {Idioma.ES: "Opción inválida. Elegí uno de los campos."},
     "error_estado_no_manejable": {Idioma.ES: "Estado no manejable."},
     "info_destinos_seleccionados": {
         Idioma.ES: (
@@ -144,20 +126,15 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         )
     },
     "info_ia_detecto_destinos": {
-        Idioma.ES: (
-            "La IA detectó: {nombres} (ingresá los números correspondientes)."
-        )
+        Idioma.ES: ("La IA detectó: {nombres} (ingresá los números correspondientes).")
     },
     "error_destino_no_encontrado": {
         Idioma.ES: (
-            "Número(s) no encontrado(s): {invalidos}. Revisá el catálogo.\n"
-            "{destinos_mensaje}"
+            "Número(s) no encontrado(s): {invalidos}. Revisá el catálogo.\n{destinos_mensaje}"
         )
     },
     "error_abono_supera_neto": {
-        Idioma.ES: (
-            "El abono ({abono}) no puede superar el neto calculado ({neto})."
-        )
+        Idioma.ES: ("El abono ({abono}) no puede superar el neto calculado ({neto}).")
     },
     "error_neto_supera_valor_detalle": {
         Idioma.ES: (
@@ -167,6 +144,44 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "error_neto_supera_valor_monto_neto": {
         Idioma.ES: "El neto ({neto}) no puede superar el valor ({valor})."
+    },
+    "titulo_datos_extraidos_foto": {Idioma.ES: "*Datos extraidos de la foto:*"},
+    "completar_datos_faltantes": {Idioma.ES: "\nCompletemos lo que falta:"},
+    "dato_extraido_nombre": {Idioma.ES: "Nombre: {valor}"},
+    "dato_extraido_telefono": {Idioma.ES: "Teléfono: {valor}"},
+    "dato_extraido_fecha": {Idioma.ES: "Fecha: {valor}"},
+    "dato_extraido_destinos": {Idioma.ES: "Destinos: {valor}"},
+    "dato_extraido_adultos": {Idioma.ES: "Adultos: {valor}"},
+    "dato_extraido_ninos": {Idioma.ES: "Niños: {valor}"},
+    "dato_extraido_valor": {Idioma.ES: "Valor: {valor}"},
+    "dato_extraido_abono": {Idioma.ES: "Abono: {valor}"},
+    "dato_extraido_ticket": {Idioma.ES: "N° ticket: {valor}"},
+    "dato_extraido_hotel": {Idioma.ES: "Hotel: {valor}"},
+    "dato_extraido_habitacion": {Idioma.ES: "Habitación: {valor}"},
+    "dato_extraido_vendedor": {Idioma.ES: "Vendedor: {valor}"},
+    "error_extraccion_no_disponible": {
+        Idioma.ES: (
+            "La extracción automática no está disponible. "
+            "Usa /start para ingresar los datos manualmente."
+        )
+    },
+    "error_extraccion_timeout": {
+        Idioma.ES: (
+            "La IA tardó demasiado en procesar la foto. "
+            "Intenta de nuevo o usa /start."
+        )
+    },
+    "error_extraccion_fallo": {
+        Idioma.ES: (
+            "Ocurrió un error al procesar la foto. "
+            "Intenta de nuevo o usa /start."
+        )
+    },
+    "error_datos_incompletos": {
+        Idioma.ES: (
+            "⚠️ Faltan datos para confirmar:\n• {campos}\n\n"
+            "Edita los campos faltantes antes de confirmar."
+        )
     },
 }
 

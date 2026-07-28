@@ -282,10 +282,12 @@ class TestConfirmacionEditar:
         assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
         assert len(salida.opciones) > 0
 
-    def test_confirmacion_confirmar_termina(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+    def test_confirmacion_confirmar_con_ctx_vacio_bloquea(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """With an empty context, confirmation must stay blocked at CONFIRMACION."""
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TERMINADO
-        assert salida.listo is True
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
     def test_confirmacion_cancelar_cancela(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "❌ Cancelar", ctx)
@@ -353,12 +355,12 @@ class TestParticipante:
 
 
 class TestConfirmacion:
-    def test_confirmacion_confirmar_devuelve_terminado_listo(
+    def test_confirmacion_confirmar_con_ctx_vacio_bloquea(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
+        """With an empty context, confirmation must stay blocked at CONFIRMACION."""
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TERMINADO
-        assert salida.listo is True
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
 
 class TestCancelar:
@@ -770,7 +772,7 @@ class TestParsearMonto:
 
 
 class TestFotoModo:
-    """foto_modo=True causes _handle_punto_de_venta to skip DESTINO and go to CONFIRMACION."""
+    """foto_modo=True causes _handle_punto_de_venta to skip DESTINO and go to PARTICIPANTE_ROL."""
 
     def test_estados_foto_avanzar_no_incluye_monto_valor_ni_monto_abono(self) -> None:
         """MONTO_VALOR and MONTO_ABONO must NOT be in _ESTADOS_FOTO_AVANZAR.
@@ -784,13 +786,13 @@ class TestFotoModo:
         assert EstadoFSM.MONTO_VALOR not in _ESTADOS_FOTO_AVANZAR
         assert EstadoFSM.MONTO_ABONO not in _ESTADOS_FOTO_AVANZAR
 
-    def test_foto_modo_salta_a_confirmacion_despues_de_punto_de_venta(
+    def test_foto_modo_salta_a_participante_rol_despues_de_punto_de_venta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """With foto_modo=True, _handle_punto_de_venta jumps to CONFIRMACION."""
+        """With foto_modo=True, _handle_punto_de_venta jumps to PARTICIPANTE_ROL."""
         ctx.foto_modo = True
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
 
     def test_foto_modo_false_after_punto_de_venta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -812,7 +814,7 @@ class TestFotoModo:
             destinos_numeros=[1],  # Tour Playa Blanca: neto_adulto=100000
         )
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         assert salida.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
     def test_handle_destino_recomputa_neto_en_modo_edicion(
@@ -842,3 +844,135 @@ class TestFotoModo:
 
     def test_negative_returns_none(self) -> None:
         assert _parsear_monto("-500") is None
+
+
+# ─── foto_modo: salta a PARTICIPANTE_ROL (no CONFIRMACION) ──────────────────
+
+
+class TestFotoModoSaltaParticipanteRol:
+    """Cambio 3: foto_modo=True must route to PARTICIPANTE_ROL after PUNTO_DE_VENTA."""
+
+    def test_foto_modo_salta_a_participante_rol_no_confirmacion(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """Con foto_modo=True, _handle_punto_de_venta va a PARTICIPANTE_ROL, no CONFIRMACION."""
+        ctx.foto_modo = True
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+
+    def test_foto_modo_opciones_participante_rol(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """La salida debe tener las opciones de rol."""
+        ctx.foto_modo = True
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert "Ambos" in salida.opciones
+
+    def test_foto_modo_false_se_resetea(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """foto_modo se resetea a False en el contexto retornado."""
+        ctx.foto_modo = True
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.contexto.foto_modo is False
+
+
+# ─── Validación en _handle_confirmacion ──────────────────────────────────────
+
+
+@pytest.fixture()
+def ctx_completo() -> ContextoVenta:
+    """A ContextoVenta with all required fields filled (tipo INTERNO)."""
+    return ContextoVenta(
+        cliente_nombre="Ana García",
+        cliente_telefono="3001234567",
+        cliente_hotel="Hotel Test",
+        cliente_habitacion="101",
+        fecha_salida=datetime.datetime(2026, 8, 1, 8, 0),
+        adultos=2,
+        ninos=1,
+        destinos_numeros=[1],
+        valor=Decimal("260000"),
+        abono=Decimal("130000"),
+        tipo_cliente="INTERNO",
+        punto_de_venta_nombre="Hotel Test",
+        rol_registrante="ambos",
+        neto=Decimal("180000"),
+    )
+
+
+class TestValidarDatosConfirmacion:
+    def test_ctx_completo_no_tiene_faltantes(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        """Un contexto con todos los campos rellenos no bloquea confirmacion."""
+        assert fsm._validar_datos_confirmacion(ctx_completo) == []
+
+    def test_falta_cliente_nombre(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_nombre = None
+        assert "Nombre del cliente" in fsm._validar_datos_confirmacion(ctx_completo)
+
+    def test_falta_telefono(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_telefono = None
+        assert "Teléfono" in fsm._validar_datos_confirmacion(ctx_completo)
+
+    def test_hotel_habitacion_obligatorios_solo_para_interno(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.tipo_cliente = "EXTERNO"
+        ctx_completo.cliente_hotel = None
+        ctx_completo.cliente_habitacion = None
+        faltantes = fsm._validar_datos_confirmacion(ctx_completo)
+        assert "Hotel" not in faltantes
+        assert "Habitación" not in faltantes
+
+    def test_hotel_obligatorio_para_interno(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.tipo_cliente = "INTERNO"
+        ctx_completo.cliente_hotel = None
+        assert "Hotel" in fsm._validar_datos_confirmacion(ctx_completo)
+
+    def test_habitacion_obligatoria_para_interno(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.tipo_cliente = "INTERNO"
+        ctx_completo.cliente_habitacion = None
+        assert "Habitación" in fsm._validar_datos_confirmacion(ctx_completo)
+
+    def test_ninos_cero_es_valido(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.ninos = 0
+        assert "Niños" not in " ".join(fsm._validar_datos_confirmacion(ctx_completo))
+
+    def test_ninos_none_falla(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.ninos = None
+        faltantes = fsm._validar_datos_confirmacion(ctx_completo)
+        assert any("iños" in f for f in faltantes)
+
+    def test_abono_cero_es_valido(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.abono = Decimal("0")
+        assert "Abono" not in fsm._validar_datos_confirmacion(ctx_completo)
+
+    def test_confirmacion_bloqueada_si_faltan_datos(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        ctx_completo.cliente_nombre = None
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx_completo)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert "Nombre del cliente" in salida.mensaje
+
+    def test_confirmacion_procede_si_datos_completos(
+        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx_completo)
+        assert salida.nuevo_estado == EstadoFSM.TERMINADO

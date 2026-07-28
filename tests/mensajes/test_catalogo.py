@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from garay.dominio.comun.errores import ErrorDeConfiguracion
@@ -169,6 +171,77 @@ class TestClavesTemplateBatchC:
         result = template.format(neto="$200.000", valor="$100.000")
         assert "{" not in result
         assert "$200.000" in result
+
+
+class TestClavesFotoExtraccion:
+    """Tests for new catalog keys added in foto-validate-catalog change."""
+
+    CLAVES_NUEVAS: ClassVar[list[str]] = [
+        "titulo_datos_extraidos_foto",
+        "completar_datos_faltantes",
+        "dato_extraido_nombre",
+        "dato_extraido_telefono",
+        "dato_extraido_fecha",
+        "dato_extraido_destinos",
+        "dato_extraido_adultos",
+        "dato_extraido_ninos",
+        "dato_extraido_valor",
+        "dato_extraido_abono",
+        "dato_extraido_ticket",
+        "dato_extraido_hotel",
+        "dato_extraido_habitacion",
+        "dato_extraido_vendedor",
+        "error_extraccion_no_disponible",
+        "error_extraccion_timeout",
+        "error_extraccion_fallo",
+        "error_datos_incompletos",
+    ]
+
+    def test_todas_las_claves_nuevas_existen(self) -> None:
+        """All 18 new keys must be present in the catalog."""
+        for clave in self.CLAVES_NUEVAS:
+            msg = obtener_mensaje(clave)
+            assert isinstance(msg, str) and len(msg) > 0, f"Key missing or empty: {clave!r}"
+
+    def test_error_datos_incompletos_tiene_placeholder_campos(self) -> None:
+        template = obtener_mensaje("error_datos_incompletos")
+        assert "{campos}" in template
+
+    def test_ninguna_clave_nueva_tiene_voseo(self) -> None:
+        voseo_palabras = ("usá", "intentá", "podés", "escribí", "elegí", "ingresá")
+        for clave in self.CLAVES_NUEVAS:
+            msg = obtener_mensaje(clave)
+            for palabra in voseo_palabras:
+                assert palabra not in msg, (
+                    f"Key {clave!r} contains voseo {palabra!r}: {msg!r}"
+                )
+
+    def test_dato_extraido_nombre_tiene_placeholder_valor(self) -> None:
+        template = obtener_mensaje("dato_extraido_nombre")
+        result = template.format(valor="Ana García")
+        assert "Ana García" in result
+        assert "{" not in result
+
+    def test_dato_extraido_valor_tiene_placeholder_valor(self) -> None:
+        template = obtener_mensaje("dato_extraido_valor")
+        result = template.format(valor="$260.000")
+        assert "$260.000" in result
+        assert "{" not in result
+
+    def test_titulo_datos_extraidos_foto_tiene_markdown(self) -> None:
+        msg = obtener_mensaje("titulo_datos_extraidos_foto")
+        assert "*" in msg  # Markdown bold
+
+    def test_error_extraccion_no_disponible_no_tiene_voseo(self) -> None:
+        msg = obtener_mensaje("error_extraccion_no_disponible")
+        assert "usá" not in msg
+        assert "usa" in msg.lower() or "/start" in msg
+
+    def test_error_datos_incompletos_format_completo(self) -> None:
+        template = obtener_mensaje("error_datos_incompletos")
+        result = template.format(campos="Nombre del cliente\n• Teléfono")
+        assert "{" not in result
+        assert "Nombre del cliente" in result
 
 
 class TestConfirmacionResumenEspecialE:

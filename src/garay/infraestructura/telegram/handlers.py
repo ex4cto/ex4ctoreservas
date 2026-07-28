@@ -28,6 +28,7 @@ from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
+from garay.mensajes.catalogo import obtener_mensaje
 
 _TZ = ZoneInfo("America/Bogota")
 
@@ -222,6 +223,11 @@ async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return await _enviar_salida(update, context, salida)
 
 
+def _fmt_cop(valor: Decimal) -> str:
+    """Format a Decimal as Colombian pesos. E.g.: 260000 → '$260.000'"""
+    return "$" + f"{int(valor):,}".replace(",", ".")
+
+
 @requiere_rol
 async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle photo or image document — extract reservation data via AI."""
@@ -232,8 +238,7 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if extractor is None:
         if update.effective_message:
             await update.effective_message.reply_text(
-                "La extracción automática no está disponible. "
-                "Usá /start para ingresar los datos manualmente."
+                obtener_mensaje("error_extraccion_no_disponible")
             )
         return ConversationHandler.END
 
@@ -260,14 +265,14 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     except TimeoutError:
         if update.effective_message:
             await update.effective_message.reply_text(
-                "La IA tardó demasiado en procesar la foto. Intentá de nuevo o usá /start."
+                obtener_mensaje("error_extraccion_timeout")
             )
         return ConversationHandler.END
     except Exception:
         logger.exception("Error al procesar foto con IA")
         if update.effective_message:
             await update.effective_message.reply_text(
-                "Ocurrió un error al procesar la foto. Intentá de nuevo o usá /start."
+                obtener_mensaje("error_extraccion_fallo")
             )
         return ConversationHandler.END
 
@@ -276,34 +281,69 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
 
     # Build summary of extracted data
-    lineas: list[str] = ["*Datos extraídos de la foto:*\n"]
+    lineas: list[str] = [obtener_mensaje("titulo_datos_extraidos_foto")]
     if ctx.cliente_nombre:
-        lineas.append(f"Nombre: {ctx.cliente_nombre}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_nombre").format(valor=ctx.cliente_nombre)
+        )
     if ctx.cliente_telefono:
-        lineas.append(f"Teléfono: {ctx.cliente_telefono}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_telefono").format(valor=ctx.cliente_telefono)
+        )
     if ctx.fecha_salida:
-        lineas.append(f"Fecha: {ctx.fecha_salida.strftime('%d/%m/%Y')}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_fecha").format(
+                valor=ctx.fecha_salida.strftime("%d/%m/%Y")
+            )
+        )
     if ctx.destinos_nombres:
-        lineas.append(f"Destinos: {', '.join(ctx.destinos_nombres)}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_destinos").format(
+                valor=", ".join(ctx.destinos_nombres)
+            )
+        )
     if ctx.adultos is not None:
-        lineas.append(f"Adultos: {ctx.adultos}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_adultos").format(valor=ctx.adultos)
+        )
     if ctx.ninos is not None and ctx.ninos > 0:
-        lineas.append(f"Niños: {ctx.ninos}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_ninos").format(valor=ctx.ninos)
+        )
     if ctx.valor is not None:
-        lineas.append(f"Valor: {ctx.valor}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_valor").format(valor=_fmt_cop(ctx.valor))
+        )
     if ctx.abono is not None:
-        lineas.append(f"Abono: {ctx.abono}")
+        lineas.append(
+            obtener_mensaje("dato_extraido_abono").format(valor=_fmt_cop(ctx.abono))
+        )
     if ctx.numero_fisico is not None:
-        lineas.append(f"N° ticket: {ctx.numero_fisico}")
-    lineas.append("\nCompletemos lo que falta:")
+        lineas.append(
+            obtener_mensaje("dato_extraido_ticket").format(valor=ctx.numero_fisico)
+        )
+    if ctx.cliente_hotel:
+        lineas.append(
+            obtener_mensaje("dato_extraido_hotel").format(valor=ctx.cliente_hotel)
+        )
+    if ctx.cliente_habitacion:
+        lineas.append(
+            obtener_mensaje("dato_extraido_habitacion").format(valor=ctx.cliente_habitacion)
+        )
+    if ctx.vendedor_nombre:
+        lineas.append(
+            obtener_mensaje("dato_extraido_vendedor").format(valor=ctx.vendedor_nombre)
+        )
+    lineas.append(obtener_mensaje("completar_datos_faltantes"))
 
-    ctx.foto_modo = True  # jump to CONFIRMACION after PUNTO_DE_VENTA
+    ctx.foto_modo = True  # jump to PARTICIPANTE_ROL after PUNTO_DE_VENTA
 
     # Start the FSM at TIPO_RESERVA with the pre-filled ctx
     # (photo entry skips METODO_INPUT — user already chose Foto implicitly)
     salida = SalidaFSM(
         mensaje="\n".join(lineas)
-        + "\n\n¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
+        + "\n\n"
+        + obtener_mensaje("pregunta_tipo_reserva"),
         opciones=["INTERNO", "EXTERNO", "DIGITAL"],
         nuevo_estado=EstadoFSM.TIPO_RESERVA,
         contexto=ctx,

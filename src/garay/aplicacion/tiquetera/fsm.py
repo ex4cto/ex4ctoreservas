@@ -383,9 +383,9 @@ class FSMTiquetera:
                 if computed is not None:
                     ctx.neto = computed
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.CONFIRMACION,
-                mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                mensaje=obtener_mensaje("pregunta_rol_venta"),
+                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -811,9 +811,58 @@ class FSMTiquetera:
             contexto=ctx,
         )
 
+    def _validar_datos_confirmacion(self, ctx: ContextoVenta) -> list[str]:
+        """Return a list of missing required field labels for confirmation.
+
+        An empty list means the context is complete and confirmation can proceed.
+        """
+        faltantes: list[str] = []
+        if not ctx.cliente_nombre:
+            faltantes.append("Nombre del cliente")
+        if not ctx.cliente_telefono:
+            faltantes.append("Teléfono")
+        if ctx.tipo_cliente == "INTERNO":
+            if not ctx.cliente_hotel:
+                faltantes.append("Hotel")
+            if not ctx.cliente_habitacion:
+                faltantes.append("Habitación")
+        if ctx.fecha_salida is None:
+            faltantes.append("Fecha de salida")
+        if ctx.adultos is None or ctx.adultos < 1:
+            faltantes.append("Adultos (mínimo 1)")
+        if ctx.ninos is None:
+            faltantes.append("Niños (puede ser 0)")
+        if not ctx.destinos_numeros:
+            faltantes.append("Destinos (pendientes de confirmar)")
+        if ctx.valor is None:
+            faltantes.append("Valor total")
+        if ctx.abono is None:
+            faltantes.append("Abono")
+        if not ctx.tipo_cliente:
+            faltantes.append("Tipo de reserva")
+        if not ctx.punto_de_venta_nombre:
+            faltantes.append("Punto de venta")
+        if not ctx.rol_registrante:
+            faltantes.append("Participantes (vendedor/cerrador)")
+        return faltantes
+
     def _handle_confirmacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         if entrada.strip() == "✅ Confirmar":
+            faltantes = self._validar_datos_confirmacion(ctx)
+            if faltantes:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.CONFIRMACION,
+                    mensaje=(
+                        obtener_mensaje("error_datos_incompletos").format(
+                            campos="\n• ".join(faltantes)
+                        )
+                        + "\n\n"
+                        + self._construir_resumen(ctx)
+                    ),
+                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    contexto=ctx,
+                )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TERMINADO,
                 mensaje=obtener_mensaje("confirmacion_venta_exitosa"),
