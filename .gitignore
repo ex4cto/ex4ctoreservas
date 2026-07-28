@@ -17,3 +17,24 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime
+logs/
+*.log
+
+# Media / user data (reference only, not tracked)
+*.xlsx
+*.xls
+*.jpg
+*.jpeg
+*.png
+*.pdf
+
+# Tool config (local only)
+.atl/
+.claude/
+
+# Business context docs (local reference, not versioned)
+"situacion problema"
+situacion problema
+GARAY_CONTEXT.md
