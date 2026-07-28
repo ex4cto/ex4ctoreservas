@@ -842,6 +842,167 @@ class TestFotoModo:
     def test_invalid_returns_none(self) -> None:
         assert _parsear_monto("abc") is None
 
+
+# ─── Change 1: procesar_foto respects modo_edicion ───────────────────────────
+
+
+class TestProcesarFotoModoEdicion:
+    """Change 1: procesar_foto must NOT auto-advance when modo_edicion=True."""
+
+    def test_procesar_foto_no_avanza_cuando_modo_edicion(self, fsm: FSMTiquetera) -> None:
+        """With modo_edicion=True, procesar_foto stops at the target state even when
+        the next state also has a pre-filled value (telefono pre-filled)."""
+        # Full context — all ESTADOS_FOTO_AVANZAR values are set
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            cliente_nombre="Juan",
+            cliente_telefono="300111222",
+            cliente_hotel="Grand",
+            cliente_habitacion="101",
+            fecha_salida=datetime.datetime(2026, 12, 25, 10, 0),
+            adultos=2,
+            ninos=0,
+            modo_edicion=True,
+        )
+        # Simulate: user selected "Cliente" in EDITAR_SELECTOR → CLIENTE_NOMBRE with modo_edicion
+        # Now user types the new name — procesar_foto is called with EDITAR_SELECTOR
+        salida = fsm.procesar_foto(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx)
+        # _handle_editar_selector sets modo_edicion=True and returns CLIENTE_NOMBRE.
+        # Without the fix, procesar_foto would auto-advance through pre-filled states.
+        # With the fix it must stop at CLIENTE_NOMBRE.
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+        assert salida.contexto.modo_edicion is True
+
+    def test_procesar_foto_avanza_normalmente_sin_modo_edicion(self, fsm: FSMTiquetera) -> None:
+        """Regression: without modo_edicion auto-advance still works for photo flow."""
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            cliente_nombre="Juan",
+            cliente_telefono=None,
+        )
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
+        # CLIENTE_NOMBRE has value, so it auto-advances to CLIENTE_TELEFONO (no value → stops)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
+
+
+# ─── Change 2: Adultos/Niños edit covers both fields ─────────────────────────
+
+
+class TestEditarAdultosNinos:
+    """Change 2: editing 'Adultos/Niños' must prompt for niños after adultos."""
+
+    def test_editar_adultos_ninos_pide_ninos_tras_adultos(self, fsm: FSMTiquetera) -> None:
+        """When modo_edicion=True, _handle_pax_adultos must go to PAX_NINOS, not CONFIRMACION."""
+        ctx = ContextoVenta(modo_edicion=True, adultos=1, ninos=2)
+        salida = fsm.procesar(EstadoFSM.PAX_ADULTOS, "3", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PAX_NINOS
+        assert salida.contexto.adultos == 3
+        # modo_edicion must still be True so PAX_NINOS knows to return to CONFIRMACION
+        assert salida.contexto.modo_edicion is True
+
+    def test_editar_adultos_ninos_completo_va_a_confirmacion(self, fsm: FSMTiquetera) -> None:
+        """After adultos → niños, _handle_pax_ninos clears modo_edicion and goes to CONFIRMACION."""
+        ctx = ContextoVenta(modo_edicion=True, adultos=1, ninos=2)
+        # Step 1: edit adultos
+        salida1 = fsm.procesar(EstadoFSM.PAX_ADULTOS, "3", ctx)
+        assert salida1.nuevo_estado == EstadoFSM.PAX_NINOS
+        # Step 2: edit niños
+        salida2 = fsm.procesar(EstadoFSM.PAX_NINOS, "1", salida1.contexto)
+        assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida2.contexto.adultos == 3
+        assert salida2.contexto.ninos == 1
+        assert salida2.contexto.modo_edicion is False
+
+
+# ─── Change 3: Habitación en _CAMPOS_EDITABLES ───────────────────────────────
+
+
+class TestHabitacionEditable:
+    """Change 3: 'Habitación' must appear in _CAMPOS_EDITABLES."""
+
+    def test_habitacion_aparece_en_campos_editables(self, fsm: FSMTiquetera) -> None:
+        from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
+
+        target_states = {estado for _, estado in _CAMPOS_EDITABLES}
+        assert EstadoFSM.CLIENTE_HABITACION in target_states
+
+    def test_editar_habitacion_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
+        """With modo_edicion=True, CLIENTE_HABITACION returns to CONFIRMACION."""
+        ctx = ContextoVenta(modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "202", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.cliente_habitacion == "202"
+
+    def test_editar_selector_habitacion_navega_correctamente(self, fsm: FSMTiquetera) -> None:
+        """Selecting 'Habitación' from EDITAR_SELECTOR navigates to CLIENTE_HABITACION."""
+        ctx = ContextoVenta()
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Habitación", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
+        assert salida.contexto.modo_edicion is True
+
+
+# ─── Change 4: EDITAR_VENDEDOR / EDITAR_CERRADOR states ─────────────────────
+
+
+class TestEditarParticipantes:
+    """Change 4: new FSM states for editing participant names directly."""
+
+    def test_editar_participantes_mapea_a_editar_vendedor(self, fsm: FSMTiquetera) -> None:
+        """'Participantes' in EDITAR_SELECTOR must go to EDITAR_VENDEDOR (not PARTICIPANTE_ROL)."""
+        from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
+
+        campos_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
+        assert campos_map.get("Participantes") == EstadoFSM.EDITAR_VENDEDOR
+
+    def test_editar_participantes_ambos_pide_vendedor_luego_cerrador(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """rol='ambos': EDITAR_VENDEDOR → EDITAR_CERRADOR → CONFIRMACION."""
+        ctx = ContextoVenta(rol_registrante="ambos", modo_edicion=True)
+        # Step 1: enter vendor name
+        salida1 = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Maria", ctx)
+        assert salida1.nuevo_estado == EstadoFSM.EDITAR_CERRADOR
+        assert salida1.contexto.vendedor_nombre == "Maria"
+        # Step 2: enter closer name
+        salida2 = fsm.procesar(EstadoFSM.EDITAR_CERRADOR, "Pedro", salida1.contexto)
+        assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida2.contexto.cerrador_nombre == "Pedro"
+        assert salida2.contexto.modo_edicion is False
+
+    def test_editar_participantes_solo_vendedor_va_directo_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """rol='vendedor': EDITAR_VENDEDOR → CONFIRMACION (no cerrador step)."""
+        ctx = ContextoVenta(rol_registrante="vendedor", modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Carlos", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.vendedor_nombre == "Carlos"
+        assert salida.contexto.modo_edicion is False
+
+    def test_editar_participantes_cerrador_guarda_en_vendedor_nombre(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """rol='cerrador': EDITAR_VENDEDOR stores into vendedor_nombre → CONFIRMACION."""
+        ctx = ContextoVenta(rol_registrante="cerrador", modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Ana", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.vendedor_nombre == "Ana"
+        assert salida.contexto.modo_edicion is False
+
+    def test_habitacion_en_campos_editables_no_es_participante_rol(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """After change 4, 'Participantes' maps to EDITAR_VENDEDOR, NOT PARTICIPANTE_ROL."""
+        from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
+
+        campos_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
+        assert campos_map.get("Participantes") != EstadoFSM.PARTICIPANTE_ROL
+
+    def test_editar_vendedor_estado_existe_en_enum(self) -> None:
+        """EstadoFSM.EDITAR_VENDEDOR and EDITAR_CERRADOR must exist."""
+        assert EstadoFSM.EDITAR_VENDEDOR == "editar_vendedor"
+        assert EstadoFSM.EDITAR_CERRADOR == "editar_cerrador"
+
     def test_negative_returns_none(self) -> None:
         assert _parsear_monto("-500") is None
 

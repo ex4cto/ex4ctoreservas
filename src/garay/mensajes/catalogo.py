@@ -183,6 +183,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Edita los campos faltantes antes de confirmar."
         )
     },
+    "pregunta_editar_vendedor": {
+        Idioma.ES: "Vendedor actual: {actual}\n¿Nuevo nombre?"
+    },
+    "pregunta_editar_cerrador": {
+        Idioma.ES: "Cerrador actual: {actual}\n¿Nuevo nombre?"
+    },
 }
 
 

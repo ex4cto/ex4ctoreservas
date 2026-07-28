@@ -26,7 +26,9 @@ from garay.infraestructura.telegram.handlers import (
     handle_cliente_telefono,
     handle_confirmacion,
     handle_destino,
+    handle_editar_cerrador,
     handle_editar_selector,
+    handle_editar_vendedor,
     handle_esperando_foto,
     handle_fecha_salida,
     handle_metodo_input,
@@ -121,6 +123,12 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             estados[EstadoFSM.EDITAR_SELECTOR]: [
                 _CB(handle_editar_selector),
                 MessageHandler(_TEXT, handle_editar_selector),
+            ],
+            estados[EstadoFSM.EDITAR_VENDEDOR]: [
+                MessageHandler(_TEXT, handle_editar_vendedor),
+            ],
+            estados[EstadoFSM.EDITAR_CERRADOR]: [
+                MessageHandler(_TEXT, handle_editar_cerrador),
             ],
         },
         fallbacks=[

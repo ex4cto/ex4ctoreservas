@@ -38,6 +38,8 @@ class EstadoFSM(StrEnum):
     PARTICIPANTE_OTRO = "participante_otro"
     CONFIRMACION = "confirmacion"
     EDITAR_SELECTOR = "editar_selector"
+    EDITAR_VENDEDOR = "editar_vendedor"
+    EDITAR_CERRADOR = "editar_cerrador"
     TERMINADO = "terminado"
     CANCELADO = "cancelado"
 
@@ -108,11 +110,12 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
     ("Teléfono", EstadoFSM.CLIENTE_TELEFONO),
     ("Hotel", EstadoFSM.CLIENTE_HOTEL),
+    ("Habitación", EstadoFSM.CLIENTE_HABITACION),
     ("Fecha", EstadoFSM.FECHA_SALIDA),
     ("Adultos/Niños", EstadoFSM.PAX_ADULTOS),
     ("Monto valor", EstadoFSM.MONTO_VALOR),
     ("Abono", EstadoFSM.MONTO_ABONO),
-    ("Participantes", EstadoFSM.PARTICIPANTE_ROL),
+    ("Participantes", EstadoFSM.EDITAR_VENDEDOR),
 ]
 
 
@@ -216,6 +219,8 @@ class FSMTiquetera:
             EstadoFSM.PARTICIPANTE_OTRO: self._handle_participante_otro,
             EstadoFSM.CONFIRMACION: self._handle_confirmacion,
             EstadoFSM.EDITAR_SELECTOR: self._handle_editar_selector,
+            EstadoFSM.EDITAR_VENDEDOR: self._handle_editar_vendedor,
+            EstadoFSM.EDITAR_CERRADOR: self._handle_editar_cerrador,
         }
         handler = handlers.get(estado)
         if handler is None:
@@ -235,7 +240,7 @@ class FSMTiquetera:
     ) -> SalidaFSM:
         """Like procesar() but auto-advances through photo-prefilled states."""
         salida = self.procesar(estado, entrada, ctx)
-        while salida.nuevo_estado in _ESTADOS_FOTO_AVANZAR:
+        while salida.nuevo_estado in _ESTADOS_FOTO_AVANZAR and not salida.contexto.modo_edicion:
             valor = self._get_valor_prefilled(salida.nuevo_estado, salida.contexto)
             if valor is None:
                 break
@@ -610,11 +615,10 @@ class FSMTiquetera:
             )
         ctx.adultos = n
         if ctx.modo_edicion:
-            ctx.modo_edicion = False
+            # Keep modo_edicion=True so PAX_NINOS handler returns to CONFIRMACION
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.CONFIRMACION,
-                mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                nuevo_estado=EstadoFSM.PAX_NINOS,
+                mensaje=obtener_mensaje("pregunta_ninos"),
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -901,6 +905,36 @@ class FSMTiquetera:
             contexto=ctx,
         )
 
+    def _handle_editar_vendedor(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        ctx.vendedor_nombre = entrada.strip()
+        if ctx.rol_registrante == "ambos":
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_CERRADOR,
+                mensaje=obtener_mensaje("pregunta_editar_cerrador").format(
+                    actual=ctx.cerrador_nombre or "—"
+                ),
+                contexto=ctx,
+            )
+        ctx.modo_edicion = False
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CONFIRMACION,
+            mensaje=self._construir_resumen(ctx),
+            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+            contexto=ctx,
+        )
+
+    def _handle_editar_cerrador(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        ctx.cerrador_nombre = entrada.strip()
+        ctx.modo_edicion = False
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CONFIRMACION,
+            mensaje=self._construir_resumen(ctx),
+            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+            contexto=ctx,
+        )
+
     def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
         msgs: dict[EstadoFSM, str] = {
             EstadoFSM.TIPO_RESERVA: obtener_mensaje("pregunta_tipo_reserva"),
@@ -909,11 +943,18 @@ class FSMTiquetera:
             EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_cliente_nombre"),
             EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_cliente_telefono"),
             EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_cliente_hotel"),
+            EstadoFSM.CLIENTE_HABITACION: obtener_mensaje("pregunta_cliente_habitacion"),
             EstadoFSM.FECHA_SALIDA: obtener_mensaje("pregunta_fecha_salida"),
             EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_adultos"),
             EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_valor"),
             EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_abono"),
             EstadoFSM.PARTICIPANTE_ROL: obtener_mensaje("pregunta_rol_venta"),
+            EstadoFSM.EDITAR_VENDEDOR: obtener_mensaje("pregunta_editar_vendedor").format(
+                actual=ctx.vendedor_nombre or "—"
+            ),
+            EstadoFSM.EDITAR_CERRADOR: obtener_mensaje("pregunta_editar_cerrador").format(
+                actual=ctx.cerrador_nombre or "—"
+            ),
         }
         return msgs.get(estado, "")
 
