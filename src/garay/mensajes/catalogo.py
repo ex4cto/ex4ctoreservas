@@ -28,10 +28,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_destino": {Idioma.ES: "Seleccioná los destinos (podés elegir varios):"},
     "pregunta_cliente_nombre": {Idioma.ES: "¿Cuál es el nombre del cliente?"},
     "pregunta_cliente_telefono": {Idioma.ES: "¿Cuál es el teléfono del cliente?"},
-    "pregunta_cliente_hotel": {Idioma.ES: "¿En qué hotel está hospedado el cliente?"},
+    "pregunta_cliente_hotel": {
+        Idioma.ES: "¿En qué hotel está hospedado el cliente? (escribí 'no' si no aplica)"
+    },
     "pregunta_cliente_habitacion": {Idioma.ES: "¿Cuál es el número de habitación?"},
     "pregunta_fecha_salida": {
-        Idioma.ES: "¿Cuál es la fecha de salida? (formato: DD/MM, DD/MM/YY o DD/MM/YYYY)"
+        Idioma.ES: "¿Cuál es la fecha de salida? (DD/MM, DD/MM/YY o DD/MM/YYYY)"
     },
     "pregunta_adultos": {Idioma.ES: "¿Cuántos adultos? (mínimo 1)"},
     "pregunta_ninos": {Idioma.ES: "¿Cuántos niños? (puede ser 0)"},

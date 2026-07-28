@@ -42,3 +42,14 @@ class TestClavesFormatoFecha:
     def test_error_fecha_invalida_incluye_formato_corto(self) -> None:
         msg = obtener_mensaje("error_fecha_invalida")
         assert "DD/MM/YY" in msg
+
+
+class TestClavesUnificacionBatchA:
+    def test_pregunta_cliente_hotel_incluye_sufijo_sin_hotel(self) -> None:
+        msg = obtener_mensaje("pregunta_cliente_hotel")
+        assert "escribí 'no'" in msg
+
+    def test_pregunta_fecha_salida_no_tiene_prefijo_formato(self) -> None:
+        msg = obtener_mensaje("pregunta_fecha_salida")
+        assert "formato:" not in msg
+        assert "DD/MM/YY" in msg

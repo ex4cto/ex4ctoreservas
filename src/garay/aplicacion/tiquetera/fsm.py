@@ -248,7 +248,7 @@ class FSMTiquetera:
         ctx = _clonar(contexto)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CANCELADO,
-            mensaje="Operación cancelada. Escribí /start para comenzar de nuevo.",
+            mensaje=obtener_mensaje("venta_cancelada"),
             contexto=ctx,
         )
 
@@ -360,7 +360,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PUNTO_DE_VENTA,
-            mensaje="¿Cuál es el punto de venta?",
+            mensaje=obtener_mensaje("pregunta_punto_de_venta"),
             opciones=list(self._puntos_venta),
             contexto=ctx,
         )
@@ -414,7 +414,7 @@ class FSMTiquetera:
                 )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CLIENTE_NOMBRE,
-                mensaje="¿Cuál es el nombre del cliente?",
+                mensaje=obtener_mensaje("pregunta_cliente_nombre"),
                 contexto=ctx,
             )
 
@@ -482,7 +482,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_TELEFONO,
-            mensaje="¿Cuál es el teléfono del cliente?",
+            mensaje=obtener_mensaje("pregunta_cliente_telefono"),
             contexto=ctx,
         )
 
@@ -499,7 +499,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HOTEL,
-            mensaje="¿En qué hotel está hospedado el cliente?",
+            mensaje=obtener_mensaje("pregunta_cliente_hotel"),
             contexto=ctx,
         )
 
@@ -534,7 +534,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HABITACION,
-            mensaje="¿Cuál es el número de habitación?",
+            mensaje=obtener_mensaje("pregunta_cliente_habitacion"),
             contexto=ctx,
         )
 
@@ -575,7 +575,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PAX_ADULTOS,
-            mensaje="¿Cuántos adultos? (mínimo 1)",
+            mensaje=obtener_mensaje("pregunta_adultos"),
             contexto=ctx,
         )
 
@@ -606,7 +606,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PAX_NINOS,
-            mensaje="¿Cuántos niños? (puede ser 0)",
+            mensaje=obtener_mensaje("pregunta_ninos"),
             contexto=ctx,
         )
 
@@ -637,7 +637,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_VALOR,
-            mensaje="¿Cuál es el valor total de la venta?",
+            mensaje=obtener_mensaje("pregunta_valor"),
             contexto=ctx,
         )
 
@@ -647,7 +647,7 @@ class FSMTiquetera:
         if monto is None or monto <= Decimal("0"):
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_VALOR,
-                mensaje="Monto inválido. Ingresá un valor positivo (ej: 500000 o 500.000).",
+                mensaje=obtener_mensaje("error_monto_invalido"),
                 contexto=ctx,
             )
         ctx.valor = monto
@@ -661,7 +661,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_ABONO,
-            mensaje="¿Cuánto abonó el cliente? (0 si no hubo abono)",
+            mensaje=obtener_mensaje("pregunta_abono"),
             contexto=ctx,
         )
 
@@ -762,14 +762,14 @@ class FSMTiquetera:
             ctx.rol_registrante = "vendedor"
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
-                mensaje="¿Cuál es el nombre del cerrador?",
+                mensaje=obtener_mensaje("pregunta_participante_otro_cerrador"),
                 contexto=ctx,
             )
         if opcion == "Solo cerrador":
             ctx.rol_registrante = "cerrador"
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
-                mensaje="¿Cuál es el nombre del vendedor?",
+                mensaje=obtener_mensaje("pregunta_participante_otro_vendedor"),
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -816,7 +816,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CANCELADO,
-            mensaje="Operación cancelada. Escribí /start para comenzar de nuevo.",
+            mensaje=obtener_mensaje("venta_cancelada"),
             contexto=ctx,
         )
 
@@ -841,18 +841,16 @@ class FSMTiquetera:
 
     def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
         msgs: dict[EstadoFSM, str] = {
-            EstadoFSM.TIPO_RESERVA: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL",
-            EstadoFSM.PUNTO_DE_VENTA: "¿Cuál es el punto de venta?",
+            EstadoFSM.TIPO_RESERVA: obtener_mensaje("pregunta_tipo_reserva"),
+            EstadoFSM.PUNTO_DE_VENTA: obtener_mensaje("pregunta_punto_de_venta"),
             EstadoFSM.DESTINO: self._destinos_mensaje(ctx),
-            EstadoFSM.CLIENTE_NOMBRE: "¿Cuál es el nombre del cliente?",
-            EstadoFSM.CLIENTE_TELEFONO: "¿Cuál es el teléfono del cliente?",
-            EstadoFSM.CLIENTE_HOTEL: (
-                "¿En qué hotel está hospedado el cliente? (escribí 'no' si no aplica)"
-            ),
-            EstadoFSM.FECHA_SALIDA: "¿Cuál es la fecha de salida? (DD/MM, DD/MM/YY o DD/MM/YYYY)",
-            EstadoFSM.PAX_ADULTOS: "¿Cuántos adultos? (mínimo 1)",
-            EstadoFSM.MONTO_VALOR: "¿Cuál es el valor total de la venta?",
-            EstadoFSM.MONTO_ABONO: "¿Cuánto abonó el cliente? (0 si no hubo abono)",
+            EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_cliente_nombre"),
+            EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_cliente_telefono"),
+            EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_cliente_hotel"),
+            EstadoFSM.FECHA_SALIDA: obtener_mensaje("pregunta_fecha_salida"),
+            EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_adultos"),
+            EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_valor"),
+            EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_abono"),
             EstadoFSM.PARTICIPANTE_ROL: "¿Cuál fue tu rol en esta venta?",
         }
         return msgs.get(estado, "")
