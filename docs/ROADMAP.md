@@ -61,6 +61,7 @@
 | 3.6 | Comandos Telegram `/mis_ventas` + `/resumen_empresa`, es_admin, repos periodo | ✅ | 272 tests |
 | 3.7 | Correcciones UX/dominio: METODO_INPUT, hotel skip, neto auto-calc, editar desde resumen, seed parsing, notificación format | ✅ | 316 tests |
 | 3.8 | Correcciones post-testing manual: freeze FSM (abono loop), typo hotel fuzzy (rapidfuzz), formato fechas unificado, validación neto≤valor, seed neto×1000 | ✅ | 354 tests |
+| 3.9 | Fix input montos: "500" → $500.000 (miles-de-pesos en valor/abono/neto), fix import ContextoVenta | ✅ | 362 tests |
 
 ---
 
@@ -154,4 +155,4 @@ Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 354 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 362 · **mypy:** strict clean · **ruff:** clean
