@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     webhook_secret: str = Field(default="")
     grupo_id: str = Field(default="")
 
+    # Secret for Forward Email webhook (distinct from Telegram webhook_secret).
+    forward_email_secret: str = Field(default="")
+
     # Moneda base del sistema.
     moneda_predeterminada: str = "COP"
 

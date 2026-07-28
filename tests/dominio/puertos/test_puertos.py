@@ -58,6 +58,9 @@ class TestIngresoRepository:
             def listar_sin_clasificar(self) -> list[Ingreso]:
                 return []
 
+            def existe_referencia(self, referencia: str) -> bool:
+                return False
+
         assert isinstance(_Impl(), IngresoRepository)
 
     def test_sin_implementar_no_se_puede_instanciar(self) -> None:

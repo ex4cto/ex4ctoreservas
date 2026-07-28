@@ -45,6 +45,9 @@ class IngresoRepository(ABC):
     @abstractmethod
     def listar_sin_clasificar(self) -> list[Ingreso]: ...
 
+    @abstractmethod
+    def existe_referencia(self, referencia: str) -> bool: ...
+
 
 class EgresoRepository(ABC):
     @abstractmethod
