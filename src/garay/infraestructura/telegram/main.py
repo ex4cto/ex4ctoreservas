@@ -26,6 +26,7 @@ from garay.infraestructura.persistencia.repositorios.reglas_comision import (
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
+from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
@@ -54,6 +55,7 @@ def main() -> None:
     reglas_repo = SQLAReglasComisionRepository(sf)
     tiqueteras_repo = SQLATiqueteraRepository(sf)
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
+    ingreso_repo = SQLAIngresoRepository(sf)
 
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino)
@@ -101,6 +103,7 @@ def main() -> None:
             "comision_registrada_repo": comisiones_repo,
             "registrar_venta_service": servicio,
             "extractor_reserva": extractor_reserva,
+            "ingreso_repo": ingreso_repo,
         }
     )
 

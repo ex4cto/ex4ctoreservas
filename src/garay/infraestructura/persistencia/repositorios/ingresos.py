@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 
 from sqlalchemy import select
@@ -11,6 +12,8 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Ingreso
 from garay.dominio.puertos.repositorios import IngresoRepository
 from garay.infraestructura.persistencia.modelos import IngresoModel
+
+_UTC = datetime.UTC
 
 
 def _to_orm(ingreso: Ingreso) -> IngresoModel:
@@ -23,6 +26,7 @@ def _to_orm(ingreso: Ingreso) -> IngresoModel:
         remitente=ingreso.remitente,
         clasificado=ingreso.clasificado,
         venta_id=ingreso.venta_id,
+        fecha_recibido=ingreso.fecha_recibido,
     )
 
 
@@ -36,6 +40,7 @@ def _to_domain(m: IngresoModel) -> Ingreso:
         remitente=m.remitente,
         clasificado=m.clasificado,
         venta_id=m.venta_id,
+        fecha_recibido=m.fecha_recibido,
     )
 
 
@@ -63,3 +68,16 @@ class SQLAIngresoRepository(IngresoRepository):
             stmt = select(IngresoModel.id).where(IngresoModel.referencia == referencia).limit(1)
             result = session.execute(stmt).scalar_one_or_none()
             return result is not None
+
+    def listar_recientes(self, minutos: int) -> list[Ingreso]:
+        """Return ingresos with fecha_recibido within the last *minutos* minutes."""
+        desde = datetime.datetime.now(_UTC) - datetime.timedelta(minutes=minutos)
+        with self._sf.begin() as session:
+            stmt = (
+                select(IngresoModel)
+                .where(IngresoModel.fecha_recibido.isnot(None))
+                .where(IngresoModel.fecha_recibido >= desde)
+                .order_by(IngresoModel.fecha_recibido.desc())
+            )
+            rows = session.execute(stmt).scalars().all()
+            return [_to_domain(r) for r in rows]

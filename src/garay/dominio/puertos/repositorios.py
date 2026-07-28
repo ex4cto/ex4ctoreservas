@@ -48,6 +48,11 @@ class IngresoRepository(ABC):
     @abstractmethod
     def existe_referencia(self, referencia: str) -> bool: ...
 
+    @abstractmethod
+    def listar_recientes(self, minutos: int) -> list[Ingreso]:
+        """Return ingresos with fecha_recibido within the last *minutos* minutes."""
+        ...
+
 
 class EgresoRepository(ABC):
     @abstractmethod

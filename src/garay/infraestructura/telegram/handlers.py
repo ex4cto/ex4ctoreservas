@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
 import uuid
 from collections import defaultdict
@@ -22,6 +23,7 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
+    IngresoRepository,
     VentaRepository,
 )
 from garay.dominio.ventas.contexto import ContextoVenta
@@ -29,6 +31,8 @@ from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.mensajes.catalogo import obtener_mensaje
+
+_UTC = datetime.UTC
 
 _TZ = ZoneInfo("America/Bogota")
 
@@ -470,6 +474,52 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if update.effective_message:
         await update.effective_message.reply_text(mensaje, parse_mode="Markdown")
+
+
+def _fmt_hace_minutos(fecha_recibido: datetime.datetime) -> str:
+    """Return a human-readable 'hace N min' string relative to now (UTC)."""
+    aware = (
+        fecha_recibido.replace(tzinfo=_UTC)
+        if fecha_recibido.tzinfo is None
+        else fecha_recibido
+    )
+    delta = datetime.datetime.now(_UTC) - aware
+    minutos = max(0, int(delta.total_seconds() // 60))
+    return f"hace {minutos} min"
+
+
+@requiere_rol
+async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /verificar_pago — list unreconciled ingresos from the last 5 minutes."""
+    ingreso_repo: IngresoRepository | None = context.bot_data.get("ingreso_repo")
+
+    if ingreso_repo is None:
+        if update.effective_message:
+            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
+        return
+
+    ingresos = await asyncio.to_thread(ingreso_repo.listar_recientes, 5)
+
+    if not ingresos:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                "❌ Sin pagos en los últimos 5 minutos.\nPedile al cliente el comprobante."
+            )
+        return
+
+    lineas = ["✅ *Pagos recibidos (últimos 5 min):*", ""]
+    for ingreso in ingresos:
+        monto_fmt = _fmt_cop(ingreso.monto.monto)
+        remitente = ingreso.remitente or "Desconocido"
+        tiempo = (
+            _fmt_hace_minutos(ingreso.fecha_recibido)
+            if ingreso.fecha_recibido is not None
+            else "hora desconocida"
+        )
+        lineas.append(f"• {monto_fmt} — {remitente} ({ingreso.banco}) — {tiempo}")
+
+    if update.effective_message:
+        await update.effective_message.reply_text("\n".join(lineas), parse_mode="Markdown")
 
 
 @requiere_admin

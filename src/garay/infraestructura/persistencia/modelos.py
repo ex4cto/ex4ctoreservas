@@ -18,6 +18,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -159,6 +160,10 @@ class IngresoModel(Base):
     clasificado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     venta_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=True
+    )
+    # UTC timestamp of receipt. Null for legacy records predating this column.
+    fecha_recibido: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
     )
 
 

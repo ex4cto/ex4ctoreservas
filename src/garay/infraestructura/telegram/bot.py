@@ -20,6 +20,7 @@ from garay.infraestructura.telegram.handlers import (
     cmd_mis_ventas,
     cmd_resumen_empresa,
     cmd_start,
+    cmd_verificar_pago,
     handle_cliente_habitacion,
     handle_cliente_hotel,
     handle_cliente_nombre,
@@ -140,4 +141,5 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("resumen_empresa", cmd_resumen_empresa), group=1)
+    app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     return app

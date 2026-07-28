@@ -25,6 +25,8 @@ class Ingreso:
     remitente: str | None = field(default=None)
     clasificado: bool = field(default=False)
     venta_id: uuid.UUID | None = field(default=None)
+    # Timestamp of receipt (UTC). None for legacy records created before this field existed.
+    fecha_recibido: datetime.datetime | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.referencia.strip():
