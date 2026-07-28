@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 
 from telegram import Update
 
@@ -30,11 +31,26 @@ from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepo
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 
+_logger = logging.getLogger(__name__)
+
+
+def _ensure_ollama_running(bin_path: str) -> None:
+    """Start ollama serve in the background if it is not already running."""
+    try:
+        subprocess.Popen(
+            [bin_path, "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        _logger.warning("ollama binary not found at %r — photo extraction will fail", bin_path)
+
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     settings = obtener_settings()
+    _ensure_ollama_running(settings.ollama_bin)
 
     if not settings.grupo_id:
         raise RuntimeError(
