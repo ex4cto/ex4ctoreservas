@@ -64,6 +64,8 @@
 | 3.9 | Fix input montos: "500" → $500.000 (miles-de-pesos en valor/abono/neto), fix import ContextoVenta | ✅ | 362 tests |
 | 3.10 | Estado ESPERANDO_FOTO, fix foto button, fix abono display, format date unificado | ✅ | 372 tests |
 | 3.11 | Migración catálogo completa: ~40 strings eliminados de fsm.py, 25 claves nuevas/actualizadas, `_construir_resumen` wired, Judgment Day pre-ejecución | ✅ | 400 tests |
+| 3.12 | Extracción foto mejorada: prompt con layout físico del tiquete, `numero_ticket` str (alphanumérico), `vendedor_nombre` mapeado desde `servicio_nombre`, `foto_modo` flag (salta wizard), Alembic migration `numero_fisico` BigInteger→String | ✅ | 405 tests · commits `494b540` `e3ce4d3` |
+| 3.13 | Validación confirmación + catálogo `cmd_foto`: bloquea "✅ Confirmar" si faltan campos obligatorios (hotel/hab solo para INTERNO), `foto_modo`→`PARTICIPANTE_ROL`, 18 claves catálogo nuevas, formato `$260.000` en resumen inicial | ✅ | 427 tests · commit `443ff10` |
 
 ---
 
@@ -157,4 +159,4 @@ Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 400 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 427 · **mypy:** strict clean · **ruff:** clean
