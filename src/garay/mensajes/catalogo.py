@@ -76,12 +76,11 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Habitación: {cliente_habitacion}\n"
             "Fecha salida: {fecha_salida}\n"
             "Adultos: {adultos} | Niños: {ninos}\n"
-            "Ticket #: {numero_ticket}\n"
             "Valor: {valor}\n"
             "Abono: {abono}\n"
             "Neto: {neto}\n"
-            "Registrado por: {participante_nombre} ({participante_rol})\n"
-            "Otro participante: {participante_otro}\n\n"
+            "Vendedor: {vendedor}\n"
+            "Cerrador: {cerrador}\n\n"
             "¿Confirmamos?"
         )
     },

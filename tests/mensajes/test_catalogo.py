@@ -169,3 +169,39 @@ class TestClavesTemplateBatchC:
         result = template.format(neto="$200.000", valor="$100.000")
         assert "{" not in result
         assert "$200.000" in result
+
+
+class TestConfirmacionResumenEspecialE:
+    def test_confirmacion_resumen_no_tiene_numero_ticket(self) -> None:
+        template = obtener_mensaje("confirmacion_resumen")
+        assert "numero_ticket" not in template
+        assert "Ticket" not in template
+
+    def test_confirmacion_resumen_tiene_vendedor_y_cerrador(self) -> None:
+        template = obtener_mensaje("confirmacion_resumen")
+        assert "{vendedor}" in template
+        assert "{cerrador}" in template
+
+    def test_confirmacion_resumen_format_completo_sin_error(self) -> None:
+        template = obtener_mensaje("confirmacion_resumen")
+        result = template.format(
+            tipo="EXTERNO",
+            punto_de_venta="Oficina",
+            destinos="Tour Playa Blanca",
+            cliente_nombre="Juan Pérez",
+            cliente_telefono="3001234567",
+            cliente_hotel="Hotel Mar",
+            cliente_habitacion="302",
+            fecha_salida="15/08/2025",
+            adultos=2,
+            ninos=0,
+            valor="$200.000",
+            abono="$100.000",
+            neto="$150.000",
+            vendedor="(tú)",
+            cerrador="María García",
+        )
+        assert "{" not in result
+        assert "Tour Playa Blanca" in result
+        assert "Ticket" not in result
+        assert "Vendedor: (tú)" in result

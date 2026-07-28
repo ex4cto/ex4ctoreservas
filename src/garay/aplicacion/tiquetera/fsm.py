@@ -129,6 +129,7 @@ def _clonar(ctx: ContextoVenta) -> ContextoVenta:
 
 def _tú_si(rol: str | None, *roles: str) -> str:
     """Return '(tú)' when `rol` is in `roles`, otherwise '—'."""
+    # i18n debt: "(tú)" and "—" are user-visible strings bypassing the catalog
     return "(tú)" if rol in roles else "—"
 
 
@@ -898,22 +899,22 @@ class FSMTiquetera:
         fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
         hotel_str = "Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
         hab_str = "—" if ctx.sin_hotel else (ctx.cliente_habitacion or "—")
-        return (
-            "📋 *Resumen de la venta:*\n"
-            f"Tipo: {ctx.tipo_cliente or '—'}\n"
-            f"Punto de venta: {ctx.punto_de_venta_nombre or 'Sin punto'}\n"
-            f"Destinos: {destinos_str}\n"
-            f"Cliente: {ctx.cliente_nombre or '—'}\n"
-            f"Teléfono: {ctx.cliente_telefono or '—'}\n"
-            f"Hotel: {hotel_str}\n"
-            f"Habitación: {hab_str}\n"
-            f"Fecha salida: {fecha_str}\n"
-            f"Adultos: {ctx.adultos or 0} | Niños: {ctx.ninos or 0}\n"
-            f"Valor: {_formatear_monto(ctx.valor)}\n"
-            f"Abono: {_formatear_monto(ctx.abono)}\n"
-            f"Neto: {_formatear_monto(ctx.neto)}\n"
-            f"Vendedor: {ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'vendedor')}\n"
-            "Cerrador: "
-            f"{ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, 'ambos', 'cerrador')}\n\n"
-            "¿Confirmamos?"
+        vendedor_str = ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, "ambos", "vendedor")
+        cerrador_str = ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, "ambos", "cerrador")
+        return obtener_mensaje("confirmacion_resumen").format(
+            tipo=ctx.tipo_cliente or "—",
+            punto_de_venta=ctx.punto_de_venta_nombre or "Sin punto",
+            destinos=destinos_str,
+            cliente_nombre=ctx.cliente_nombre or "—",
+            cliente_telefono=ctx.cliente_telefono or "—",
+            cliente_hotel=hotel_str,
+            cliente_habitacion=hab_str,
+            fecha_salida=fecha_str,
+            adultos=ctx.adultos or 0,
+            ninos=ctx.ninos or 0,
+            valor=_formatear_monto(ctx.valor),
+            abono=_formatear_monto(ctx.abono),
+            neto=_formatear_monto(ctx.neto),
+            vendedor=vendedor_str,
+            cerrador=cerrador_str,
         )
