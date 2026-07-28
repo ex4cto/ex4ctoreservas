@@ -84,7 +84,11 @@ def main() -> None:
 
     fsm = FSMTiquetera(servicios=servicios, puntos_venta=puntos_venta)
 
-    extractor_ia = ExtractorOllama(url=settings.ollama_url, modelo=settings.ollama_modelo)
+    extractor_ia = ExtractorOllama(
+        url=settings.ollama_url,
+        modelo=settings.ollama_modelo,
+        timeout=settings.ollama_timeout,
+    )
     extractor_reserva = ExtractorReservaOllama(extractor_ia)
 
     notificador = NotificadorGrupoTelegram(settings.telegram_bot_token)
@@ -111,6 +115,7 @@ def main() -> None:
             "comision_registrada_repo": comisiones_repo,
             "registrar_venta_service": servicio,
             "extractor_reserva": extractor_reserva,
+            "ollama_timeout": settings.ollama_timeout,
         }
     )
 

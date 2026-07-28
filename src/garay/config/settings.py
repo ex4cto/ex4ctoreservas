@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     ollama_url: str = Field(default="http://localhost:11434")
     ollama_modelo: str = Field(default="llava")
     ollama_bin: str = Field(default="ollama")
+    ollama_timeout: int = Field(default=300)
 
 
 @lru_cache(maxsize=1)
