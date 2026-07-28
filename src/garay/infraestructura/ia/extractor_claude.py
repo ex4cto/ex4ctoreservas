@@ -19,9 +19,9 @@ from garay.dominio.tiquetera.valor_objetos import DatosExtraidos
 _logger = logging.getLogger(__name__)
 
 _PROMPT = """\
-Sos un extractor de datos de tiquetes de la agencia Garay Tours (Cartagena, Colombia).
-Analizá la foto y extraé los campos según el layout exacto que se describe abajo.
-Respondé ÚNICAMENTE con JSON válido, sin texto adicional ni bloques de código.
+Eres un extractor de datos de tiquetes de la agencia Garay Tours (Cartagena, Colombia).
+Analiza la foto y extrae los campos según el layout exacto que se describe abajo.
+Responde ÚNICAMENTE con JSON válido, sin texto adicional ni bloques de código.
 
 ── LAYOUT DEL TIQUETE PROMO ──────────────────────────────────────
 CAMPO N° (serial del tiquete): recuadro gris en el borde derecho del
@@ -47,14 +47,14 @@ CUADRÍCULA DE CHECKBOXES:
   Incluir en "destinos" SOLO los que tengan una X visible.
 
 ── REGLAS CRÍTICAS ───────────────────────────────────────────────
-- "numero_ticket": extraé el valor del campo N° como string. NUNCA uses
+- "numero_ticket": extrae el valor del campo N° como string. NUNCA uses
   un monto monetario como numero_ticket.
 - "abono": el monto junto a "Abono:" en la fila de dinero. NUNCA uses el
   valor del campo N° como abono.
 - "destinos": lista solo los checkboxes marcados con X. Si ninguno → [].
 - "fecha_salida": formato "DD/MM/YYYY HH:MM" o "DD/MM/YYYY". Si incluye
-  AM/PM, convertí a 24h. Solo fecha/hora de salida.
-- Si no podés leer un campo con certeza → null.
+  AM/PM, convierte a 24h. Solo fecha/hora de salida.
+- Si no puedes leer un campo con certeza → null.
 ──────────────────────────────────────────────────────────────────
 
 {
