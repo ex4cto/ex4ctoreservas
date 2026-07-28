@@ -60,12 +60,41 @@ class TestExtractorClaudeExtraerDeFoto:
 
         with patch("garay.infraestructura.ia.extractor_claude.anthropic.Anthropic") as mock_cls:
             msg = MagicMock()
-            msg.content = [MagicMock(text="no es json")]
+            msg.content = [MagicMock(text="no es json en absoluto")]
             mock_cls.return_value.messages.create.return_value = msg
             extractor = ExtractorClaude(api_key="sk-test")
             result = extractor.extraer_de_foto(str(foto))
 
         assert result.confianza == Decimal("0")
+
+    def test_json_envuelto_en_markdown_se_parsea_correctamente(self, tmp_path) -> None:
+        foto = tmp_path / "ticket.jpg"
+        foto.write_bytes(b"fake-image")
+
+        payload = {
+            "numero_ticket": 7,
+            "nombre_cliente": "Ana Lopez",
+            "telefono": None,
+            "destinos": ["Playa Blanca"],
+            "fecha_salida": None,
+            "adultos": 1,
+            "ninos": 0,
+            "valor": None,
+            "abono": None,
+            "vendedor": None,
+            "confianza": 0.8,
+        }
+        raw_with_fences = f"```json\n{json.dumps(payload)}\n```"
+
+        with patch("garay.infraestructura.ia.extractor_claude.anthropic.Anthropic") as mock_cls:
+            msg = MagicMock()
+            msg.content = [MagicMock(spec=TextBlock, text=raw_with_fences)]
+            mock_cls.return_value.messages.create.return_value = msg
+            extractor = ExtractorClaude(api_key="sk-test")
+            result = extractor.extraer_de_foto(str(foto))
+
+        assert result.nombre_cliente == "Ana Lopez"
+        assert result.confianza == Decimal("0.8")
 
     def test_auth_error_lanza_excepcion(self, tmp_path) -> None:
         import anthropic

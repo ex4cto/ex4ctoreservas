@@ -6,6 +6,7 @@ import base64
 import datetime
 import json
 import logging
+import re
 from decimal import Decimal, InvalidOperation
 
 import anthropic
@@ -100,8 +101,11 @@ class ExtractorClaude(ExtractorIA):
         return self._parsear_respuesta(raw)
 
     def _parsear_respuesta(self, raw: str) -> DatosExtraidos:
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            return DatosExtraidos(confianza=Decimal("0"))
         try:
-            data = json.loads(raw)
+            data = json.loads(match.group())
         except json.JSONDecodeError:
             return DatosExtraidos(confianza=Decimal("0"))
 
