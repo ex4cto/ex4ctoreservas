@@ -266,10 +266,8 @@ class FSMTiquetera:
         # No selection: show instruction + optional IA hint
         lineas = [obtener_mensaje("pregunta_destino_numero")]
         if ctx.destinos_nombres:
-            nombres = ', '.join(ctx.destinos_nombres)
-            lineas.append(
-                obtener_mensaje("info_ia_detecto_destinos").format(nombres=nombres)
-            )
+            nombres = ", ".join(ctx.destinos_nombres)
+            lineas.append(obtener_mensaje("info_ia_detecto_destinos").format(nombres=nombres))
         lineas.append(obtener_mensaje("info_sin_tours_seleccionados"))
         return "\n".join(lineas)
 
@@ -378,6 +376,18 @@ class FSMTiquetera:
                 opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
                 contexto=ctx,
             )
+        if ctx.foto_modo:
+            ctx.foto_modo = False
+            if ctx.neto is None and ctx.abono is not None and ctx.adultos is not None:
+                computed = self._calcular_neto(ctx)
+                if computed is not None:
+                    ctx.neto = computed
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
             mensaje=self._destinos_mensaje(ctx),
@@ -403,6 +413,10 @@ class FSMTiquetera:
                 )
             if ctx.modo_edicion:
                 ctx.modo_edicion = False
+                if ctx.neto is None and ctx.abono is not None and ctx.adultos is not None:
+                    computed = self._calcular_neto(ctx)
+                    if computed is not None:
+                        ctx.neto = computed
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),

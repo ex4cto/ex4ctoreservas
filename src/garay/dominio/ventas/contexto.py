@@ -29,6 +29,7 @@ class ContextoVenta:
     vendedor_nombre: str | None = None
     cerrador_nombre: str | None = None
     referido_nombre: str | None = None
-    numero_fisico: int | None = None
+    numero_fisico: str | None = None
     rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"
     modo_edicion: bool = False
+    foto_modo: bool = False

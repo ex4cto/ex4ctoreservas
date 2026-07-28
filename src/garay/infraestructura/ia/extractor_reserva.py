@@ -38,6 +38,7 @@ class ExtractorReservaFoto(ExtractorReserva):
             cliente_telefono=datos.telefono,
             cliente_hotel=datos.cliente_hotel,
             cliente_habitacion=datos.numero_habitacion,
+            vendedor_nombre=datos.servicio_nombre,
             destinos_nombres=list(datos.destinos),
             fecha_salida=datos.fecha_salida,
             adultos=datos.adultos,

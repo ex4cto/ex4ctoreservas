@@ -52,7 +52,7 @@ class TestExtractorReservaFoto:
             fecha_salida=fecha,
             adultos=2,
             ninos=1,
-            numero_ticket=42,
+            numero_ticket="42",
         )
         mock_extractor_ia.extraer_de_foto.return_value = datos
 
@@ -73,38 +73,26 @@ class TestExtractorReservaFoto:
     def test_numero_ticket_mapea_a_numero_fisico(
         self, extractor: ExtractorReservaFoto, mock_extractor_ia: MagicMock
     ) -> None:
-        """Scenario 2 — numero_ticket → numero_fisico (name trap)."""
-        datos = DatosExtraidos(numero_ticket=42)
+        """Scenario 2 — numero_ticket (str) → numero_fisico (str)."""
+        datos = DatosExtraidos(numero_ticket="42")
         mock_extractor_ia.extraer_de_foto.return_value = datos
 
         with patch("garay.infraestructura.ia.extractor_reserva.os.unlink"):
             ctx = extractor.extraer_de_foto(b"bytes")
 
-        assert ctx.numero_fisico == 42
+        assert ctx.numero_fisico == "42"
 
-    def test_servicio_nombre_es_ignorado(
+    def test_servicio_nombre_mapea_a_vendedor_nombre(
         self, extractor: ExtractorReservaFoto, mock_extractor_ia: MagicMock
     ) -> None:
-        """Scenario 3 — servicio_nombre must NOT appear in any ContextoVenta field."""
+        """Scenario 3 — servicio_nombre maps to ctx.vendedor_nombre."""
         datos = DatosExtraidos(servicio_nombre="Carlos")
         mock_extractor_ia.extraer_de_foto.return_value = datos
 
         with patch("garay.infraestructura.ia.extractor_reserva.os.unlink"):
             ctx = extractor.extraer_de_foto(b"bytes")
 
-        for field_val in [
-            ctx.cliente_nombre,
-            ctx.cliente_telefono,
-            ctx.cliente_hotel,
-            ctx.cliente_habitacion,
-            ctx.vendedor_nombre,
-            ctx.cerrador_nombre,
-            ctx.referido_nombre,
-            ctx.punto_de_venta_nombre,
-            ctx.rol_registrante,
-        ]:
-            assert field_val != "Carlos"
-        assert "Carlos" not in ctx.destinos_nombres
+        assert ctx.vendedor_nombre == "Carlos"
 
     def test_destinos_tuple_a_destinos_nombres_list(
         self, extractor: ExtractorReservaFoto, mock_extractor_ia: MagicMock

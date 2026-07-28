@@ -19,8 +19,43 @@ from garay.dominio.tiquetera.valor_objetos import DatosExtraidos
 _logger = logging.getLogger(__name__)
 
 _PROMPT = """\
-Sos un extractor de datos para una agencia de turismo. Analizá esta foto de un tiquete de venta
-y extraé todos los campos que puedas leer. Respondé SOLO con JSON válido con estos campos:
+Sos un extractor de datos de tiquetes de la agencia Garay Tours (Cartagena, Colombia).
+Analizá la foto y extraé los campos según el layout exacto que se describe abajo.
+Respondé ÚNICAMENTE con JSON válido, sin texto adicional ni bloques de código.
+
+── LAYOUT DEL TIQUETE PROMO ──────────────────────────────────────
+CAMPO N° (serial del tiquete): recuadro gris en el borde derecho del
+tiquete, etiquetado "N°". Puede ser numérico (ej: 0845) o alfanumérico
+(ej: C047). Este campo es el número de serie del papel impreso, NO dinero.
+→ va en "numero_ticket" (string).
+
+FILA 1: Nombre: [nombre cliente]  |  Niños: [entero]  |  Adultos: [entero]
+FILA 2: Fecha y hora de salida: [DD/MM/YYYY HH:MM]  |  Hotel: [nombre hotel]
+FILA 3: N° Habitación: [número]  |  Tel: [teléfono]  |  Vendedor: [nombre]
+
+FILA DE DINERO (tres campos en línea, de izquierda a derecha):
+  Valor:  [precio total de venta en COP, ej: 260000]
+  Abono:  [anticipo pagado por el cliente en COP, ej: 130000]
+            Si dice "OK" en lugar de número → null
+  Saldo:  [Valor - Abono, campo calculado — NO incluir en JSON]
+
+CUADRÍCULA DE CHECKBOXES:
+  Playa blanca | Islas de Rosario | Playa tranquila | Cholen | Playa linda
+  4 Islas | 5 Islas | Palmerito Beach | Punta Arena | Rumba en Chiva
+  Tours Bahia | Playa Cristal Full Day | Playa Cristal | Barú + Mapache + Snorkel
+  Otros → Cual: [texto libre]
+  Incluir en "destinos" SOLO los que tengan una X visible.
+
+── REGLAS CRÍTICAS ───────────────────────────────────────────────
+- "numero_ticket": extraé el valor del campo N° como string. NUNCA uses
+  un monto monetario como numero_ticket.
+- "abono": el monto junto a "Abono:" en la fila de dinero. NUNCA uses el
+  valor del campo N° como abono.
+- "destinos": lista solo los checkboxes marcados con X. Si ninguno → [].
+- "fecha_salida": formato "DD/MM/YYYY HH:MM" o "DD/MM/YYYY". Si incluye
+  AM/PM, convertí a 24h. Solo fecha/hora de salida.
+- Si no podés leer un campo con certeza → null.
+──────────────────────────────────────────────────────────────────
 
 {
   "numero_ticket": null,
@@ -28,25 +63,15 @@ y extraé todos los campos que puedas leer. Respondé SOLO con JSON válido con 
   "telefono": null,
   "cliente_hotel": null,
   "numero_habitacion": null,
+  "vendedor": null,
   "destinos": [],
   "fecha_salida": null,
   "adultos": null,
   "ninos": null,
   "valor": null,
   "abono": null,
-  "vendedor": null,
   "confianza": 0.0
-}
-
-Reglas:
-- numero_ticket: entero o null
-- destinos: lista de strings con los destinos marcados
-- fecha_salida: string en formato "DD/MM/YYYY" o null (solo la fecha, sin hora)
-- adultos, ninos: enteros o null
-- valor, abono: números decimales (pesos colombianos) o null
-- confianza: float 0.0-1.0 (qué tan bien se pudo leer la imagen)
-- Si no podés leer un campo con certeza, usá null
-- No incluyas texto fuera del JSON\
+}\
 """
 
 _DATE_FORMATS = [
@@ -160,7 +185,11 @@ class ExtractorClaude(ExtractorIA):
                 fecha_salida=fecha_salida,
                 adultos=_int_or_none("adultos"),
                 ninos=_int_or_none("ninos"),
-                numero_ticket=_int_or_none("numero_ticket"),
+                numero_ticket=(
+                    str(data["numero_ticket"])
+                    if data.get("numero_ticket") is not None
+                    else None
+                ),
                 confianza=confianza,
             )
         except (InvalidOperation, ValueError, TypeError):

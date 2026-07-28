@@ -27,6 +27,6 @@ class DatosExtraidos:
     fecha_salida: datetime.datetime | None = None
     adultos: int | None = None
     ninos: int | None = None
-    numero_ticket: int | None = None
+    numero_ticket: str | None = None
     # Metadata
     confianza: Decimal = Decimal("0")

@@ -59,8 +59,8 @@ def _dict_to_datos(raw: dict[str, object]) -> DatosExtraidos:
     ninos: int | None = int(ninos_raw) if isinstance(ninos_raw, int) else None
 
     numero_ticket_raw = raw.get("numero_ticket")
-    numero_ticket: int | None = (
-        int(numero_ticket_raw) if isinstance(numero_ticket_raw, int) else None
+    numero_ticket: str | None = (
+        str(numero_ticket_raw) if numero_ticket_raw is not None else None
     )
 
     destinos_raw = raw.get("destinos")

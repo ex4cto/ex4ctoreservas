@@ -66,8 +66,8 @@ class TestTiquetera:
         assert hash(a) == hash(b)
 
     def test_tiquetera_con_numero_fisico(self) -> None:
-        t = _tiquetera(numero_fisico=42)
-        assert t.numero_fisico == 42
+        t = _tiquetera(numero_fisico="42")
+        assert t.numero_fisico == "42"
 
     def test_tiquetera_sin_numero_fisico_es_none(self) -> None:
         t = _tiquetera()

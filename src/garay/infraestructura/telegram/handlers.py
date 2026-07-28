@@ -84,6 +84,8 @@ async def _enviar_salida(
             reply_markup=teclado,
             parse_mode="Markdown",
         )
+    if salida.nuevo_estado in (EstadoFSM.TERMINADO, EstadoFSM.CANCELADO):
+        return ConversationHandler.END
     return ESTADO_PTB[salida.nuevo_estado]
 
 
@@ -294,6 +296,8 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if ctx.numero_fisico is not None:
         lineas.append(f"N° ticket: {ctx.numero_fisico}")
     lineas.append("\nCompletemos lo que falta:")
+
+    ctx.foto_modo = True  # jump to CONFIRMACION after PUNTO_DE_VENTA
 
     # Start the FSM at TIPO_RESERVA with the pre-filled ctx
     # (photo entry skips METODO_INPUT — user already chose Foto implicitly)

@@ -27,7 +27,7 @@ class RegistrarVentaComando:
     foto_referencia: str | None = None
     porcentaje_referido: Decimal = field(default_factory=lambda: Decimal("0"))
     abono: Dinero | None = None
-    numero_fisico: int | None = None
+    numero_fisico: str | None = None
 
 
 @dataclass(frozen=True)

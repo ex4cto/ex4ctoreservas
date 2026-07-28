@@ -121,7 +121,7 @@ class TiqueteraModel(Base):
     )
     foto_referencia: Mapped[str] = mapped_column(String, nullable=False)
     # Physical paper number entered by the user; optional.
-    numero_fisico: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    numero_fisico: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # System-assigned via ticket_seq on INSERT; None before first persist.
     numero_ticket: Mapped[int | None] = mapped_column(
         BigInteger, _ticket_seq, nullable=True, unique=True

@@ -561,6 +561,7 @@ class TestProcesarFoto:
 
 # ─── Fix 1: destino mensaje sin instruccion cuando hay seleccion ─────────────
 
+
 class TestDestinoMensaje:
     """Fix 1: instruction line hidden when tours already selected."""
 
@@ -571,9 +572,7 @@ class TestDestinoMensaje:
         salida = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
         assert "Ingresá el número del tour" in salida.mensaje
 
-    def test_destinos_mensaje_con_seleccion_omite_instruccion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_destinos_mensaje_con_seleccion_omite_instruccion(self, fsm: FSMTiquetera) -> None:
         # Tours already selected → instruction line must NOT appear, only "Seleccionados:"
         ctx = ContextoVenta(destinos_numeros=[1])
         salida = fsm.procesar(EstadoFSM.DESTINO, "2", ctx)
@@ -583,6 +582,7 @@ class TestDestinoMensaje:
 
 
 # ─── Fix 2: hotel skip detection flexible ────────────────────────────────────
+
 
 class TestEsSinHotel:
     """Fix 2: _es_sin_hotel covers flexible natural-language inputs."""
@@ -625,33 +625,26 @@ class TestEsSinHotel:
 class TestHotelSkipFlexible:
     """Fix 2: FSM accepts flexible no-hotel phrases."""
 
-    def test_hotel_frase_completa_sin_hotel(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_hotel_frase_completa_sin_hotel(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "no estoy en ningún hotel", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
         assert salida.contexto.sin_hotel is True
 
-    def test_hotel_frase_no_tengo(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_hotel_frase_no_tengo(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "no tengo hotel", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-    def test_hotel_ninguna(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_hotel_ninguna(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "ninguna", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-    def test_hotel_nombre_real_no_se_confunde(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
+    def test_hotel_nombre_real_no_se_confunde(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Novotel Centro", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
 
 
 # ─── Fix 3: EDITAR_SELECTOR ──────────────────────────────────────────────────
+
 
 class TestEditarSelector:
     """Fix 3: field-by-field edit mode from CONFIRMACION."""
@@ -677,39 +670,29 @@ class TestEditarSelector:
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
         assert salida.contexto.modo_edicion is True
 
-    def test_editar_cliente_nombre_vuelve_a_confirmacion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_editar_cliente_nombre_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         # modo_edicion=True → after editing a field, return to CONFIRMACION
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Nuevo Nombre", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.cliente_nombre == "Nuevo Nombre"
 
-    def test_editar_hotel_vuelve_a_confirmacion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_editar_hotel_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Grand Hyatt", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-    def test_modo_edicion_se_resetea_tras_editar(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_modo_edicion_se_resetea_tras_editar(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Otro", ctx)
         assert salida.contexto.modo_edicion is False
 
-    def test_editar_tipo_reserva_vuelve_a_confirmacion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_editar_tipo_reserva_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-    def test_editar_fecha_salida_vuelve_a_confirmacion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_editar_fecha_salida_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
@@ -722,15 +705,14 @@ class TestEditarSelector:
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-    def test_editar_participante_rol_ambos_vuelve_a_confirmacion(
-        self, fsm: FSMTiquetera
-    ) -> None:
+    def test_editar_participante_rol_ambos_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
 
 # ─── Fix 4: formateo de montos ───────────────────────────────────────────────
+
 
 class TestFormatearMonto:
     """Fix 4: _formatear_monto uses dot as thousands separator."""
@@ -782,6 +764,75 @@ class TestParsearMonto:
 
     def test_dot_thousands_large_not_scaled(self) -> None:
         assert _parsear_monto("1.800.000") == Decimal("1800000")
+
+
+# ─── foto_modo: jump to CONFIRMACION after PUNTO_DE_VENTA ────────────────────
+
+
+class TestFotoModo:
+    """foto_modo=True causes _handle_punto_de_venta to skip DESTINO and go to CONFIRMACION."""
+
+    def test_estados_foto_avanzar_no_incluye_monto_valor_ni_monto_abono(self) -> None:
+        """MONTO_VALOR and MONTO_ABONO must NOT be in _ESTADOS_FOTO_AVANZAR.
+
+        _handle_monto_abono can loop back to itself (abono > neto path) or to
+        MONTO_VALOR (neto > valor path). Including them in the frozenset would
+        create an infinite loop in procesar_foto.
+        """
+        from garay.aplicacion.tiquetera.fsm import _ESTADOS_FOTO_AVANZAR
+
+        assert EstadoFSM.MONTO_VALOR not in _ESTADOS_FOTO_AVANZAR
+        assert EstadoFSM.MONTO_ABONO not in _ESTADOS_FOTO_AVANZAR
+
+    def test_foto_modo_salta_a_confirmacion_despues_de_punto_de_venta(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """With foto_modo=True, _handle_punto_de_venta jumps to CONFIRMACION."""
+        ctx.foto_modo = True
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_foto_modo_false_after_punto_de_venta(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        """foto_modo is reset to False in the returned context."""
+        ctx.foto_modo = True
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.contexto.foto_modo is False
+
+    def test_foto_modo_computa_neto_cuando_datos_disponibles(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """When foto_modo=True and abono/adultos are set, neto is auto-computed."""
+        ctx = ContextoVenta(
+            foto_modo=True,
+            abono=Decimal("50000"),
+            adultos=2,
+            ninos=0,
+            destinos_numeros=[1],  # Tour Playa Blanca: neto_adulto=100000
+        )
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
+
+    def test_handle_destino_recomputa_neto_en_modo_edicion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """Editing destinations recomputes neto when modo_edicion=True and abono is set."""
+        ctx = ContextoVenta(
+            modo_edicion=True,
+            abono=Decimal("50000"),
+            adultos=2,
+            ninos=0,
+        )
+        # First: select destination 1
+        salida = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
+        ctx2 = salida.contexto
+        # Now confirm with modo_edicion=True
+        ctx2.modo_edicion = True
+        salida2 = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx2)
+        assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida2.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
     def test_zero_stays_zero(self) -> None:
         assert _parsear_monto("0") == Decimal("0")

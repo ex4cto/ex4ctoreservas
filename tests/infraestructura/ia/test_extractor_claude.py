@@ -31,7 +31,7 @@ class TestExtractorClaudeExtraerDeFoto:
         foto.write_bytes(b"fake-image")
 
         payload = {
-            "numero_ticket": 42,
+            "numero_ticket": "0845",
             "nombre_cliente": "Juan Perez",
             "telefono": "3001234567",
             "destinos": ["Playa Blanca"],
@@ -52,7 +52,7 @@ class TestExtractorClaudeExtraerDeFoto:
         assert result.nombre_cliente == "Juan Perez"
         assert result.adultos == 2
         assert result.confianza == Decimal("0.9")
-        assert result.numero_ticket == 42
+        assert result.numero_ticket == "0845"
 
     def test_respuesta_json_invalida_retorna_confianza_cero(self, tmp_path) -> None:
         foto = tmp_path / "ticket.jpg"
@@ -72,7 +72,7 @@ class TestExtractorClaudeExtraerDeFoto:
         foto.write_bytes(b"fake-image")
 
         payload = {
-            "numero_ticket": 7,
+            "numero_ticket": "7",
             "nombre_cliente": "Ana Lopez",
             "telefono": None,
             "destinos": ["Playa Blanca"],
@@ -95,6 +95,7 @@ class TestExtractorClaudeExtraerDeFoto:
 
         assert result.nombre_cliente == "Ana Lopez"
         assert result.confianza == Decimal("0.8")
+        assert result.numero_ticket == "7"
 
     def test_numero_con_cero_inicial_se_parsea_correctamente(self, tmp_path) -> None:
         foto = tmp_path / "ticket.jpg"
