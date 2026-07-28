@@ -1,4 +1,5 @@
 """Smoke tests: ORM models import cleanly and schema creates without error in SQLite."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -45,10 +46,23 @@ def test_venta_columns_present() -> None:
     Base.metadata.create_all(engine)
     inspector = sa.inspect(engine)
     cols = {c["name"] for c in inspector.get_columns("ventas")}
-    assert {"id", "valor_venta", "neto", "abono", "servicio_ids", "cliente_id",
-            "tipo_cliente", "fecha", "adultos", "ninos", "estado",
-            "vendedor_nombre", "cerrador_nombre", "punto_de_venta_id",
-            "referido_nombre"}.issubset(cols)
+    assert {
+        "id",
+        "valor_venta",
+        "neto",
+        "abono",
+        "servicio_ids",
+        "cliente_id",
+        "tipo_cliente",
+        "fecha",
+        "adultos",
+        "ninos",
+        "estado",
+        "vendedor_nombre",
+        "cerrador_nombre",
+        "punto_de_venta_id",
+        "referido_nombre",
+    }.issubset(cols)
 
 
 def test_tiquetera_has_both_ticket_fields() -> None:

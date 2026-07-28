@@ -43,19 +43,21 @@ _MIL_RE = re.compile(r"(\d[\d.,]*)\s*MIL", re.IGNORECASE)
 _NUM_RE = re.compile(r"\d[\d.,]+")
 
 
-def _parse_neto(texto: str | None) -> Decimal | None:
+def _parse_neto(texto: str | int | float | None) -> Decimal | None:
     """Parse a dirty neto price string into a Decimal, or None if unparseable."""
     if texto is None:
         return None
+    if not isinstance(texto, str):
+        texto = str(texto)
     texto = texto.strip()
     if not texto:
         return None
-    # Strings with no digits at all (e.g. "NO INGRESAN NIÑOS")
+    # Children not allowed or free — treat as 0 regardless of digit presence
+    if re.search(r"no\s+pagan|no\s+ingresan|no\s+se\s+aceptan", texto, re.IGNORECASE):
+        return Decimal("0")
+    # Strings with no digits at all
     if not re.search(r"\d", texto):
         return None
-    # "No pagan" variants — treat as 0
-    if re.search(r"no\s+pagan", texto, re.IGNORECASE):
-        return Decimal("0")
     # "50 MIL" → 50000
     mil_match = _MIL_RE.search(texto)
     if mil_match:
@@ -75,7 +77,7 @@ def _parse_neto(texto: str | None) -> Decimal | None:
     return None
 
 
-def _neto_semilla(texto: str | None) -> Decimal | None:
+def _neto_semilla(texto: str | int | float | None) -> Decimal | None:
     """Parse neto for the seed context, where plain numbers are in miles de pesos.
 
     "180" → 180,000 COP; "80.000" and "50 MIL" already parse to ≥ 1000 and are not scaled.

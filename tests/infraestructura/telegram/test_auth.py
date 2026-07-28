@@ -1,4 +1,5 @@
 """Unit tests for the requiere_rol decorator."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -43,9 +44,7 @@ def _make_repo(found: bool = True) -> MagicMock:
 # ---------------------------------------------------------------------------
 
 
-async def _dummy_handler(
-    update: object, context: object
-) -> int:
+async def _dummy_handler(update: object, context: object) -> int:
     return 42
 
 

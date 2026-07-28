@@ -69,9 +69,7 @@ class Dinero:
 
     def _verificar_moneda(self, otro: Dinero) -> None:
         if self._moneda != otro._moneda:
-            raise MonedaIncompatible(
-                f"Distinta moneda: {self._moneda} vs {otro._moneda}."
-            )
+            raise MonedaIncompatible(f"Distinta moneda: {self._moneda} vs {otro._moneda}.")
 
     def _validar_factor(self, factor: Factor, contexto: str) -> Decimal:
         if isinstance(factor, bool | float):

@@ -89,9 +89,7 @@ class SQLAVentaRepository(VentaRepository):
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]:
         with self._sf.begin() as session:
             stmt = (
-                select(VentaModel)
-                .where(VentaModel.fecha >= desde)
-                .where(VentaModel.fecha <= hasta)
+                select(VentaModel).where(VentaModel.fecha >= desde).where(VentaModel.fecha <= hasta)
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]

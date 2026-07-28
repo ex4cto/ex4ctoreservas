@@ -66,6 +66,10 @@
 | 3.11 | Migración catálogo completa: ~40 strings eliminados de fsm.py, 25 claves nuevas/actualizadas, `_construir_resumen` wired, Judgment Day pre-ejecución | ✅ | 400 tests |
 | 3.12 | Extracción foto mejorada: prompt con layout físico del tiquete, `numero_ticket` str (alphanumérico), `vendedor_nombre` mapeado desde `servicio_nombre`, `foto_modo` flag (salta wizard), Alembic migration `numero_fisico` BigInteger→String | ✅ | 405 tests · commits `494b540` `e3ce4d3` |
 | 3.13 | Validación confirmación + catálogo `cmd_foto`: bloquea "✅ Confirmar" si faltan campos obligatorios (hotel/hab solo para INTERNO), `foto_modo`→`PARTICIPANTE_ROL`, 18 claves catálogo nuevas, formato `$260.000` en resumen inicial | ✅ | 427 tests · commit `443ff10` |
+| 3.14 | Fix edit flow foto: `procesar_foto` respeta `modo_edicion`, "Adultos/Niños" edita ambos campos, "Habitación" en selector, nuevos estados EDITAR_VENDEDOR/CERRADOR reemplazan PARTICIPANTE_ROL en edición | ✅ | 440 tests · commit `3712bc0` |
+| 3.15 | Edit prompts muestran valor actual: 8 claves de catálogo con `{actual}`, `_mensaje_para_estado` ctx-aware (nombre, teléfono, hotel, habitación, fecha, adultos/niños, valor, abono) | ✅ | 449 tests · commit `c2f00fd` |
+| 3.16 | Fix neto recálculo en edición: `_parse_neto` reconoce "NO INGRESAN NIÑOS"/"NO SE ACEPTAN" → 0; `_calcular_neto` siempre recalcula al editar destino, pax o foto mode (elimina condición `ctx.neto is None`) | ✅ | 455 tests |
+| 3.17 | Sync catálogo precios desde Google Sheet: `precio_sugerido` (97 servicios) y `neto_adulto` (4 correcciones por match 100%); fix `_parse_neto` para aceptar `int`/`float` además de `str` | ✅ | 455 tests |
 
 ---
 
@@ -159,4 +163,4 @@ Etapa 3  ████████████████████  100%  ✅
 Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 427 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 455 · **mypy:** strict clean · **ruff:** clean

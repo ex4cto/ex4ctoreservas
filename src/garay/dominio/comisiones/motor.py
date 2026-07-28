@@ -65,9 +65,7 @@ class MotorComisiones(MotorComisionesBase):
 
         # Invariante sagrado: punto + vendedor + cerrador + agencia == ganancia
         total_neto = comision_punto + comision_vendedor + comision_cerrador + comision_agencia
-        assert total_neto == venta.ganancia, (
-            f"Invariante violado: {total_neto} != {venta.ganancia}"
-        )
+        assert total_neto == venta.ganancia, f"Invariante violado: {total_neto} != {venta.ganancia}"
 
         return DesgloseComision(
             vendedor=comision_vendedor,

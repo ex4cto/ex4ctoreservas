@@ -45,16 +45,16 @@ class SQLAFreelancerRepository(FreelancerRepository):
 
     def listar_activos(self) -> list[Freelancer]:
         with self._sf.begin() as session:
-            rows = session.execute(
-                select(FreelancerModel).where(FreelancerModel.activo.is_(True))
-            ).scalars().all()
+            rows = (
+                session.execute(select(FreelancerModel).where(FreelancerModel.activo.is_(True)))
+                .scalars()
+                .all()
+            )
             return [to_domain(r) for r in rows]
 
     def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None:
         with self._sf.begin() as session:
             row = session.execute(
-                select(FreelancerModel).where(
-                    FreelancerModel.telegram_user_id == telegram_user_id
-                )
+                select(FreelancerModel).where(FreelancerModel.telegram_user_id == telegram_user_id)
             ).scalar_one_or_none()
             return to_domain(row) if row else None

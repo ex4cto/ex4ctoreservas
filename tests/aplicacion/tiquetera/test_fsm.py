@@ -1210,3 +1210,52 @@ class TestEditarMensajesConValorActual:
         ctx_completo.abono = Decimal("130000")
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Abono", ctx_completo)
         assert "$130.000" in salida.mensaje
+
+
+class TestNetoRecalculoEnEdicion:
+    """Neto must recalculate from catalog whenever destino or pax changes in edit mode."""
+
+    def test_editar_destino_recalcula_neto_aunque_ya_estaba_seteado(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # neto stale from a previous calculation; after confirming destino edit it must update
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            adultos=2,
+            ninos=0,
+            neto=Decimal("999999"),
+            modo_edicion=True,
+        )
+        salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        # Service 1: 100000 × 2 adultos = 200000
+        assert salida.contexto.neto == Decimal("200000")
+
+    def test_editar_pax_recalcula_neto_aunque_ya_estaba_seteado(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # adultos went from 1 → 2; neto should update from 100000 to 200000
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            adultos=2,
+            neto=Decimal("100000"),
+            modo_edicion=True,
+        )
+        salida = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        # Service 1: 100000 × 2 adultos = 200000
+        assert salida.contexto.neto == Decimal("200000")
+
+    def test_foto_modo_recalcula_neto_desde_catalogo(self, fsm: FSMTiquetera) -> None:
+        # IA extracted a wrong neto; catalog must override it
+        ctx = ContextoVenta(
+            destinos_numeros=[1],
+            adultos=2,
+            ninos=0,
+            abono=Decimal("0"),
+            neto=Decimal("999999"),
+            foto_modo=True,
+        )
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        # Service 1: 100000 × 2 adultos = 200000
+        assert salida.contexto.neto == Decimal("200000")

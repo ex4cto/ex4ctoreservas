@@ -40,8 +40,6 @@ class SQLAReglasComisionRepository(ReglasComisionRepository):
     def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None:
         with self._sf.begin() as session:
             row = session.execute(
-                select(ReglasComisionModel).where(
-                    ReglasComisionModel.tipo_cliente == str(tipo)
-                )
+                select(ReglasComisionModel).where(ReglasComisionModel.tipo_cliente == str(tipo))
             ).scalar_one_or_none()
             return to_domain(row) if row else None

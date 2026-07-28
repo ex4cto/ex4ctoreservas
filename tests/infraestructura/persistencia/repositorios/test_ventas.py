@@ -105,8 +105,10 @@ def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> 
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2026, 7, 15),
         participantes=Participantes(
-            vendedor_nombre="Carlos", cerrador_nombre=None,
-            punto_de_venta_id=None, referido_nombre=None,
+            vendedor_nombre="Carlos",
+            cerrador_nombre=None,
+            punto_de_venta_id=None,
+            referido_nombre=None,
         ),
     )
     repo.guardar(v)
@@ -130,8 +132,10 @@ def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> 
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2026, 7, 10),
         participantes=Participantes(
-            vendedor_nombre="OtroVendedor", cerrador_nombre="Carlos",
-            punto_de_venta_id=None, referido_nombre=None,
+            vendedor_nombre="OtroVendedor",
+            cerrador_nombre="Carlos",
+            punto_de_venta_id=None,
+            referido_nombre=None,
         ),
     )
     repo.guardar(v)
@@ -154,8 +158,10 @@ def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) 
         tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2026, 6, 1),
         participantes=Participantes(
-            vendedor_nombre="Carlos", cerrador_nombre=None,
-            punto_de_venta_id=None, referido_nombre=None,
+            vendedor_nombre="Carlos",
+            cerrador_nombre=None,
+            punto_de_venta_id=None,
+            referido_nombre=None,
         ),
     )
     repo.guardar(v)

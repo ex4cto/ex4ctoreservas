@@ -39,28 +39,17 @@ def test_seed_completo_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(ServicioModel)
-            ).scalar()
-            == 137
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 137
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(PuntoDeVentaModel)
-            ).scalar()
-            == 4
+            session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(ReglasComisionModel)
-            ).scalar()
+            session.execute(sa.select(sa.func.count()).select_from(ReglasComisionModel)).scalar()
             == 3
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(FreelancerModel)
-            ).scalar()
-            == 8
+            session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
         )
 
 
@@ -77,28 +66,17 @@ def test_seed_idempotente_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(ServicioModel)
-            ).scalar()
-            == 137
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 137
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(PuntoDeVentaModel)
-            ).scalar()
-            == 4
+            session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(ReglasComisionModel)
-            ).scalar()
+            session.execute(sa.select(sa.func.count()).select_from(ReglasComisionModel)).scalar()
             == 3
         )
         assert (
-            session.execute(
-                sa.select(sa.func.count()).select_from(FreelancerModel)
-            ).scalar()
-            == 8
+            session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
         )
 
 

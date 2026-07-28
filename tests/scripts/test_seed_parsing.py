@@ -18,7 +18,10 @@ class TestParseNeto:
         assert _parse_neto("80.000 ( 2-3 años)") == Decimal("80000")
 
     def test_parse_neto_sin_ninos(self) -> None:
-        assert _parse_neto("NO INGRESAN NIÑOS") is None
+        assert _parse_neto("NO INGRESAN NIÑOS") == Decimal("0")
+
+    def test_parse_neto_no_se_aceptan(self) -> None:
+        assert _parse_neto("NO SE ACEPTAN") == Decimal("0")
 
     def test_parse_neto_con_letra_mil(self) -> None:
         assert _parse_neto("50 MIL") == Decimal("50000")
@@ -73,6 +76,12 @@ class TestNetoSemilla:
 
     def test_no_pagan_stays_zero(self) -> None:
         assert _neto_semilla("(0-12 AÑOS) No pagan") == Decimal("0")
+
+    def test_no_ingresan_stays_zero(self) -> None:
+        assert _neto_semilla("NO INGRESAN NIÑOS") == Decimal("0")
+
+    def test_no_se_aceptan_stays_zero(self) -> None:
+        assert _neto_semilla("NO SE ACEPTAN") == Decimal("0")
 
     def test_none_returns_none(self) -> None:
         assert _neto_semilla(None) is None

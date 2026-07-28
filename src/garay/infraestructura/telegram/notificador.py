@@ -39,10 +39,6 @@ class NotificadorGrupoTelegram(NotificadorGrupo):
             with urllib.request.urlopen(req) as resp:
                 resp.read()
         except urllib.error.HTTPError as exc:
-            raise NotificadorError(
-                f"Telegram API returned HTTP {exc.code}"
-            ) from exc
+            raise NotificadorError(f"Telegram API returned HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise NotificadorNoDisponible(
-                f"Telegram API is unreachable: {exc.reason}"
-            ) from exc
+            raise NotificadorNoDisponible(f"Telegram API is unreachable: {exc.reason}") from exc

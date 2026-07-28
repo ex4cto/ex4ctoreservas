@@ -17,9 +17,7 @@ def crear_engine(url: str | None = None) -> Engine:
     """Crea el engine. Usa ``url`` o, si falta, ``database_url`` de la configuracion."""
     destino = url or obtener_settings().database_url
     if not destino:
-        raise ErrorDeConfiguracion(
-            "Falta la URL de la base de datos (GARAY_DATABASE_URL)."
-        )
+        raise ErrorDeConfiguracion("Falta la URL de la base de datos (GARAY_DATABASE_URL).")
     return create_engine(destino, future=True)
 
 

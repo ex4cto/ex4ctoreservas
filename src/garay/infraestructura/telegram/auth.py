@@ -1,4 +1,5 @@
 """Authorization decorator for PTB handlers."""
+
 from __future__ import annotations
 
 import functools
@@ -27,9 +28,7 @@ def requiere_rol(
     """
 
     @functools.wraps(handler)
-    async def wrapper(
-        update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int | None:
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
         # Guard: effective_user can be None in channel posts
         user = update.effective_user
         if user is None:
@@ -42,9 +41,7 @@ def requiere_rol(
 
         if repo.buscar_por_telegram_id(user.id) is None:
             if update.effective_message:
-                await update.effective_message.reply_text(
-                    "No estás registrado como freelancer."
-                )
+                await update.effective_message.reply_text("No estás registrado como freelancer.")
             return ConversationHandler.END
 
         return await handler(update, context)
@@ -75,9 +72,7 @@ def requiere_admin(
         freelancer = repo.buscar_por_telegram_id(user.id)
         if freelancer is None:
             if update.effective_message:
-                await update.effective_message.reply_text(
-                    "No estás registrado como freelancer."
-                )
+                await update.effective_message.reply_text("No estás registrado como freelancer.")
             return None
 
         if not freelancer.es_admin:

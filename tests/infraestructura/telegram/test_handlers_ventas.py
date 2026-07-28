@@ -1,4 +1,5 @@
 """Unit tests for cmd_mis_ventas and cmd_resumen_empresa handlers."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock

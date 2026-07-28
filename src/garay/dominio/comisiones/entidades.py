@@ -1,4 +1,5 @@
 """Entidades persistibles del modulo comisiones."""
+
 from __future__ import annotations
 
 import datetime

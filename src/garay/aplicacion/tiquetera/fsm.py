@@ -383,10 +383,9 @@ class FSMTiquetera:
             )
         if ctx.foto_modo:
             ctx.foto_modo = False
-            if ctx.neto is None and ctx.abono is not None and ctx.adultos is not None:
-                computed = self._calcular_neto(ctx)
-                if computed is not None:
-                    ctx.neto = computed
+            computed = self._calcular_neto(ctx)
+            if computed is not None:
+                ctx.neto = computed
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                 mensaje=obtener_mensaje("pregunta_rol_venta"),
@@ -418,10 +417,9 @@ class FSMTiquetera:
                 )
             if ctx.modo_edicion:
                 ctx.modo_edicion = False
-                if ctx.neto is None and ctx.abono is not None and ctx.adultos is not None:
-                    computed = self._calcular_neto(ctx)
-                    if computed is not None:
-                        ctx.neto = computed
+                computed = self._calcular_neto(ctx)
+                if computed is not None:
+                    ctx.neto = computed
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
@@ -646,6 +644,9 @@ class FSMTiquetera:
         ctx.ninos = n
         if ctx.modo_edicion:
             ctx.modo_edicion = False
+            computed = self._calcular_neto(ctx)
+            if computed is not None:
+                ctx.neto = computed
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),

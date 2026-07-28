@@ -25,16 +25,18 @@ def _make_venta(sf: sessionmaker[Session]) -> uuid.UUID:
     with sf.begin() as s:
         s.add(ClienteModel(id=cliente_id, nombre="Test", tipo="EXTERNO"))
     venta_id = uuid.uuid4()
-    SQLAVentaRepository(sf).guardar(Venta(
-        id=venta_id,
-        valor_venta=Dinero("1000000"),
-        neto=Dinero("900000"),
-        servicio_ids=[],
-        cliente_id=cliente_id,
-        tipo_cliente=TipoCliente.EXTERNO,
-        fecha=datetime.date(2026, 7, 1),
-        participantes=Participantes(),
-    ))
+    SQLAVentaRepository(sf).guardar(
+        Venta(
+            id=venta_id,
+            valor_venta=Dinero("1000000"),
+            neto=Dinero("900000"),
+            servicio_ids=[],
+            cliente_id=cliente_id,
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2026, 7, 1),
+            participantes=Participantes(),
+        )
+    )
     return venta_id
 
 
@@ -78,6 +80,7 @@ def test_listar_por_venta_ids_vacio() -> None:
     """listar_por_venta_ids([]) returns [] WITHOUT touching DB."""
     # No sf fixture needed — guard must fire before any DB access
     from unittest.mock import MagicMock
+
     mock_sf = MagicMock()
     repo = SQLAComisionRegistradaRepository(mock_sf)
     result = repo.listar_por_venta_ids([])
@@ -106,9 +109,11 @@ def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
             agencia=Dinero("310000"),
             snapshot=snapshot,
         )
-        repo.guardar(ComisionRegistrada(
-            venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
-        ))
+        repo.guardar(
+            ComisionRegistrada(
+                venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
+            )
+        )
     results = repo.listar_por_venta_ids([venta_id1, venta_id2])
     assert len(results) == 2
 
@@ -134,9 +139,11 @@ def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
             agencia=Dinero("310000"),
             snapshot=snapshot,
         )
-        repo.guardar(ComisionRegistrada(
-            venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
-        ))
+        repo.guardar(
+            ComisionRegistrada(
+                venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
+            )
+        )
     results = repo.listar_por_venta_ids([venta_id1])
     assert len(results) == 1
     assert results[0].venta_id == venta_id1
