@@ -78,5 +78,5 @@ class TestExtractorClaudeExtraerDeFoto:
                 message="invalid key", response=MagicMock(), body={}
             )
             extractor = ExtractorClaude(api_key="sk-bad")
-            with pytest.raises(Exception):
+            with pytest.raises(anthropic.AuthenticationError):
                 extractor.extraer_de_foto(str(foto))

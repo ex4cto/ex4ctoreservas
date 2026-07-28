@@ -253,7 +253,7 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         ctx = await asyncio.wait_for(
             asyncio.to_thread(extractor.extraer_de_foto, foto_bytes),
-            timeout=float(context.bot_data.get("ollama_timeout", 300)),
+            timeout=300.0,
         )
     except TimeoutError:
         if update.effective_message:

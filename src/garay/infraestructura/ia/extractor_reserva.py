@@ -10,10 +10,10 @@ from garay.dominio.puertos.servicios_externos import ExtractorIA, ExtractorReser
 from garay.dominio.ventas.contexto import ContextoVenta
 
 
-class ExtractorReservaOllama(ExtractorReserva):
+class ExtractorReservaFoto(ExtractorReserva):
     """Maps photo bytes → ContextoVenta by delegating to an ExtractorIA port.
 
-    Depends on the abstract ExtractorIA port — never on ExtractorOllama directly.
+    Depends on the abstract ExtractorIA port — never on a concrete implementation.
     Follows dependency inversion.
     """
 

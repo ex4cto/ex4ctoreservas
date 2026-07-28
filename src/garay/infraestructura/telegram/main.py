@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import subprocess
 
 from telegram import Update
 
@@ -11,10 +10,8 @@ from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
-from garay.dominio.puertos.servicios_externos import ExtractorIA
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
-from garay.infraestructura.ia.extractor_ollama import ExtractorOllama
-from garay.infraestructura.ia.extractor_reserva_ollama import ExtractorReservaOllama
+from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
@@ -34,18 +31,6 @@ from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 
 _logger = logging.getLogger(__name__)
-
-
-def _ensure_ollama_running(bin_path: str) -> None:
-    """Start ollama serve in the background if it is not already running."""
-    try:
-        subprocess.Popen(
-            [bin_path, "serve"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except FileNotFoundError:
-        _logger.warning("ollama binary not found at %r — photo extraction will fail", bin_path)
 
 
 def main() -> None:
@@ -85,22 +70,12 @@ def main() -> None:
 
     fsm = FSMTiquetera(servicios=servicios, puntos_venta=puntos_venta)
 
-    extractor_ia: ExtractorIA
-    if settings.extractor == "claude":
-        extractor_ia = ExtractorClaude(
-            api_key=settings.anthropic_api_key,
-            modelo=settings.claude_modelo,
-        )
-        _logger.info("Using Claude vision extractor (model: %s)", settings.claude_modelo)
-    else:
-        _ensure_ollama_running(settings.ollama_bin)
-        extractor_ia = ExtractorOllama(
-            url=settings.ollama_url,
-            modelo=settings.ollama_modelo,
-            timeout=settings.ollama_timeout,
-        )
-        _logger.info("Using Ollama vision extractor (model: %s)", settings.ollama_modelo)
-    extractor_reserva = ExtractorReservaOllama(extractor_ia)
+    extractor_ia = ExtractorClaude(
+        api_key=settings.anthropic_api_key,
+        modelo=settings.claude_modelo,
+    )
+    _logger.info("Using Claude vision extractor (model: %s)", settings.claude_modelo)
+    extractor_reserva = ExtractorReservaFoto(extractor_ia)
 
     notificador = NotificadorGrupoTelegram(settings.telegram_bot_token)
     servicio = RegistrarVentaService(
@@ -126,7 +101,6 @@ def main() -> None:
             "comision_registrada_repo": comisiones_repo,
             "registrar_venta_service": servicio,
             "extractor_reserva": extractor_reserva,
-            "ollama_timeout": settings.ollama_timeout,
         }
     )
 
