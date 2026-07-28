@@ -131,3 +131,41 @@ class TestClavesNuevasBatchB:
     def test_error_estado_no_manejable(self) -> None:
         msg = obtener_mensaje("error_estado_no_manejable")
         assert len(msg) > 0
+
+
+class TestClavesTemplateBatchC:
+    def test_info_destinos_seleccionados_format(self) -> None:
+        template = obtener_mensaje("info_destinos_seleccionados")
+        result = template.format(seleccionados="15 — Playa Blanca, 23 — Cartagena")
+        assert "{" not in result
+        assert "Seleccionados:" in result
+
+    def test_info_ia_detecto_destinos_format(self) -> None:
+        template = obtener_mensaje("info_ia_detecto_destinos")
+        result = template.format(nombres="Playa Blanca")
+        assert "{" not in result
+        assert "IA" in result or "detectó" in result
+
+    def test_error_destino_no_encontrado_format(self) -> None:
+        template = obtener_mensaje("error_destino_no_encontrado")
+        result = template.format(invalidos="99", destinos_mensaje="Ingresá el número...")
+        assert "{" not in result
+        assert "99" in result
+
+    def test_error_abono_supera_neto_format(self) -> None:
+        template = obtener_mensaje("error_abono_supera_neto")
+        result = template.format(abono="$500.000", neto="$400.000")
+        assert "{" not in result
+        assert "$500.000" in result
+
+    def test_error_neto_supera_valor_detalle_format(self) -> None:
+        template = obtener_mensaje("error_neto_supera_valor_detalle")
+        result = template.format(neto="$50.000", valor="$40.000")
+        assert "{" not in result
+        assert "$50.000" in result
+
+    def test_error_neto_supera_valor_monto_neto_format(self) -> None:
+        template = obtener_mensaje("error_neto_supera_valor_monto_neto")
+        result = template.format(neto="$200.000", valor="$100.000")
+        assert "{" not in result
+        assert "$200.000" in result

@@ -143,6 +143,37 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "Opción inválida. Elegí uno de los campos."
     },
     "error_estado_no_manejable": {Idioma.ES: "Estado no manejable."},
+    "info_destinos_seleccionados": {
+        Idioma.ES: (
+            "Seleccionados: {seleccionados}\n"
+            "Agregá más números o escribí *confirmar* para continuar."
+        )
+    },
+    "info_ia_detecto_destinos": {
+        Idioma.ES: (
+            "La IA detectó: {nombres} (ingresá los números correspondientes)."
+        )
+    },
+    "error_destino_no_encontrado": {
+        Idioma.ES: (
+            "Número(s) no encontrado(s): {invalidos}. Revisá el catálogo.\n"
+            "{destinos_mensaje}"
+        )
+    },
+    "error_abono_supera_neto": {
+        Idioma.ES: (
+            "El abono ({abono}) no puede superar el neto calculado ({neto})."
+        )
+    },
+    "error_neto_supera_valor_detalle": {
+        Idioma.ES: (
+            "El neto calculado ({neto}) supera el valor de la venta ({valor}). "
+            "Ingresá un valor mayor o igual a {neto}."
+        )
+    },
+    "error_neto_supera_valor_monto_neto": {
+        Idioma.ES: "El neto ({neto}) no puede superar el valor ({valor})."
+    },
 }
 
 

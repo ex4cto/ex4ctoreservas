@@ -259,16 +259,15 @@ class FSMTiquetera:
             for n in ctx.destinos_numeros:
                 nombre = num_map.get(n, str(n))
                 seleccionados.append(f"{n} — {nombre}")
-            return (
-                f"Seleccionados: {', '.join(seleccionados)}\n"
-                "Agregá más números o escribí *confirmar* para continuar."
+            return obtener_mensaje("info_destinos_seleccionados").format(
+                seleccionados=", ".join(seleccionados)
             )
         # No selection: show instruction + optional IA hint
         lineas = [obtener_mensaje("pregunta_destino_numero")]
         if ctx.destinos_nombres:
             nombres = ', '.join(ctx.destinos_nombres)
             lineas.append(
-                f"La IA detectó: {nombres} (ingresá los números correspondientes)."
+                obtener_mensaje("info_ia_detecto_destinos").format(nombres=nombres)
             )
         lineas.append(obtener_mensaje("info_sin_tours_seleccionados"))
         return "\n".join(lineas)
@@ -453,8 +452,10 @@ class FSMTiquetera:
         if invalidos and not ctx.destinos_numeros:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=f"Número(s) no encontrado(s): {', '.join(invalidos)}. Revisá el catálogo.\n"
-                + self._destinos_mensaje(ctx),
+                mensaje=obtener_mensaje("error_destino_no_encontrado").format(
+                    invalidos=", ".join(invalidos),
+                    destinos_mensaje=self._destinos_mensaje(ctx),
+                ),
                 opciones=self._opciones_destino(ctx),
                 contexto=ctx,
             )
@@ -679,9 +680,9 @@ class FSMTiquetera:
                 neto_fmt = _formatear_monto(neto)
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.MONTO_ABONO,
-                    mensaje=(
-                        f"El abono ({abono_fmt}) no puede superar "
-                        f"el neto calculado ({neto_fmt})."
+                    mensaje=obtener_mensaje("error_abono_supera_neto").format(
+                        abono=abono_fmt,
+                        neto=neto_fmt,
                     ),
                     contexto=ctx,
                 )
@@ -690,9 +691,9 @@ class FSMTiquetera:
                 valor_fmt = _formatear_monto(ctx.valor)
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.MONTO_VALOR,
-                    mensaje=(
-                        f"El neto calculado ({neto_fmt}) supera el valor de la venta "
-                        f"({valor_fmt}). Ingresá un valor mayor o igual a {neto_fmt}."
+                    mensaje=obtener_mensaje("error_neto_supera_valor_detalle").format(
+                        neto=neto_fmt,
+                        valor=valor_fmt,
                     ),
                     contexto=ctx,
                 )
@@ -729,7 +730,10 @@ class FSMTiquetera:
         if ctx.valor is not None and monto > ctx.valor:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_NETO,
-                mensaje=f"El neto ({monto}) no puede superar el valor ({ctx.valor}).",
+                mensaje=obtener_mensaje("error_neto_supera_valor_monto_neto").format(
+                    neto=_formatear_monto(monto),
+                    valor=_formatear_monto(ctx.valor),
+                ),
                 contexto=ctx,
             )
         ctx.neto = monto
