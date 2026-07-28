@@ -85,6 +85,64 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "¿Confirmamos?"
         )
     },
+    "pregunta_metodo_input": {
+        Idioma.ES: (
+            "¿Cómo querés registrar la venta?\n\n"
+            "_Podés modificar cualquier dato en el resumen antes de confirmar._"
+        )
+    },
+    "pregunta_destino_numero": {
+        Idioma.ES: (
+            "Ingresá el número del tour "
+            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
+        )
+    },
+    "info_sin_tours_seleccionados": {
+        Idioma.ES: "Aún no seleccionaste ningún tour."
+    },
+    "error_tipo_reserva_invalido": {
+        Idioma.ES: "Opción inválida. Elegí INTERNO, EXTERNO o DIGITAL."
+    },
+    "error_sin_destino_numero": {
+        Idioma.ES: "Tenés que ingresar al menos un número de tour."
+    },
+    "error_adultos_invalido": {
+        Idioma.ES: "Número inválido. Ingresá un entero mayor a 0."
+    },
+    "error_adultos_minimo": {Idioma.ES: "Debe haber al menos 1 adulto."},
+    "error_ninos_invalido": {
+        Idioma.ES: "Número inválido. Ingresá un entero >= 0."
+    },
+    "error_ninos_negativo": {
+        Idioma.ES: "El número de niños no puede ser negativo."
+    },
+    "error_abono_invalido": {
+        Idioma.ES: "Monto inválido. Ingresá 0 si no hubo abono."
+    },
+    "pregunta_rol_venta": {Idioma.ES: "¿Cuál fue tu rol en esta venta?"},
+    "pregunta_neto_sin_precio": {
+        Idioma.ES: (
+            "¿Cuál es el monto neto? "
+            "(no se encontró precio en el catálogo para algún tour seleccionado)"
+        )
+    },
+    "error_neto_invalido": {
+        Idioma.ES: "Monto inválido. Ingresá un número >= 0."
+    },
+    "error_rol_invalido": {
+        Idioma.ES: "Opción inválida. Elegí: Ambos, Solo vendedor, o Solo cerrador."
+    },
+    "error_interno_rol_no_definido": {
+        Idioma.ES: (
+            "Error interno: rol no definido. Escribí /cancelar y comenzá de nuevo."
+        )
+    },
+    "confirmacion_venta_exitosa": {Idioma.ES: "¡Venta registrada con éxito!"},
+    "pregunta_campo_editar": {Idioma.ES: "¿Qué campo querés modificar?"},
+    "error_campo_editar_invalido": {
+        Idioma.ES: "Opción inválida. Elegí uno de los campos."
+    },
+    "error_estado_no_manejable": {Idioma.ES: "Estado no manejable."},
 }
 
 

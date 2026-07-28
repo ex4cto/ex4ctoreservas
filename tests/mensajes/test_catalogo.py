@@ -53,3 +53,81 @@ class TestClavesUnificacionBatchA:
         msg = obtener_mensaje("pregunta_fecha_salida")
         assert "formato:" not in msg
         assert "DD/MM/YY" in msg
+
+
+class TestClavesNuevasBatchB:
+    def test_pregunta_metodo_input(self) -> None:
+        msg = obtener_mensaje("pregunta_metodo_input")
+        assert "registrar" in msg.lower()
+
+    def test_pregunta_destino_numero(self) -> None:
+        msg = obtener_mensaje("pregunta_destino_numero")
+        assert "número" in msg.lower() or "numero" in msg.lower()
+
+    def test_info_sin_tours_seleccionados(self) -> None:
+        msg = obtener_mensaje("info_sin_tours_seleccionados")
+        assert "seleccionaste" in msg.lower()
+
+    def test_error_tipo_reserva_invalido(self) -> None:
+        msg = obtener_mensaje("error_tipo_reserva_invalido")
+        assert "INTERNO" in msg
+
+    def test_error_sin_destino_numero(self) -> None:
+        msg = obtener_mensaje("error_sin_destino_numero")
+        assert "número" in msg.lower() or "numero" in msg.lower()
+
+    def test_error_adultos_invalido(self) -> None:
+        msg = obtener_mensaje("error_adultos_invalido")
+        assert "entero" in msg.lower()
+
+    def test_error_adultos_minimo(self) -> None:
+        msg = obtener_mensaje("error_adultos_minimo")
+        assert "adulto" in msg.lower()
+
+    def test_error_ninos_invalido(self) -> None:
+        msg = obtener_mensaje("error_ninos_invalido")
+        assert "entero" in msg.lower()
+
+    def test_error_ninos_negativo(self) -> None:
+        msg = obtener_mensaje("error_ninos_negativo")
+        assert "negativo" in msg.lower()
+
+    def test_error_abono_invalido(self) -> None:
+        msg = obtener_mensaje("error_abono_invalido")
+        assert "abono" in msg.lower()
+
+    def test_pregunta_rol_venta(self) -> None:
+        msg = obtener_mensaje("pregunta_rol_venta")
+        assert "rol" in msg.lower()
+
+    def test_pregunta_neto_sin_precio(self) -> None:
+        msg = obtener_mensaje("pregunta_neto_sin_precio")
+        assert "neto" in msg.lower()
+
+    def test_error_neto_invalido(self) -> None:
+        msg = obtener_mensaje("error_neto_invalido")
+        assert "neto" in msg.lower() or "monto" in msg.lower()
+
+    def test_error_rol_invalido(self) -> None:
+        msg = obtener_mensaje("error_rol_invalido")
+        assert "Ambos" in msg
+
+    def test_error_interno_rol_no_definido(self) -> None:
+        msg = obtener_mensaje("error_interno_rol_no_definido")
+        assert "rol" in msg.lower()
+
+    def test_confirmacion_venta_exitosa(self) -> None:
+        msg = obtener_mensaje("confirmacion_venta_exitosa")
+        assert "éxito" in msg.lower() or "exitosa" in msg.lower() or "registrada" in msg.lower()
+
+    def test_pregunta_campo_editar(self) -> None:
+        msg = obtener_mensaje("pregunta_campo_editar")
+        assert "campo" in msg.lower() or "modificar" in msg.lower()
+
+    def test_error_campo_editar_invalido(self) -> None:
+        msg = obtener_mensaje("error_campo_editar_invalido")
+        assert "campo" in msg.lower() or "opción" in msg.lower() or "opcion" in msg.lower()
+
+    def test_error_estado_no_manejable(self) -> None:
+        msg = obtener_mensaje("error_estado_no_manejable")
+        assert len(msg) > 0

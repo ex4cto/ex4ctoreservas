@@ -184,10 +184,7 @@ class FSMTiquetera:
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
-            mensaje=(
-                "¿Cómo querés registrar la venta?\n\n"
-                "_Podés modificar cualquier dato en el resumen antes de confirmar._"
-            ),
+            mensaje=obtener_mensaje("pregunta_metodo_input"),
             opciones=["Manual", "Foto"],
             contexto=ContextoVenta(),
         )
@@ -224,7 +221,7 @@ class FSMTiquetera:
             ctx = _clonar(contexto)
             return SalidaFSM(
                 nuevo_estado=estado,
-                mensaje="Estado no manejable.",
+                mensaje=obtener_mensaje("error_estado_no_manejable"),
                 contexto=ctx,
             )
         return handler(entrada, contexto)
@@ -267,16 +264,13 @@ class FSMTiquetera:
                 "Agregá más números o escribí *confirmar* para continuar."
             )
         # No selection: show instruction + optional IA hint
-        lineas = [
-            "Ingresá el número del tour "
-            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
-        ]
+        lineas = [obtener_mensaje("pregunta_destino_numero")]
         if ctx.destinos_nombres:
             nombres = ', '.join(ctx.destinos_nombres)
             lineas.append(
                 f"La IA detectó: {nombres} (ingresá los números correspondientes)."
             )
-        lineas.append("Aún no seleccionaste ningún tour.")
+        lineas.append(obtener_mensaje("info_sin_tours_seleccionados"))
         return "\n".join(lineas)
 
     def _opciones_destino(self, ctx: ContextoVenta) -> list[str]:
@@ -344,7 +338,7 @@ class FSMTiquetera:
         if tipo is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TIPO_RESERVA,
-                mensaje="Opción inválida. Elegí INTERNO, EXTERNO o DIGITAL.",
+                mensaje=obtener_mensaje("error_tipo_reserva_invalido"),
                 opciones=["INTERNO", "EXTERNO", "DIGITAL"],
                 contexto=_clonar(contexto),
             )
@@ -399,8 +393,11 @@ class FSMTiquetera:
             if not ctx.destinos_numeros:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje="Tenés que ingresar al menos un número de tour.\n"
-                    + self._destinos_mensaje(ctx),
+                    mensaje=(
+                        obtener_mensaje("error_sin_destino_numero")
+                        + "\n"
+                        + self._destinos_mensaje(ctx)
+                    ),
                     opciones=self._opciones_destino(ctx),
                     contexto=ctx,
                 )
@@ -586,13 +583,13 @@ class FSMTiquetera:
         except ValueError:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PAX_ADULTOS,
-                mensaje="Número inválido. Ingresá un entero mayor a 0.",
+                mensaje=obtener_mensaje("error_adultos_invalido"),
                 contexto=ctx,
             )
         if n < 1:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PAX_ADULTOS,
-                mensaje="Debe haber al menos 1 adulto.",
+                mensaje=obtener_mensaje("error_adultos_minimo"),
                 contexto=ctx,
             )
         ctx.adultos = n
@@ -617,13 +614,13 @@ class FSMTiquetera:
         except ValueError:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PAX_NINOS,
-                mensaje="Número inválido. Ingresá un entero >= 0.",
+                mensaje=obtener_mensaje("error_ninos_invalido"),
                 contexto=ctx,
             )
         if n < 0:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PAX_NINOS,
-                mensaje="El número de niños no puede ser negativo.",
+                mensaje=obtener_mensaje("error_ninos_negativo"),
                 contexto=ctx,
             )
         ctx.ninos = n
@@ -671,7 +668,7 @@ class FSMTiquetera:
         if monto is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_ABONO,
-                mensaje="Monto inválido. Ingresá 0 si no hubo abono.",
+                mensaje=obtener_mensaje("error_abono_invalido"),
                 contexto=ctx,
             )
         ctx.abono = monto
@@ -710,16 +707,13 @@ class FSMTiquetera:
                 )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                mensaje="¿Cuál fue tu rol en esta venta?",
+                mensaje=obtener_mensaje("pregunta_rol_venta"),
                 opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
                 contexto=ctx,
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_NETO,
-            mensaje=(
-                "¿Cuál es el monto neto? "
-                "(no se encontró precio en el catálogo para algún tour seleccionado)"
-            ),
+            mensaje=obtener_mensaje("pregunta_neto_sin_precio"),
             contexto=ctx,
         )
 
@@ -729,7 +723,7 @@ class FSMTiquetera:
         if monto is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_NETO,
-                mensaje="Monto inválido. Ingresá un número >= 0.",
+                mensaje=obtener_mensaje("error_neto_invalido"),
                 contexto=ctx,
             )
         if ctx.valor is not None and monto > ctx.valor:
@@ -741,7 +735,7 @@ class FSMTiquetera:
         ctx.neto = monto
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-            mensaje="¿Cuál fue tu rol en esta venta?",
+            mensaje=obtener_mensaje("pregunta_rol_venta"),
             opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
             contexto=ctx,
         )
@@ -774,7 +768,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-            mensaje="Opción inválida. Elegí: Ambos, Solo vendedor, o Solo cerrador.",
+            mensaje=obtener_mensaje("error_rol_invalido"),
             opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
             contexto=ctx,
         )
@@ -788,7 +782,7 @@ class FSMTiquetera:
         else:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
-                mensaje="Error interno: rol no definido. Escribí /cancelar y comenzá de nuevo.",
+                mensaje=obtener_mensaje("error_interno_rol_no_definido"),
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -803,14 +797,14 @@ class FSMTiquetera:
         if entrada.strip() == "✅ Confirmar":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TERMINADO,
-                mensaje="¡Venta registrada con éxito!",
+                mensaje=obtener_mensaje("confirmacion_venta_exitosa"),
                 listo=True,
                 contexto=ctx,
             )
         if entrada.strip() == "✏️ Editar":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
-                mensaje="¿Qué campo querés modificar?",
+                mensaje=obtener_mensaje("pregunta_campo_editar"),
                 opciones=[label for label, _ in _CAMPOS_EDITABLES],
                 contexto=ctx,
             )
@@ -827,7 +821,7 @@ class FSMTiquetera:
         if estado_destino is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
-                mensaje="Opción inválida. Elegí uno de los campos.",
+                mensaje=obtener_mensaje("error_campo_editar_invalido"),
                 opciones=[label for label, _ in _CAMPOS_EDITABLES],
                 contexto=ctx,
             )
@@ -851,7 +845,7 @@ class FSMTiquetera:
             EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_adultos"),
             EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_valor"),
             EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_abono"),
-            EstadoFSM.PARTICIPANTE_ROL: "¿Cuál fue tu rol en esta venta?",
+            EstadoFSM.PARTICIPANTE_ROL: obtener_mensaje("pregunta_rol_venta"),
         }
         return msgs.get(estado, "")
 
