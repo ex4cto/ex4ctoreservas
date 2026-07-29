@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="")
     claude_modelo: str = Field(default="claude-haiku-4-5-20251001")
 
+    # Developer bypass — full access to all commands regardless of role.
+    # GARAY_DEV_TELEGRAM_IDS="123456789,987654321" (comma-separated)
+    dev_telegram_ids: str = Field(default="")
+
+    # Streamlit dashboard URL — sent alongside /dashboard_ventas reply.
+    dashboard_url: str = Field(default="http://localhost:8501")
+
     # Conciliacion: propietario access and engine parameters.
     # GARAY_PROPIETARIO_TELEGRAM_IDS="123456789,987654321" (comma-separated, empty = deny all)
     propietario_telegram_ids: str = Field(default="")

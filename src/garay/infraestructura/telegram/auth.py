@@ -17,6 +17,13 @@ from garay.mensajes.catalogo import obtener_mensaje
 logger = logging.getLogger(__name__)
 
 
+def _es_dev(telegram_user_id: int) -> bool:
+    ids_str = obtener_settings().dev_telegram_ids.strip()
+    if not ids_str:
+        return False
+    return telegram_user_id in {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+
+
 def requiere_rol(
     handler: Callable[..., Coroutine[Any, Any, int | None]],
 ) -> Callable[..., Coroutine[Any, Any, int | None]]:
@@ -35,6 +42,9 @@ def requiere_rol(
         user = update.effective_user
         if user is None:
             return ConversationHandler.END
+
+        if _es_dev(user.id):
+            return await handler(update, context)
 
         repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
         if repo is None:
@@ -65,6 +75,9 @@ def requiere_admin(
         user = update.effective_user
         if user is None:
             return None
+
+        if _es_dev(user.id):
+            return await handler(update, context)
 
         repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
         if repo is None:
@@ -105,6 +118,9 @@ def requiere_propietario(
         user = update.effective_user
         if user is None:
             return None
+
+        if _es_dev(user.id):
+            return await handler(update, context)
 
         settings = obtener_settings()
         ids_str = settings.propietario_telegram_ids.strip()

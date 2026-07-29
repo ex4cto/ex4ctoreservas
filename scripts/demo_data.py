@@ -1,0 +1,235 @@
+#!/usr/bin/env python
+"""Insert demo data for live dashboard testing.
+
+Run with:
+    uv run python scripts/demo_data.py
+
+Idempotent via deterministic UUIDs — safe to re-run.
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import date, datetime, timezone
+from decimal import Decimal
+
+import garay.infraestructura.persistencia.tipos  # noqa: F401 — registers TipoDinero
+from garay.config import obtener_settings
+from garay.dominio.comun.dinero import Dinero
+from garay.infraestructura.persistencia.modelos import (
+    ClienteModel,
+    ComisionRegistradaModel,
+    ConciliacionModel,
+    EgresoModel,
+    IngresoModel,
+    VentaModel,
+)
+from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+
+NS = uuid.UUID("d3e0d4a0-0000-0000-0000-000000000000")
+AÑO, MES = 2026, 7
+
+
+def did(key: str) -> uuid.UUID:
+    return uuid.uuid5(NS, key)
+
+
+def dinero(monto: int | Decimal) -> Dinero:
+    return Dinero(Decimal(str(monto)))
+
+
+VENTAS = [
+    # (key, cliente, vendedor, cerrador, valor, neto, dia, adultos)
+    ("v1", "Carlos Pérez",     "Juan",    "Juan",     260_000, 200_000, 3,  2),
+    ("v2", "Ana Gómez",        "María",   "María",    310_000, 240_000, 5,  1),
+    ("v3", "Luis Herrera",     "Juan",    "Pedro",    520_000, 410_000, 8,  3),
+    ("v4", "Sofia Martínez",   "María",   "María",    180_000, 140_000, 10, 1),
+    ("v5", "Daniel Torres",    "Pedro",   "Pedro",    650_000, 510_000, 12, 4),
+    ("v6", "Valentina Cruz",   "Juan",    "Juan",     290_000, 220_000, 14, 2),
+    ("v7", "Andrés Vargas",    "María",   "Pedro",    480_000, 370_000, 16, 3),
+    ("v8", "Camila Ríos",      "Pedro",   "Pedro",    220_000, 170_000, 18, 1),
+    ("v9", "Felipe Morales",   "Juan",    "Juan",     390_000, 300_000, 20, 2),
+    ("v10","Isabella Castillo","María",   "María",    710_000, 560_000, 22, 5),
+    ("v11","Mateo Jiménez",    "Pedro",   "Juan",     340_000, 260_000, 24, 2),
+    ("v12","Lucía Mendoza",    "Juan",    "María",    560_000, 435_000, 26, 4),
+]
+
+INGRESOS = [
+    # (key, banco, monto, referencia, dia, clasificado)
+    ("i1",  "Bancolombia", 260_000, "BC-2026-001", 4,  True),
+    ("i2",  "Nequi",       310_000, "NQ-2026-002", 6,  True),
+    ("i3",  "Bancolombia", 520_000, "BC-2026-003", 9,  True),
+    ("i4",  "Nequi",       180_000, "NQ-2026-004", 11, True),
+    ("i5",  "Bancolombia", 650_000, "BC-2026-005", 13, True),
+    ("i6",  "Bancolombia", 290_000, "BC-2026-006", 15, False),  # pendiente
+    ("i7",  "Nequi",       480_000, "NQ-2026-007", 17, False),  # pendiente
+    ("i8",  "Bancolombia", 220_000, "BC-2026-008", 19, True),
+    ("i9",  "Nequi",       390_000, "NQ-2026-009", 21, True),
+    ("i10", "Bancolombia", 710_000, "BC-2026-010", 23, True),
+    ("i11", "Bancolombia", 145_000, "BC-2026-011", 25, False),  # sin match (plata personal)
+    ("i12", "Nequi",        85_000, "NQ-2026-012", 27, False),  # pendiente
+]
+
+EGRESOS = [
+    # (key, descripcion, categoria, monto, dia)
+    ("e1",  "Arriendo oficina julio",          "Arriendos",       1_800_000, 1),
+    ("e2",  "Nómina Juan",                     "Nómina",          1_200_000, 1),
+    ("e3",  "Nómina María",                    "Nómina",          1_200_000, 1),
+    ("e4",  "Nómina Pedro",                    "Nómina",            900_000, 1),
+    ("e5",  "Internet y teléfono",             "Servicios",         120_000, 5),
+    ("e6",  "Papelería y útiles",              "Papelería",          45_000, 8),
+    ("e7",  "Mantenimiento computadores",      "Servicios",         180_000, 10),
+    ("e8",  "Publicidad Facebook Ads",         "Marketing",         250_000, 12),
+    ("e9",  "Almuerzo reunión equipo",         "Varios",             95_000, 15),
+    ("e10", "Transporte cliente hotel",        "Transporte",         60_000, 18),
+    ("e11", "Publicidad Instagram",            "Marketing",         150_000, 20),
+    ("e12", "Servicios contabilidad",          "Servicios",         200_000, 25),
+]
+
+# (ingreso_key, venta_key, estado)
+CONCILIACIONES = [
+    ("i1",  "v1",  "matcheado"),
+    ("i2",  "v2",  "matcheado"),
+    ("i3",  "v3",  "matcheado"),
+    ("i4",  "v4",  "matcheado"),
+    ("i5",  "v5",  "matcheado"),
+    ("i6",  "v6",  "pendiente"),
+    ("i7",  "v7",  "pendiente"),
+    ("i8",  "v8",  "matcheado"),
+    ("i9",  "v9",  "matcheado"),
+    ("i10", "v10", "matcheado"),
+    ("i11", None,  "personal"),
+    ("i12", None,  "sin_match"),
+]
+
+SNAPSHOT = {
+    "tipo_cliente": "INTERNO",
+    "porcentaje_vendedor": "0.10",
+    "porcentaje_cerrador": "0.05",
+    "porcentaje_referido_maximo": "0.03",
+    "porcentaje_capa_punto": "0.05",
+}
+
+
+def comision(valor: int, neto: int) -> dict[str, Dinero]:
+    ganancia = valor - neto
+    vend = dinero(round(ganancia * 0.40))
+    cerr = dinero(round(ganancia * 0.20))
+    ref  = dinero(0)
+    pv   = dinero(round(ganancia * 0.05))
+    ag   = dinero(ganancia) - vend - cerr - ref - pv
+    return {"vendedor": vend, "cerrador": cerr, "referido": ref, "punto_de_venta": pv, "agencia": ag}
+
+
+def main() -> None:
+    settings = obtener_settings()
+    engine = crear_engine(settings.database_url)
+    Sesion = crear_fabrica_sesiones(engine)
+
+    with Sesion() as session:
+        # Clientes
+        clientes: dict[str, uuid.UUID] = {}
+        for key, nombre, *_ in VENTAS:
+            cid = did(f"cliente:{nombre}")
+            clientes[key] = cid
+            if not session.get(ClienteModel, cid):
+                session.add(ClienteModel(
+                    id=cid, nombre=nombre, tipo="INTERNO",
+                    telefono=None, hotel="Hotel Demo", numero_habitacion="101",
+                ))
+
+        session.flush()
+
+        # Ventas + Comisiones
+        for key, _, vendedor, cerrador, valor, neto, dia, adultos in VENTAS:
+            vid = did(f"venta:{key}")
+            if not session.get(VentaModel, vid):
+                session.add(VentaModel(
+                    id=vid,
+                    valor_venta=dinero(valor),
+                    neto=dinero(neto),
+                    abono=None,
+                    servicio_ids=[],
+                    cliente_id=clientes[key],
+                    tipo_cliente="INTERNO",
+                    fecha=date(AÑO, MES, dia),
+                    adultos=adultos,
+                    ninos=0,
+                    estado="PROCESADA",
+                    vendedor_nombre=vendedor,
+                    cerrador_nombre=cerrador,
+                    punto_de_venta_id=None,
+                    referido_nombre=None,
+                ))
+            if not session.get(ComisionRegistradaModel, vid):
+                com = comision(valor, neto)
+                session.add(ComisionRegistradaModel(
+                    venta_id=vid,
+                    vendedor=com["vendedor"],
+                    cerrador=com["cerrador"],
+                    punto_de_venta=com["punto_de_venta"],
+                    referido=com["referido"],
+                    agencia=com["agencia"],
+                    snapshot_json=SNAPSHOT,
+                    fecha=date(AÑO, MES, dia),
+                ))
+
+        session.flush()
+
+        # Ingresos
+        for key, banco, monto, ref, dia, clasificado in INGRESOS:
+            iid = did(f"ingreso:{key}")
+            if not session.get(IngresoModel, iid):
+                session.add(IngresoModel(
+                    id=iid,
+                    banco=banco,
+                    monto=dinero(monto),
+                    fecha=date(AÑO, MES, dia),
+                    referencia=ref,
+                    remitente="Demo Cliente",
+                    clasificado=clasificado,
+                    venta_id=None,
+                    fecha_recibido=datetime(AÑO, MES, dia, 10, 0, tzinfo=timezone.utc),
+                ))
+
+        session.flush()
+
+        # Egresos
+        for key, desc, cat, monto, dia in EGRESOS:
+            eid = did(f"egreso:{key}")
+            if not session.get(EgresoModel, eid):
+                session.add(EgresoModel(
+                    id=eid,
+                    descripcion=desc,
+                    monto=dinero(monto),
+                    fecha=date(AÑO, MES, dia),
+                    categoria=cat,
+                    tipo="manual",
+                    referencia=None,
+                    fecha_recibido=None,
+                ))
+
+        session.flush()
+
+        # Conciliaciones
+        for ing_key, venta_key, estado in CONCILIACIONES:
+            iid = did(f"ingreso:{ing_key}")
+            vid = did(f"venta:{venta_key}") if venta_key else None
+            cid = did(f"conciliacion:{ing_key}")
+            if not session.get(ConciliacionModel, cid):
+                session.add(ConciliacionModel(
+                    id=cid,
+                    ingreso_id=iid,
+                    venta_id=vid,
+                    estado=estado,
+                    notas="",
+                    score=Decimal("0.95") if estado == "matcheado" else Decimal("0.45"),
+                    confianza=Decimal("0.95") if estado == "matcheado" else Decimal("0.45"),
+                ))
+
+        session.commit()
+        print(f"[OK] Demo data insertada: {len(VENTAS)} ventas, {len(INGRESOS)} ingresos, {len(EGRESOS)} egresos, {len(CONCILIACIONES)} conciliaciones")
+
+
+if __name__ == "__main__":
+    main()

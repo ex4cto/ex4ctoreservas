@@ -133,11 +133,14 @@ async def cmd_dashboard_ventas(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
+    from garay.config.settings import obtener_settings
 
     hoy = date.today()
     servicio: ResumenVentasService = context.bot_data["resumen_ventas_service"]
     resumen = servicio.ejecutar(hoy.month, hoy.year)
     texto = _formatear_resumen_ventas(resumen, hoy.month, hoy.year)
+    url = obtener_settings().dashboard_url
+    texto += f"\n\n📊 [Ver dashboard completo]({url})"
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
     if update.effective_message:
         await update.effective_message.reply_text(

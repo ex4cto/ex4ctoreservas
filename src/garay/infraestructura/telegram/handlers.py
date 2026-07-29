@@ -215,7 +215,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "📋 /nueva\\_venta — Registrar una venta\n"
         "💰 /verificar\\_pago — Pagos recibidos (últimos 5 min)\n"
         "📊 /mis\\_ventas — Mis ventas del período\n"
-        "📈 /resumen\\_empresa — Resumen empresa _(solo admin)_\n"
+        "📈 /dashboard\\_ventas — Dashboard de ventas _(solo admin)_\n"
+        "💵 /flujo\\_caja — Flujo de caja mensual _(solo propietario)_\n"
+        "🧾 /nuevo\\_egreso — Registrar un egreso manual\n"
         "❌ /cancelar — Cancelar operación actual"
     )
     await update.message.reply_text(texto, parse_mode="Markdown")
