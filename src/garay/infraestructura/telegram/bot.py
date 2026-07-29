@@ -22,6 +22,7 @@ from garay.infraestructura.telegram.handlers import (
     cmd_mis_ventas,
     cmd_start,
     cmd_verificar_pago,
+    handle_canal_origen,
     handle_cliente_email,
     handle_cliente_habitacion,
     handle_cliente_hotel,
@@ -120,6 +121,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             estados[EstadoFSM.TIPO_RESERVA]: [
                 _CB(handle_tipo_reserva),
                 MessageHandler(_TEXT, handle_tipo_reserva),
+            ],
+            estados[EstadoFSM.CANAL_ORIGEN]: [
+                _CB(handle_canal_origen),
+                MessageHandler(_TEXT, handle_canal_origen),
             ],
             estados[EstadoFSM.PUNTO_DE_VENTA]: [
                 _CB(handle_punto_de_venta),

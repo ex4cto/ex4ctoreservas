@@ -9,6 +9,7 @@ ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.METODO_INPUT: 20,
     EstadoFSM.ESPERANDO_FOTO: 22,
     EstadoFSM.TIPO_RESERVA: 0,
+    EstadoFSM.CANAL_ORIGEN: 28,
     EstadoFSM.PUNTO_DE_VENTA: 1,
     EstadoFSM.DESTINO: 2,
     EstadoFSM.CLIENTE_NOMBRE: 3,

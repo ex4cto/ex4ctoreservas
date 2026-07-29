@@ -204,6 +204,7 @@ def _contexto_a_comando(
         servicio_nombres=ctx.destinos_nombres,
         hotel=ctx.cliente_hotel,
         habitacion=ctx.cliente_habitacion,
+        canal_origen=ctx.canal_origen,
     )
 
 
@@ -501,6 +502,7 @@ handle_monto_abono = _make_handler(EstadoFSM.MONTO_ABONO)
 handle_monto_neto = _make_handler(EstadoFSM.MONTO_NETO)
 handle_participante_rol = _make_handler(EstadoFSM.PARTICIPANTE_ROL)
 handle_participante_otro = _make_handler(EstadoFSM.PARTICIPANTE_OTRO)
+handle_canal_origen = _make_handler(EstadoFSM.CANAL_ORIGEN)
 handle_confirmacion = _make_handler(EstadoFSM.CONFIRMACION)
 handle_editar_selector = _make_handler(EstadoFSM.EDITAR_SELECTOR)
 handle_editar_vendedor = _make_handler(EstadoFSM.EDITAR_VENDEDOR)
@@ -555,7 +557,10 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if ventas:
         lineas.append("\n*Detalle:*")
         for v in ventas[-10:]:
-            lineas.append(f"• {v.fecha.strftime('%d/%m')} — ${v.valor_venta.monto:,.0f}")
+            linea = f"• {v.fecha.strftime('%d/%m')} — ${v.valor_venta.monto:,.0f}"
+            if v.canal_origen:
+                linea += f" · 📲 {v.canal_origen}"
+            lineas.append(linea)
 
     mensaje = "\n".join(lineas)
     if len(mensaje) > 4096:

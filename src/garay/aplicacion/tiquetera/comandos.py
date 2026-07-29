@@ -33,6 +33,7 @@ class RegistrarVentaComando:
     servicio_nombres: list[str] = field(default_factory=list)
     hotel: str | None = None
     habitacion: str | None = None
+    canal_origen: str | None = None
 
 
 @dataclass(frozen=True)

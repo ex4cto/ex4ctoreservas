@@ -63,6 +63,7 @@ class RegistrarVentaService:
             adultos=cmd.adultos,
             ninos=cmd.ninos,
             abono=cmd.abono,
+            canal_origen=cmd.canal_origen,
         )
 
         # 2. Fetch commission rules — raise if not found
@@ -141,6 +142,8 @@ class RegistrarVentaService:
             lineas.append(f"🎫 Ticket: {cmd.numero_fisico}")
 
         lineas.append(f"🏷 Tipo: {cmd.tipo_cliente.value}")
+        if cmd.canal_origen:
+            lineas.append(f"📲 Canal: {cmd.canal_origen}")
         lineas.append("")
         lineas.append("Comisiones:")
         lineas.append(f"  Agencia: {_fmt_cop(desglose.agencia)}")
