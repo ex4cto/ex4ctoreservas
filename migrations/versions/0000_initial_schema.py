@@ -146,9 +146,7 @@ def upgrade() -> None:
         sa.Column("fecha", sa.Date(), nullable=False),
         sa.Column("categoria", sa.String(), nullable=False),
         sa.Column("tipo", sa.String(), nullable=False),
-        sa.Column("referencia", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("referencia"),
     )
 
     op.create_table(
