@@ -127,6 +127,7 @@
 | 8.1 | Dashboard ventas/comisiones: `/dashboard_ventas` por vendedor, período, navegación meses | ✅ | `ResumenVentasService`; reemplaza `/resumen_empresa` |
 | 8.2 | Dashboard flujo de caja: `/flujo_caja` ingresos vs egresos, conciliado vs pendiente | ✅ | `FlujoCajaService`; solo propietario |
 | 8.3 | Reporte automático al grupo WhatsApp | ⬜ | Pendiente — proveedor WhatsApp sin definir |
+| 8.4 | Dashboard Streamlit (`dashboard/app.py`): KPIs + gráficos Plotly ventas y flujo | ⬜ | Implementado local; pendiente deploy en Railway como tercer servicio |
 
 ---
 
@@ -141,30 +142,33 @@
 
 ---
 
-## Etapa 10 — Deployment VPS + Operación ⬜
-*Transversal. Se empieza a preparar en paralelo desde Etapa 3.*
+## Etapa 10 — Deployment Railway + Operación 🔄
+*Railway (ex VPS). Desplegado en producción desde 2026-07-29.*
 
-| # | Fase | Estado |
-|---|------|--------|
-| 10.1 | Provisioning: Postgres · dos procesos · reverse proxy + HTTPS | ⬜ |
-| 10.2 | Migraciones y seed: Alembic en deploy + seed de config inicial | ⬜ |
-| 10.3 | Backups automáticos Postgres (la conciliación es plata, no se puede perder) | ⬜ |
-| 10.4 | Monitoreo: healthchecks + alertas caída bot / webhook | ⬜ |
-| 10.5 | Secrets y seguridad: tokens, webhook secret, acceso restringido | ⬜ |
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 10.1 | Provisioning: Postgres + servicio web (FastAPI) + servicio worker (bot) + HTTPS automático | ✅ | Railway project `resourceful-wonder`; repo `ex4cto/ex4ctoreservas` en `main` |
+| 10.2 | Migraciones y seed: `alembic upgrade head` en Railway + `scripts/demo_data.py` | ✅ | Migración base `0000` creada; cadena completa aplicada |
+| 10.3 | Backups automáticos Postgres | ⬜ | Railway Pro incluye backups; configurar retención |
+| 10.4 | Monitoreo: healthchecks + alertas caída bot / webhook | ⬜ | Pendiente |
+| 10.5 | Secrets y seguridad: tokens en Railway env vars, HMAC webhook, roles por Telegram ID | ✅ | `GARAY_PROPIETARIO_TELEGRAM_IDS`, `GARAY_DEV_TELEGRAM_IDS`, `GARAY_FORWARD_EMAIL_SECRET` |
 
 ---
 
 ## Progreso global
 
 ```
-Etapa 0  ████████████████████  100%  ✅
-Etapa 1  ████████████████████  100%  ✅
-Etapa 2  ████████████████████  100%  ✅
-Etapa 3  ████████████████████  100%  ✅
-Etapa 4  ████████████████████  100%  ✅
-Etapa 5  ████████████████████  100%  ✅
-Etapa 6  ████████████████████  100%  ✅
-Etapas 7-10  ░░░░░░░░░░░░░░░░░     0%  ⬜
+Etapa 0   ████████████████████  100%  ✅
+Etapa 1   ████████████████████  100%  ✅
+Etapa 2   ████████████████████  100%  ✅
+Etapa 3   ████████████████████  100%  ✅
+Etapa 4   ████████████████████  100%  ✅  (prod Railway ✅)
+Etapa 5   ████████████████████  100%  ✅
+Etapa 6   ████████████████████  100%  ✅
+Etapa 7   ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
+Etapa 8   ████████████░░░░░░░░   60%  🔄  (8.1 8.2 ✅ · 8.3 8.4 ⬜)
+Etapa 9   ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
+Etapa 10  ████████████░░░░░░░░   60%  🔄  (10.1 10.2 10.5 ✅ · 10.3 10.4 ⬜)
 ```
 
 **Tests:** 672 · **mypy:** strict clean · **ruff:** clean
