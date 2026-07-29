@@ -8,7 +8,13 @@ from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.tipos import TipoCliente
-from garay.dominio.conciliacion.entidades import Conciliacion, Egreso, Ingreso
+from garay.dominio.conciliacion.entidades import (
+    CategoriaEgreso,
+    Conciliacion,
+    Egreso,
+    GastoRecurrente,
+    Ingreso,
+)
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
@@ -65,6 +71,28 @@ class EgresoRepository(ABC):
     def existe_referencia(self, referencia: str) -> bool: ...
 
 
+class CategoriaEgresoRepository(ABC):
+    @abstractmethod
+    def listar_activas(self) -> list[str]: ...
+
+    @abstractmethod
+    def guardar(self, categoria: CategoriaEgreso) -> None: ...
+
+
+class GastoRecurrenteRepository(ABC):
+    @abstractmethod
+    def guardar(self, gasto: GastoRecurrente) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> GastoRecurrente | None: ...
+
+    @abstractmethod
+    def listar_activos(self) -> list[GastoRecurrente]: ...
+
+    @abstractmethod
+    def desactivar(self, id: uuid.UUID) -> None: ...
+
+
 class TiqueteraRepository(ABC):
     @abstractmethod
     def guardar(self, tiquetera: Tiquetera) -> None: ...
@@ -79,6 +107,19 @@ class ConciliacionRepository(ABC):
 
     @abstractmethod
     def buscar_por_ingreso_id(self, ingreso_id: uuid.UUID) -> Conciliacion | None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Conciliacion | None: ...
+
+    @abstractmethod
+    def listar_pendientes(self) -> list[Conciliacion]:
+        """Conciliaciones con estado PENDIENTE o SIN_MATCH — requieren revision humana."""
+        ...
+
+    @abstractmethod
+    def listar_ingreso_ids_procesados(self) -> list[uuid.UUID]:
+        """IDs de ingresos que ya tienen al menos una conciliacion registrada."""
+        ...
 
 
 class FreelancerRepository(ABC):

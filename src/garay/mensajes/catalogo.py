@@ -213,6 +213,87 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_editar_monto_abono": {
         Idioma.ES: "Abono actual: {actual}\n¿Nuevo abono? (0 si no hubo)"
     },
+    # --- Egresos manuales ---
+    "egreso.pedir_monto": {Idioma.ES: "¿Cuál es el monto del egreso?"},
+    "egreso.pedir_descripcion": {Idioma.ES: "¿Qué descripción le das a este egreso?"},
+    "egreso.pedir_categoria": {Idioma.ES: "¿Cuál es la categoría?"},
+    "egreso.pedir_fecha": {
+        Idioma.ES: "¿En qué fecha fue? (DD/MM o DD/MM/YYYY, o escribe *hoy*)"
+    },
+    "egreso.confirmar_resumen": {
+        Idioma.ES: (
+            "💸 *Nuevo egreso:*\n"
+            "Monto: {monto}\n"
+            "Descripción: {descripcion}\n"
+            "Categoría: {categoria}\n"
+            "Fecha: {fecha}\n\n"
+            "¿Confirmamos?"
+        )
+    },
+    "egreso.registrado": {Idioma.ES: "✅ Egreso registrado correctamente."},
+    "egreso.error_monto": {
+        Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."
+    },
+    "egreso.error_fecha": {
+        Idioma.ES: "Fecha inválida. Usa DD/MM, DD/MM/YYYY o escribe *hoy*."
+    },
+    "egreso.error_categoria": {
+        Idioma.ES: "Categoría inválida. Elige una de las opciones."
+    },
+    # --- Gastos fijos ---
+    "gastos_fijos.lista": {Idioma.ES: "📋 *Gastos fijos activos:*\n{lista}"},
+    "gastos_fijos.vacio": {
+        Idioma.ES: "No hay gastos fijos configurados. Usa el botón para agregar."
+    },
+    "gastos_fijos.pedir_nombre": {
+        Idioma.ES: "¿Cuál es el nombre del gasto fijo? (ej: Arriendo oficina)"
+    },
+    "gastos_fijos.pedir_monto": {Idioma.ES: "¿Cuál es el monto mensual?"},
+    "gastos_fijos.pedir_categoria": {Idioma.ES: "¿Cuál es la categoría?"},
+    "gastos_fijos.pedir_dia": {
+        Idioma.ES: "¿Qué día del mes se genera este gasto? (1 al 28)"
+    },
+    "gastos_fijos.creado": {
+        Idioma.ES: "✅ Gasto fijo creado: *{nombre}* — {monto} el día {dia} de cada mes."
+    },
+    "gastos_fijos.desactivado": {Idioma.ES: "✅ *{nombre}* desactivado."},
+    "gastos_fijos.confirmacion": {
+        Idioma.ES: (
+            "📋 *Nuevo gasto fijo:*\n"
+            "Nombre: {nombre}\n"
+            "Monto: {monto}\n"
+            "Categoría: {categoria}\n"
+            "Día del mes: {dia}\n\n"
+            "¿Confirmamos?"
+        )
+    },
+    # --- Conciliacion ---
+    "conciliacion.sin_acceso": {Idioma.ES: "Este comando es solo para el propietario."},
+    "conciliacion.sin_pendientes": {Idioma.ES: "No hay ingresos pendientes de conciliar."},
+    "conciliacion.resumen": {
+        Idioma.ES: (
+            "Conciliación completada:\n"
+            "✅ Matcheados: {matcheados}\n"
+            "❌ Sin match: {sin_match}\n"
+            "⏳ Pendientes: {pendientes}"
+        )
+    },
+    "conciliacion.item_pendiente": {
+        Idioma.ES: "💰 ${monto} de {banco} — {fecha}\nSugerencia: {sugerencia}"
+    },
+    "conciliacion.confirmado": {Idioma.ES: "✅ Ingreso marcado como matcheado."},
+    "conciliacion.marcado_personal": {Idioma.ES: "👤 Ingreso marcado como personal."},
+    "conciliacion.marcado_sin_match": {Idioma.ES: "❓ Ingreso marcado como sin match."},
+    # --- Generar mes ---
+    "generar_mes.sin_activos": {
+        Idioma.ES: "No hay gastos fijos activos para generar."
+    },
+    "generar_mes.resultado": {
+        Idioma.ES: "✅ Generados {cantidad} egreso(s) para {mes}/{año}."
+    },
+    "generar_mes.ya_generados": {
+        Idioma.ES: "Los gastos de {mes}/{año} ya fueron generados anteriormente."
+    },
 }
 
 

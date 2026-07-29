@@ -45,6 +45,31 @@ from garay.infraestructura.telegram.handlers import (
     handle_punto_de_venta,
     handle_tipo_reserva,
 )
+from garay.infraestructura.telegram.handlers_egresos import (
+    EGRESO_CATEGORIA,
+    EGRESO_CONFIRMACION,
+    EGRESO_DESCRIPCION,
+    EGRESO_FECHA,
+    EGRESO_MONTO,
+    GF_CATEGORIA,
+    GF_CONFIRMACION,
+    GF_DIA,
+    GF_MONTO,
+    GF_NOMBRE,
+    cmd_gastos_fijos,
+    cmd_generar_mes,
+    cmd_nuevo_egreso,
+    handle_egreso_categoria,
+    handle_egreso_confirmacion,
+    handle_egreso_descripcion,
+    handle_egreso_fecha,
+    handle_egreso_monto,
+    handle_gf_categoria,
+    handle_gf_confirmacion,
+    handle_gf_dia,
+    handle_gf_monto,
+    handle_gf_nombre,
+)
 
 _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
@@ -55,6 +80,9 @@ _COMANDOS = [
     BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
     BotCommand("mis_ventas", "Mis ventas del período"),
     BotCommand("resumen_empresa", "Resumen empresa (solo admin)"),
+    BotCommand("nuevo_egreso", "Registrar un egreso manual"),
+    BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
+    BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
     BotCommand("cancelar", "Cancelar operación actual"),
 ]
 
@@ -155,8 +183,46 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
+    # /nuevo_egreso conversation handler
+    egreso_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("nuevo_egreso", cmd_nuevo_egreso)],
+        states={
+            EGRESO_MONTO: [MessageHandler(_TEXT, handle_egreso_monto)],
+            EGRESO_DESCRIPCION: [MessageHandler(_TEXT, handle_egreso_descripcion)],
+            EGRESO_CATEGORIA: [
+                _CB(handle_egreso_categoria),
+                MessageHandler(_TEXT, handle_egreso_categoria),
+            ],
+            EGRESO_FECHA: [MessageHandler(_TEXT, handle_egreso_fecha)],
+            EGRESO_CONFIRMACION: [_CB(handle_egreso_confirmacion)],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
+    # /gastos_fijos (new gasto fijo) conversation handler
+    gastos_fijos_conv_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(handle_gf_nombre, pattern="^nuevo_gasto_fijo$"),
+        ],
+        states={
+            GF_NOMBRE: [MessageHandler(_TEXT, handle_gf_nombre)],
+            GF_MONTO: [MessageHandler(_TEXT, handle_gf_monto)],
+            GF_CATEGORIA: [
+                _CB(handle_gf_categoria),
+                MessageHandler(_TEXT, handle_gf_categoria),
+            ],
+            GF_DIA: [MessageHandler(_TEXT, handle_gf_dia)],
+            GF_CONFIRMACION: [_CB(handle_gf_confirmacion)],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
+    app.add_handler(egreso_conv_handler, group=2)
+    app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("resumen_empresa", cmd_resumen_empresa), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
+    app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
+    app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
     return app

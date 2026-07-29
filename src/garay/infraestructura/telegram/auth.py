@@ -10,7 +10,9 @@ from typing import Any
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
+from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,45 @@ def requiere_admin(
             if update.effective_message:
                 await update.effective_message.reply_text(
                     "Este comando es solo para administradores."
+                )
+            return None
+
+        return await handler(update, context)
+
+    return wrapper
+
+
+def requiere_propietario(
+    handler: Callable[..., Coroutine[Any, Any, Any]],
+) -> Callable[..., Coroutine[Any, Any, Any]]:
+    """Guard for standalone CommandHandlers reserved for the agency owner.
+
+    Reads ``propietario_telegram_ids`` from settings (comma-separated integers).
+    An empty list is a fail-safe: access is denied to everyone.
+    Returns ``None`` on deny (not ``ConversationHandler.END``) because
+    these are standalone CommandHandlers, not ConversationHandler entry points.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Any:
+        user = update.effective_user
+        if user is None:
+            return None
+
+        settings = obtener_settings()
+        ids_str = settings.propietario_telegram_ids.strip()
+        if not ids_str:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    obtener_mensaje("conciliacion.sin_acceso")
+                )
+            return None
+
+        ids_permitidos = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+        if user.id not in ids_permitidos:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    obtener_mensaje("conciliacion.sin_acceso")
                 )
             return None
 

@@ -6,6 +6,8 @@ import logging
 
 from telegram import Update
 
+from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
+from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
@@ -13,12 +15,18 @@ from garay.dominio.comisiones.motor import MotorComisiones
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.categorias_egreso import (
+    SQLACategoriaEgresoRepository,
+)
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
+from garay.infraestructura.persistencia.repositorios.gastos_recurrentes import (
+    SQLAGastoRecurrenteRepository,
+)
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
@@ -58,6 +66,17 @@ def main() -> None:
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
     ingreso_repo = SQLAIngresoRepository(sf)
     egreso_repo = SQLAEgresoRepository(sf)
+    categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
+    gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
+
+    egreso_service = RegistrarEgresoManualService(
+        egreso_repo=egreso_repo,
+        categoria_repo=categoria_egreso_repo,
+    )
+    generar_gastos_service = GenerarGastosRecurrentesService(
+        recurrentes_repo=gasto_recurrente_repo,
+        egreso_repo=egreso_repo,
+    )
 
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino)
@@ -107,6 +126,9 @@ def main() -> None:
             "extractor_reserva": extractor_reserva,
             "ingreso_repo": ingreso_repo,
             "egreso_repo": egreso_repo,
+            "egreso_service": egreso_service,
+            "recurrente_service": gasto_recurrente_repo,
+            "generar_gastos_service": generar_gastos_service,
         }
     )
 

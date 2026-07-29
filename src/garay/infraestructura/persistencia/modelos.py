@@ -184,8 +184,29 @@ class EgresoModel(Base):
     )
 
 
+class CategoriaEgresoModel(Base):
+    __tablename__ = "categorias_egreso"
+
+    nombre: Mapped[str] = mapped_column(String, primary_key=True)
+    descripcion: Mapped[str] = mapped_column(String, nullable=False, default="")
+    activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    orden: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class GastoRecurrenteModel(Base):
+    __tablename__ = "gastos_recurrentes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    nombre: Mapped[str] = mapped_column(String, nullable=False)
+    monto: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
+    categoria: Mapped[str] = mapped_column(String, nullable=False)
+    dia_mes: Mapped[int] = mapped_column(Integer, nullable=False)
+    activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
 class ConciliacionModel(Base):
     __tablename__ = "conciliaciones"
+    __table_args__ = (sa.UniqueConstraint("ingreso_id", name="uq_conciliaciones_ingreso_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     ingreso_id: Mapped[uuid.UUID] = mapped_column(
@@ -196,3 +217,5 @@ class ConciliacionModel(Base):
     )
     estado: Mapped[str] = mapped_column(String, nullable=False, default="pendiente")
     notas: Mapped[str] = mapped_column(String, nullable=False, default="")
+    score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
+    confianza: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)

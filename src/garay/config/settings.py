@@ -5,6 +5,7 @@ Ningun valor de negocio ni secreto se hardcodea: todo se resuelve aca.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from enum import StrEnum
 from functools import lru_cache
 
@@ -47,6 +48,15 @@ class Settings(BaseSettings):
     # Claude AI configuration.
     anthropic_api_key: str = Field(default="")
     claude_modelo: str = Field(default="claude-haiku-4-5-20251001")
+
+    # Conciliacion: propietario access and engine parameters.
+    # GARAY_PROPIETARIO_TELEGRAM_IDS="123456789,987654321" (comma-separated, empty = deny all)
+    propietario_telegram_ids: str = Field(default="")
+    conciliacion_tolerancia_pct: Decimal = Field(default=Decimal("0.05"))
+    conciliacion_ventana_dias: int = Field(default=3)
+    conciliacion_confianza_auto: Decimal = Field(default=Decimal("0.90"))
+    conciliacion_peso_monto: Decimal = Field(default=Decimal("0.6"))
+    conciliacion_peso_fecha: Decimal = Field(default=Decimal("0.4"))
 
 
 @lru_cache(maxsize=1)
