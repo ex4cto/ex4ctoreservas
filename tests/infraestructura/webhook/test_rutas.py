@@ -18,8 +18,8 @@ _PAYLOAD_BANCOLOMBIA = {
     "asunto": "Transferencia recibida",
     "cuerpo_html": "",
     "cuerpo_texto": (
-        "recibiste una transferencia de Carlos Gomez por $500,000 "
-        "el 15/07/26 a las 10:30"
+        "Recibiste una transferencia por $500,000 de Carlos Gomez "
+        "en tu cuenta **5643, el 15/07/26 a las 10:30"
     ),
 }
 

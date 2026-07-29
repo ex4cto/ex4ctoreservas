@@ -14,7 +14,7 @@ from garay.infraestructura.webhook.parser.base import (
 from garay.infraestructura.webhook.schemas import PagoExtraido
 
 _PATRON_RECIBIDO = re.compile(
-    r"recibiste\s+una\s+transferencia\s+de\s+(.+?)\s+por\s+\$([\d,]+(?:\.\d{2})?)"
+    r"recibiste\s+una\s+transferencia\s+por\s+\$([\d,\.]+)\s+de\s+(.+?)\s+en\s+tu\s+cuenta"
     r".+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
@@ -34,21 +34,16 @@ def _parsear_monto(texto: str) -> Decimal:
         raise ErrorParseoBanco(f"Monto invalido Bancolombia: '{texto}'") from error
 
 
-import logging as _logging
-_log = _logging.getLogger(__name__)
-
-
 class ParserBancolombia(ParserBanco):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
         texto = cuerpo_texto or _texto_desde_html(cuerpo_html)
-        _log.info("BANCOLOMBIA_BODY_SAMPLE: %s", texto[:600].replace("\n", " "))
         coincidencia = _PATRON_RECIBIDO.search(texto)
         if not coincidencia:
             raise ErrorParseoBanco(
                 "No se encontro patron de pago recibido en email Bancolombia"
             )
-        remitente = coincidencia.group(1).strip()
-        monto = _parsear_monto(coincidencia.group(2))
+        monto = _parsear_monto(coincidencia.group(1))
+        remitente = coincidencia.group(2).strip()
         fecha_pago = _parsear_fecha_hora_bancolombia(coincidencia.group(3), coincidencia.group(4))
         return PagoExtraido(
             monto=monto,

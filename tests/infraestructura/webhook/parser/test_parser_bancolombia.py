@@ -12,13 +12,13 @@ from garay.infraestructura.webhook.parser.base import ErrorParseoBanco
 _PARSER = ParserBancolombia()
 
 _TEXTO_VALIDO = (
-    "recibiste una transferencia de Juan Perez por $1,500,000 "
-    "el 15/07/26 a las 10:30"
+    "Recibiste una transferencia por $1,500,000 de Juan Perez "
+    "en tu cuenta **5643, el 15/07/26 a las 10:30"
 )
 
 _TEXTO_VALIDO_4_DIGITOS = (
-    "recibiste una transferencia de Maria Lopez por $250,000.50 "
-    "el 29/04/2026 a las 04:27"
+    "Recibiste una transferencia por $250,000.50 de Maria Lopez "
+    "en tu cuenta **1234, el 29/04/2026 a las 04:27"
 )
 
 
@@ -50,7 +50,7 @@ def test_parsea_fecha_4_digitos_anio() -> None:
 
 
 def test_usa_cuerpo_html_si_texto_vacio() -> None:
-    html = "<p>recibiste una transferencia de Carlos Rios por $500,000 el 01/01/26 a las 09:00</p>"
+    html = "<p>Recibiste una transferencia por $500,000 de Carlos Rios en tu cuenta **9999, el 01/01/26 a las 09:00</p>"
     resultado = _PARSER.parsear(html, "")
 
     assert resultado.remitente == "Carlos Rios"
@@ -63,7 +63,6 @@ def test_texto_sin_patron_lanza_error_parseo() -> None:
 
 
 def test_monto_invalido_lanza_error_parseo() -> None:
-    # Edge case: letter where number expected — covered by regex not matching at all
-    texto = "recibiste una transferencia de Ana por $ABC el 01/01/26 a las 09:00"
+    texto = "Recibiste una transferencia por $ABC de Ana en tu cuenta **1111, el 01/01/26 a las 09:00"
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear(texto, texto)
