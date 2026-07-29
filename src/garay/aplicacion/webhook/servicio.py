@@ -28,6 +28,7 @@ def guardar_ingreso(
         referencia=referencia,
         remitente=pago.remitente,
         clasificado=False,
+        fecha_recibido=datetime.datetime.now(datetime.UTC),
     )
     repo.guardar(ingreso)
     return ingreso
