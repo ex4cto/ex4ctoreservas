@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.dominio.clientes.entidades import Cliente
@@ -25,6 +26,7 @@ from garay.dominio.puertos.repositorios import (
     IngresoRepository,
     VentaRepository,
 )
+from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import requiere_rol
@@ -174,6 +176,9 @@ def _contexto_a_comando(
         telefono=ctx.cliente_telefono,
         hotel=ctx.cliente_hotel,
         numero_habitacion=ctx.cliente_habitacion,
+        email=ctx.cliente_email,
+        identificacion=ctx.cliente_identificacion,
+        tipo_identificacion=ctx.cliente_tipo_identificacion,
     )
     cliente_repo.guardar(nuevo_cliente)
 
@@ -394,7 +399,25 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                 servicio = context.bot_data.get("registrar_venta_service")
                 if servicio is not None:
                     try:
-                        await asyncio.to_thread(servicio.ejecutar, cmd)
+                        resultado = await asyncio.to_thread(servicio.ejecutar, cmd)
+                        if salida.contexto.cliente_email:
+                            factura_service: GenerarFacturaService | None = context.bot_data.get(
+                                "generar_factura_service"
+                            )
+                            notificador_email: NotificadorEmail | None = context.bot_data.get(
+                                "notificador_email"
+                            )
+                            if factura_service is not None and notificador_email is not None:
+                                try:
+                                    html = factura_service.generar(salida.contexto, resultado)
+                                    await asyncio.to_thread(
+                                        notificador_email.enviar,
+                                        salida.contexto.cliente_email,
+                                        "Factura de servicio - Garay Tours",
+                                        html,
+                                    )
+                                except Exception:
+                                    logger.exception("Error al enviar factura por correo")
                     except Exception:
                         logger.exception("Error al registrar venta")
                         if update.effective_message:
@@ -420,6 +443,9 @@ handle_punto_de_venta = _make_handler(EstadoFSM.PUNTO_DE_VENTA)
 handle_destino = _make_handler(EstadoFSM.DESTINO)
 handle_cliente_nombre = _make_handler(EstadoFSM.CLIENTE_NOMBRE)
 handle_cliente_telefono = _make_handler(EstadoFSM.CLIENTE_TELEFONO)
+handle_cliente_email = _make_handler(EstadoFSM.CLIENTE_EMAIL)
+handle_cliente_tipo_id = _make_handler(EstadoFSM.CLIENTE_TIPO_ID)
+handle_cliente_identificacion = _make_handler(EstadoFSM.CLIENTE_IDENTIFICACION)
 handle_cliente_hotel = _make_handler(EstadoFSM.CLIENTE_HOTEL)
 handle_cliente_habitacion = _make_handler(EstadoFSM.CLIENTE_HABITACION)
 handle_fecha_salida = _make_handler(EstadoFSM.FECHA_SALIDA)

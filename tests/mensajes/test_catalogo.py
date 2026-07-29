@@ -316,6 +316,8 @@ class TestConfirmacionResumenEspecialE:
             destinos="Tour Playa Blanca",
             cliente_nombre="Juan Pérez",
             cliente_telefono="3001234567",
+            cliente_email="juan@example.com",
+            cliente_identificacion="1234567890",
             cliente_hotel="Hotel Mar",
             cliente_habitacion="302",
             fecha_salida="15/08/2025",

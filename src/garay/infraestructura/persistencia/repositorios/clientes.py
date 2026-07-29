@@ -18,6 +18,9 @@ def to_orm(c: Cliente) -> ClienteModel:
         telefono=c.telefono,
         hotel=c.hotel,
         numero_habitacion=c.numero_habitacion,
+        email=c.email,
+        identificacion=c.identificacion,
+        tipo_identificacion=c.tipo_identificacion,
     )
 
 
@@ -29,6 +32,9 @@ def to_domain(m: ClienteModel) -> Cliente:
         telefono=m.telefono,
         hotel=m.hotel,
         numero_habitacion=m.numero_habitacion,
+        email=m.email,
+        identificacion=m.identificacion,
+        tipo_identificacion=m.tipo_identificacion,
     )
 
 

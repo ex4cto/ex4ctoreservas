@@ -19,6 +19,9 @@ class Cliente:
     telefono: str | None = None
     hotel: str | None = None
     numero_habitacion: str | None = None
+    email: str | None = None
+    identificacion: str | None = None
+    tipo_identificacion: str | None = None
 
     def __post_init__(self) -> None:
         if not self.nombre.strip():

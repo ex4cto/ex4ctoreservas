@@ -26,6 +26,9 @@ class EstadoFSM(StrEnum):
     DESTINO = "destino"
     CLIENTE_NOMBRE = "cliente_nombre"
     CLIENTE_TELEFONO = "cliente_telefono"
+    CLIENTE_EMAIL = "cliente_email"
+    CLIENTE_TIPO_ID = "cliente_tipo_id"
+    CLIENTE_IDENTIFICACION = "cliente_identificacion"
     CLIENTE_HOTEL = "cliente_hotel"
     CLIENTE_HABITACION = "cliente_habitacion"
     FECHA_SALIDA = "fecha_salida"
@@ -109,6 +112,8 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Destinos", EstadoFSM.DESTINO),
     ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
     ("Teléfono", EstadoFSM.CLIENTE_TELEFONO),
+    ("Correo", EstadoFSM.CLIENTE_EMAIL),
+    ("Identificación", EstadoFSM.CLIENTE_IDENTIFICACION),
     ("Hotel", EstadoFSM.CLIENTE_HOTEL),
     ("Habitación", EstadoFSM.CLIENTE_HABITACION),
     ("Fecha", EstadoFSM.FECHA_SALIDA),
@@ -207,6 +212,9 @@ class FSMTiquetera:
             EstadoFSM.DESTINO: self._handle_destino,
             EstadoFSM.CLIENTE_NOMBRE: self._handle_cliente_nombre,
             EstadoFSM.CLIENTE_TELEFONO: self._handle_cliente_telefono,
+            EstadoFSM.CLIENTE_EMAIL: self._handle_cliente_email,
+            EstadoFSM.CLIENTE_TIPO_ID: self._handle_cliente_tipo_id,
+            EstadoFSM.CLIENTE_IDENTIFICACION: self._handle_cliente_identificacion,
             EstadoFSM.CLIENTE_HOTEL: self._handle_cliente_hotel,
             EstadoFSM.CLIENTE_HABITACION: self._handle_cliente_habitacion,
             EstadoFSM.FECHA_SALIDA: self._handle_fecha_salida,
@@ -505,6 +513,80 @@ class FSMTiquetera:
     def _handle_cliente_telefono(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         ctx.cliente_telefono = entrada.strip()
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CLIENTE_EMAIL,
+            mensaje=obtener_mensaje("pregunta_cliente_email"),
+            contexto=ctx,
+        )
+
+    def _handle_cliente_email(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        email = entrada.strip()
+        if "@" not in email:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CLIENTE_EMAIL,
+                mensaje=obtener_mensaje("error_email_invalido"),
+                contexto=ctx,
+            )
+        ctx.cliente_email = email
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CLIENTE_TIPO_ID,
+            mensaje=obtener_mensaje("pregunta_cliente_tipo_id"),
+            opciones=["CC", "NIT"],
+            contexto=ctx,
+        )
+
+    def _handle_cliente_tipo_id(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        tipo = entrada.strip().upper()
+        if tipo not in ("CC", "NIT"):
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CLIENTE_TIPO_ID,
+                mensaje=obtener_mensaje("error_tipo_id_invalido"),
+                opciones=["CC", "NIT"],
+                contexto=ctx,
+            )
+        ctx.cliente_tipo_identificacion = tipo
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CLIENTE_IDENTIFICACION,
+            mensaje=obtener_mensaje("pregunta_cliente_identificacion"),
+            contexto=ctx,
+        )
+
+    def _handle_cliente_identificacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        identificacion = entrada.strip()
+        if not identificacion:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CLIENTE_IDENTIFICACION,
+                mensaje=obtener_mensaje("error_identificacion_vacia"),
+                contexto=ctx,
+            )
+        ctx.cliente_identificacion = identificacion
         if ctx.modo_edicion:
             ctx.modo_edicion = False
             return SalidaFSM(
@@ -826,6 +908,10 @@ class FSMTiquetera:
             faltantes.append("Nombre del cliente")
         if not ctx.cliente_telefono:
             faltantes.append("Teléfono")
+        if not ctx.cliente_email:
+            faltantes.append("Correo electrónico")
+        if not ctx.cliente_identificacion:
+            faltantes.append("Identificación")
         if ctx.tipo_cliente == "INTERNO":
             if not ctx.cliente_hotel:
                 faltantes.append("Hotel")
@@ -947,6 +1033,12 @@ class FSMTiquetera:
             EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_editar_cliente_telefono").format(
                 actual=ctx.cliente_telefono or "—"
             ),
+            EstadoFSM.CLIENTE_EMAIL: obtener_mensaje("pregunta_editar_cliente_email").format(
+                actual=ctx.cliente_email or "—"
+            ),
+            EstadoFSM.CLIENTE_IDENTIFICACION: obtener_mensaje(
+                "pregunta_editar_cliente_identificacion"
+            ).format(actual=ctx.cliente_identificacion or "—"),
             EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_editar_cliente_hotel").format(
                 actual="Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
             ),
@@ -981,6 +1073,7 @@ class FSMTiquetera:
             EstadoFSM.TIPO_RESERVA: ["INTERNO", "EXTERNO", "DIGITAL"],
             EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
             EstadoFSM.DESTINO: self._opciones_destino(ctx),
+            EstadoFSM.CLIENTE_TIPO_ID: ["CC", "NIT"],
             EstadoFSM.PARTICIPANTE_ROL: ["Ambos", "Solo vendedor", "Solo cerrador"],
         }
         return opts.get(estado, [])
@@ -1029,6 +1122,8 @@ class FSMTiquetera:
             destinos=destinos_str,
             cliente_nombre=ctx.cliente_nombre or "—",
             cliente_telefono=ctx.cliente_telefono or "—",
+            cliente_email=ctx.cliente_email or "—",
+            cliente_identificacion=ctx.cliente_identificacion or "—",
             cliente_hotel=hotel_str,
             cliente_habitacion=hab_str,
             fecha_salida=fecha_str,

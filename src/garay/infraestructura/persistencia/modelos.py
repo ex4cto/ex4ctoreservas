@@ -58,6 +58,9 @@ class ClienteModel(Base):
     telefono: Mapped[str | None] = mapped_column(String, nullable=True)
     hotel: Mapped[str | None] = mapped_column(String, nullable=True)
     numero_habitacion: Mapped[str | None] = mapped_column(String, nullable=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    identificacion: Mapped[str | None] = mapped_column(String, nullable=True)
+    tipo_identificacion: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class FreelancerModel(Base):

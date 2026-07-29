@@ -19,3 +19,8 @@ class NotificadorGrupo(ABC):
 class ExtractorReserva(ABC):
     @abstractmethod
     def extraer_de_foto(self, foto_bytes: bytes) -> ContextoVenta: ...
+
+
+class NotificadorEmail(ABC):
+    @abstractmethod
+    def enviar(self, destinatario: str, asunto: str, cuerpo_html: str) -> None: ...

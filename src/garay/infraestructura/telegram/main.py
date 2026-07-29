@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
+import base64
 import logging
+from pathlib import Path
 
 from telegram import Update
 
 from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
+from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.puertos.servicios_externos import NotificadorEmail
+from garay.infraestructura.email.adaptador_gmail import GmailAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
@@ -118,6 +123,20 @@ def main() -> None:
         comisiones_repo=comisiones_repo,
     )
 
+    logo_path = Path(__file__).parents[4] / "Flyer Agencia de Viajes Profesional Azul (2).png"
+    logo_url = ""
+    if logo_path.exists():
+        logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
+        logo_url = f"data:image/png;base64,{logo_b64}"
+
+    generar_factura_service = GenerarFacturaService(logo_url=logo_url)
+    notificador_email: NotificadorEmail | None = None
+    if settings.gmail_usuario and settings.gmail_app_password:
+        notificador_email = GmailAdapter(
+            usuario=settings.gmail_usuario,
+            app_password=settings.gmail_app_password,
+        )
+
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
@@ -148,6 +167,8 @@ def main() -> None:
             "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,
             "flujo_caja_service": flujo_caja_service,
+            "generar_factura_service": generar_factura_service,
+            "notificador_email": notificador_email,
         }
     )
 

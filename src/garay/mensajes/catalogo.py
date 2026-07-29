@@ -67,6 +67,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Destinos: {destinos}\n"
             "Cliente: {cliente_nombre}\n"
             "Teléfono: {cliente_telefono}\n"
+            "Correo: {cliente_email}\n"
+            "Identificación: {cliente_identificacion}\n"
             "Hotel: {cliente_hotel}\n"
             "Habitación: {cliente_habitacion}\n"
             "Fecha salida: {fecha_salida}\n"
@@ -212,6 +214,18 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "pregunta_editar_monto_abono": {
         Idioma.ES: "Abono actual: {actual}\n¿Nuevo abono? (0 si no hubo)"
+    },
+    "pregunta_cliente_email": {Idioma.ES: "¿Cuál es el correo electrónico del cliente?"},
+    "pregunta_cliente_tipo_id": {Idioma.ES: "¿Tipo de identificación del cliente?"},
+    "pregunta_cliente_identificacion": {Idioma.ES: "¿Número de identificación del cliente?"},
+    "error_email_invalido": {Idioma.ES: "Correo inválido. Debe contener '@'."},
+    "error_tipo_id_invalido": {Idioma.ES: "Opción inválida. Seleccioná CC o NIT."},
+    "error_identificacion_vacia": {Idioma.ES: "La identificación no puede estar vacía."},
+    "pregunta_editar_cliente_email": {
+        Idioma.ES: "Correo actual: {actual}\n¿Cuál es el nuevo correo?"
+    },
+    "pregunta_editar_cliente_identificacion": {
+        Idioma.ES: "Identificación actual: {actual}\n¿Cuál es la nueva identificación?"
     },
     # --- Egresos manuales ---
     "egreso.pedir_monto": {Idioma.ES: "¿Cuál es el monto del egreso?"},

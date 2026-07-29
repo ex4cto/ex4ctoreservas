@@ -449,6 +449,21 @@ class TestFlujoCompleto:
 
         # CLIENTE_TELEFONO
         s = fsm.procesar(EstadoFSM.CLIENTE_TELEFONO, "3001234567", ctx)
+        assert s.nuevo_estado == EstadoFSM.CLIENTE_EMAIL
+        ctx = s.contexto
+
+        # CLIENTE_EMAIL
+        s = fsm.procesar(EstadoFSM.CLIENTE_EMAIL, "juan@example.com", ctx)
+        assert s.nuevo_estado == EstadoFSM.CLIENTE_TIPO_ID
+        ctx = s.contexto
+
+        # CLIENTE_TIPO_ID
+        s = fsm.procesar(EstadoFSM.CLIENTE_TIPO_ID, "CC", ctx)
+        assert s.nuevo_estado == EstadoFSM.CLIENTE_IDENTIFICACION
+        ctx = s.contexto
+
+        # CLIENTE_IDENTIFICACION
+        s = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
         ctx = s.contexto
 
@@ -1047,6 +1062,9 @@ def ctx_completo() -> ContextoVenta:
     return ContextoVenta(
         cliente_nombre="Ana García",
         cliente_telefono="3001234567",
+        cliente_email="ana@example.com",
+        cliente_identificacion="1234567890",
+        cliente_tipo_identificacion="CC",
         cliente_hotel="Hotel Test",
         cliente_habitacion="101",
         fecha_salida=datetime.datetime(2026, 8, 1, 8, 0),

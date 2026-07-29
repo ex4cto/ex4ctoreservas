@@ -22,10 +22,13 @@ from garay.infraestructura.telegram.handlers import (
     cmd_mis_ventas,
     cmd_start,
     cmd_verificar_pago,
+    handle_cliente_email,
     handle_cliente_habitacion,
     handle_cliente_hotel,
+    handle_cliente_identificacion,
     handle_cliente_nombre,
     handle_cliente_telefono,
+    handle_cliente_tipo_id,
     handle_confirmacion,
     handle_destino,
     handle_editar_cerrador,
@@ -131,6 +134,16 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             estados[EstadoFSM.CLIENTE_TELEFONO]: [
                 MessageHandler(_TEXT, handle_cliente_telefono),
+            ],
+            estados[EstadoFSM.CLIENTE_EMAIL]: [
+                MessageHandler(_TEXT, handle_cliente_email),
+            ],
+            estados[EstadoFSM.CLIENTE_TIPO_ID]: [
+                _CB(handle_cliente_tipo_id),
+                MessageHandler(_TEXT, handle_cliente_tipo_id),
+            ],
+            estados[EstadoFSM.CLIENTE_IDENTIFICACION]: [
+                MessageHandler(_TEXT, handle_cliente_identificacion),
             ],
             estados[EstadoFSM.CLIENTE_HOTEL]: [
                 MessageHandler(_TEXT, handle_cliente_hotel),
