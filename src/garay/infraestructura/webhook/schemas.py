@@ -22,3 +22,10 @@ class PagoExtraido(BaseModel):
     remitente: str
     banco_origen: str
     fecha_pago: datetime.datetime
+
+
+class EgresoExtraido(BaseModel):
+    monto: Decimal
+    descripcion: str
+    banco_origen: str
+    fecha_egreso: datetime.datetime

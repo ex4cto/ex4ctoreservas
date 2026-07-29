@@ -176,6 +176,12 @@ class EgresoModel(Base):
     fecha: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     categoria: Mapped[str] = mapped_column(String, nullable=False)  # CategoriaEgreso value
     tipo: Mapped[str] = mapped_column(String, nullable=False, default="manual")  # TipoEgreso
+    # Unique message ID; None for manually-created records.
+    referencia: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    # UTC timestamp of receipt. Null for legacy/manual records.
+    fecha_recibido: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class ConciliacionModel(Base):

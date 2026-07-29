@@ -219,10 +219,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "📈 /resumen\\_empresa — Resumen empresa _(solo admin)_\n"
         "❌ /cancelar — Cancelar operación actual"
     )
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("📋 Registrar nueva venta", callback_data="iniciar_venta"),
-    ]])
-    await update.message.reply_text(texto, parse_mode="Markdown", reply_markup=keyboard)
+    await update.message.reply_text(texto, parse_mode="Markdown")
     return ConversationHandler.END
 
 

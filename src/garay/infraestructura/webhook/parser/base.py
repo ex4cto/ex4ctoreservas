@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import datetime
 from abc import ABC, abstractmethod
+from datetime import UTC
+from typing import Final
 
-from garay.infraestructura.webhook.schemas import PagoExtraido
+from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
 BANCO_BANCOLOMBIA = "Bancolombia"
 BANCO_NEQUI = "Nequi"
+
+DIRECCION_INGRESO: Final = "ingreso"
+DIRECCION_EGRESO: Final = "egreso"
 
 _DOMINIOS_BANCOLOMBIA: frozenset[str] = frozenset(
     [
@@ -18,14 +24,62 @@ _DOMINIOS_BANCOLOMBIA: frozenset[str] = frozenset(
 )
 _DOMINIOS_NEQUI: frozenset[str] = frozenset(["nequi.com.co"])
 
+_MESES_ES_FULL: dict[str, int] = {
+    "enero": 1,
+    "febrero": 2,
+    "marzo": 3,
+    "abril": 4,
+    "mayo": 5,
+    "junio": 6,
+    "julio": 7,
+    "agosto": 8,
+    "septiembre": 9,
+    "octubre": 10,
+    "noviembre": 11,
+    "diciembre": 12,
+}
+
+_KEYWORDS_EGRESO: frozenset[str] = frozenset(
+    [
+        "compraste",
+        "transferiste",
+        "enviaste",
+        "pagaste con nequi",
+    ]
+)
+
 
 class ErrorParseoBanco(Exception):
     """Raised when a bank email cannot be parsed into a PagoExtraido."""
 
 
+def _parsear_fecha_hora_bancolombia(fecha_str: str, hora_str: str) -> datetime.datetime:
+    """Parse a Bancolombia date/time string pair into a UTC datetime.
+
+    Tries both two-digit and four-digit year formats.
+    Raises ErrorParseoBanco if neither format matches.
+    """
+    for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+        try:
+            return datetime.datetime.strptime(
+                f"{fecha_str} {hora_str}", f"{fmt} %H:%M"
+            ).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    raise ErrorParseoBanco(
+        f"Fecha/hora invalida Bancolombia: '{fecha_str} {hora_str}'"
+    )
+
+
 class ParserBanco(ABC):
     @abstractmethod
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
+        ...
+
+
+class ParserEgreso(ABC):
+    @abstractmethod
+    def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> EgresoExtraido:
         ...
 
 
@@ -37,3 +91,11 @@ def detectar_banco(remitente_email: str) -> str | None:
     if dominio in _DOMINIOS_NEQUI:
         return BANCO_NEQUI
     return None
+
+
+def detectar_direccion(cuerpo_texto: str) -> str:
+    """Return DIRECCION_EGRESO or DIRECCION_INGRESO based on keywords in email body."""
+    texto_lower = cuerpo_texto.lower()
+    if any(kw in texto_lower for kw in _KEYWORDS_EGRESO):
+        return DIRECCION_EGRESO
+    return DIRECCION_INGRESO

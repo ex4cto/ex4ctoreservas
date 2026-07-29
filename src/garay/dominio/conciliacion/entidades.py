@@ -49,6 +49,10 @@ class Egreso:
     fecha: datetime.date
     categoria: CategoriaEgreso
     tipo: TipoEgreso = field(default=TipoEgreso.MANUAL)
+    # Unique message ID used as idempotency key for webhook-originated egresos.
+    referencia: str | None = field(default=None)
+    # UTC timestamp of receipt. None for manually-created records.
+    fecha_recibido: datetime.datetime | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.descripcion.strip():

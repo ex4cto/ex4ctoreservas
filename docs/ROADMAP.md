@@ -86,14 +86,14 @@
 
 ---
 
-## Etapa 5 — Egresos / Salidas ⬜
+## Etapa 5 — Egresos / Salidas 🔄
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
-| 5.1 | Egresos automáticos: correos salientes Bancolombia/Nequi | ⬜ | Verificar si mandan correo en salientes |
+| 5.1 | Egresos automáticos: correos salientes Bancolombia/Nequi | ✅ | 3 patrones Bancolombia + 2 Nequi; `_parsear_monto_bilingue`; `SQLAEgresoRepository`; 48 tests |
 | 5.2 | Egresos manuales: categorías en config/DB (nunca hardcodeadas) | ⬜ | |
 | 5.3 | Recurrencia: gastos fijos como catálogo (arriendo, Sharimel, IA, plan, etc.) | ⬜ | |
-| 5.4 | Persistencia: EgresoRepository | ⬜ | |
+| 5.4 | Persistencia adicional: listar egresos por período | ⬜ | `guardar` y `existe_referencia` ya implementados |
 
 ---
 
@@ -166,4 +166,4 @@ Etapa 4  ████████████████████  100%  ✅
 Etapas 5-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 495 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 543 · **mypy:** strict clean · **ruff:** clean

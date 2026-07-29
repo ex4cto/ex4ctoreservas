@@ -9,28 +9,29 @@ import logging
 
 from fastapi import FastAPI
 
-from garay.dominio.puertos.repositorios import IngresoRepository
+from garay.dominio.puertos.repositorios import EgresoRepository, IngresoRepository
 from garay.infraestructura.webhook.rutas import router
 
 logger = logging.getLogger(__name__)
 
 
-def crear_app(repo: IngresoRepository | None = None) -> FastAPI:
+def crear_app(
+    *,
+    ingreso_repo: IngresoRepository | None = None,
+    egreso_repo: EgresoRepository | None = None,
+) -> FastAPI:
     """Create and configure the FastAPI application.
 
-    Args:
-        repo: Optional IngresoRepository to override for tests.
-              When None, the router uses its own Depends() resolution.
-
-    Returns:
-        Configured FastAPI instance with the webhook router mounted.
+    ingreso_repo: Optional IngresoRepository to override for tests.
+    egreso_repo: Optional EgresoRepository to override for tests.
     """
     app = FastAPI(title="Garay Tours — Webhook")
 
-    if repo is not None:
-        from garay.dominio.puertos.repositorios import IngresoRepository as _IngresoRepository
+    if ingreso_repo is not None:
+        app.dependency_overrides[IngresoRepository] = lambda: ingreso_repo
 
-        app.dependency_overrides[_IngresoRepository] = lambda: repo
+    if egreso_repo is not None:
+        app.dependency_overrides[EgresoRepository] = lambda: egreso_repo
 
     app.include_router(router)
     return app

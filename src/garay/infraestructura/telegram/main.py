@@ -17,7 +17,9 @@ from garay.infraestructura.persistencia.repositorios.clientes import SQLACliente
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
 )
+from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
+from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
@@ -26,7 +28,6 @@ from garay.infraestructura.persistencia.repositorios.reglas_comision import (
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
-from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
@@ -56,6 +57,7 @@ def main() -> None:
     tiqueteras_repo = SQLATiqueteraRepository(sf)
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
     ingreso_repo = SQLAIngresoRepository(sf)
+    egreso_repo = SQLAEgresoRepository(sf)
 
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino)
@@ -104,6 +106,7 @@ def main() -> None:
             "registrar_venta_service": servicio,
             "extractor_reserva": extractor_reserva,
             "ingreso_repo": ingreso_repo,
+            "egreso_repo": egreso_repo,
         }
     )
 

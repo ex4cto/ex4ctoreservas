@@ -61,6 +61,9 @@ class EgresoRepository(ABC):
     @abstractmethod
     def buscar_por_id(self, id: uuid.UUID) -> Egreso | None: ...
 
+    @abstractmethod
+    def existe_referencia(self, referencia: str) -> bool: ...
+
 
 class TiqueteraRepository(ABC):
     @abstractmethod
