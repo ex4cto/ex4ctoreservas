@@ -13,8 +13,16 @@ from garay.infraestructura.webhook.parser.base import (
 )
 from garay.infraestructura.webhook.schemas import PagoExtraido
 
-_PATRON_RECIBIDO = re.compile(
+# Bancolombia-to-Bancolombia: "por $X de NOMBRE en tu cuenta ... el fecha a las hora"
+_PATRON_BC_A_BC = re.compile(
     r"recibiste\s+una\s+transferencia\s+por\s+\$([\d,\.]+)\s+de\s+(.+?)\s+en\s+tu\s+cuenta"
+    r".+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# External bank to Bancolombia: "de NOMBRE por $X el fecha a las hora"
+_PATRON_EXTERNO = re.compile(
+    r"recibiste\s+una\s+transferencia\s+de\s+(.+?)\s+por\s+\$([\d,\.]+)"
     r".+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
@@ -37,14 +45,21 @@ def _parsear_monto(texto: str) -> Decimal:
 class ParserBancolombia(ParserBanco):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
         texto = cuerpo_texto or _texto_desde_html(cuerpo_html)
-        coincidencia = _PATRON_RECIBIDO.search(texto)
-        if not coincidencia:
-            raise ErrorParseoBanco(
-                "No se encontro patron de pago recibido en email Bancolombia"
-            )
-        monto = _parsear_monto(coincidencia.group(1))
-        remitente = coincidencia.group(2).strip()
-        fecha_pago = _parsear_fecha_hora_bancolombia(coincidencia.group(3), coincidencia.group(4))
+
+        m = _PATRON_BC_A_BC.search(texto)
+        if m:
+            monto = _parsear_monto(m.group(1))
+            remitente = m.group(2).strip()
+            fecha_pago = _parsear_fecha_hora_bancolombia(m.group(3), m.group(4))
+        else:
+            m2 = _PATRON_EXTERNO.search(texto)
+            if not m2:
+                raise ErrorParseoBanco(
+                    "No se encontro patron de pago recibido en email Bancolombia"
+                )
+            remitente = m2.group(1).strip()
+            monto = _parsear_monto(m2.group(2))
+            fecha_pago = _parsear_fecha_hora_bancolombia(m2.group(3), m2.group(4))
         return PagoExtraido(
             monto=monto,
             remitente=remitente,
