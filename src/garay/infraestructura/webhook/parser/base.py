@@ -83,13 +83,24 @@ class ParserEgreso(ABC):
         ...
 
 
-def detectar_banco(remitente_email: str) -> str | None:
-    """Return the bank name for a sender email address, or None if unknown."""
+def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
+    """Return the bank name for a sender email, or None if unknown.
+
+    Falls back to body content when the email was forwarded through Gmail
+    and the original bank sender address was replaced.
+    """
     dominio = remitente_email.lower().split("@")[-1]
     if dominio in _DOMINIOS_BANCOLOMBIA:
         return BANCO_BANCOLOMBIA
     if dominio in _DOMINIOS_NEQUI:
         return BANCO_NEQUI
+
+    cuerpo_lower = cuerpo.lower()
+    if "bancolombia" in cuerpo_lower:
+        return BANCO_BANCOLOMBIA
+    if "nequi" in cuerpo_lower:
+        return BANCO_NEQUI
+
     return None
 
 

@@ -60,12 +60,12 @@ def recibir_email(
         logger.debug("Skipping email with empty message_id")
         return {"estado": "ok"}
 
-    banco = detectar_banco(payload.remitente_email)
+    cuerpo = payload.cuerpo_texto or payload.cuerpo_html
+    banco = detectar_banco(payload.remitente_email, cuerpo)
     if banco is None:
         logger.warning("Unknown bank sender: %s — skipping", payload.remitente_email)
         return {"estado": "ok"}
 
-    cuerpo = payload.cuerpo_texto or payload.cuerpo_html
     direccion = detectar_direccion(cuerpo)
 
     if direccion == DIRECCION_EGRESO:
