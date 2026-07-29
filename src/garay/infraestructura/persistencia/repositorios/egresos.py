@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.conciliacion.entidades import Egreso
-from garay.dominio.conciliacion.tipos import CategoriaEgreso, TipoEgreso
+from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.dominio.puertos.repositorios import EgresoRepository
 from garay.infraestructura.persistencia.modelos import EgresoModel
 
@@ -35,7 +35,7 @@ def _to_domain(m: EgresoModel) -> Egreso:
         descripcion=m.descripcion,
         monto=m.monto,
         fecha=m.fecha,
-        categoria=CategoriaEgreso(m.categoria),
+        categoria=m.categoria,
         tipo=TipoEgreso(m.tipo),
         referencia=m.referencia,
         fecha_recibido=m.fecha_recibido,

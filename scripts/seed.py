@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from garay.config import obtener_settings
 from garay.dominio.comun.tipos import TipoCliente
 from garay.infraestructura.persistencia.modelos import (
+    CategoriaEgresoModel,
     FreelancerModel,
     PuntoDeVentaModel,
     ReglasComisionModel,
@@ -136,6 +137,16 @@ FREELANCERS: list[str] = [
     "Kike",
 ]
 
+CATEGORIAS_EGRESO: list[tuple[str, str, int]] = [
+    ("arriendo", "Arriendo de local u oficina", 1),
+    ("nomina", "Sueldos y honorarios", 2),
+    ("uniformes", "Uniformes y dotacion", 3),
+    ("papeleria", "Papeleria y materiales", 4),
+    ("proveedor", "Pagos a proveedores de tours", 5),
+    ("ocasional", "Gastos ocasionales no recurrentes", 6),
+    ("otro", "Otros gastos", 7),
+]
+
 FREELANCERS_ADMIN: list[tuple[str, int | None]] = [
     ("Garay", None),  # TODO: set real Telegram ID
     ("Sharimel", None),  # TODO: set real Telegram ID
@@ -211,6 +222,19 @@ def seed_freelancers(session: Session) -> None:
         )
 
 
+def seed_categorias_egreso(session: Session) -> None:
+    """Insert the initial expense categories (idempotent via primary key merge)."""
+    for nombre, descripcion, orden in CATEGORIAS_EGRESO:
+        session.merge(
+            CategoriaEgresoModel(
+                nombre=nombre,
+                descripcion=descripcion,
+                activo=True,
+                orden=orden,
+            )
+        )
+
+
 def seed_freelancers_admin(session: Session) -> None:
     """Insert admin freelancers with es_admin=True."""
     for nombre, telegram_user_id in FREELANCERS_ADMIN:
@@ -246,6 +270,7 @@ def main() -> None:
         seed_reglas_comision(session)
         seed_freelancers(session)
         seed_freelancers_admin(session)
+        seed_categorias_egreso(session)
 
     print("Seed completed.")
 

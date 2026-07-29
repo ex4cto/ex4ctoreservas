@@ -7,7 +7,7 @@ import uuid
 
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso, Ingreso
-from garay.dominio.conciliacion.tipos import CategoriaEgreso, TipoEgreso
+from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.dominio.puertos.repositorios import EgresoRepository, IngresoRepository
 from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
@@ -46,7 +46,7 @@ def guardar_egreso(
         descripcion=pago.descripcion,
         monto=Dinero(pago.monto, moneda),
         fecha=pago.fecha_egreso.date(),
-        categoria=CategoriaEgreso.OTRO,
+        categoria="otro",
         tipo=TipoEgreso.AUTOMATICO,
         referencia=referencia,
         fecha_recibido=datetime.datetime.now(datetime.UTC),

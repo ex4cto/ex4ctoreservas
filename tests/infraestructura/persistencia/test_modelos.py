@@ -6,11 +6,13 @@ import sqlalchemy as sa
 
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (  # noqa: F401
+    CategoriaEgresoModel,
     ClienteModel,
     ComisionRegistradaModel,
     ConciliacionModel,
     EgresoModel,
     FreelancerModel,
+    GastoRecurrenteModel,
     IngresoModel,
     PuntoDeVentaModel,
     ReglasComisionModel,
@@ -31,6 +33,8 @@ _EXPECTED_TABLES = {
     "ingresos",
     "egresos",
     "conciliaciones",
+    "categorias_egreso",
+    "gastos_recurrentes",
 }
 
 

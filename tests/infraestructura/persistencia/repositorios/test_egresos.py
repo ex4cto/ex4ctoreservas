@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso
-from garay.dominio.conciliacion.tipos import CategoriaEgreso, TipoEgreso
+from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 
 
@@ -23,7 +23,7 @@ def _make_egreso(
         descripcion="Compra en MOVISTAR PAGOSEPAYCO",
         monto=Dinero("69328.00"),
         fecha=datetime.date(2026, 7, 27),
-        categoria=CategoriaEgreso.OTRO,
+        categoria="otro",
         tipo=tipo,
         referencia=referencia,
     )
@@ -40,7 +40,7 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.id == egreso.id
     assert resultado.descripcion == "Compra en MOVISTAR PAGOSEPAYCO"
     assert resultado.monto == Dinero("69328.00")
-    assert resultado.categoria == CategoriaEgreso.OTRO
+    assert resultado.categoria == "otro"
     assert resultado.tipo == TipoEgreso.AUTOMATICO
 
 

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 from garay.aplicacion.webhook.servicio import guardar_egreso
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.conciliacion.tipos import CategoriaEgreso, TipoEgreso
+from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.infraestructura.webhook.schemas import EgresoExtraido
 
 
@@ -38,7 +38,7 @@ def test_guardar_egreso_devuelve_egreso_con_campos_correctos() -> None:
     assert resultado.descripcion == "Compra en MOVISTAR PAGOSEPAYCO"
     assert resultado.monto == Dinero("69328.00", "COP")
     assert resultado.fecha == datetime.date(2026, 7, 27)
-    assert resultado.categoria == CategoriaEgreso.OTRO
+    assert resultado.categoria == "otro"
     assert resultado.tipo == TipoEgreso.AUTOMATICO
     assert resultado.referencia == "MSG-EGRESO-001"
 

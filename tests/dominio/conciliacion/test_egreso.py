@@ -8,7 +8,7 @@ import pytest
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso
 from garay.dominio.conciliacion.errores import DescripcionEgresoVacia, MontoInvalido
-from garay.dominio.conciliacion.tipos import CategoriaEgreso, TipoEgreso
+from garay.dominio.conciliacion.tipos import TipoEgreso
 
 
 def _egreso(**kwargs: object) -> Egreso:
@@ -17,7 +17,7 @@ def _egreso(**kwargs: object) -> Egreso:
         "descripcion": "Pago de arriendo",
         "monto": Dinero(500_000),
         "fecha": datetime.date(2026, 7, 1),
-        "categoria": CategoriaEgreso.ARRIENDO,
+        "categoria": "arriendo",
     }
     defaults.update(kwargs)
     return Egreso(**defaults)  # type: ignore[arg-type]
@@ -31,11 +31,11 @@ class TestEgreso:
             descripcion="Uniformes equipo",
             monto=Dinero(200_000),
             fecha=datetime.date(2026, 7, 1),
-            categoria=CategoriaEgreso.UNIFORMES,
+            categoria="uniformes",
         )
         assert e.id == eid
         assert e.descripcion == "Uniformes equipo"
-        assert e.categoria == CategoriaEgreso.UNIFORMES
+        assert e.categoria == "uniformes"
 
     def test_tipo_manual_por_defecto(self) -> None:
         e = _egreso()
