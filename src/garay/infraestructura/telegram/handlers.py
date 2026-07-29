@@ -413,27 +413,33 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                         resultado = await asyncio.to_thread(servicio.ejecutar, cmd)
                         desglose = resultado.desglose
                         ctx_final = salida.contexto
-                        comision = int(desglose.vendedor + desglose.cerrador)
+
+                        def _cop(v: object) -> str:
+                            return "$" + f"{int(v or 0):,}".replace(",", ".")
+
                         if desglose.vendedor and desglose.cerrador and desglose.vendedor != desglose.cerrador:
                             comision_txt = (
-                                f"Vendedor: ${int(desglose.vendedor):,} | "
-                                f"Cerrador: ${int(desglose.cerrador):,}"
-                            ).replace(",", ".")
-                        else:
-                            comision_txt = f"${comision:,}".replace(",", ".")
-                        msg_ok = (
-                            f"✅ *Venta registrada exitosamente*\n\n"
-                            f"Cliente: {ctx_final.cliente_nombre or '—'}\n"
-                            f"Valor: ${int(ctx_final.valor or 0):,} | Abono: ${int(ctx_final.abono or 0):,}\n"
-                            f"Comisión: {comision_txt}\n\n"
-                            f"Usá /mis\\_ventas para ver tu historial\\."
-                        ).replace(",", ".")
-                        if update.effective_chat:
-                            await context.bot.send_message(
-                                chat_id=update.effective_chat.id,
-                                text=msg_ok,
-                                parse_mode="MarkdownV2",
+                                f"Vendedor: {_cop(desglose.vendedor)} / "
+                                f"Cerrador: {_cop(desglose.cerrador)}"
                             )
+                        else:
+                            comision_txt = _cop(desglose.vendedor + desglose.cerrador)
+                        msg_ok = (
+                            f"✅ <b>Venta registrada exitosamente</b>\n\n"
+                            f"Cliente: {ctx_final.cliente_nombre or '—'}\n"
+                            f"Valor: {_cop(ctx_final.valor)} | Abono: {_cop(ctx_final.abono)}\n"
+                            f"Comisión: {comision_txt}\n\n"
+                            f"Usá /mis_ventas para ver tu historial."
+                        )
+                        try:
+                            if update.effective_chat:
+                                await context.bot.send_message(
+                                    chat_id=update.effective_chat.id,
+                                    text=msg_ok,
+                                    parse_mode="HTML",
+                                )
+                        except Exception:
+                            logger.exception("Error al enviar mensaje de confirmación")
                         if ctx_final.cliente_email:
                             factura_service: GenerarFacturaService | None = context.bot_data.get(
                                 "generar_factura_service"
