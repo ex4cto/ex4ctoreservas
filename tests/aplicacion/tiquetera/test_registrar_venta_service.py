@@ -55,6 +55,14 @@ def _cmd(
     punto_de_venta_id: uuid.UUID | None = None,
     vendedor_nombre: str | None = "Ana",
     cerrador_nombre: str | None = "Luis",
+    cliente_nombre: str | None = None,
+    cliente_telefono: str | None = None,
+    servicio_nombres: list[str] | None = None,
+    hotel: str | None = None,
+    habitacion: str | None = None,
+    abono: "Dinero | None" = None,
+    adultos: int = 2,
+    ninos: int = 0,
 ) -> RegistrarVentaComando:
     return RegistrarVentaComando(
         valor_venta=_VALOR_VENTA,
@@ -68,10 +76,16 @@ def _cmd(
             cerrador_nombre=cerrador_nombre,
             punto_de_venta_id=punto_de_venta_id,
         ),
-        adultos=2,
-        ninos=0,
+        adultos=adultos,
+        ninos=ninos,
         foto_referencia=foto_referencia,
         porcentaje_referido=porcentaje_referido,
+        abono=abono,
+        cliente_nombre=cliente_nombre,
+        cliente_telefono=cliente_telefono,
+        servicio_nombres=servicio_nombres if servicio_nombres is not None else [],
+        hotel=hotel,
+        habitacion=habitacion,
     )
 
 
@@ -199,10 +213,64 @@ class TestMensajeNotificacion:
         service, notificador = self._capturar_mensaje()
         service.ejecutar(_cmd(vendedor_nombre="Ana", cerrador_nombre="Luis"))
         mensaje = notificador.notificar.call_args.args[0]
-        # Message should contain field labels on separate lines
-        assert "Vendedor:" in mensaje
-        assert "Cerrador:" in mensaje
+        assert "Vendedor" in mensaje
+        assert "Cerrador" in mensaje
         assert "Valor:" in mensaje
+
+    def test_mensaje_contiene_cliente_nombre(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(cliente_nombre="María García"))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "María García" in mensaje
+
+    def test_mensaje_contiene_destino(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(servicio_nombres=["Playa Blanca"]))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Playa Blanca" in mensaje
+
+    def test_mensaje_contiene_telefono_si_presente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(cliente_telefono="3001234567"))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "3001234567" in mensaje
+
+    def test_mensaje_omite_telefono_si_ausente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(cliente_telefono=None))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Teléfono" not in mensaje
+
+    def test_mensaje_contiene_abono_si_presente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(abono=Dinero(200_000)))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "$200.000" in mensaje
+
+    def test_mensaje_contiene_pax(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(adultos=2, ninos=0))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "2" in mensaje
+
+    def test_mensaje_usa_html_no_markdown(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd())
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "<b>" in mensaje
+        assert "*" not in mensaje
+
+    def test_mensaje_contiene_hotel_si_presente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(hotel="Dann Carlton"))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Dann Carlton" in mensaje
+
+    def test_mensaje_omite_hotel_si_ausente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(hotel=None))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Hotel" not in mensaje
 
 
 class TestRegistrarVentaPersistsComision:

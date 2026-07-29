@@ -199,6 +199,11 @@ def _contexto_a_comando(
         ninos=ctx.ninos if ctx.ninos is not None else 0,
         abono=Dinero(ctx.abono) if ctx.abono else None,
         numero_fisico=ctx.numero_fisico,
+        cliente_nombre=ctx.cliente_nombre,
+        cliente_telefono=ctx.cliente_telefono,
+        servicio_nombres=ctx.destinos_nombres,
+        hotel=ctx.cliente_hotel,
+        habitacion=ctx.cliente_habitacion,
     )
 
 

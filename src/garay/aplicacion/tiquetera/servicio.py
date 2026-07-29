@@ -105,18 +105,54 @@ class RegistrarVentaService:
         # 7. Notify the group
         vendedor = cmd.participantes.vendedor_nombre or "—"
         cerrador = cmd.participantes.cerrador_nombre or "—"
-        mensaje = (
-            "🎉 *Nueva venta registrada*\n"
-            f"Tipo: {cmd.tipo_cliente.value}\n"
-            f"Fecha: {cmd.fecha.strftime('%d/%m/%Y')}\n"
-            f"Valor: {_fmt_cop(cmd.valor_venta)}\n"
-            f"Neto: {_fmt_cop(cmd.neto)}\n"
-            f"Ganancia agencia: {_fmt_cop(desglose.agencia)}\n"
-            f"Ganancia vendedor: {_fmt_cop(desglose.vendedor)}\n"
-            f"Ganancia cerrador: {_fmt_cop(desglose.cerrador)}\n"
-            f"Vendedor: {vendedor}\n"
-            f"Cerrador: {cerrador}"
-        )
+
+        lineas: list[str] = ["🎉 <b>Nueva venta registrada</b>", ""]
+
+        if cmd.servicio_nombres:
+            lineas.append(f"📍 Destino: {', '.join(cmd.servicio_nombres)}")
+
+        lineas.append(f"📅 Fecha: {cmd.fecha.strftime('%d/%m/%Y')}")
+
+        if cmd.cliente_nombre:
+            lineas.append(f"👤 Cliente: {cmd.cliente_nombre}")
+
+        if cmd.cliente_telefono:
+            lineas.append(f"📞 Teléfono: {cmd.cliente_telefono}")
+
+        if cmd.hotel:
+            hotel_line = f"🏨 Hotel: {cmd.hotel}"
+            if cmd.habitacion:
+                hotel_line += f" | Hab: {cmd.habitacion}"
+            lineas.append(hotel_line)
+
+        if cmd.ninos > 0:
+            lineas.append(f"👥 Pax: {cmd.adultos} adultos / {cmd.ninos} niño{'s' if cmd.ninos != 1 else ''}")
+        else:
+            lineas.append(f"👥 Pax: {cmd.adultos} adultos")
+
+        valor_line = f"💰 Valor: {_fmt_cop(cmd.valor_venta)}"
+        if cmd.abono is not None:
+            valor_line += f" | Abono: {_fmt_cop(cmd.abono)}"
+        lineas.append(valor_line)
+
+        lineas.append(f"💼 Neto: {_fmt_cop(cmd.neto)}")
+
+        if cmd.numero_fisico:
+            lineas.append(f"🎫 Ticket: {cmd.numero_fisico}")
+
+        lineas.append(f"🏷 Tipo: {cmd.tipo_cliente.value}")
+        lineas.append("")
+        lineas.append("Comisiones:")
+        lineas.append(f"  Agencia: {_fmt_cop(desglose.agencia)}")
+
+        if vendedor == cerrador:
+            comision_total = _fmt_cop(desglose.vendedor + desglose.cerrador)
+            lineas.append(f"  {vendedor}: {comision_total}")
+        else:
+            lineas.append(f"  Vendedor ({vendedor}): {_fmt_cop(desglose.vendedor)}")
+            lineas.append(f"  Cerrador ({cerrador}): {_fmt_cop(desglose.cerrador)}")
+
+        mensaje = "\n".join(lineas)
         self._notificador.notificar(mensaje, self._grupo_id)
 
         return ResultadoRegistrarVenta(venta_id=venta.id, desglose=desglose)
