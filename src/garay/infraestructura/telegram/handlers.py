@@ -78,7 +78,6 @@ async def _enviar_salida(
             parse_mode="Markdown",
         )
     elif update.callback_query:
-        await update.callback_query.answer()
         await update.callback_query.edit_message_text(
             salida.mensaje,
             reply_markup=teclado,
@@ -383,6 +382,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
     """Factory: creates an async handler for a given FSM state."""
 
     async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        if update.callback_query:
+            try:
+                await update.callback_query.answer()
+            except Exception:
+                logger.warning("callback_query.answer() failed — query may be too old")
         fsm = _get_fsm(context)
         if fsm is None:
             return ConversationHandler.END

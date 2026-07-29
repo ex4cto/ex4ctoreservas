@@ -16,7 +16,7 @@ class TestGmailAdapterEnviar:
             mock_server = MagicMock()
             mock_ssl.return_value.__enter__.return_value = mock_server
             adapter.enviar("dest@example.com", "Asunto", "<html>cuerpo</html>")
-        mock_ssl.assert_called_once_with("smtp.gmail.com", 465)
+        mock_ssl.assert_called_once_with("smtp.gmail.com", 465, timeout=10)
 
     def test_enviar_hace_login_con_credenciales(self) -> None:
         adapter = GmailAdapter(usuario="user@gmail.com", app_password="apppass")

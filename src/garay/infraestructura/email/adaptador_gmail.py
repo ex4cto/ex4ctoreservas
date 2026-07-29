@@ -23,6 +23,6 @@ class GmailAdapter(NotificadorEmail):
         msg["From"] = self._usuario
         msg["To"] = destinatario
         msg.attach(MIMEText(cuerpo_html, "html", "utf-8"))
-        with smtplib.SMTP_SSL(self._HOST, self._PORT) as server:
+        with smtplib.SMTP_SSL(self._HOST, self._PORT, timeout=10) as server:
             server.login(self._usuario, self._password)
             server.sendmail(self._usuario, destinatario, msg.as_string())
