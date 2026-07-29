@@ -15,3 +15,12 @@ class EstadoVenta(StrEnum):
     PENDIENTE = "PENDIENTE"
     PROCESADA = "PROCESADA"
     CANCELADA = "CANCELADA"
+
+
+class CanalOrigen(StrEnum):
+    WHATSAPP = "WhatsApp"
+    INSTAGRAM = "Instagram"
+    TIKTOK = "TikTok"
+    FACEBOOK = "Facebook"
+    GOOGLE = "Google"
+    PAGINA_WEB = "Página web"

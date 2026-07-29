@@ -36,6 +36,7 @@ class Venta:
     ninos: int = 0
     abono: Dinero | None = None
     estado: EstadoVenta = field(default=EstadoVenta.PENDIENTE)
+    canal_origen: str | None = None
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:

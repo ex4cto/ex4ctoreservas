@@ -36,3 +36,4 @@ class ContextoVenta:
     cliente_email: str | None = None
     cliente_identificacion: str | None = None
     cliente_tipo_identificacion: str | None = None
+    canal_origen: str | None = None
