@@ -312,6 +312,7 @@ class TestConfirmacionResumenEspecialE:
         template = obtener_mensaje("confirmacion_resumen")
         result = template.format(
             tipo="EXTERNO",
+            canal="—",
             punto_de_venta="Oficina",
             destinos="Tour Playa Blanca",
             cliente_nombre="Juan Pérez",

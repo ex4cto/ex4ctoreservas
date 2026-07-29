@@ -59,10 +59,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "error_neto_supera_valor": {Idioma.ES: "El neto no puede superar el valor total de la venta."},
     "venta_cancelada": {Idioma.ES: "Operación cancelada. Escribí /start para comenzar de nuevo."},
+    "pregunta_canal_origen": {Idioma.ES: "¿De qué canal digital llegó el cliente?"},
+    "error_canal_invalido": {Idioma.ES: "Opción inválida. Elegí uno de los canales disponibles."},
+    "pregunta_editar_canal": {Idioma.ES: "Canal actual: {actual}\n¿Nuevo canal de origen?"},
     "confirmacion_resumen": {
         Idioma.ES: (
             "📋 *Resumen de la venta:*\n"
             "Tipo: {tipo}\n"
+            "Canal: {canal}\n"
             "Punto de venta: {punto_de_venta}\n"
             "Destinos: {destinos}\n"
             "Cliente: {cliente_nombre}\n"

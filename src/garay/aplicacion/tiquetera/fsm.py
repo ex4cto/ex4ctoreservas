@@ -13,7 +13,7 @@ from enum import StrEnum
 
 from rapidfuzz import fuzz
 
-from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -22,6 +22,7 @@ class EstadoFSM(StrEnum):
     METODO_INPUT = "metodo_input"
     ESPERANDO_FOTO = "esperando_foto"
     TIPO_RESERVA = "tipo_reserva"
+    CANAL_ORIGEN = "canal_origen"
     PUNTO_DE_VENTA = "punto_de_venta"
     DESTINO = "destino"
     CLIENTE_NOMBRE = "cliente_nombre"
@@ -65,6 +66,7 @@ _ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset(
         EstadoFSM.FECHA_SALIDA,
         EstadoFSM.PAX_ADULTOS,
         EstadoFSM.PAX_NINOS,
+        EstadoFSM.PUNTO_DE_VENTA,
     }
 )
 
@@ -108,6 +110,7 @@ def _es_sin_hotel(entrada: str) -> bool:
 
 _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Tipo reserva", EstadoFSM.TIPO_RESERVA),
+    ("Canal", EstadoFSM.CANAL_ORIGEN),
     ("Punto de venta", EstadoFSM.PUNTO_DE_VENTA),
     ("Destinos", EstadoFSM.DESTINO),
     ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
@@ -208,6 +211,7 @@ class FSMTiquetera:
             EstadoFSM.METODO_INPUT: self._handle_metodo_input,
             EstadoFSM.ESPERANDO_FOTO: self._handle_esperando_foto,
             EstadoFSM.TIPO_RESERVA: self._handle_tipo_reserva,
+            EstadoFSM.CANAL_ORIGEN: self._handle_canal_origen,
             EstadoFSM.PUNTO_DE_VENTA: self._handle_punto_de_venta,
             EstadoFSM.DESTINO: self._handle_destino,
             EstadoFSM.CLIENTE_NOMBRE: self._handle_cliente_nombre,
@@ -355,6 +359,42 @@ class FSMTiquetera:
             )
         ctx = _clonar(contexto)
         ctx.tipo_cliente = tipo
+        if ctx.modo_edicion:
+            if tipo != TipoCliente.DIGITAL:
+                ctx.canal_origen = None
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        if tipo == TipoCliente.DIGITAL:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CANAL_ORIGEN,
+                mensaje=obtener_mensaje("pregunta_canal_origen"),
+                opciones=[c.value for c in CanalOrigen],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.PUNTO_DE_VENTA,
+            mensaje=obtener_mensaje("pregunta_punto_de_venta"),
+            opciones=list(self._puntos_venta),
+            contexto=ctx,
+        )
+
+    def _handle_canal_origen(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        valores_validos = {c.value for c in CanalOrigen}
+        seleccion = entrada.strip()
+        if seleccion not in valores_validos:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CANAL_ORIGEN,
+                mensaje=obtener_mensaje("error_canal_invalido"),
+                opciones=[c.value for c in CanalOrigen],
+                contexto=ctx,
+            )
+        ctx.canal_origen = seleccion
         if ctx.modo_edicion:
             ctx.modo_edicion = False
             return SalidaFSM(
@@ -935,6 +975,8 @@ class FSMTiquetera:
             faltantes.append("Punto de venta")
         if not ctx.rol_registrante:
             faltantes.append("Participantes (vendedor/cerrador)")
+        if ctx.tipo_cliente == TipoCliente.DIGITAL and not ctx.canal_origen:
+            faltantes.append("Canal de origen")
         return faltantes
 
     def _handle_confirmacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
@@ -961,10 +1003,15 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         if entrada.strip() == "✏️ Editar":
+            opciones_editar = [
+                label
+                for label, est in _CAMPOS_EDITABLES
+                if est != EstadoFSM.CANAL_ORIGEN or ctx.tipo_cliente == TipoCliente.DIGITAL
+            ]
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
                 mensaje=obtener_mensaje("pregunta_campo_editar"),
-                opciones=[label for label, _ in _CAMPOS_EDITABLES],
+                opciones=opciones_editar,
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -975,13 +1022,31 @@ class FSMTiquetera:
 
     def _handle_editar_selector(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        campo_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
-        estado_destino = campo_map.get(entrada.strip())
-        if estado_destino is None:
+        label_elegido = entrada.strip()
+        if label_elegido == "Canal" and ctx.tipo_cliente != TipoCliente.DIGITAL:
+            opciones_editar = [
+                label
+                for label, est in _CAMPOS_EDITABLES
+                if est != EstadoFSM.CANAL_ORIGEN or ctx.tipo_cliente == TipoCliente.DIGITAL
+            ]
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
                 mensaje=obtener_mensaje("error_campo_editar_invalido"),
-                opciones=[label for label, _ in _CAMPOS_EDITABLES],
+                opciones=opciones_editar,
+                contexto=ctx,
+            )
+        campo_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
+        estado_destino = campo_map.get(label_elegido)
+        if estado_destino is None:
+            opciones_editar = [
+                label
+                for label, est in _CAMPOS_EDITABLES
+                if est != EstadoFSM.CANAL_ORIGEN or ctx.tipo_cliente == TipoCliente.DIGITAL
+            ]
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
+                mensaje=obtener_mensaje("error_campo_editar_invalido"),
+                opciones=opciones_editar,
                 contexto=ctx,
             )
         ctx.modo_edicion = True
@@ -1025,6 +1090,9 @@ class FSMTiquetera:
     def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
         msgs: dict[EstadoFSM, str] = {
             EstadoFSM.TIPO_RESERVA: obtener_mensaje("pregunta_tipo_reserva"),
+            EstadoFSM.CANAL_ORIGEN: obtener_mensaje("pregunta_editar_canal").format(
+                actual=ctx.canal_origen or "—"
+            ),
             EstadoFSM.PUNTO_DE_VENTA: obtener_mensaje("pregunta_punto_de_venta"),
             EstadoFSM.DESTINO: self._destinos_mensaje(ctx),
             EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_editar_cliente_nombre").format(
@@ -1071,6 +1139,7 @@ class FSMTiquetera:
     def _opciones_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> list[str]:
         opts: dict[EstadoFSM, list[str]] = {
             EstadoFSM.TIPO_RESERVA: ["INTERNO", "EXTERNO", "DIGITAL"],
+            EstadoFSM.CANAL_ORIGEN: [c.value for c in CanalOrigen],
             EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
             EstadoFSM.DESTINO: self._opciones_destino(ctx),
             EstadoFSM.CLIENTE_TIPO_ID: ["CC", "NIT"],
@@ -1079,6 +1148,8 @@ class FSMTiquetera:
         return opts.get(estado, [])
 
     def _get_valor_prefilled(self, estado: EstadoFSM, ctx: ContextoVenta) -> str | None:
+        if estado == EstadoFSM.PUNTO_DE_VENTA:
+            return ctx.punto_de_venta_nombre
         if estado == EstadoFSM.CLIENTE_NOMBRE:
             return ctx.cliente_nombre
         if estado == EstadoFSM.CLIENTE_TELEFONO:
@@ -1118,6 +1189,7 @@ class FSMTiquetera:
         cerrador_str = ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, "ambos", "cerrador")
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
+            canal=ctx.canal_origen or "—",
             punto_de_venta=ctx.punto_de_venta_nombre or "Sin punto",
             destinos=destinos_str,
             cliente_nombre=ctx.cliente_nombre or "—",
