@@ -73,14 +73,16 @@
 
 ---
 
-## Etapa 4 — Ingresos bancarios (FastAPI / webhook) ⬜
+## Etapa 4 — Ingresos bancarios (FastAPI / webhook) ✅
 
-| # | Fase | Estado |
-|---|------|--------|
-| 4.1 | Reusar webhook Forward Email: endpoint FastAPI + webhook secret | ⬜ |
-| 4.2 | Parsers Bancolombia / Nequi → entidad Ingreso normalizada | ⬜ |
-| 4.3 | Persistencia + idempotencia: deduplicación por correo | ⬜ |
-| 4.4 | Clasificación inicial: todo ingreso nace "sin clasificar" | ⬜ |
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 4.1 | Webhook Forward Email: POST /webhook/email + HMAC secret | ✅ | FastAPI single-tenant, `GARAY_FORWARD_EMAIL_SECRET` |
+| 4.2 | Parsers Bancolombia / Nequi → `PagoExtraido` normalizado | ✅ | Regex probados con correos reales, edge cases 12am/12pm |
+| 4.3 | Persistencia + idempotencia: deduplicación por `messageId` | ✅ | `SQLAIngresoRepository`, `existe_referencia()` |
+| 4.4 | Clasificación inicial: todo ingreso nace "sin clasificar" | ✅ | Listo para Etapa 6 — conciliación |
+| 4.5 | `/verificar_pago`: pagos recibidos en últimos 5 min | ✅ | Disponible para todos los freelancers |
+| 4.6 | `/start` muestra menú de comandos, `set_my_commands()` al arrancar | ✅ | `/nueva_venta` como entry point del flujo de tiquetera |
 
 ---
 
@@ -160,7 +162,8 @@ Etapa 0  ████████████████████  100%  ✅
 Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ████████████████████  100%  ✅
 Etapa 3  ████████████████████  100%  ✅
-Etapas 4-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
+Etapa 4  ████████████████████  100%  ✅
+Etapas 5-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
 ```
 
-**Tests:** 455 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 495 · **mypy:** strict clean · **ruff:** clean
