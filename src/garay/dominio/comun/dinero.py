@@ -61,6 +61,9 @@ class Dinero:
     def moneda(self) -> str:
         return self._moneda
 
+    def __reduce__(self) -> tuple:
+        return (self.__class__, (self._monto, self._moneda))
+
     def __setattr__(self, nombre: str, valor: object) -> None:
         raise AttributeError("Dinero es inmutable.")
 
