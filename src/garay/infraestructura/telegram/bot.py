@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from telegram import BotCommand
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -21,6 +22,7 @@ from garay.infraestructura.telegram.handlers import (
     cmd_resumen_empresa,
     cmd_start,
     cmd_verificar_pago,
+    handle_iniciar_venta,
     handle_cliente_habitacion,
     handle_cliente_hotel,
     handle_cliente_nombre,
@@ -48,15 +50,30 @@ _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
 
 
+_COMANDOS = [
+    BotCommand("nueva_venta", "Registrar una venta"),
+    BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
+    BotCommand("mis_ventas", "Mis ventas del período"),
+    BotCommand("resumen_empresa", "Resumen empresa (solo admin)"),
+    BotCommand("cancelar", "Cancelar operación actual"),
+]
+
+
+async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
+    await app.bot.set_my_commands(_COMANDOS)
+
+
 def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     """Build and return the configured PTB Application."""
-    app = Application.builder().token(token).build()
+    app = Application.builder().token(token).post_init(_post_init).build()
 
     estados = ESTADO_PTB
 
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", cmd_start),
+            CommandHandler("nueva_venta", handle_iniciar_venta),
+            CallbackQueryHandler(handle_iniciar_venta, pattern="^iniciar_venta$"),
         ],
         states={
             estados[EstadoFSM.METODO_INPUT]: [

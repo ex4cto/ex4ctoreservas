@@ -367,10 +367,10 @@ class TestCmdFoto:
 
 
 class TestCmdStart:
-    """WU-6: /start returns METODO_INPUT state."""
+    """WU-6: /start shows menu and returns END (does not start FSM)."""
 
     @pytest.mark.asyncio
-    async def test_cmd_start_retorna_metodo_input(self) -> None:
+    async def test_cmd_start_muestra_menu_y_retorna_end(self) -> None:
         update = MagicMock()
         update.message = MagicMock()
         update.message.reply_text = AsyncMock()
@@ -379,11 +379,13 @@ class TestCmdStart:
         update.effective_user = MagicMock()
         update.effective_user.id = 12345
 
-        fsm = FSMTiquetera(servicios=[(1, "Tour", Decimal("100"), None)], puntos_venta=["PDV"])
-        fl_repo = _make_freelancer_repo(found=True)
         context = MagicMock()
-        context.bot_data = {"fsm": fsm, "freelancer_repo": fl_repo}
+        context.bot_data = {}
         context.user_data = {}
 
         result = await cmd_start(update, context)
-        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        assert result == ConversationHandler.END
+        update.message.reply_text.assert_called_once()
+        call_text = update.message.reply_text.call_args[0][0]
+        assert "nueva" in call_text
+        assert "verificar" in call_text

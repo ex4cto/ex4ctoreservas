@@ -207,9 +207,29 @@ async def _foto_en_conversacion(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 
-@requiere_rol
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /start — initialize the FSM."""
+    """Handle /start — show main menu."""
+    if update.message is None:
+        return ConversationHandler.END
+    texto = (
+        "👋 Bienvenido a *Garay Tours*\n\n"
+        "📋 /nueva\\_venta — Registrar una venta\n"
+        "💰 /verificar\\_pago — Pagos recibidos (últimos 5 min)\n"
+        "📊 /mis\\_ventas — Mis ventas del período\n"
+        "📈 /resumen\\_empresa — Resumen empresa _(solo admin)_\n"
+        "❌ /cancelar — Cancelar operación actual"
+    )
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📋 Registrar nueva venta", callback_data="iniciar_venta"),
+    ]])
+    await update.message.reply_text(texto, parse_mode="Markdown", reply_markup=keyboard)
+    return ConversationHandler.END
+
+
+async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Start the tiquetera FSM — entry point from button or /nueva_venta."""
+    if update.callback_query is not None:
+        await update.callback_query.answer()
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
