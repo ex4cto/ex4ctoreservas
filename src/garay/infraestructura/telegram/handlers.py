@@ -397,6 +397,13 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
             entrada = update.message.text
         ctx = _get_contexto(context)
         salida = fsm.procesar_foto(estado, entrada, ctx)
+        logger.info(
+            "[FSM %s] entrada=%r listo=%s nuevo_estado=%s",
+            estado.value,
+            entrada[:30],
+            salida.listo,
+            salida.nuevo_estado,
+        )
         if salida.listo:
             cmd = _contexto_a_comando(update, context, salida.contexto)
             if cmd is not None:
@@ -404,7 +411,30 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                 if servicio is not None:
                     try:
                         resultado = await asyncio.to_thread(servicio.ejecutar, cmd)
-                        if salida.contexto.cliente_email:
+                        desglose = resultado.desglose
+                        ctx_final = salida.contexto
+                        comision = int(desglose.vendedor + desglose.cerrador)
+                        if desglose.vendedor and desglose.cerrador and desglose.vendedor != desglose.cerrador:
+                            comision_txt = (
+                                f"Vendedor: ${int(desglose.vendedor):,} | "
+                                f"Cerrador: ${int(desglose.cerrador):,}"
+                            ).replace(",", ".")
+                        else:
+                            comision_txt = f"${comision:,}".replace(",", ".")
+                        msg_ok = (
+                            f"✅ *Venta registrada exitosamente*\n\n"
+                            f"Cliente: {ctx_final.cliente_nombre or '—'}\n"
+                            f"Valor: ${int(ctx_final.valor or 0):,} | Abono: ${int(ctx_final.abono or 0):,}\n"
+                            f"Comisión: {comision_txt}\n\n"
+                            f"Usá /mis\\_ventas para ver tu historial\\."
+                        ).replace(",", ".")
+                        if update.effective_chat:
+                            await context.bot.send_message(
+                                chat_id=update.effective_chat.id,
+                                text=msg_ok,
+                                parse_mode="MarkdownV2",
+                            )
+                        if ctx_final.cliente_email:
                             factura_service: GenerarFacturaService | None = context.bot_data.get(
                                 "generar_factura_service"
                             )
@@ -413,10 +443,10 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                             )
                             if factura_service is not None and notificador_email is not None:
                                 try:
-                                    html = factura_service.generar(salida.contexto, resultado)
+                                    html = factura_service.generar(ctx_final, resultado)
                                     await asyncio.to_thread(
                                         notificador_email.enviar,
-                                        salida.contexto.cliente_email,
+                                        ctx_final.cliente_email,
                                         "Factura de servicio - Garay Tours",
                                         html,
                                     )
