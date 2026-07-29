@@ -86,27 +86,26 @@
 
 ---
 
-## Etapa 5 — Egresos / Salidas 🔄
+## Etapa 5 — Egresos / Salidas ✅
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
-| 5.1 | Egresos automáticos: correos salientes Bancolombia/Nequi | ✅ | 3 patrones Bancolombia + 2 Nequi; `_parsear_monto_bilingue`; `SQLAEgresoRepository`; 48 tests |
-| 5.2 | Egresos manuales: categorías en config/DB (nunca hardcodeadas) | ⬜ | |
-| 5.3 | Recurrencia: gastos fijos como catálogo (arriendo, Sharimel, IA, plan, etc.) | ⬜ | |
-| 5.4 | Persistencia adicional: listar egresos por período | ⬜ | `guardar` y `existe_referencia` ya implementados |
+| 5.1 | Egresos automáticos: correos salientes Bancolombia/Nequi | ✅ | 5 patrones (3 BC + 2 Nequi + Kushki); `_parsear_monto_bilingue`; `SQLAEgresoRepository` |
+| 5.2 | Egresos manuales: categorías en DB, `/nuevo_egreso` Telegram | ✅ | `CategoriaEgreso` dataclass + repo; `RegistrarEgresoManualService`; seed 7 categorías |
+| 5.3 | Recurrencia: gastos fijos como catálogo, `/gastos_fijos`, `/generar_mes` | ✅ | `GastoRecurrente` entity; `GenerarGastosRecurrentesService` idempotente |
+| 5.4 | Persistencia adicional: listar egresos por período | ⬜ | Diferido a Etapa 6 — el motor de conciliación lo necesitará |
 
 ---
 
-## Etapa 6 — Motor de Conciliación ⬜
-*El valor central del proyecto. Depende de Etapas 3, 4 y 5.*
+## Etapa 6 — Motor de Conciliación ✅
 
-| # | Fase | Estado |
-|---|------|--------|
-| 6.1 | Estrategia de match: venta↔ingreso por monto + ventana fecha con tolerancia | ⬜ |
-| 6.2 | Estados: matcheado · sin match · personal/sin clasificar · pendiente | ⬜ |
-| 6.3 | Resolución manual asistida: sugerencias rankeadas, humano confirma | ⬜ |
-| 6.4 | Cuenta mezclada: separar plata personal vs agencia | ⬜ |
-| 6.5 | Tests: match exacto · tolerancia · ambiguo · duplicados mismo día | ⬜ |
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 6.1 | Estrategia de match: venta↔ingreso por monto + ventana fecha con tolerancia | ✅ | `MotorConciliacion`, scoring 100% Decimal, pesos en Settings |
+| 6.2 | Estados: matcheado · sin match · personal/sin clasificar · pendiente | ✅ | `EstadoConciliacion` completo, callbacks inline por estado |
+| 6.3 | Resolución manual asistida: sugerencias rankeadas, humano confirma | ✅ | `/pendientes` con botones Match/Personal/Sin match |
+| 6.4 | Permisos propietario: `/conciliar` y `/pendientes` solo Garay + dev | ✅ | `requiere_propietario`, `GARAY_PROPIETARIO_TELEGRAM_IDS` |
+| 6.5 | Tests: match exacto · tolerancia · ambiguo · sin candidatos · idempotencia | ✅ | 45 tests nuevos |
 
 ---
 
@@ -163,7 +162,9 @@ Etapa 1  ████████████████████  100%  ✅
 Etapa 2  ████████████████████  100%  ✅
 Etapa 3  ████████████████████  100%  ✅
 Etapa 4  ████████████████████  100%  ✅
-Etapas 5-10  ░░░░░░░░░░░░░░░░░   0%  ⬜
+Etapa 5  ████████████████████  100%  ✅
+Etapa 6  ████████████████████  100%  ✅
+Etapas 7-10  ░░░░░░░░░░░░░░░░░     0%  ⬜
 ```
 
-**Tests:** 543 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 647 · **mypy:** strict clean · **ruff:** clean
