@@ -1228,7 +1228,7 @@ class TestNetoRecalculoEnEdicion:
         )
         salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
-        # Service 1: 100000 × 2 adultos = 200000
+        # Service 1: 100000 x 2 adultos = 200000
         assert salida.contexto.neto == Decimal("200000")
 
     def test_editar_pax_recalcula_neto_aunque_ya_estaba_seteado(
@@ -1243,7 +1243,7 @@ class TestNetoRecalculoEnEdicion:
         )
         salida = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
-        # Service 1: 100000 × 2 adultos = 200000
+        # Service 1: 100000 x 2 adultos = 200000
         assert salida.contexto.neto == Decimal("200000")
 
     def test_foto_modo_recalcula_neto_desde_catalogo(self, fsm: FSMTiquetera) -> None:
@@ -1257,5 +1257,5 @@ class TestNetoRecalculoEnEdicion:
             foto_modo=True,
         )
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        # Service 1: 100000 × 2 adultos = 200000
+        # Service 1: 100000 x 2 adultos = 200000
         assert salida.contexto.neto == Decimal("200000")

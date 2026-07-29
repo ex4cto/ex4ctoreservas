@@ -14,10 +14,6 @@ def validar_secret(secret_recibido: str, *, expected: str) -> None:
 
     Uses hmac.compare_digest to prevent timing attacks.
     Raises ErrorSecretInvalido if the secret is wrong or empty.
-
-    Args:
-        secret_recibido: The secret provided in the incoming request.
-        expected: The configured GARAY_FORWARD_EMAIL_SECRET value.
     """
     if not hmac.compare_digest(secret_recibido, expected):
         raise ErrorSecretInvalido("Secret invalido")

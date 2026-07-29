@@ -8,7 +8,6 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Ingreso
 from garay.dominio.puertos.repositorios import IngresoRepository
 from garay.infraestructura.persistencia.modelos import IngresoModel
@@ -34,7 +33,7 @@ def _to_domain(m: IngresoModel) -> Ingreso:
     return Ingreso(
         id=m.id,
         banco=m.banco,
-        monto=m.monto if isinstance(m.monto, Dinero) else Dinero(str(m.monto)),
+        monto=m.monto,
         fecha=m.fecha,
         referencia=m.referencia,
         remitente=m.remitente,

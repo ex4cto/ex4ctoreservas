@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 
 from garay.infraestructura.webhook.parser.base import (
+    _MESES_ES_FULL,
     BANCO_NEQUI,
     ErrorParseoBanco,
     ParserBanco,
@@ -18,21 +19,6 @@ _PATRON_RECIBIDO = re.compile(
     r" a las (\d{1,2}:\d{2} [ap]\.m\.?)",
     re.IGNORECASE,
 )
-
-_MESES_ES: dict[str, int] = {
-    "enero": 1,
-    "febrero": 2,
-    "marzo": 3,
-    "abril": 4,
-    "mayo": 5,
-    "junio": 6,
-    "julio": 7,
-    "agosto": 8,
-    "septiembre": 9,
-    "octubre": 10,
-    "noviembre": 11,
-    "diciembre": 12,
-}
 
 
 def _parsear_monto_nequi(texto: str) -> Decimal:
@@ -49,7 +35,7 @@ def _parsear_fecha_hora_nequi(fecha_str: str, hora_str: str) -> datetime:
     partes_fecha = fecha_str.lower().split()
     try:
         dia = int(partes_fecha[0])
-        mes = _MESES_ES[partes_fecha[2]]
+        mes = _MESES_ES_FULL[partes_fecha[2]]
         anio = int(partes_fecha[4])
     except (IndexError, KeyError, ValueError) as error:
         raise ErrorParseoBanco(f"Fecha invalida Nequi: '{fecha_str}'") from error
