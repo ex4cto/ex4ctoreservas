@@ -19,6 +19,13 @@ class ResumenVendedor:
 
 
 @dataclass(frozen=True)
+class ResumenCanal:
+    canal: str
+    cantidad: int
+    valor_total: Dinero
+
+
+@dataclass(frozen=True)
 class ResumenVentas:
     mes: int
     año: int
@@ -26,6 +33,7 @@ class ResumenVentas:
     total_valor: Dinero
     ganancia_agencia: Dinero
     por_vendedor: tuple[ResumenVendedor, ...]
+    por_canal: tuple[ResumenCanal, ...] = ()
 
 
 class ResumenVentasService:
@@ -50,6 +58,7 @@ class ResumenVentasService:
                 total_valor=Dinero(0),
                 ganancia_agencia=Dinero(0),
                 por_vendedor=(),
+                por_canal=(),
             )
 
         venta_ids = [v.id for v in ventas]
@@ -93,6 +102,19 @@ class ResumenVentasService:
             for n in nombres
         )
 
+        conteo_canal: dict[str, int] = {}
+        valor_canal: dict[str, Dinero] = {}
+        for venta in ventas:
+            if venta.canal_origen is not None:
+                canal = venta.canal_origen
+                conteo_canal[canal] = conteo_canal.get(canal, 0) + 1
+                valor_canal[canal] = valor_canal.get(canal, Dinero(0)) + venta.valor_venta
+
+        por_canal = tuple(
+            ResumenCanal(canal=c, cantidad=conteo_canal[c], valor_total=valor_canal[c])
+            for c in sorted(conteo_canal)
+        )
+
         return ResumenVentas(
             mes=mes,
             año=año,
@@ -100,4 +122,5 @@ class ResumenVentasService:
             total_valor=total_valor,
             ganancia_agencia=ganancia,
             por_vendedor=por_vendedor,
+            por_canal=por_canal,
         )

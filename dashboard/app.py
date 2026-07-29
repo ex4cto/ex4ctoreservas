@@ -14,7 +14,7 @@ import streamlit as st
 
 import garay.infraestructura.persistencia.tipos  # noqa: F401
 from garay.aplicacion.reportes.flujo_caja import FlujoCaja, FlujoCajaService
-from garay.aplicacion.reportes.resumen_ventas import ResumenVentas, ResumenVentasService
+from garay.aplicacion.reportes.resumen_ventas import ResumenCanal, ResumenVentas, ResumenVentasService
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
@@ -194,6 +194,54 @@ def pagina_ventas(mes: int, año: int) -> None:
         use_container_width=True,
         hide_index=True,
     )
+
+    if resumen.por_canal:
+        st.markdown("---")
+        st.subheader("Ventas por canal (DIGITAL)")
+        canales_nombres = [c.canal for c in resumen.por_canal]
+        canales_conteos = [c.cantidad for c in resumen.por_canal]
+        canales_valores = [float(c.valor_total.monto) for c in resumen.por_canal]
+
+        col_canal_izq, col_canal_der = st.columns(2)
+
+        with col_canal_izq:
+            fig_canal = go.Figure(go.Bar(
+                x=canales_nombres,
+                y=canales_conteos,
+                marker_color="#9B59B6",
+                text=canales_conteos,
+                textposition="outside",
+            ))
+            fig_canal.update_layout(
+                yaxis_title="Cantidad de ventas",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=20, b=20),
+            )
+            st.plotly_chart(fig_canal, use_container_width=True)
+
+        with col_canal_der:
+            fig_canal_valor = go.Figure(go.Pie(
+                labels=canales_nombres,
+                values=canales_valores,
+                hole=0.4,
+                textinfo="label+percent",
+            ))
+            fig_canal_valor.update_layout(
+                margin=dict(t=20, b=20),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_canal_valor, use_container_width=True)
+
+        st.dataframe(
+            {
+                "Canal": canales_nombres,
+                "Ventas": canales_conteos,
+                "Valor total": [_cop(c.valor_total.monto) for c in resumen.por_canal],
+            },
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def pagina_flujo(mes: int, año: int) -> None:
