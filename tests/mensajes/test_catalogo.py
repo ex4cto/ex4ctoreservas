@@ -244,6 +244,59 @@ class TestClavesFotoExtraccion:
         assert "Nombre del cliente" in result
 
 
+class TestClavesReportesDashboard:
+    """Tests for dashboard report catalog keys — Etapa 8."""
+
+    CLAVES_REPORTES: ClassVar[list[str]] = [
+        "reporte.sin_datos",
+        "reporte.ventas.encabezado",
+        "reporte.ventas.vendedor_item",
+        "reporte.caja.encabezado",
+        "reporte.caja.categoria_item",
+        "reporte.nav_anterior",
+        "reporte.nav_siguiente",
+    ]
+
+    def test_todas_las_claves_de_reportes_existen(self) -> None:
+        for clave in self.CLAVES_REPORTES:
+            msg = obtener_mensaje(clave)
+            assert isinstance(msg, str) and len(msg) > 0, f"Key missing: {clave!r}"
+
+    def test_reporte_sin_datos_es_string(self) -> None:
+        msg = obtener_mensaje("reporte.sin_datos")
+        assert isinstance(msg, str)
+
+    def test_reporte_ventas_encabezado_tiene_placeholders(self) -> None:
+        template = obtener_mensaje("reporte.ventas.encabezado")
+        result = template.format(
+            mes="Julio", año=2026, total_ventas=10,
+            total_valor="1.000.000", ganancia="200.000",
+        )
+        assert "{" not in result
+
+    def test_reporte_caja_encabezado_tiene_placeholders(self) -> None:
+        template = obtener_mensaje("reporte.caja.encabezado")
+        result = template.format(
+            mes="Julio", año=2026,
+            ingresos="500.000", egresos="300.000",
+            signo="+", balance="200.000",
+            conciliados=3, pendientes=1,
+        )
+        assert "{" not in result
+
+    def test_reporte_nav_anterior_tiene_placeholder_label(self) -> None:
+        template = obtener_mensaje("reporte.nav_anterior")
+        result = template.format(label="Junio 2026")
+        assert "Junio 2026" in result
+        assert "{" not in result
+
+    def test_reporte_nav_siguiente_tiene_placeholder_label(self) -> None:
+        template = obtener_mensaje("reporte.nav_siguiente")
+        result = template.format(label="Agosto 2026")
+        assert "Agosto 2026" in result
+        assert "{" not in result
+
+
 class TestConfirmacionResumenEspecialE:
     def test_confirmacion_resumen_no_tiene_numero_ticket(self) -> None:
         template = obtener_mensaje("confirmacion_resumen")

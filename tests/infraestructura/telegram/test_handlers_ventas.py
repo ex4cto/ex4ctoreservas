@@ -1,4 +1,4 @@
-"""Unit tests for cmd_mis_ventas and cmd_resumen_empresa handlers."""
+"""Unit tests for cmd_mis_ventas handler."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from garay.infraestructura.telegram.handlers import cmd_mis_ventas, cmd_resumen_empresa
+from garay.infraestructura.telegram.handlers import cmd_mis_ventas
 
 
 def _make_update(user_id: int = 123) -> MagicMock:
@@ -72,14 +72,3 @@ async def test_cmd_mis_ventas_sin_ventas() -> None:
     assert "0" in msg
 
 
-@pytest.mark.asyncio
-async def test_cmd_resumen_empresa_no_repos() -> None:
-    """Missing repos → reply error message."""
-    update = _make_update()
-    context = _make_context()  # no repos at all
-
-    await cmd_resumen_empresa.__wrapped__(update, context)  # type: ignore[attr-defined]
-
-    update.effective_message.reply_text.assert_called_once()
-    call_args = update.effective_message.reply_text.call_args[0][0]
-    assert "Error" in call_args or "error" in call_args

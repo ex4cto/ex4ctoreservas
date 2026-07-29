@@ -6,7 +6,6 @@ import asyncio
 import datetime
 import logging
 import uuid
-from collections import defaultdict
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -28,7 +27,7 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_rol
+from garay.infraestructura.telegram.auth import requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -539,62 +538,3 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.effective_message.reply_text("\n".join(lineas), parse_mode="Markdown")
 
 
-@requiere_admin
-async def cmd_resumen_empresa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
-    comision_repo: ComisionRegistradaRepository | None = context.bot_data.get(
-        "comision_registrada_repo"
-    )
-
-    if venta_repo is None or comision_repo is None:
-        if update.effective_message:
-            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
-        return
-
-    hoy = date.today()
-    desde = date(hoy.year, hoy.month, 1)
-    hasta = hoy
-
-    ventas = await asyncio.to_thread(venta_repo.listar_por_periodo, desde, hasta)
-    venta_ids = [v.id for v in ventas]
-    comisiones = await asyncio.to_thread(comision_repo.listar_por_venta_ids, venta_ids)
-
-    ventas_por_id = {v.id: v for v in ventas}
-    por_freelancer: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
-    for c in comisiones:
-        venta = ventas_por_id.get(c.venta_id)
-        if venta is None:
-            continue
-        vendedor = venta.participantes.vendedor_nombre
-        cerrador = venta.participantes.cerrador_nombre
-        if vendedor:
-            por_freelancer[vendedor] += c.desglose.vendedor.monto
-        if cerrador:
-            por_freelancer[cerrador] += c.desglose.cerrador.monto
-
-    total_ventas = len(ventas)
-    valor_total = sum((v.valor_venta.monto for v in ventas), start=Decimal("0"))
-    comision_total = sum(
-        (c.desglose.vendedor.monto + c.desglose.cerrador.monto for c in comisiones),
-        start=Decimal("0"),
-    )
-    agencia_total = sum((c.desglose.agencia.monto for c in comisiones), start=Decimal("0"))
-
-    lineas = [
-        f"*Resumen empresa — {desde.strftime('%d/%m/%Y')} al {hasta.strftime('%d/%m/%Y')}*",
-        f"Total ventas: {total_ventas}",
-        f"Valor total: ${valor_total:,.0f}",
-        f"Comisiones freelancers: ${comision_total:,.0f}",
-        f"Ganancia agencia: ${agencia_total:,.0f}",
-        "\n*Por freelancer:*",
-    ]
-    for nombre, comision in sorted(por_freelancer.items(), key=lambda x: x[1], reverse=True):
-        if nombre:
-            lineas.append(f"• {nombre}: ${comision:,.0f}")
-
-    mensaje = "\n".join(lineas)
-    if len(mensaje) > 4096:
-        mensaje = mensaje[:4090] + "\n..."
-
-    if update.effective_message:
-        await update.effective_message.reply_text(mensaje, parse_mode="Markdown")

@@ -80,3 +80,12 @@ class SQLAIngresoRepository(IngresoRepository):
             )
             rows = session.execute(stmt).scalars().all()
             return [_to_domain(r) for r in rows]
+
+    def listar_por_periodo(self, desde: datetime.date, hasta: datetime.date) -> list[Ingreso]:
+        with self._sf.begin() as session:
+            stmt = (
+                select(IngresoModel)
+                .where(IngresoModel.fecha >= desde, IngresoModel.fecha <= hasta)
+                .order_by(IngresoModel.fecha)
+            )
+            return [_to_domain(m) for m in session.scalars(stmt).all()]

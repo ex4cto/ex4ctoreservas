@@ -64,3 +64,12 @@ class SQLAEgresoRepository(EgresoRepository):
             )
             result = session.execute(stmt).scalar_one_or_none()
             return result is not None
+
+    def listar_por_periodo(self, desde: datetime.date, hasta: datetime.date) -> list[Egreso]:
+        with self._sf.begin() as session:
+            stmt = (
+                select(EgresoModel)
+                .where(EgresoModel.fecha >= desde, EgresoModel.fecha <= hasta)
+                .order_by(EgresoModel.fecha)
+            )
+            return [_to_domain(m) for m in session.scalars(stmt).all()]

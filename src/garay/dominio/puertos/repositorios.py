@@ -59,6 +59,9 @@ class IngresoRepository(ABC):
         """Return ingresos with fecha_recibido within the last *minutos* minutes."""
         ...
 
+    @abstractmethod
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Ingreso]: ...
+
 
 class EgresoRepository(ABC):
     @abstractmethod
@@ -69,6 +72,9 @@ class EgresoRepository(ABC):
 
     @abstractmethod
     def existe_referencia(self, referencia: str) -> bool: ...
+
+    @abstractmethod
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Egreso]: ...
 
 
 class CategoriaEgresoRepository(ABC):
@@ -119,6 +125,11 @@ class ConciliacionRepository(ABC):
     @abstractmethod
     def listar_ingreso_ids_procesados(self) -> list[uuid.UUID]:
         """IDs de ingresos que ya tienen al menos una conciliacion registrada."""
+        ...
+
+    @abstractmethod
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Conciliacion]:
+        """Filtra por fecha del ingreso relacionado (JOIN ingresos)."""
         ...
 
 

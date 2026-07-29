@@ -13,13 +13,13 @@ from telegram.ext import (
 )
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
+from garay.infraestructura.telegram import handlers_reportes
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
     cmd_cancelar,
     cmd_foto,
     cmd_mis_ventas,
-    cmd_resumen_empresa,
     cmd_start,
     cmd_verificar_pago,
     handle_cliente_habitacion,
@@ -79,7 +79,8 @@ _COMANDOS = [
     BotCommand("nueva_venta", "Registrar una venta"),
     BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
     BotCommand("mis_ventas", "Mis ventas del período"),
-    BotCommand("resumen_empresa", "Resumen empresa (solo admin)"),
+    BotCommand("dashboard_ventas", "Dashboard de ventas (solo admin)"),
+    BotCommand("flujo_caja", "Flujo de caja mensual (solo propietario)"),
     BotCommand("nuevo_egreso", "Registrar un egreso manual"),
     BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
     BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
@@ -221,8 +222,8 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
-    app.add_handler(CommandHandler("resumen_empresa", cmd_resumen_empresa), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
     app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
+    handlers_reportes.registrar_handlers(app)
     return app

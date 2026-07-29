@@ -8,6 +8,8 @@ from telegram import Update
 
 from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
+from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
+from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
@@ -21,6 +23,9 @@ from garay.infraestructura.persistencia.repositorios.categorias_egreso import (
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
+)
+from garay.infraestructura.persistencia.repositorios.conciliaciones import (
+    SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
@@ -64,6 +69,7 @@ def main() -> None:
     reglas_repo = SQLAReglasComisionRepository(sf)
     tiqueteras_repo = SQLATiqueteraRepository(sf)
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
+    conciliacion_repo = SQLAConciliacionRepository(sf)
     ingreso_repo = SQLAIngresoRepository(sf)
     egreso_repo = SQLAEgresoRepository(sf)
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
@@ -113,6 +119,16 @@ def main() -> None:
     )
 
     app = crear_aplicacion(settings.telegram_bot_token)
+    resumen_ventas_service = ResumenVentasService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+    )
+    flujo_caja_service = FlujoCajaService(
+        ingresos=ingreso_repo,
+        egresos=egreso_repo,
+        conciliaciones=conciliacion_repo,
+    )
+
     app.bot_data.update(
         {
             "fsm": fsm,
@@ -129,6 +145,9 @@ def main() -> None:
             "egreso_service": egreso_service,
             "recurrente_service": gasto_recurrente_repo,
             "generar_gastos_service": generar_gastos_service,
+            "conciliacion_repo": conciliacion_repo,
+            "resumen_ventas_service": resumen_ventas_service,
+            "flujo_caja_service": flujo_caja_service,
         }
     )
 

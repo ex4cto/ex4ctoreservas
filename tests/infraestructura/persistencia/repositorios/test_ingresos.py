@@ -75,3 +75,43 @@ def test_existe_referencia_falso(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
 
     assert repo.existe_referencia("MSG-INEXISTENTE") is False
+
+
+def test_listar_por_periodo_devuelve_ingresos_en_rango(sf: sessionmaker[Session]) -> None:
+    repo = SQLAIngresoRepository(sf)
+    dentro = Ingreso(
+        id=uuid.uuid4(),
+        banco="Bancolombia",
+        monto=Dinero("100000"),
+        fecha=datetime.date(2026, 7, 10),
+        referencia="REF-DENTRO",
+    )
+    fuera = Ingreso(
+        id=uuid.uuid4(),
+        banco="Nequi",
+        monto=Dinero("200000"),
+        fecha=datetime.date(2026, 6, 30),
+        referencia="REF-FUERA",
+    )
+    repo.guardar(dentro)
+    repo.guardar(fuera)
+
+    resultado = repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    ids = {r.id for r in resultado}
+    assert dentro.id in ids
+    assert fuera.id not in ids
+
+
+def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
+    sf: sessionmaker[Session],
+) -> None:
+    repo = SQLAIngresoRepository(sf)
+
+    resultado = repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    assert resultado == []

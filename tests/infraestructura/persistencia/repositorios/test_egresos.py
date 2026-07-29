@@ -68,3 +68,45 @@ def test_existe_referencia_con_referencia_none_no_falla(sf: sessionmaker[Session
     repo.guardar(egreso)
 
     assert repo.existe_referencia("MSG-CUALQUIERA") is False
+
+
+def test_listar_por_periodo_devuelve_egresos_en_rango(sf: sessionmaker[Session]) -> None:
+    repo = SQLAEgresoRepository(sf)
+    dentro = Egreso(
+        id=uuid.uuid4(),
+        descripcion="Compra julio",
+        monto=Dinero("50000"),
+        fecha=datetime.date(2026, 7, 15),
+        categoria="transporte",
+        tipo=TipoEgreso.MANUAL,
+    )
+    fuera = Egreso(
+        id=uuid.uuid4(),
+        descripcion="Compra junio",
+        monto=Dinero("30000"),
+        fecha=datetime.date(2026, 6, 10),
+        categoria="transporte",
+        tipo=TipoEgreso.MANUAL,
+    )
+    repo.guardar(dentro)
+    repo.guardar(fuera)
+
+    resultado = repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    ids = {e.id for e in resultado}
+    assert dentro.id in ids
+    assert fuera.id not in ids
+
+
+def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
+    sf: sessionmaker[Session],
+) -> None:
+    repo = SQLAEgresoRepository(sf)
+
+    resultado = repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    assert resultado == []

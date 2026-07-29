@@ -136,3 +136,55 @@ def test_buscar_por_id_no_existe_devuelve_none(sf: sessionmaker[Session]) -> Non
 def test_buscar_por_ingreso_id_no_existe_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAConciliacionRepository(sf)
     assert repo.buscar_por_ingreso_id(uuid.uuid4()) is None
+
+
+def test_listar_por_periodo_filtra_por_fecha_del_ingreso(sf: sessionmaker[Session]) -> None:
+    ingreso_repo = SQLAIngresoRepository(sf)
+    conc_repo = SQLAConciliacionRepository(sf)
+
+    # Ingreso dentro del periodo
+    i_dentro = _make_ingreso("REF-PERIODO-1")
+    i_dentro = Ingreso(
+        id=i_dentro.id,
+        banco=i_dentro.banco,
+        monto=i_dentro.monto,
+        fecha=datetime.date(2026, 7, 10),
+        referencia=i_dentro.referencia,
+    )
+    # Ingreso fuera del periodo
+    i_fuera = _make_ingreso("REF-PERIODO-2")
+    i_fuera = Ingreso(
+        id=i_fuera.id,
+        banco=i_fuera.banco,
+        monto=i_fuera.monto,
+        fecha=datetime.date(2026, 6, 5),
+        referencia=i_fuera.referencia,
+    )
+
+    ingreso_repo.guardar(i_dentro)
+    ingreso_repo.guardar(i_fuera)
+
+    conc_dentro = _make_conciliacion(i_dentro.id, estado=EstadoConciliacion.MATCHEADO)
+    conc_fuera = _make_conciliacion(i_fuera.id, estado=EstadoConciliacion.PENDIENTE)
+    conc_repo.guardar(conc_dentro)
+    conc_repo.guardar(conc_fuera)
+
+    resultado = conc_repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    ids = {c.id for c in resultado}
+    assert conc_dentro.id in ids
+    assert conc_fuera.id not in ids
+
+
+def test_listar_por_periodo_sin_conciliaciones_devuelve_vacio(
+    sf: sessionmaker[Session],
+) -> None:
+    repo = SQLAConciliacionRepository(sf)
+
+    resultado = repo.listar_por_periodo(
+        datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+    )
+
+    assert resultado == []

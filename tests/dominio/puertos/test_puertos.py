@@ -64,6 +64,9 @@ class TestIngresoRepository:
             def listar_recientes(self, minutos: int) -> list[Ingreso]:
                 return []
 
+            def listar_por_periodo(self, desde: date, hasta: date) -> list[Ingreso]:
+                return []
+
         assert isinstance(_Impl(), IngresoRepository)
 
     def test_sin_implementar_no_se_puede_instanciar(self) -> None:

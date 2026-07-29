@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 
 from sqlalchemy import select
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from garay.dominio.conciliacion.entidades import Conciliacion
 from garay.dominio.conciliacion.tipos import EstadoConciliacion
 from garay.dominio.puertos.repositorios import ConciliacionRepository
-from garay.infraestructura.persistencia.modelos import ConciliacionModel
+from garay.infraestructura.persistencia.modelos import ConciliacionModel, IngresoModel
 
 
 class SQLAConciliacionRepository(ConciliacionRepository):
@@ -59,6 +60,18 @@ class SQLAConciliacionRepository(ConciliacionRepository):
         with self._sf.begin() as session:
             stmt = select(ConciliacionModel.ingreso_id)
             return list(session.scalars(stmt).all())
+
+    def listar_por_periodo(
+        self, desde: datetime.date, hasta: datetime.date
+    ) -> list[Conciliacion]:
+        """Filtra por fecha del ingreso relacionado (JOIN ingresos)."""
+        with self._sf.begin() as session:
+            stmt = (
+                select(ConciliacionModel)
+                .join(IngresoModel, ConciliacionModel.ingreso_id == IngresoModel.id)
+                .where(IngresoModel.fecha >= desde, IngresoModel.fecha <= hasta)
+            )
+            return [self._to_entity(m) for m in session.scalars(stmt).all()]
 
     @staticmethod
     def _to_entity(model: ConciliacionModel) -> Conciliacion:

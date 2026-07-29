@@ -284,6 +284,30 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "conciliacion.confirmado": {Idioma.ES: "✅ Ingreso marcado como matcheado."},
     "conciliacion.marcado_personal": {Idioma.ES: "👤 Ingreso marcado como personal."},
     "conciliacion.marcado_sin_match": {Idioma.ES: "❓ Ingreso marcado como sin match."},
+    # --- Reportes / Dashboards ---
+    "reporte.sin_datos": {Idioma.ES: "No hay datos para este período."},
+    "reporte.ventas.encabezado": {
+        Idioma.ES: (
+            "📊 *Ventas — {mes} {año}*\n"
+            "{total_ventas} ventas · ${total_valor}\n"
+            "Ganancia agencia: ${ganancia}"
+        )
+    },
+    "reporte.ventas.vendedor_item": {
+        Idioma.ES: "• {nombre}: {ventas} ventas · comisión ${comision}"
+    },
+    "reporte.caja.encabezado": {
+        Idioma.ES: (
+            "💰 *Flujo de Caja — {mes} {año}*\n"
+            "Ingresos: ${ingresos}\n"
+            "Egresos: ${egresos}\n"
+            "Balance: {signo}${balance}\n"
+            "✅ Conciliados: {conciliados} · ⏳ Pendientes: {pendientes}"
+        )
+    },
+    "reporte.caja.categoria_item": {Idioma.ES: "• {categoria}: ${monto}"},
+    "reporte.nav_anterior": {Idioma.ES: "◀ {label}"},
+    "reporte.nav_siguiente": {Idioma.ES: "{label} ▶"},
     # --- Generar mes ---
     "generar_mes.sin_activos": {
         Idioma.ES: "No hay gastos fijos activos para generar."
