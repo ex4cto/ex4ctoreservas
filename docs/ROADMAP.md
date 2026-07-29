@@ -120,13 +120,13 @@
 
 ---
 
-## Etapa 8 — Dashboards + WhatsApp ⬜
+## Etapa 8 — Dashboards + WhatsApp 🔄
 
-| # | Fase | Estado |
-|---|------|--------|
-| 8.1 | Dashboard ventas/comisiones: por vendedor, punto, período | ⬜ |
-| 8.2 | Dashboard flujo de caja: ingresos vs egresos, conciliado vs sin clasificar | ⬜ |
-| 8.3 | Reporte automático al grupo WhatsApp | ⬜ |
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 8.1 | Dashboard ventas/comisiones: `/dashboard_ventas` por vendedor, período, navegación meses | ✅ | `ResumenVentasService`; reemplaza `/resumen_empresa` |
+| 8.2 | Dashboard flujo de caja: `/flujo_caja` ingresos vs egresos, conciliado vs pendiente | ✅ | `FlujoCajaService`; solo propietario |
+| 8.3 | Reporte automático al grupo WhatsApp | ⬜ | Pendiente — proveedor WhatsApp sin definir |
 
 ---
 
@@ -167,4 +167,4 @@ Etapa 6  ████████████████████  100%  ✅
 Etapas 7-10  ░░░░░░░░░░░░░░░░░     0%  ⬜
 ```
 
-**Tests:** 647 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 672 · **mypy:** strict clean · **ruff:** clean
