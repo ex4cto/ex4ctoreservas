@@ -114,6 +114,7 @@ class VentaModel(Base):
         Uuid(as_uuid=True), ForeignKey("puntos_de_venta.id"), nullable=True
     )
     referido_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    canal_origen: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class TiqueteraModel(Base):

@@ -30,6 +30,7 @@ def to_orm(v: Venta) -> VentaModel:
         cerrador_nombre=v.participantes.cerrador_nombre,
         punto_de_venta_id=v.participantes.punto_de_venta_id,
         referido_nombre=v.participantes.referido_nombre,
+        canal_origen=v.canal_origen,
     )
 
 
@@ -46,6 +47,7 @@ def to_domain(m: VentaModel) -> Venta:
         adultos=m.adultos,
         ninos=m.ninos,
         estado=EstadoVenta(m.estado),
+        canal_origen=m.canal_origen,
         participantes=Participantes(
             vendedor_nombre=m.vendedor_nombre,
             cerrador_nombre=m.cerrador_nombre,
