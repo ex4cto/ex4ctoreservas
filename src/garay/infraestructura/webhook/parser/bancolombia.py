@@ -34,9 +34,14 @@ def _parsear_monto(texto: str) -> Decimal:
         raise ErrorParseoBanco(f"Monto invalido Bancolombia: '{texto}'") from error
 
 
+import logging as _logging
+_log = _logging.getLogger(__name__)
+
+
 class ParserBancolombia(ParserBanco):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
         texto = cuerpo_texto or _texto_desde_html(cuerpo_html)
+        _log.info("BANCOLOMBIA_BODY_SAMPLE: %s", texto[:600].replace("\n", " "))
         coincidencia = _PATRON_RECIBIDO.search(texto)
         if not coincidencia:
             raise ErrorParseoBanco(
