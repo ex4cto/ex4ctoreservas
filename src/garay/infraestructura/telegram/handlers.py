@@ -247,7 +247,8 @@ async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /cancelar — cancel from any state."""
-    context.user_data["_cancelar_handled"] = True
+    if context.user_data is not None:
+        context.user_data["_cancelar_handled"] = True
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
@@ -258,9 +259,10 @@ async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def cmd_cancelar_sin_conv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Standalone /cancelar handler — fires when no conversation is active."""
-    if context.user_data.pop("_cancelar_handled", False):
+    if context.user_data is not None and context.user_data.pop("_cancelar_handled", False):
         return
-    await update.effective_message.reply_text(obtener_mensaje("cancelar_sin_operacion"))
+    if update.effective_message is not None:
+        await update.effective_message.reply_text(obtener_mensaje("cancelar_sin_operacion"))
 
 
 def _fmt_cop(valor: Decimal) -> str:
@@ -429,7 +431,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                         ctx_final = salida.contexto
 
                         def _cop(v: object) -> str:
-                            raw = v.monto if hasattr(v, "monto") else (v or 0)
+                            raw: Any = v.monto if hasattr(v, "monto") else (v or 0)
                             return "$" + f"{int(raw):,}".replace(",", ".")
 
                         if (
