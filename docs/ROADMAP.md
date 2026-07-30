@@ -70,6 +70,7 @@
 | 3.15 | Edit prompts muestran valor actual: 8 claves de catálogo con `{actual}`, `_mensaje_para_estado` ctx-aware (nombre, teléfono, hotel, habitación, fecha, adultos/niños, valor, abono) | ✅ | 449 tests · commit `c2f00fd` |
 | 3.16 | Fix neto recálculo en edición: `_parse_neto` reconoce "NO INGRESAN NIÑOS"/"NO SE ACEPTAN" → 0; `_calcular_neto` siempre recalcula al editar destino, pax o foto mode (elimina condición `ctx.neto is None`) | ✅ | 455 tests |
 | 3.17 | Sync catálogo precios desde Google Sheet: `precio_sugerido` (97 servicios) y `neto_adulto` (4 correcciones por match 100%); fix `_parse_neto` para aceptar `int`/`float` además de `str` | ✅ | 455 tests |
+| 3.18 | Gestión de freelancers (admin): `/nuevo_freelancer`, `/eliminar_freelancer`, `/listar_freelancers`; guards `requiere_admin`; FSM states 200-206 | ✅ | |
 
 ---
 
@@ -106,6 +107,18 @@
 | 6.3 | Resolución manual asistida: sugerencias rankeadas, humano confirma | ✅ | `/pendientes` con botones Match/Personal/Sin match |
 | 6.4 | Permisos propietario: `/conciliar` y `/pendientes` solo Garay + dev | ✅ | `requiere_propietario`, `GARAY_PROPIETARIO_TELEGRAM_IDS` |
 | 6.5 | Tests: match exacto · tolerancia · ambiguo · sin candidatos · idempotencia | ✅ | 45 tests nuevos |
+
+---
+
+## Etapa 11 — Factura electrónica + canal digital ✅
+
+| # | Fase | Estado | Notas |
+|---|------|--------|-------|
+| 11.1 | Factura HTML auto-enviada al cierre de venta: template con logo, medios de pago, timezone Bogotá, número de factura (6 hex del UUID) | ✅ | `FacturaService`; commit `9fa4bef` |
+| 11.2 | ResendAdapter: reemplaza GmailAdapter SMTP/465 por Resend HTTP API (`httpx.post`) | ✅ | `src/garay/infraestructura/email/adaptador_resend.py`; commit `3370e11` |
+| 11.3 | Canal de origen digital: `CanalOrigen` StrEnum (6 canales: WhatsApp/Instagram/TikTok/Facebook/Google/Página web), `TipoCliente.DIGITAL`, estado FSM `CANAL_ORIGEN`, rama DIGITAL (skip `PUNTO_DE_VENTA`) | ✅ | commits `09abe1e`–`b997211` |
+| 11.4 | Reporte por canal: `ResumenCanal` dataclass, `por_canal` en `ResumenVentasService`, gráfico en Streamlit dashboard | ✅ | commit `ac5f395` |
+| 11.5 | Notificación grupo enriquecida: mensaje de grupo incluye detalles completos de la venta | ✅ | commit `b849159` |
 
 ---
 
@@ -169,6 +182,7 @@ Etapa 7   ░░░░░░░░░░░░░░░░░░░░    0%  �
 Etapa 8   ████████████░░░░░░░░   60%  🔄  (8.1 8.2 ✅ · 8.3 8.4 ⬜)
 Etapa 9   ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
 Etapa 10  ████████████░░░░░░░░   60%  🔄  (10.1 10.2 10.5 ✅ · 10.3 10.4 ⬜)
+Etapa 11  ████████████████████  100%  ✅
 ```
 
-**Tests:** 707 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 808 · **mypy:** strict clean · **ruff:** clean
