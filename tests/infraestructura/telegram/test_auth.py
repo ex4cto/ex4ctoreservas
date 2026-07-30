@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from telegram import Update
 from telegram.ext import ConversationHandler
 
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_rol
+from garay.dominio.puertos.repositorios import FreelancerRepository
+from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv, requiere_rol
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -168,3 +169,81 @@ async def test_requiere_admin_ok() -> None:
 
     repo.buscar_por_telegram_id.assert_called_once_with(123)
     assert result == 42
+
+
+# ---------------------------------------------------------------------------
+# Tests for requiere_admin_conv
+# ---------------------------------------------------------------------------
+
+
+class TestRequiereAdminConv:
+    """requiere_admin_conv must return ConversationHandler.END (not None) on deny."""
+
+    def _make_repo(self, freelancer: object | None = None) -> MagicMock:
+        repo = MagicMock(spec=FreelancerRepository)
+        repo.buscar_por_telegram_id.return_value = freelancer
+        return repo
+
+    async def test_sin_usuario_retorna_end(self) -> None:
+        @requiere_admin_conv
+        async def handler(update: object, context: object) -> int:
+            return 99
+
+        update = MagicMock()
+        update.effective_user = None
+        context = MagicMock()
+        result = await handler(update, context)
+        assert result == ConversationHandler.END
+
+    async def test_no_registrado_retorna_end(self) -> None:
+        @requiere_admin_conv
+        async def handler(update: object, context: object) -> int:
+            return 99
+
+        update = MagicMock()
+        update.effective_user = MagicMock(id=999)
+        update.effective_message = AsyncMock()
+        context = MagicMock()
+        context.bot_data = {"freelancer_repo": self._make_repo(None)}
+        with patch("garay.infraestructura.telegram.auth._es_dev", return_value=False):
+            result = await handler(update, context)
+        assert result == ConversationHandler.END
+
+    async def test_no_admin_retorna_end(self) -> None:
+        import uuid
+
+        from garay.dominio.freelancers.entidades import Freelancer
+
+        freelancer = Freelancer(id=uuid.uuid4(), nombre="Juan", es_admin=False)
+
+        @requiere_admin_conv
+        async def handler(update: object, context: object) -> int:
+            return 99
+
+        update = MagicMock()
+        update.effective_user = MagicMock(id=123)
+        update.effective_message = AsyncMock()
+        context = MagicMock()
+        context.bot_data = {"freelancer_repo": self._make_repo(freelancer)}
+        with patch("garay.infraestructura.telegram.auth._es_dev", return_value=False):
+            result = await handler(update, context)
+        assert result == ConversationHandler.END
+
+    async def test_admin_llama_handler(self) -> None:
+        import uuid
+
+        from garay.dominio.freelancers.entidades import Freelancer
+
+        freelancer = Freelancer(id=uuid.uuid4(), nombre="Garay", es_admin=True)
+
+        @requiere_admin_conv
+        async def handler(update: object, context: object) -> int:
+            return 42
+
+        update = MagicMock()
+        update.effective_user = MagicMock(id=123)
+        context = MagicMock()
+        context.bot_data = {"freelancer_repo": self._make_repo(freelancer)}
+        with patch("garay.infraestructura.telegram.auth._es_dev", return_value=False):
+            result = await handler(update, context)
+        assert result == 42

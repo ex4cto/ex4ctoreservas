@@ -329,6 +329,24 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.caja.categoria_item": {Idioma.ES: "• {categoria}: ${monto}"},
     "reporte.nav_anterior": {Idioma.ES: "◀ {label}"},
     "reporte.nav_siguiente": {Idioma.ES: "{label} ▶"},
+    # --- Freelancers ---
+    "freelancer.pedir_nombre": {Idioma.ES: "¿Cuál es el nombre del freelancer?"},
+    "freelancer.error_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresá el nombre:"},
+    "freelancer.error_nombre_duplicado": {Idioma.ES: "Ya existe un freelancer con ese nombre. Ingresá otro:"},
+    "freelancer.pedir_telegram_id": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero, ej: 123456789)"},
+    "freelancer.error_telegram_id_invalido": {Idioma.ES: "El ID debe ser un número entero. Intentá de nuevo:"},
+    "freelancer.error_telegram_id_duplicado": {Idioma.ES: "Ese ID ya está asignado a otro freelancer. Ingresá otro:"},
+    "freelancer.confirmacion_nuevo": {
+        Idioma.ES: "¿Confirmás crear este freelancer?\n\nNombre: {nombre}\nTelegram ID: {telegram_id}"
+    },
+    "freelancer.creado": {Idioma.ES: "✅ Freelancer {nombre} creado correctamente."},
+    "freelancer.cancelado": {Idioma.ES: "Operación cancelada."},
+    "freelancer.lista_encabezado": {Idioma.ES: "👥 <b>Freelancers registrados:</b>"},
+    "freelancer.lista_vacia": {Idioma.ES: "No hay freelancers registrados."},
+    "freelancer.seleccionar_eliminar": {Idioma.ES: "Seleccioná el freelancer a desactivar:"},
+    "freelancer.sin_activos": {Idioma.ES: "No hay freelancers activos para desactivar."},
+    "freelancer.confirmar_eliminar": {Idioma.ES: "¿Desactivar a <b>{nombre}</b>?"},
+    "freelancer.eliminado": {Idioma.ES: "✅ {nombre} fue desactivado."},
     # --- Generar mes ---
     "generar_mes.sin_activos": {
         Idioma.ES: "No hay gastos fijos activos para generar."

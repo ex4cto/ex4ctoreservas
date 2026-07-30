@@ -50,6 +50,21 @@ from garay.infraestructura.telegram.handlers import (
     handle_punto_de_venta,
     handle_tipo_reserva,
 )
+from garay.infraestructura.telegram.handlers_freelancers import (
+    EF_CONFIRMAR,
+    EF_SELECCIONAR,
+    FL_CONFIRMACION,
+    FL_NOMBRE,
+    FL_TELEGRAM_ID,
+    cmd_eliminar_freelancer,
+    cmd_listar_freelancers,
+    cmd_nuevo_freelancer,
+    handle_ef_confirmar,
+    handle_ef_seleccionar,
+    handle_fl_confirmacion,
+    handle_fl_nombre,
+    handle_fl_telegram_id,
+)
 from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
@@ -89,6 +104,7 @@ _COMANDOS = [
     BotCommand("nuevo_egreso", "Registrar un egreso manual"),
     BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
     BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
+    BotCommand("listar_freelancers", "Ver y gestionar freelancers (solo admin)"),
     BotCommand("cancelar", "Cancelar operación actual"),
 ]
 
@@ -237,9 +253,31 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
 
+    nuevo_freelancer_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("nuevo_freelancer", cmd_nuevo_freelancer)],
+        states={
+            FL_NOMBRE: [MessageHandler(_TEXT, handle_fl_nombre)],
+            FL_TELEGRAM_ID: [MessageHandler(_TEXT, handle_fl_telegram_id)],
+            FL_CONFIRMACION: [_CB(handle_fl_confirmacion)],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
+    eliminar_freelancer_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("eliminar_freelancer", cmd_eliminar_freelancer)],
+        states={
+            EF_SELECCIONAR: [_CB(handle_ef_seleccionar)],
+            EF_CONFIRMAR: [_CB(handle_ef_confirmar)],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
+    app.add_handler(nuevo_freelancer_conv_handler, group=5)
+    app.add_handler(eliminar_freelancer_conv_handler, group=5)
+    app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)

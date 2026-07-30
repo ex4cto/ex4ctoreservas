@@ -55,6 +55,26 @@ class SQLAFreelancerRepository(FreelancerRepository):
     def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None:
         with self._sf.begin() as session:
             row = session.execute(
-                select(FreelancerModel).where(FreelancerModel.telegram_user_id == telegram_user_id)
+                select(FreelancerModel)
+                .where(FreelancerModel.telegram_user_id == telegram_user_id)
+                .where(FreelancerModel.activo.is_(True))
             ).scalar_one_or_none()
             return to_domain(row) if row else None
+
+    def buscar_por_nombre(self, nombre: str) -> Freelancer | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(FreelancerModel).where(FreelancerModel.nombre == nombre)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None
+
+    def listar_todos(self) -> list[Freelancer]:
+        with self._sf.begin() as session:
+            rows = (
+                session.execute(
+                    select(FreelancerModel).order_by(FreelancerModel.nombre)
+                )
+                .scalars()
+                .all()
+            )
+            return [to_domain(r) for r in rows]

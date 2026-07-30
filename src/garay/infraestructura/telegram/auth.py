@@ -102,6 +102,47 @@ def requiere_admin(
     return wrapper
 
 
+def requiere_admin_conv(
+    handler: Callable[..., Coroutine[Any, Any, int | None]],
+) -> Callable[..., Coroutine[Any, Any, int | None]]:
+    """Guard for ConversationHandler entry points — admins only.
+
+    Returns ``ConversationHandler.END`` on deny (not ``None``) so the
+    conversation is never opened for unauthorized users.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        user = update.effective_user
+        if user is None:
+            return ConversationHandler.END
+
+        if _es_dev(user.id):
+            return await handler(update, context)
+
+        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        if repo is None:
+            logger.error("freelancer_repo not found in bot_data — wiring error")
+            return ConversationHandler.END
+
+        freelancer = repo.buscar_por_telegram_id(user.id)
+        if freelancer is None:
+            if update.effective_message:
+                await update.effective_message.reply_text("No estás registrado como freelancer.")
+            return ConversationHandler.END
+
+        if not freelancer.es_admin:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    "Este comando es solo para administradores."
+                )
+            return ConversationHandler.END
+
+        return await handler(update, context)
+
+    return wrapper
+
+
 def requiere_propietario(
     handler: Callable[..., Coroutine[Any, Any, Any]],
 ) -> Callable[..., Coroutine[Any, Any, Any]]:
