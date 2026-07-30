@@ -28,6 +28,13 @@ _TEXTO_EXTERNO = (
     "el 15/07/26 a las 10:30"
 )
 
+# Provider/gateway payment format (e.g. Wompi payment link) — real forwarded email
+_TEXTO_PAGO_PROVEEDOR = (
+    "Bancolombia: Recibiste un pago PROVEEDOR de WOMPI S.A.S. por $208,929.30 "
+    "en tu cuenta de Ahorros el 30/07/2026 a las 12:06. Si tienes dudas, "
+    "llamanos al 018000931987. A tu lado siempre."
+)
+
 
 def test_bc_a_bc_parsea_remitente_y_monto() -> None:
     resultado = _PARSER.parsear(_TEXTO_BC_A_BC, _TEXTO_BC_A_BC)
@@ -70,6 +77,24 @@ def test_externo_parsea_remitente_y_monto() -> None:
     assert resultado.remitente == "Carlos Gomez"
     assert resultado.monto == Decimal("500000")
     assert resultado.banco_origen == "Bancolombia"
+
+
+def test_pago_proveedor_parsea_remitente_y_monto() -> None:
+    resultado = _PARSER.parsear(_TEXTO_PAGO_PROVEEDOR, _TEXTO_PAGO_PROVEEDOR)
+
+    assert resultado.remitente == "WOMPI S.A.S."
+    assert resultado.monto == Decimal("208929.30")
+    assert resultado.banco_origen == "Bancolombia"
+
+
+def test_pago_proveedor_parsea_fecha_y_hora() -> None:
+    resultado = _PARSER.parsear(_TEXTO_PAGO_PROVEEDOR, _TEXTO_PAGO_PROVEEDOR)
+
+    assert resultado.fecha_pago.year == 2026
+    assert resultado.fecha_pago.month == 7
+    assert resultado.fecha_pago.day == 30
+    assert resultado.fecha_pago.hour == 12
+    assert resultado.fecha_pago.minute == 6
 
 
 def test_texto_sin_patron_lanza_error_parseo() -> None:
