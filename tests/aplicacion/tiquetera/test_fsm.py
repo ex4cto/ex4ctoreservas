@@ -704,10 +704,23 @@ class TestEditarSelector:
         salida = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Otro", ctx)
         assert salida.contexto.modo_edicion is False
 
-    def test_editar_tipo_reserva_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
+    def test_editar_tipo_reserva_externo_con_punto_vuelve_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # When switching to EXTERNO and punto_de_venta is already set → go to CONFIRMACION
         ctx = ContextoVenta(modo_edicion=True)
+        ctx.punto_de_venta_nombre = "Marie Real"
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_tipo_reserva_externo_sin_punto_va_a_punto_de_venta(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # When switching to EXTERNO and punto_de_venta is None → smart routing to PUNTO_DE_VENTA
+        ctx = ContextoVenta(modo_edicion=True)
+        ctx.punto_de_venta_nombre = None
+        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
 
     def test_editar_fecha_salida_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(modo_edicion=True)

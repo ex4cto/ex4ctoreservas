@@ -96,12 +96,12 @@ class TestTipoReservaDigitalVaACanalOrigen:
 
 
 class TestCanalOrigenHandler:
-    def test_canal_valido_va_a_punto_de_venta(
+    def test_canal_valido_va_a_destino(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         ctx.tipo_cliente = TipoCliente.DIGITAL
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "WhatsApp", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
+        assert salida.nuevo_estado == EstadoFSM.DESTINO
 
     def test_canal_invalido_re_pregunta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
