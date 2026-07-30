@@ -150,3 +150,26 @@ def test_parsear_pago_comercio_nombre_largo() -> None:
     resultado = _PARSER.parsear("", cuerpo)
     assert resultado.descripcion == "Pago en Movistar Colombia S.A."
     assert resultado.monto == Decimal("50000")
+
+
+def test_parsea_envio_a_la_una_en_punto() -> None:
+    """1 o'clock reads 'a la 1:15' (singular), not 'a las' — must still parse."""
+    cuerpo = (
+        "Enviaste de manera exitosa 59.000 a la llave 0091963837 de FAVIPAN CRESPO "
+        "el 11 de julio de 2026 a la 1:15 a.m."
+    )
+    resultado = _PARSER.parsear("", cuerpo)
+    assert resultado.monto == Decimal("59000")
+    assert resultado.descripcion == "Envio a FAVIPAN CRESPO"
+    assert resultado.fecha_egreso.hour == 1
+
+
+def test_parsea_envio_con_nbsp_y_saltos() -> None:
+    """Forwarded emails carry NBSP (\\xa0) and line breaks; must still parse."""
+    cuerpo = (
+        "Enviaste de manera exitosa\xa0300.000 a la llave 0092631303 de GRAFHIC\n"
+        "DESIGN G D el 10 de julio de 2026 a las\xa012:29 p.m."
+    )
+    resultado = _PARSER.parsear("", cuerpo)
+    assert resultado.monto == Decimal("300000")
+    assert resultado.descripcion == "Envio a GRAFHIC DESIGN G D"

@@ -18,7 +18,7 @@ from garay.infraestructura.webhook.schemas import EgresoExtraido
 #            el 25 de julio de 2026 a las 7:05 p.m."
 _PATRON_ENVIO = re.compile(
     r"Enviaste de manera exitosa\s+([\d.,]+)\s+a la llave\s+[\d]+\s+de\s+(.+?)"
-    r"\s+el\s+(\d{1,2} de \w+ de \d{4})\s+a las\s+(\d{1,2}:\d{2}\s+[ap]\.m\.?)",
+    r"\s+el\s+(\d{1,2} de \w+ de \d{4})\s+a\s+las?\s+(\d{1,2}:\d{2}\s+[ap]\.m\.?)",
     re.IGNORECASE,
 )
 
@@ -154,7 +154,9 @@ def _parsear_fecha_factura(fecha_str: str) -> datetime:
 
 class ParserNequiEgreso(ParserEgreso):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> EgresoExtraido:
-        texto = cuerpo_texto or cuerpo_html
+        # Forwarded emails carry NBSP (\xa0) and line breaks; collapse whitespace
+        # so the literal-space patterns match.
+        texto = re.sub(r"\s+", " ", cuerpo_texto or cuerpo_html)
 
         # Try Tipo 1: Envio Bre-B
         m = _PATRON_ENVIO.search(texto)
