@@ -133,14 +133,14 @@
 
 ---
 
-## Etapa 8 — Dashboards + WhatsApp 🔄
+## Etapa 8 — Dashboards + WhatsApp 🔄 (8.1 8.2 8.4 ✅ · 8.3 ⬜)
 
 | # | Fase | Estado | Notas |
 |---|------|--------|-------|
 | 8.1 | Dashboard ventas/comisiones: `/dashboard_ventas` por vendedor, período, navegación meses | ✅ | `ResumenVentasService`; reemplaza `/resumen_empresa` |
 | 8.2 | Dashboard flujo de caja: `/flujo_caja` ingresos vs egresos, conciliado vs pendiente | ✅ | `FlujoCajaService`; solo propietario |
 | 8.3 | Reporte automático al grupo WhatsApp | ⬜ | Pendiente — proveedor WhatsApp sin definir |
-| 8.4 | Dashboard Streamlit (`dashboard/app.py`): KPIs + gráficos Plotly ventas y flujo | ⬜ | Implementado local; pendiente deploy en Railway como tercer servicio |
+| 8.4 | Dashboard Streamlit (`dashboard/app.py`): KPIs + gráficos Plotly ventas y flujo | ✅ | Deploy Railway: https://dashboard-production-8e25.up.railway.app |
 
 ---
 
@@ -179,10 +179,10 @@ Etapa 4   ████████████████████  100%  �
 Etapa 5   ████████████████████  100%  ✅
 Etapa 6   ████████████████████  100%  ✅
 Etapa 7   ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
-Etapa 8   ████████████░░░░░░░░   60%  🔄  (8.1 8.2 ✅ · 8.3 8.4 ⬜)
+Etapa 8   ███████████████░░░░░   75%  🔄  (8.1 8.2 8.4 ✅ · 8.3 ⬜)
 Etapa 9   ░░░░░░░░░░░░░░░░░░░░    0%  ⬜
 Etapa 10  ████████████░░░░░░░░   60%  🔄  (10.1 10.2 10.5 ✅ · 10.3 10.4 ⬜)
 Etapa 11  ████████████████████  100%  ✅
 ```
 
-**Tests:** 808 · **mypy:** strict clean · **ruff:** clean
+**Tests:** 813 · **mypy:** strict clean · **ruff:** clean
