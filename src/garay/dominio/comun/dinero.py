@@ -61,7 +61,7 @@ class Dinero:
     def moneda(self) -> str:
         return self._moneda
 
-    def __reduce__(self) -> tuple:
+    def __reduce__(self) -> tuple[type, tuple[Decimal, str]]:
         return (self.__class__, (self._monto, self._moneda))
 
     def __setattr__(self, nombre: str, valor: object) -> None:

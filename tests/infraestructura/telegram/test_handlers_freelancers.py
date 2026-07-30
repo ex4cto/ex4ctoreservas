@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from telegram.ext import ConversationHandler
@@ -24,7 +24,6 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     handle_fl_nombre,
     handle_fl_telegram_id,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,7 +58,7 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
 
 def _make_context(
     freelancers: list[Freelancer] | None = None,
-    user_data: dict | None = None,
+    user_data: dict[str, object] | None = None,
 ) -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = user_data or {}

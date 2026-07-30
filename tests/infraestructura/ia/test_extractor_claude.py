@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,14 +20,14 @@ class TestExtractorClaudeInit:
 
 
 class TestExtractorClaudeExtraerDeFoto:
-    def _make_response(self, payload: dict) -> MagicMock:
+    def _make_response(self, payload: dict[str, object]) -> MagicMock:
         block = MagicMock(spec=TextBlock)
         block.text = json.dumps(payload)
         msg = MagicMock()
         msg.content = [block]
         return msg
 
-    def test_extrae_campos_correctamente(self, tmp_path) -> None:
+    def test_extrae_campos_correctamente(self, tmp_path: Path) -> None:
         foto = tmp_path / "ticket.jpg"
         foto.write_bytes(b"fake-image")
 
@@ -54,7 +55,7 @@ class TestExtractorClaudeExtraerDeFoto:
         assert result.confianza == Decimal("0.9")
         assert result.numero_ticket == "0845"
 
-    def test_respuesta_json_invalida_retorna_confianza_cero(self, tmp_path) -> None:
+    def test_respuesta_json_invalida_retorna_confianza_cero(self, tmp_path: Path) -> None:
         foto = tmp_path / "ticket.jpg"
         foto.write_bytes(b"fake-image")
 
@@ -67,7 +68,7 @@ class TestExtractorClaudeExtraerDeFoto:
 
         assert result.confianza == Decimal("0")
 
-    def test_json_envuelto_en_markdown_se_parsea_correctamente(self, tmp_path) -> None:
+    def test_json_envuelto_en_markdown_se_parsea_correctamente(self, tmp_path: Path) -> None:
         foto = tmp_path / "ticket.jpg"
         foto.write_bytes(b"fake-image")
 
@@ -97,7 +98,7 @@ class TestExtractorClaudeExtraerDeFoto:
         assert result.confianza == Decimal("0.8")
         assert result.numero_ticket == "7"
 
-    def test_numero_con_cero_inicial_se_parsea_correctamente(self, tmp_path) -> None:
+    def test_numero_con_cero_inicial_se_parsea_correctamente(self, tmp_path: Path) -> None:
         foto = tmp_path / "ticket.jpg"
         foto.write_bytes(b"fake-image")
 
@@ -119,7 +120,7 @@ class TestExtractorClaudeExtraerDeFoto:
         assert result.abono.monto == Decimal("845")
         assert result.adultos == 2
 
-    def test_auth_error_lanza_excepcion(self, tmp_path) -> None:
+    def test_auth_error_lanza_excepcion(self, tmp_path: Path) -> None:
         import anthropic
 
         foto = tmp_path / "ticket.jpg"

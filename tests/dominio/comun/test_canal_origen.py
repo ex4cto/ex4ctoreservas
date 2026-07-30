@@ -14,7 +14,7 @@ from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
 
 
-def _venta_base(**kwargs) -> Venta:
+def _venta_base(**kwargs: object) -> Venta:
     defaults = dict(
         id=uuid.uuid4(),
         valor_venta=Dinero(1_000_000),

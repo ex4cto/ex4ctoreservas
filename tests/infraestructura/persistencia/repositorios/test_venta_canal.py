@@ -22,7 +22,7 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
     return cliente_id
 
 
-def _venta(cliente_id: uuid.UUID, **kwargs) -> Venta:
+def _venta(cliente_id: uuid.UUID, **kwargs: object) -> Venta:
     defaults = dict(
         id=uuid.uuid4(),
         valor_venta=Dinero("500000"),

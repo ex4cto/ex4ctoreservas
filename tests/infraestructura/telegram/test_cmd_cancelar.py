@@ -21,7 +21,7 @@ def _make_update(*, message: bool = True) -> MagicMock:
     return update
 
 
-def _make_context(user_data: dict | None = None) -> MagicMock:
+def _make_context(user_data: dict[str, object] | None = None) -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = user_data if user_data is not None else {}
     ctx.bot_data = {}
