@@ -254,3 +254,33 @@ async def test_cmd_movimientos_no_usa_parse_mode_markdown() -> None:
     assert "parse_mode" not in kwargs or kwargs["parse_mode"] != "Markdown", (
         f"reply_text was called with parse_mode='Markdown': kwargs={kwargs}, args={args}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Hora shown in Bogotá time (UTC-5), not UTC
+# ---------------------------------------------------------------------------
+
+
+def test_formatear_movimientos_hora_en_bogota() -> None:
+    """fecha_recibido 18:46 UTC must render as 13:46 (America/Bogota, UTC-5)."""
+    from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientes
+    from garay.infraestructura.telegram.handlers_reportes import _formatear_movimientos
+
+    i = Ingreso(
+        id=uuid.uuid4(),
+        banco="Bancolombia",
+        monto=Dinero("100000"),
+        fecha=datetime.date(2026, 7, 30),
+        referencia="REF-TZ",
+        fecha_recibido=datetime.datetime(2026, 7, 30, 18, 46, tzinfo=_UTC),
+        reenviado=False,
+    )
+    resultado = MovimientosRecientes(
+        ingresos=(i,),
+        egresos=(),
+        total_ingresos=i.monto,
+        total_egresos=Dinero(0),
+    )
+    texto = _formatear_movimientos(resultado, horas=24)
+    assert "13:46" in texto, f"Expected Bogotá time '13:46', got: {texto!r}"
+    assert "18:46" not in texto, f"Should not show UTC time, got: {texto!r}"

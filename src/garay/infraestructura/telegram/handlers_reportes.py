@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
@@ -214,6 +215,15 @@ def _fmt_cop(valor: Decimal) -> str:
     return "$" + f"{int(valor):,}".replace(",", ".")
 
 
+_BOGOTA = ZoneInfo("America/Bogota")
+
+
+def _hora_bogota(dt: datetime) -> str:
+    # fecha_recibido may be naive (SQLite) or aware (Postgres); normalize to UTC first.
+    aware = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
+    return aware.astimezone(_BOGOTA).strftime("%H:%M")
+
+
 def _formatear_movimientos(movimientos: object, horas: int) -> str:
     from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientes
 
@@ -234,7 +244,7 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
         lineas.append(obtener_mensaje("movimientos.seccion_ingresos"))
         for ing in movimientos.ingresos:
             hora_str = (
-                ing.fecha_recibido.strftime("%H:%M")
+                _hora_bogota(ing.fecha_recibido)
                 if ing.fecha_recibido is not None
                 else "—"
             )
@@ -253,7 +263,7 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
         lineas.append(obtener_mensaje("movimientos.seccion_egresos"))
         for egr in movimientos.egresos:
             hora_str = (
-                egr.fecha_recibido.strftime("%H:%M")
+                _hora_bogota(egr.fecha_recibido)
                 if egr.fecha_recibido is not None
                 else "—"
             )
