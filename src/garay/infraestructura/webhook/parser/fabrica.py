@@ -7,12 +7,14 @@ from garay.infraestructura.webhook.parser.bancolombia_egreso import ParserBancol
 from garay.infraestructura.webhook.parser.base import (
     BANCO_BANCOLOMBIA,
     BANCO_NEQUI,
+    BANCO_PSE,
     ErrorParseoBanco,
     ParserBanco,
     ParserEgreso,
 )
 from garay.infraestructura.webhook.parser.nequi import ParserNequi
 from garay.infraestructura.webhook.parser.nequi_egreso import ParserNequiEgreso
+from garay.infraestructura.webhook.parser.pse_egreso import ParserPSEEgreso
 
 _PARSERS: dict[str, ParserBanco] = {
     BANCO_BANCOLOMBIA: ParserBancolombia(),
@@ -22,6 +24,7 @@ _PARSERS: dict[str, ParserBanco] = {
 _PARSERS_EGRESO: dict[str, ParserEgreso] = {
     BANCO_BANCOLOMBIA: ParserBancolombiaEgreso(),
     BANCO_NEQUI: ParserNequiEgreso(),
+    BANCO_PSE: ParserPSEEgreso(),
 }
 
 

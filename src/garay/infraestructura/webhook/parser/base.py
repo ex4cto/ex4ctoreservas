@@ -11,6 +11,7 @@ from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
 BANCO_BANCOLOMBIA = "Bancolombia"
 BANCO_NEQUI = "Nequi"
+BANCO_PSE = "PSE"
 
 DIRECCION_INGRESO: Final = "ingreso"
 DIRECCION_EGRESO: Final = "egreso"
@@ -83,6 +84,15 @@ class ParserEgreso(ABC):
         ...
 
 
+def _es_pse(cuerpo_lower: str) -> bool:
+    """Return True if the email body contains strong PSE markers."""
+    if "serviciopse" in cuerpo_lower or "achcolombia" in cuerpo_lower:
+        return True
+    if "pse - transacci" in cuerpo_lower or "pse - transaccion" in cuerpo_lower:
+        return True
+    return "cus" in cuerpo_lower and "pse" in cuerpo_lower
+
+
 def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
     """Return the bank name for a sender email, or None if unknown.
 
@@ -96,6 +106,8 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
         return BANCO_NEQUI
 
     cuerpo_lower = cuerpo.lower()
+    if _es_pse(cuerpo_lower):
+        return BANCO_PSE
     if "bancolombia" in cuerpo_lower:
         return BANCO_BANCOLOMBIA
     if "nequi" in cuerpo_lower:
@@ -107,6 +119,8 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
 def detectar_direccion(cuerpo_texto: str) -> str:
     """Return DIRECCION_EGRESO or DIRECCION_INGRESO based on keywords in email body."""
     texto_lower = cuerpo_texto.lower()
+    if _es_pse(texto_lower):
+        return DIRECCION_EGRESO
     if any(kw in texto_lower for kw in _KEYWORDS_EGRESO):
         return DIRECCION_EGRESO
     return DIRECCION_INGRESO
