@@ -49,6 +49,22 @@ def test_12am_es_medianoche() -> None:
     assert resultado.fecha_pago.hour == 0
 
 
+def test_parsea_con_espacios_no_estandar_del_reenvio() -> None:
+    """Real forwarded emails carry NBSP (\\xa0) and line breaks that must be normalized."""
+    texto = (
+        "Recibiste\xa0550.000 de LEONOR LIZARAZO\nSILVA el 1 de julio de 2026\n"
+        "a las 7:19\xa0p.m, desde el banco Davivienda."
+    )
+    resultado = _PARSER.parsear("", texto)
+
+    assert resultado.monto == Decimal("550000.00")
+    assert resultado.remitente == "LEONOR LIZARAZO SILVA"
+    assert resultado.fecha_pago.day == 1
+    assert resultado.fecha_pago.month == 7
+    assert resultado.fecha_pago.hour == 19
+    assert resultado.fecha_pago.minute == 19
+
+
 def test_texto_sin_patron_lanza_error_parseo() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("", "Transaccion fallida sin formato reconocido")

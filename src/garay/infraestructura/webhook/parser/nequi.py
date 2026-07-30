@@ -54,7 +54,10 @@ def _parsear_fecha_hora_nequi(fecha_str: str, hora_str: str) -> datetime:
 
 class ParserNequi(ParserBanco):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
-        coincidencia = _PATRON_RECIBIDO.search(cuerpo_texto)
+        # Forwarded emails carry NBSP (\xa0) and line breaks; collapse all
+        # whitespace to single spaces so the literal-space pattern matches.
+        texto = re.sub(r"\s+", " ", cuerpo_texto)
+        coincidencia = _PATRON_RECIBIDO.search(texto)
         if not coincidencia:
             raise ErrorParseoBanco(
                 "No se encontro patron de pago recibido en email Nequi"
