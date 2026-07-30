@@ -247,12 +247,20 @@ async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /cancelar — cancel from any state."""
+    context.user_data["_cancelar_handled"] = True
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
     ctx = _get_contexto(context)
     salida = fsm.cancelar(ctx)
     return await _enviar_salida(update, context, salida)
+
+
+async def cmd_cancelar_sin_conv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Standalone /cancelar handler — fires when no conversation is active."""
+    if context.user_data.pop("_cancelar_handled", False):
+        return
+    await update.effective_message.reply_text(obtener_mensaje("cancelar_sin_operacion"))
 
 
 def _fmt_cop(valor: Decimal) -> str:

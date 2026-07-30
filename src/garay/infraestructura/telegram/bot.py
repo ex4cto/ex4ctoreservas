@@ -18,6 +18,7 @@ from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
     cmd_cancelar,
+    cmd_cancelar_sin_conv,
     cmd_foto,
     cmd_mis_ventas,
     cmd_start,
@@ -243,5 +244,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
     app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
+    app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=4)
     handlers_reportes.registrar_handlers(app)
     return app
