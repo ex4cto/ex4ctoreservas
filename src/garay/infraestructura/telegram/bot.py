@@ -284,6 +284,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
     app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
-    app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=4)
+    app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
     return app
