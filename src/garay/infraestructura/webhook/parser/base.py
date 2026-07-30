@@ -90,7 +90,9 @@ def _es_pse(cuerpo_lower: str) -> bool:
         return True
     if "pse - transacci" in cuerpo_lower or "pse - transaccion" in cuerpo_lower:
         return True
-    return "cus" in cuerpo_lower and "pse" in cuerpo_lower
+    # "cus:" is PSE's transaction-reference label (CUS: 455692497); specific
+    # enough to avoid false positives from substrings like "excusa" + "pse".
+    return "cus:" in cuerpo_lower
 
 
 def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:

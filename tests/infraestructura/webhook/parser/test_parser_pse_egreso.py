@@ -113,6 +113,13 @@ def test_detectar_banco_cuerpo_pse_con_nequi_retorna_pse() -> None:
     assert detectar_banco("agenciagaraytour1@gmail.com", cuerpo_con_nequi) == "PSE"
 
 
+def test_detectar_banco_no_confunde_substrings_cus_pse() -> None:
+    """A Bancolombia email that merely mentions 'PSE' (payment method) and a
+    word with 'cus' (excusa) must route to Bancolombia, NOT PSE."""
+    cuerpo = "Bancolombia te informa: pagaste por PSE, sin excusa alguna."
+    assert detectar_banco("x@gmail.com", cuerpo) == "Bancolombia"
+
+
 def test_detectar_direccion_pse_retorna_egreso() -> None:
     assert detectar_direccion(_TEXTO_PSE) == "egreso"
 
