@@ -273,3 +273,21 @@ class TestCmdEliminarFreelancer:
 
         assert result == ConversationHandler.END
         ctx.bot_data["freelancer_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_seleccionar_con_callback_data_none_retorna_estado(self) -> None:
+        """Regression: callback_query present but data=None must NOT crash (AttributeError)."""
+        update = MagicMock()
+        update.effective_message = AsyncMock()
+        query = AsyncMock()
+        query.data = None
+        query.answer = AsyncMock()
+        update.callback_query = query
+        ctx = _make_context()
+
+        result = await handle_ef_seleccionar(update, ctx)
+
+        assert result == EF_SELECCIONAR
+        ctx.bot_data["freelancer_repo"].buscar_por_id.assert_not_called()
+        update.effective_message.edit_message_text = AsyncMock()
+        update.effective_message.reply_text.assert_not_called()

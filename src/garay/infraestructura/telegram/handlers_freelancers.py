@@ -78,7 +78,8 @@ async def handle_fl_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             obtener_mensaje("freelancer.error_nombre_duplicado")
         )
         return FL_NOMBRE
-    context.user_data["fl_nombre"] = texto
+    if context.user_data is not None:
+        context.user_data["fl_nombre"] = texto
     await update.effective_message.reply_text(obtener_mensaje("freelancer.pedir_telegram_id"))
     return FL_TELEGRAM_ID
 
@@ -100,8 +101,9 @@ async def handle_fl_telegram_id(update: Update, context: ContextTypes.DEFAULT_TY
             obtener_mensaje("freelancer.error_telegram_id_duplicado")
         )
         return FL_TELEGRAM_ID
-    context.user_data["fl_telegram_id"] = telegram_id
-    nombre = context.user_data.get("fl_nombre", "")
+    if context.user_data is not None:
+        context.user_data["fl_telegram_id"] = telegram_id
+    nombre = context.user_data.get("fl_nombre", "") if context.user_data is not None else ""
     texto_conf = obtener_mensaje("freelancer.confirmacion_nuevo").format(
         nombre=nombre, telegram_id=telegram_id
     )
@@ -130,8 +132,10 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
         _limpiar_fl(context)
         await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
         return ConversationHandler.END
-    nombre = context.user_data.get("fl_nombre", "")
-    telegram_id: int = context.user_data.get("fl_telegram_id", 0)
+    nombre = context.user_data.get("fl_nombre", "") if context.user_data is not None else ""
+    telegram_id: int = (
+        context.user_data.get("fl_telegram_id", 0) if context.user_data is not None else 0
+    )
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     if repo:
         freelancer = Freelancer(
@@ -150,8 +154,9 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
 
 
 def _limpiar_fl(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.user_data.pop("fl_nombre", None)
-    context.user_data.pop("fl_telegram_id", None)
+    if context.user_data is not None:
+        context.user_data.pop("fl_nombre", None)
+        context.user_data.pop("fl_telegram_id", None)
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +188,7 @@ async def handle_ef_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     if query:
         await query.answer()
-    if update.effective_message is None or not query:
+    if update.effective_message is None or query is None or query.data is None:
         return EF_SELECCIONAR
     freelancer_id_str = query.data.removeprefix("ef_sel:")
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
@@ -191,8 +196,9 @@ async def handle_ef_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
     if freelancer is None:
         await update.effective_message.reply_text(obtener_mensaje("freelancer.sin_activos"))
         return ConversationHandler.END
-    context.user_data["ef_freelancer_id"] = str(freelancer.id)
-    context.user_data["ef_freelancer_nombre"] = freelancer.nombre
+    if context.user_data is not None:
+        context.user_data["ef_freelancer_id"] = str(freelancer.id)
+        context.user_data["ef_freelancer_nombre"] = freelancer.nombre
     texto = obtener_mensaje("freelancer.confirmar_eliminar").format(nombre=freelancer.nombre)
     teclado = InlineKeyboardMarkup(
         [
@@ -213,12 +219,18 @@ async def handle_ef_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
     if update.effective_message is None:
         return ConversationHandler.END
     accion = query.data if query else ""
-    nombre = context.user_data.get("ef_freelancer_nombre", "")
+    nombre = (
+        context.user_data.get("ef_freelancer_nombre", "")
+        if context.user_data is not None
+        else ""
+    )
     if accion == "ef_cancelar":
         _limpiar_ef(context)
         await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
         return ConversationHandler.END
-    freelancer_id_str = context.user_data.get("ef_freelancer_id", "")
+    freelancer_id_str = (
+        context.user_data.get("ef_freelancer_id", "") if context.user_data is not None else ""
+    )
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     if repo and freelancer_id_str:
         freelancer = repo.buscar_por_id(uuid.UUID(freelancer_id_str))
@@ -233,5 +245,6 @@ async def handle_ef_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 def _limpiar_ef(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.user_data.pop("ef_freelancer_id", None)
-    context.user_data.pop("ef_freelancer_nombre", None)
+    if context.user_data is not None:
+        context.user_data.pop("ef_freelancer_id", None)
+        context.user_data.pop("ef_freelancer_nombre", None)
