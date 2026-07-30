@@ -34,6 +34,7 @@ class ResumenVentas:
     ganancia_agencia: Dinero
     por_vendedor: tuple[ResumenVendedor, ...]
     por_canal: tuple[ResumenCanal, ...] = ()
+    por_dia: tuple[tuple[date, int, Dinero], ...] = ()
 
 
 class ResumenVentasService:
@@ -59,6 +60,7 @@ class ResumenVentasService:
                 ganancia_agencia=Dinero(0),
                 por_vendedor=(),
                 por_canal=(),
+                por_dia=(),
             )
 
         venta_ids = [v.id for v in ventas]
@@ -115,6 +117,15 @@ class ResumenVentasService:
             for c in sorted(conteo_canal)
         )
 
+        conteo_dia: dict[date, int] = {}
+        valor_dia: dict[date, Dinero] = {}
+        for v in ventas:
+            conteo_dia[v.fecha] = conteo_dia.get(v.fecha, 0) + 1
+            valor_dia[v.fecha] = valor_dia.get(v.fecha, Dinero(0)) + v.valor_venta
+        por_dia: tuple[tuple[date, int, Dinero], ...] = tuple(
+            sorted((d, conteo_dia[d], valor_dia[d]) for d in conteo_dia)
+        )
+
         return ResumenVentas(
             mes=mes,
             año=año,
@@ -123,4 +134,5 @@ class ResumenVentasService:
             ganancia_agencia=ganancia,
             por_vendedor=por_vendedor,
             por_canal=por_canal,
+            por_dia=por_dia,
         )

@@ -16,6 +16,20 @@ from garay.dominio.puertos.repositorios import (
 
 
 @dataclass(frozen=True)
+class ResumenBanco:
+    banco: str
+    cantidad: int
+    monto_total: Dinero
+
+
+@dataclass(frozen=True)
+class ResumenEstado:
+    estado: str
+    cantidad: int
+    monto_total: Dinero
+
+
+@dataclass(frozen=True)
 class FlujoCaja:
     mes: int
     año: int
@@ -25,6 +39,8 @@ class FlujoCaja:
     ingresos_conciliados: int
     ingresos_pendientes: int
     egresos_por_categoria: tuple[tuple[str, Dinero], ...]
+    ingresos_por_banco: tuple[ResumenBanco, ...] = ()
+    ingresos_por_estado: tuple[ResumenEstado, ...] = ()
 
 
 class FlujoCajaService:
@@ -63,6 +79,41 @@ class FlujoCajaService:
         for e in egresos:
             por_cat[e.categoria] = por_cat.get(e.categoria, Dinero(0)) + e.monto
 
+        # ingresos_por_banco
+        banco_conteo: dict[str, int] = {}
+        banco_monto: dict[str, Dinero] = {}
+        for i in ingresos:
+            banco_conteo[i.banco] = banco_conteo.get(i.banco, 0) + 1
+            banco_monto[i.banco] = banco_monto.get(i.banco, Dinero(0)) + i.monto
+        ingresos_por_banco = tuple(
+            ResumenBanco(banco=b, cantidad=banco_conteo[b], monto_total=banco_monto[b])
+            for b in sorted(banco_conteo)
+        )
+
+        # ingresos_por_estado
+        _orden_estado = {
+            EstadoConciliacion.MATCHEADO: 0,
+            EstadoConciliacion.PENDIENTE: 1,
+            EstadoConciliacion.SIN_MATCH: 2,
+            EstadoConciliacion.PERSONAL: 3,
+        }
+        ingreso_map = {i.id: i for i in ingresos}
+        estado_conteo: dict[str, int] = {}
+        estado_monto: dict[str, Dinero] = {}
+        for c in conciliaciones:
+            ing = ingreso_map.get(c.ingreso_id)
+            if ing is None:
+                continue
+            estado_conteo[c.estado] = estado_conteo.get(c.estado, 0) + 1
+            estado_monto[c.estado] = estado_monto.get(c.estado, Dinero(0)) + ing.monto
+        ingresos_por_estado = tuple(
+            ResumenEstado(estado=e, cantidad=estado_conteo[e], monto_total=estado_monto[e])
+            for e in sorted(
+                estado_conteo,
+                key=lambda x: _orden_estado.get(EstadoConciliacion(x), 99),
+            )
+        )
+
         return FlujoCaja(
             mes=mes,
             año=año,
@@ -72,4 +123,6 @@ class FlujoCajaService:
             ingresos_conciliados=conciliados,
             ingresos_pendientes=pendientes,
             egresos_por_categoria=tuple(sorted(por_cat.items())),
+            ingresos_por_banco=ingresos_por_banco,
+            ingresos_por_estado=ingresos_por_estado,
         )

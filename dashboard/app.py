@@ -51,6 +51,14 @@ def _cop(monto: Decimal) -> str:
     return f"${monto:,.0f}"
 
 
+def _cop_k(monto: Decimal) -> str:
+    if monto >= Decimal("1000000"):
+        return f"${monto / Decimal('1000000'):.1f}M"
+    if monto >= Decimal("1000"):
+        return f"${monto / Decimal('1000'):.1f}K"
+    return _cop(monto)
+
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
 st.sidebar.title("🌴 Garay Tours")
@@ -114,10 +122,32 @@ def pagina_ventas(mes: int, año: int) -> None:
         return
 
     # KPIs
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total ventas", resumen.total_ventas)
     c2.metric("Valor vendido", _cop(resumen.total_valor.monto))
     c3.metric("Ganancia agencia", _cop(resumen.ganancia_agencia.monto))
+    c4.metric("Ticket promedio", _cop(resumen.total_valor.monto / Decimal(str(resumen.total_ventas))))
+
+    if resumen.por_dia:
+        st.markdown("---")
+        st.subheader("Tendencia del mes")
+        dias = [str(d.day).zfill(2) for d, _, _ in resumen.por_dia]
+        conteos_dia = [cnt for _, cnt, _ in resumen.por_dia]
+        fig_dia = go.Figure(go.Bar(
+            x=dias,
+            y=conteos_dia,
+            marker_color="#4C9BE8",
+            text=conteos_dia,
+            textposition="outside",
+        ))
+        fig_dia.update_layout(
+            xaxis_title="Día",
+            yaxis_title="Ventas",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(t=20, b=20),
+        )
+        st.plotly_chart(fig_dia, use_container_width=True)
 
     st.markdown("---")
 
@@ -256,11 +286,11 @@ def pagina_flujo(mes: int, año: int) -> None:
     # KPIs
     balance_pos = flujo.balance.monto >= 0
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Ingresos", _cop(flujo.total_ingresos.monto))
-    c2.metric("Egresos", _cop(flujo.total_egresos.monto))
+    c1.metric("Ingresos", _cop_k(flujo.total_ingresos.monto))
+    c2.metric("Egresos", _cop_k(flujo.total_egresos.monto))
     c3.metric(
         "Balance",
-        _cop(abs(flujo.balance.monto)),
+        _cop_k(abs(flujo.balance.monto)),
         delta=f"{'positivo' if balance_pos else 'negativo'}",
         delta_color="normal" if balance_pos else "inverse",
     )
@@ -314,6 +344,55 @@ def pagina_flujo(mes: int, año: int) -> None:
             {
                 "Categoría": [cat for cat, _ in flujo.egresos_por_categoria],
                 "Monto": [_cop(m.monto) for _, m in flujo.egresos_por_categoria],
+            },
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    if flujo.ingresos_por_banco:
+        st.markdown("---")
+        st.subheader("Ingresos por banco")
+        col_banco_izq, col_banco_der = st.columns(2)
+        with col_banco_izq:
+            fig_banco = go.Figure(go.Bar(
+                x=[r.banco for r in flujo.ingresos_por_banco],
+                y=[float(r.monto_total.monto) for r in flujo.ingresos_por_banco],
+                marker_color="#4C9BE8",
+                text=[_cop(r.monto_total.monto) for r in flujo.ingresos_por_banco],
+                textposition="outside",
+            ))
+            fig_banco.update_layout(
+                yaxis_title="COP",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=20, b=20),
+            )
+            st.plotly_chart(fig_banco, use_container_width=True)
+        with col_banco_der:
+            st.dataframe(
+                {
+                    "Banco": [r.banco for r in flujo.ingresos_por_banco],
+                    "Ingresos": [r.cantidad for r in flujo.ingresos_por_banco],
+                    "Monto total": [_cop(r.monto_total.monto) for r in flujo.ingresos_por_banco],
+                },
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    if flujo.ingresos_por_estado:
+        st.markdown("---")
+        st.subheader("Estado de conciliación")
+        etiquetas = {
+            "matcheado": "✅ Matcheado",
+            "pendiente": "⏳ Pendiente",
+            "sin_match": "❌ Sin match",
+            "personal": "👤 Personal",
+        }
+        st.dataframe(
+            {
+                "Estado": [etiquetas.get(r.estado, r.estado) for r in flujo.ingresos_por_estado],
+                "Cantidad": [r.cantidad for r in flujo.ingresos_por_estado],
+                "Monto total": [_cop(r.monto_total.monto) for r in flujo.ingresos_por_estado],
             },
             use_container_width=True,
             hide_index=True,

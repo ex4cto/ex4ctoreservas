@@ -13,11 +13,13 @@ from garay.dominio.conciliacion.tipos import EstadoConciliacion, TipoEgreso
 
 
 def _make_ingreso(
-    monto: int = 100_000, fecha: datetime.date = datetime.date(2026, 7, 10)
+    monto: int = 100_000,
+    fecha: datetime.date = datetime.date(2026, 7, 10),
+    banco: str = "Bancolombia",
 ) -> Ingreso:
     return Ingreso(
         id=uuid.uuid4(),
-        banco="Bancolombia",
+        banco=banco,
         monto=Dinero(monto),
         fecha=fecha,
         referencia=f"REF-{uuid.uuid4().hex[:8]}",
@@ -143,3 +145,38 @@ class TestFlujoCajaServiceConciliados:
 
         assert flujo.ingresos_conciliados == 1
         assert flujo.ingresos_pendientes == 2  # PENDIENTE + SIN_MATCH
+
+
+class TestFlujoCajaServiceIngresosPorBanco:
+    def test_ingresos_por_banco_agrupa(self) -> None:
+        i1 = _make_ingreso(monto=100_000, banco="Bancolombia")
+        i2 = _make_ingreso(monto=150_000, banco="Bancolombia")
+        i3 = _make_ingreso(monto=200_000, banco="Nequi")
+        service = _make_service(ingresos=[i1, i2, i3], egresos=[], conciliaciones=[])
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert len(flujo.ingresos_por_banco) == 2
+        bancos = {r.banco: r for r in flujo.ingresos_por_banco}
+        assert bancos["Bancolombia"].cantidad == 2
+        assert bancos["Bancolombia"].monto_total == Dinero(250_000)
+        assert bancos["Nequi"].cantidad == 1
+        assert bancos["Nequi"].monto_total == Dinero(200_000)
+
+    def test_ingresos_por_estado_join(self) -> None:
+        ing = _make_ingreso(monto=100_000, banco="Bancolombia")
+        conc = _make_conciliacion(ing.id, EstadoConciliacion.MATCHEADO)
+        service = _make_service(ingresos=[ing], egresos=[], conciliaciones=[conc])
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert len(flujo.ingresos_por_estado) == 1
+        assert flujo.ingresos_por_estado[0].estado == "matcheado"
+        assert flujo.ingresos_por_estado[0].monto_total == Dinero(100_000)
+
+    def test_ingresos_por_estado_ignora_ingreso_fuera_del_map(self) -> None:
+        ing = _make_ingreso(monto=100_000)
+        ingreso_id_externo = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        conc = _make_conciliacion(ingreso_id_externo, EstadoConciliacion.MATCHEADO)
+        service = _make_service(ingresos=[ing], egresos=[], conciliaciones=[conc])
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert flujo.ingresos_por_estado == ()

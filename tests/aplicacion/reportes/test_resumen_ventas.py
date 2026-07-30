@@ -134,3 +134,25 @@ class TestResumenVentasServiceVendedorNulo:
 
         nombres = {v.nombre for v in resumen.por_vendedor}
         assert "Sin asignar" in nombres
+
+
+def test_por_dia_agrupa_correctamente() -> None:
+    v1 = _make_venta(valor=300_000, neto=200_000, fecha=datetime.date(2026, 7, 10))
+    v2 = _make_venta(valor=200_000, neto=150_000, fecha=datetime.date(2026, 7, 10))
+    v3 = _make_venta(valor=400_000, neto=300_000, fecha=datetime.date(2026, 7, 15))
+    c1 = _make_comision(v1.id)
+    c2 = _make_comision(v2.id)
+    c3 = _make_comision(v3.id)
+    service = _make_service(ventas=[v1, v2, v3], comisiones=[c1, c2, c3])
+    resumen = service.ejecutar(mes=7, año=2026)
+
+    assert len(resumen.por_dia) == 2
+    assert resumen.por_dia[0] == (datetime.date(2026, 7, 10), 2, Dinero(500_000))
+    assert resumen.por_dia[1] == (datetime.date(2026, 7, 15), 1, Dinero(400_000))
+
+
+def test_por_dia_vacio_si_sin_ventas() -> None:
+    service = _make_service(ventas=[], comisiones=[])
+    resumen = service.ejecutar(mes=7, año=2026)
+
+    assert resumen.por_dia == ()
