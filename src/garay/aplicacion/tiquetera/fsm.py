@@ -1219,7 +1219,10 @@ class FSMTiquetera:
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
-            punto_de_venta=ctx.punto_de_venta_nombre or ("—" if ctx.tipo_cliente == TipoCliente.DIGITAL else "Sin punto"),
+            punto_de_venta=(
+                ctx.punto_de_venta_nombre
+                or ("—" if ctx.tipo_cliente == TipoCliente.DIGITAL else "Sin punto")
+            ),
             destinos=destinos_str,
             cliente_nombre=ctx.cliente_nombre or "—",
             cliente_telefono=ctx.cliente_telefono or "—",

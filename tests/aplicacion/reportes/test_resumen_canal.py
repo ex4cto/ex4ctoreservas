@@ -60,7 +60,9 @@ def _make_comision(venta_id: uuid.UUID, agencia: int = 200_000) -> ComisionRegis
     )
 
 
-def _make_service(ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> ResumenVentasService:
+def _make_service(
+    ventas: list[Venta], comisiones: list[ComisionRegistrada]
+) -> ResumenVentasService:
     ventas_repo = MagicMock()
     ventas_repo.listar_por_periodo.return_value = ventas
     comisiones_repo = MagicMock()

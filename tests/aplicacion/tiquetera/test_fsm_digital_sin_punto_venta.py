@@ -28,7 +28,7 @@ def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
 
-def _ctx_digital_completo_sin_punto(fsm: FSMTiquetera) -> ContextoVenta:  # noqa: ARG001
+def _ctx_digital_completo_sin_punto(fsm: FSMTiquetera) -> ContextoVenta:
     """DIGITAL context with all required fields except punto_de_venta_nombre."""
     ctx = ContextoVenta()
     ctx.tipo_cliente = TipoCliente.DIGITAL
@@ -136,7 +136,8 @@ class TestGuardEditarSelectorPuntoVentaEnDigital:
     def test_guard_editar_selector_punto_venta_en_digital_no_activa_modo_edicion(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Triangulation: the returned context must NOT have modo_edicion=True (guard fires before it)."""
+        """Triangulation: the returned context must NOT have modo_edicion=True
+        (guard fires before it)."""
         ctx = _ctx_digital_completo_sin_punto(fsm)
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Punto de venta", ctx)
         assert salida.contexto.modo_edicion is False

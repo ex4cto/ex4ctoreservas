@@ -64,7 +64,7 @@ def test_bc_a_bc_parsea_fecha_4_digitos_anio() -> None:
 
 
 def test_bc_a_bc_usa_cuerpo_html_si_texto_vacio() -> None:
-    html = "<p>Recibiste una transferencia por $500,000 de Carlos Rios en tu cuenta **9999, el 01/01/26 a las 09:00</p>"
+    html = "<p>Recibiste una transferencia por $500,000 de Carlos Rios en tu cuenta **9999, el 01/01/26 a las 09:00</p>"  # noqa: E501
     resultado = _PARSER.parsear(html, "")
 
     assert resultado.remitente == "Carlos Rios"
@@ -103,6 +103,6 @@ def test_texto_sin_patron_lanza_error_parseo() -> None:
 
 
 def test_monto_invalido_bc_a_bc_lanza_error() -> None:
-    texto = "Recibiste una transferencia por $ABC de Ana en tu cuenta **1111, el 01/01/26 a las 09:00"
+    texto = "Recibiste una transferencia por $ABC de Ana en tu cuenta **1111, el 01/01/26 a las 09:00"  # noqa: E501
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear(texto, texto)

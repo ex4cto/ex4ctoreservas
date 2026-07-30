@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo
 from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.ventas.contexto import ContextoVenta
 
-
 _BOGOTA = ZoneInfo("America/Bogota")
 
 

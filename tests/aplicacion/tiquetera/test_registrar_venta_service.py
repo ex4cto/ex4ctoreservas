@@ -60,7 +60,7 @@ def _cmd(
     servicio_nombres: list[str] | None = None,
     hotel: str | None = None,
     habitacion: str | None = None,
-    abono: "Dinero | None" = None,
+    abono: Dinero | None = None,
     adultos: int = 2,
     ninos: int = 0,
 ) -> RegistrarVentaComando:

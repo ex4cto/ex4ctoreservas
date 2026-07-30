@@ -6,8 +6,6 @@ import datetime
 import uuid
 from decimal import Decimal
 
-import pytest
-
 from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.comisiones.snapshot import SnapshotReglas
@@ -90,7 +88,12 @@ class TestGenerarFacturaHtml:
     def test_html_contiene_politicas_cancelacion(self) -> None:
         servicio = GenerarFacturaService()
         html = servicio.generar(_ctx_completo(), _resultado())
-        assert "FORCE MAJEURE" in html or "fuerza mayor" in html.lower() or "FUERZA MAYOR" in html or "force majeure" in html.lower()
+        assert (
+            "FORCE MAJEURE" in html
+            or "fuerza mayor" in html.lower()
+            or "FUERZA MAYOR" in html
+            or "force majeure" in html.lower()
+        )
 
     def test_numero_factura_formato_correcto(self) -> None:
         venta_id = uuid.UUID("a3f7b200-cafe-0000-0000-000000000000")

@@ -51,6 +51,11 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 # lenguaje ubicuo en espanol, donde se lee "ErrorDeDominio" / "MontoInvalido".
 ignore = ["N818"]
 
+[tool.ruff.lint.per-file-ignores]
+# HTML inside f-string — reformatting would corrupt the invoice; adding noqa inside the
+# string literal would inject literal text into the HTML output.
+"src/garay/aplicacion/factura/servicio.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

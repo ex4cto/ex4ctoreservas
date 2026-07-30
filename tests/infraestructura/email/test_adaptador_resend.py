@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import httpx
 import pytest
-from unittest.mock import MagicMock, patch
 
 from garay.infraestructura.email.adaptador_resend import ResendAdapter
 

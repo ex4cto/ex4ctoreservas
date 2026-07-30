@@ -14,7 +14,10 @@ import streamlit as st
 
 import garay.infraestructura.persistencia.tipos  # noqa: F401
 from garay.aplicacion.reportes.flujo_caja import FlujoCaja, FlujoCajaService
-from garay.aplicacion.reportes.resumen_ventas import ResumenCanal, ResumenVentas, ResumenVentasService
+from garay.aplicacion.reportes.resumen_ventas import (
+    ResumenVentas,
+    ResumenVentasService,
+)
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
@@ -126,7 +129,10 @@ def pagina_ventas(mes: int, año: int) -> None:
     c1.metric("Total ventas", resumen.total_ventas)
     c2.metric("Valor vendido", _cop(resumen.total_valor.monto))
     c3.metric("Ganancia agencia", _cop(resumen.ganancia_agencia.monto))
-    c4.metric("Ticket promedio", _cop(resumen.total_valor.monto / Decimal(str(resumen.total_ventas))))
+    c4.metric(
+        "Ticket promedio",
+        _cop(resumen.total_valor.monto / Decimal(str(resumen.total_ventas))),
+    )
 
     if resumen.por_dia:
         st.markdown("---")

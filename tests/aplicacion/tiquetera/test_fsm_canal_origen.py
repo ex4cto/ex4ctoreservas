@@ -205,7 +205,8 @@ class TestFotoModoDigitalConCanal:
     def test_foto_modo_digital_flujo_completo_canal_a_participante_rol(
         self, fsm: FSMTiquetera
     ) -> None:
-        """JD-W2: foto_modo=True + DIGITAL → CANAL_ORIGEN → Instagram → PUNTO_DE_VENTA (then photo shortcut)."""
+        """JD-W2: foto_modo=True + DIGITAL → CANAL_ORIGEN → Instagram → PUNTO_DE_VENTA
+        (then photo shortcut)."""
         ctx = ContextoVenta()
         ctx.foto_modo = True
         ctx.tipo_cliente = TipoCliente.DIGITAL

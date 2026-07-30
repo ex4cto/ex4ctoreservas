@@ -10,7 +10,7 @@ Idempotent via deterministic UUIDs — safe to re-run.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import garay.infraestructura.persistencia.tipos  # noqa: F401 — registers TipoDinero
@@ -54,12 +54,12 @@ VENTAS: list[tuple] = [
     ("v4",  "Sofia Martínez",     "María",  "María",  180_000, 140_000, 10, 1, "INTERNO",  None),
     ("v5",  "Daniel Torres",      "Pedro",  "Pedro",  650_000, 510_000, 12, 4, "INTERNO",  None),
     ("v6",  "Valentina Cruz",     "Juan",   "Juan",   290_000, 220_000, 14, 2, "INTERNO",  None),
-    ("v19", "Diego Ramírez",      "Ana",    "Carlos", 490_000, 380_000,  9, 3, "DIGITAL",  "WhatsApp"),
+    ("v19", "Diego Ramírez",      "Ana",    "Carlos", 490_000, 380_000,  9, 3, "DIGITAL",  "WhatsApp"),  # noqa: E501
     ("v20", "Mariana López",      "Juan",   "Juan",   200_000, 150_000,  9, 1, "INTERNO",  None),
     ("v21", "Ricardo Aguirre",    "María",  "María",  560_000, 440_000, 10, 4, "INTERNO",  None),
     ("v22", "Catalina Peña",      "Pedro",  "Ana",    380_000, 290_000, 11, 2, "EXTERNO",  None),
     ("v23", "Julián Medina",      "Carlos", "Carlos", 440_000, 340_000, 12, 3, "INTERNO",  None),
-    ("v24", "Patricia Vargas",    "Ana",    "María",  270_000, 200_000, 13, 2, "DIGITAL",  "Instagram"),
+    ("v24", "Patricia Vargas",    "Ana",    "María",  270_000, 200_000, 13, 2, "DIGITAL",  "Instagram"),  # noqa: E501
     ("v25", "Hernán Castro",      "Juan",   "Pedro",  810_000, 640_000, 14, 6, "INTERNO",  None),
     # ── Semana 3 ─────────────────────────────────────────────────────────
     ("v7",  "Andrés Vargas",      "María",  "Pedro",  480_000, 370_000, 16, 3, "INTERNO",  None),
@@ -67,7 +67,7 @@ VENTAS: list[tuple] = [
     ("v26", "Alejandra Rios",     "María",  "Juan",   350_000, 270_000, 15, 2, "INTERNO",  None),
     ("v27", "Nelson Gómez",       "Carlos", "Carlos", 190_000, 140_000, 15, 1, "EXTERNO",  None),
     ("v28", "Monica Torres",      "Ana",    "Ana",    630_000, 500_000, 16, 4, "INTERNO",  None),
-    ("v29", "Sergio Molina",      "Juan",   "María",  290_000, 220_000, 17, 2, "DIGITAL",  "TikTok"),
+    ("v29", "Sergio Molina",      "Juan",   "María",  290_000, 220_000, 17, 2, "DIGITAL",  "TikTok"),  # noqa: E501
     ("v30", "Claudia Vega",       "Pedro",  "Pedro",  520_000, 410_000, 18, 3, "INTERNO",  None),
     ("v31", "Mauricio Álvarez",   "María",  "Carlos", 420_000, 330_000, 19, 3, "INTERNO",  None),
     ("v32", "Diana Muñoz",        "Carlos", "Juan",   175_000, 130_000, 20, 1, "EXTERNO",  None),
@@ -77,12 +77,12 @@ VENTAS: list[tuple] = [
     ("v11", "Mateo Jiménez",      "Pedro",  "Juan",   340_000, 260_000, 24, 2, "INTERNO",  None),
     ("v12", "Lucía Mendoza",      "Juan",   "María",  560_000, 435_000, 26, 4, "INTERNO",  None),
     ("v33", "Gustavo Ospina",     "Ana",    "Ana",    680_000, 540_000, 21, 5, "INTERNO",  None),
-    ("v34", "Carolina Pinto",     "Juan",   "Pedro",  310_000, 240_000, 22, 2, "DIGITAL",  "Facebook"),
+    ("v34", "Carolina Pinto",     "Juan",   "Pedro",  310_000, 240_000, 22, 2, "DIGITAL",  "Facebook"),  # noqa: E501
     ("v35", "Wilson Cruz",        "Pedro",  "María",  450_000, 350_000, 22, 3, "INTERNO",  None),
     ("v36", "Yanira Soto",        "María",  "María",  590_000, 465_000, 23, 4, "INTERNO",  None),
     ("v37", "Rafael Bermúdez",    "Carlos", "Carlos", 240_000, 180_000, 24, 2, "INTERNO",  None),
     ("v38", "Elizabeth Mora",     "Ana",    "Juan",   860_000, 680_000, 24, 6, "INTERNO",  None),
-    ("v39", "Gonzalo Duarte",     "Juan",   "María",  320_000, 245_000, 25, 2, "DIGITAL",  "Google"),
+    ("v39", "Gonzalo Duarte",     "Juan",   "María",  320_000, 245_000, 25, 2, "DIGITAL",  "Google"),  # noqa: E501
     ("v40", "Beatriz Salazar",    "Pedro",  "Pedro",  470_000, 370_000, 25, 3, "INTERNO",  None),
     # ── Últimos días ─────────────────────────────────────────────────────
     ("v41", "Harold Jiménez",     "María",  "Carlos", 130_000,  95_000, 26, 1, "EXTERNO",  None),
@@ -237,15 +237,15 @@ def comision(valor: int, neto: int) -> dict[str, Dinero]:
     ref  = dinero(0)
     pv   = dinero(round(ganancia * 0.05))
     ag   = dinero(ganancia) - vend - cerr - ref - pv
-    return {"vendedor": vend, "cerrador": cerr, "referido": ref, "punto_de_venta": pv, "agencia": ag}
+    return {"vendedor": vend, "cerrador": cerr, "referido": ref, "punto_de_venta": pv, "agencia": ag}  # noqa: E501
 
 
 def main() -> None:
     settings = obtener_settings()
     engine = crear_engine(settings.database_url)
-    Sesion = crear_fabrica_sesiones(engine)
+    sesion = crear_fabrica_sesiones(engine)
 
-    with Sesion() as session:
+    with sesion() as session:
         # Clientes
         clientes: dict[str, uuid.UUID] = {}
         for key, nombre, *_ in VENTAS:
@@ -309,7 +309,7 @@ def main() -> None:
                     remitente="Demo Cliente",
                     clasificado=clasificado,
                     venta_id=None,
-                    fecha_recibido=datetime(AÑO, MES, dia, 10, 0, tzinfo=timezone.utc),
+                    fecha_recibido=datetime(AÑO, MES, dia, 10, 0, tzinfo=UTC),
                 ))
 
         session.flush()

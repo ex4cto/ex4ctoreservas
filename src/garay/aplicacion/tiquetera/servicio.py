@@ -127,7 +127,8 @@ class RegistrarVentaService:
             lineas.append(hotel_line)
 
         if cmd.ninos > 0:
-            lineas.append(f"👥 Pax: {cmd.adultos} adultos / {cmd.ninos} niño{'s' if cmd.ninos != 1 else ''}")
+            suffix = "s" if cmd.ninos != 1 else ""
+            lineas.append(f"👥 Pax: {cmd.adultos} adultos / {cmd.ninos} niño{suffix}")
         else:
             lineas.append(f"👥 Pax: {cmd.adultos} adultos")
 

@@ -161,8 +161,8 @@ class TestValidacionConfirmacion:
 
 class TestConstruirResumen:
     def test_resumen_incluye_email(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        from decimal import Decimal
         import datetime
+        from decimal import Decimal
 
         ctx.tipo_cliente = None
         ctx.cliente_nombre = "Ana"

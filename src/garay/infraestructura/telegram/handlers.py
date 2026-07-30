@@ -432,7 +432,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                             raw = v.monto if hasattr(v, "monto") else (v or 0)
                             return "$" + f"{int(raw):,}".replace(",", ".")
 
-                        if desglose.vendedor and desglose.cerrador and desglose.vendedor != desglose.cerrador:
+                        if (
+                            desglose.vendedor
+                            and desglose.cerrador
+                            and desglose.vendedor != desglose.cerrador
+                        ):
                             comision_txt = (
                                 f"Vendedor: {_cop(desglose.vendedor)} / "
                                 f"Cerrador: {_cop(desglose.cerrador)}"

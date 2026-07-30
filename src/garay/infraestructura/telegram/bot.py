@@ -50,21 +50,6 @@ from garay.infraestructura.telegram.handlers import (
     handle_punto_de_venta,
     handle_tipo_reserva,
 )
-from garay.infraestructura.telegram.handlers_freelancers import (
-    EF_CONFIRMAR,
-    EF_SELECCIONAR,
-    FL_CONFIRMACION,
-    FL_NOMBRE,
-    FL_TELEGRAM_ID,
-    cmd_eliminar_freelancer,
-    cmd_listar_freelancers,
-    cmd_nuevo_freelancer,
-    handle_ef_confirmar,
-    handle_ef_seleccionar,
-    handle_fl_confirmacion,
-    handle_fl_nombre,
-    handle_fl_telegram_id,
-)
 from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
@@ -89,6 +74,21 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_gf_dia,
     handle_gf_monto,
     handle_gf_nombre,
+)
+from garay.infraestructura.telegram.handlers_freelancers import (
+    EF_CONFIRMAR,
+    EF_SELECCIONAR,
+    FL_CONFIRMACION,
+    FL_NOMBRE,
+    FL_TELEGRAM_ID,
+    cmd_eliminar_freelancer,
+    cmd_listar_freelancers,
+    cmd_nuevo_freelancer,
+    handle_ef_confirmar,
+    handle_ef_seleccionar,
+    handle_fl_confirmacion,
+    handle_fl_nombre,
+    handle_fl_telegram_id,
 )
 
 _TEXT = filters.TEXT & ~filters.COMMAND
