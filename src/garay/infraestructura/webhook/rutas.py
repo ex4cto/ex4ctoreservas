@@ -56,8 +56,18 @@ def recibir_email(
     except ErrorSecretInvalido:
         raise HTTPException(status_code=403, detail="Forbidden") from None
 
+    # Observability: log every inbound email's key fields so no email is ever
+    # dropped silently (the endpoint always returns 200 by design).
+    logger.warning(
+        "DIAG inbound: msgid=%r from=%r len_txt=%d len_html=%d",
+        payload.message_id[:60],
+        payload.remitente_email,
+        len(payload.cuerpo_texto),
+        len(payload.cuerpo_html),
+    )
+
     if not payload.message_id.strip():
-        logger.debug("Skipping email with empty message_id")
+        logger.warning("DIAG skip: empty message_id — dropping email")
         return {"estado": "ok"}
 
     cuerpo = payload.cuerpo_texto or payload.cuerpo_html
@@ -67,6 +77,7 @@ def recibir_email(
         return {"estado": "ok"}
 
     direccion = detectar_direccion(cuerpo)
+    logger.warning("DIAG route: banco=%s direccion=%s", banco, direccion)
 
     if direccion == DIRECCION_EGRESO:
         if egreso_repo.existe_referencia(payload.message_id):
