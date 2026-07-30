@@ -56,10 +56,11 @@ class Settings(BaseSettings):
     # Streamlit dashboard URL — sent alongside /dashboard_ventas reply.
     dashboard_url: str = Field(default="http://localhost:8501")
 
-    # Gmail SMTP for invoice delivery.
-    gmail_usuario: str = Field(default="")
-    gmail_app_password: str = Field(default="")
     factura_logo_url: str = Field(default="")
+
+    # Resend HTTP API for invoice delivery.
+    resend_api_key: str = Field(default="")
+    resend_from: str = Field(default="")
 
     # Conciliacion: propietario access and engine parameters.
     # GARAY_PROPIETARIO_TELEGRAM_IDS="123456789,987654321" (comma-separated, empty = deny all)

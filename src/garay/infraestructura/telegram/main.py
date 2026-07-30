@@ -18,7 +18,7 @@ from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
-from garay.infraestructura.email.adaptador_gmail import GmailAdapter
+from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
@@ -131,10 +131,10 @@ def main() -> None:
 
     generar_factura_service = GenerarFacturaService(logo_url=logo_url)
     notificador_email: NotificadorEmail | None = None
-    if settings.gmail_usuario and settings.gmail_app_password:
-        notificador_email = GmailAdapter(
-            usuario=settings.gmail_usuario,
-            app_password=settings.gmail_app_password,
+    if settings.resend_api_key and settings.resend_from:
+        notificador_email = ResendAdapter(
+            api_key=settings.resend_api_key,
+            from_address=settings.resend_from,
         )
 
     app = crear_aplicacion(settings.telegram_bot_token)
