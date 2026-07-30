@@ -74,6 +74,11 @@ class EgresoRepository(ABC):
     def existe_referencia(self, referencia: str) -> bool: ...
 
     @abstractmethod
+    def listar_recientes(self, minutos: int) -> list[Egreso]:
+        """Return egresos with fecha_recibido within the last *minutos* minutes."""
+        ...
+
+    @abstractmethod
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Egreso]: ...
 
 

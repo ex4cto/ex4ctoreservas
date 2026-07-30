@@ -26,6 +26,8 @@ def _to_orm(ingreso: Ingreso) -> IngresoModel:
         clasificado=ingreso.clasificado,
         venta_id=ingreso.venta_id,
         fecha_recibido=ingreso.fecha_recibido,
+        correo_origen=ingreso.correo_origen,
+        reenviado=ingreso.reenviado,
     )
 
 
@@ -40,6 +42,8 @@ def _to_domain(m: IngresoModel) -> Ingreso:
         clasificado=m.clasificado,
         venta_id=m.venta_id,
         fecha_recibido=m.fecha_recibido,
+        correo_origen=m.correo_origen,
+        reenviado=m.reenviado,
     )
 
 

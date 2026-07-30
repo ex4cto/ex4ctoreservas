@@ -41,6 +41,25 @@ def test_guardar_egreso_devuelve_egreso_con_campos_correctos() -> None:
     assert resultado.categoria == "otro"
     assert resultado.tipo == TipoEgreso.AUTOMATICO
     assert resultado.referencia == "MSG-EGRESO-001"
+    assert resultado.correo_origen is None
+    assert resultado.reenviado is False
+
+
+def test_guardar_egreso_pasa_correo_origen_y_reenviado() -> None:
+    repo = MagicMock()
+    pago = _make_egreso_extraido()
+
+    resultado = guardar_egreso(
+        pago,
+        "MSG-EGRESO-FWD",
+        repo,
+        moneda="COP",
+        correo_origen="alertas@bancolombia.com",
+        reenviado=True,
+    )
+
+    assert resultado.correo_origen == "alertas@bancolombia.com"
+    assert resultado.reenviado is True
 
 
 def test_guardar_egreso_llama_repo_guardar() -> None:

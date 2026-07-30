@@ -107,6 +107,7 @@ _COMANDOS = [
     BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
     BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
     BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
+    BotCommand("movimientos", "Movimientos recientes (solo propietario)"),
     BotCommand("cancelar", "Cancelar operación actual"),
 ]
 

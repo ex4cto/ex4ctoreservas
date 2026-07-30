@@ -41,6 +41,7 @@ class GenerarGastosRecurrentesService:
                 categoria=gasto.categoria,
                 tipo=TipoEgreso.MANUAL,
                 referencia=referencia,
+                fecha_recibido=datetime.datetime.now(datetime.UTC),
             )
             self._egresos.guardar(egreso)
             generados.append(egreso)

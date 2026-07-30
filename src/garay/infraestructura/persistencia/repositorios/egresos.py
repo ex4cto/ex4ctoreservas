@@ -26,6 +26,8 @@ def _to_orm(egreso: Egreso) -> EgresoModel:
         tipo=str(egreso.tipo),
         referencia=egreso.referencia,
         fecha_recibido=egreso.fecha_recibido,
+        correo_origen=egreso.correo_origen,
+        reenviado=egreso.reenviado,
     )
 
 
@@ -39,6 +41,8 @@ def _to_domain(m: EgresoModel) -> Egreso:
         tipo=TipoEgreso(m.tipo),
         referencia=m.referencia,
         fecha_recibido=m.fecha_recibido,
+        correo_origen=m.correo_origen,
+        reenviado=m.reenviado,
     )
 
 
@@ -64,6 +68,19 @@ class SQLAEgresoRepository(EgresoRepository):
             )
             result = session.execute(stmt).scalar_one_or_none()
             return result is not None
+
+    def listar_recientes(self, minutos: int) -> list[Egreso]:
+        """Return egresos with fecha_recibido within the last *minutos* minutes."""
+        desde = datetime.datetime.now(_UTC) - datetime.timedelta(minutes=minutos)
+        with self._sf.begin() as session:
+            stmt = (
+                select(EgresoModel)
+                .where(EgresoModel.fecha_recibido.isnot(None))
+                .where(EgresoModel.fecha_recibido >= desde)
+                .order_by(EgresoModel.fecha_recibido.desc())
+            )
+            rows = session.execute(stmt).scalars().all()
+            return [_to_domain(r) for r in rows]
 
     def listar_por_periodo(self, desde: datetime.date, hasta: datetime.date) -> list[Egreso]:
         with self._sf.begin() as session:

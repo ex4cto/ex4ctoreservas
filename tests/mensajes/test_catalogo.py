@@ -297,6 +297,41 @@ class TestClavesReportesDashboard:
         assert "{" not in result
 
 
+class TestClavesMovimientosRecientes:
+    """Tests for /movimientos catalog keys."""
+
+    CLAVES: ClassVar[list[str]] = [
+        "movimientos.encabezado",
+        "movimientos.sin_movimientos",
+        "movimientos.seccion_ingresos",
+        "movimientos.seccion_egresos",
+        "movimientos.linea",
+        "movimientos.tag_reenvio",
+    ]
+
+    def test_todas_las_claves_existen(self) -> None:
+        for clave in self.CLAVES:
+            msg = obtener_mensaje(clave)
+            assert isinstance(msg, str) and len(msg) > 0, f"Key missing: {clave!r}"
+
+    def test_linea_tiene_placeholders_monto_detalle_hora(self) -> None:
+        template = obtener_mensaje("movimientos.linea")
+        result = template.format(monto="100.000", detalle="Pago Nequi", hora="14:30")
+        assert "{" not in result
+        assert "100.000" in result
+        assert "Pago Nequi" in result
+        assert "14:30" in result
+
+    def test_encabezado_tiene_placeholder_horas(self) -> None:
+        template = obtener_mensaje("movimientos.encabezado")
+        result = template.format(horas=24)
+        assert "{" not in result
+
+    def test_tag_reenvio_es_corto(self) -> None:
+        msg = obtener_mensaje("movimientos.tag_reenvio")
+        assert len(msg) <= 20
+
+
 class TestConfirmacionResumenEspecialE:
     def test_confirmacion_resumen_no_tiene_numero_ticket(self) -> None:
         template = obtener_mensaje("confirmacion_resumen")
@@ -334,3 +369,19 @@ class TestConfirmacionResumenEspecialE:
         assert "Tour Playa Blanca" in result
         assert "Ticket" not in result
         assert "Vendedor: (tú)" in result
+
+
+class TestClavesMovimientosPlainText:
+    """FIX 2: movimientos templates must NOT contain Markdown asterisks."""
+
+    def test_encabezado_sin_asteriscos(self) -> None:
+        msg = obtener_mensaje("movimientos.encabezado")
+        assert "*" not in msg, f"'movimientos.encabezado' must not contain '*': {msg!r}"
+
+    def test_seccion_ingresos_sin_asteriscos(self) -> None:
+        msg = obtener_mensaje("movimientos.seccion_ingresos")
+        assert "*" not in msg, f"'movimientos.seccion_ingresos' must not contain '*': {msg!r}"
+
+    def test_seccion_egresos_sin_asteriscos(self) -> None:
+        msg = obtener_mensaje("movimientos.seccion_egresos")
+        assert "*" not in msg, f"'movimientos.seccion_egresos' must not contain '*': {msg!r}"

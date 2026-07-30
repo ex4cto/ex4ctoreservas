@@ -40,6 +40,25 @@ def test_guardar_ingreso_devuelve_ingreso_con_campos_correctos() -> None:
     assert resultado.remitente == "Juan Perez"
     assert resultado.clasificado is False
     assert resultado.fecha == datetime.date(2026, 7, 15)
+    assert resultado.correo_origen is None
+    assert resultado.reenviado is False
+
+
+def test_guardar_ingreso_pasa_correo_origen_y_reenviado() -> None:
+    repo = MagicMock()
+    pago = _make_pago()
+
+    resultado = guardar_ingreso(
+        pago,
+        "MSG-FWD",
+        repo,
+        moneda="COP",
+        correo_origen="alertas@bancolombia.com",
+        reenviado=True,
+    )
+
+    assert resultado.correo_origen == "alertas@bancolombia.com"
+    assert resultado.reenviado is True
 
 
 def test_guardar_ingreso_llama_repo_guardar() -> None:

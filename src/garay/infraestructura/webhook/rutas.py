@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from garay.aplicacion.webhook.servicio import guardar_egreso, guardar_ingreso
 from garay.config.settings import obtener_settings
+from garay.dominio.conciliacion.reenvio import detectar_reenvio
 from garay.dominio.puertos.repositorios import EgresoRepository, IngresoRepository
 from garay.infraestructura.webhook.parser.base import (
     DIRECCION_EGRESO,
@@ -89,7 +90,14 @@ def recibir_email(
         except ErrorParseoBanco as exc:
             logger.warning("Parse error (egreso) for %s: %s — skipping", banco, exc)
             return {"estado": "ok"}
-        guardar_egreso(pago, payload.message_id, egreso_repo, moneda=moneda)
+        guardar_egreso(
+            pago,
+            payload.message_id,
+            egreso_repo,
+            moneda=moneda,
+            correo_origen=payload.remitente_email,
+            reenviado=detectar_reenvio(payload.asunto, cuerpo),
+        )
     else:
         if ingreso_repo.existe_referencia(payload.message_id):
             logger.info("Duplicate ingreso message_id=%s — skipping", payload.message_id)
@@ -100,6 +108,13 @@ def recibir_email(
         except ErrorParseoBanco as exc:
             logger.warning("Parse error (ingreso) for %s: %s — skipping", banco, exc)
             return {"estado": "ok"}
-        guardar_ingreso(pago_ingreso, payload.message_id, ingreso_repo, moneda=moneda)
+        guardar_ingreso(
+            pago_ingreso,
+            payload.message_id,
+            ingreso_repo,
+            moneda=moneda,
+            correo_origen=payload.remitente_email,
+            reenviado=detectar_reenvio(payload.asunto, cuerpo),
+        )
 
     return {"estado": "ok"}

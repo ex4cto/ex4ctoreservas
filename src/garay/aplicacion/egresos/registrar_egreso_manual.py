@@ -40,6 +40,7 @@ class RegistrarEgresoManualService:
             fecha=fecha,
             categoria=categoria,
             tipo=TipoEgreso.MANUAL,
+            fecha_recibido=datetime.datetime.now(datetime.UTC),
         )
         self._egresos.guardar(egreso)
         return egreso

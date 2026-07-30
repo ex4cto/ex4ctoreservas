@@ -39,6 +39,10 @@ class Ingreso:
     venta_id: uuid.UUID | None = field(default=None)
     # Timestamp of receipt (UTC). None for legacy records created before this field existed.
     fecha_recibido: datetime.datetime | None = field(default=None)
+    # Email address of the original sender (from the forwarded email payload).
+    correo_origen: str | None = field(default=None)
+    # True if the email was a forward (Fwd:/Fw:/Rv: prefix or forwarded-message body).
+    reenviado: bool = field(default=False)
 
     def __post_init__(self) -> None:
         if not self.referencia.strip():
@@ -65,6 +69,10 @@ class Egreso:
     referencia: str | None = field(default=None)
     # UTC timestamp of receipt. None for manually-created records.
     fecha_recibido: datetime.datetime | None = field(default=None)
+    # Email address of the original sender (from the forwarded email payload).
+    correo_origen: str | None = field(default=None)
+    # True if the email was a forward (Fwd:/Fw:/Rv: prefix or forwarded-message body).
+    reenviado: bool = field(default=False)
 
     def __post_init__(self) -> None:
         if not self.descripcion.strip():

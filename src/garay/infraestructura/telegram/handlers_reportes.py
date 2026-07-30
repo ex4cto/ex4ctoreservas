@@ -1,9 +1,10 @@
-"""Telegram handlers for dashboard reports — /dashboard_ventas and /flujo_caja."""
+"""Telegram handlers for dashboard reports — /dashboard_ventas, /flujo_caja and /movimientos."""
 
 from __future__ import annotations
 
 import logging
 from datetime import date
+from decimal import Decimal
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
@@ -207,6 +208,82 @@ async def cb_flujo_caja(
         await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
 
 
+def _fmt_cop(valor: Decimal) -> str:
+    # Replicates the per-module pattern from handlers.py and handlers_egresos.py.
+    # E.g.: Decimal("208929.30") → "$208.929"
+    return "$" + f"{int(valor):,}".replace(",", ".")
+
+
+def _formatear_movimientos(movimientos: object, horas: int) -> str:
+    from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientes
+
+    assert isinstance(movimientos, MovimientosRecientes)
+
+    lineas = [
+        obtener_mensaje("movimientos.encabezado").format(horas=horas),
+    ]
+
+    if not movimientos.ingresos and not movimientos.egresos:
+        lineas.append(obtener_mensaje("movimientos.sin_movimientos"))
+        return "\n".join(lineas)
+
+    tag_reenvio = obtener_mensaje("movimientos.tag_reenvio")
+
+    if movimientos.ingresos:
+        lineas.append("")
+        lineas.append(obtener_mensaje("movimientos.seccion_ingresos"))
+        for ing in movimientos.ingresos:
+            hora_str = (
+                ing.fecha_recibido.strftime("%H:%M")
+                if ing.fecha_recibido is not None
+                else "—"
+            )
+            monto_str = _fmt_cop(ing.monto.monto)
+            reenvio_tag = f" {tag_reenvio}" if ing.reenviado else ""
+            lineas.append(
+                obtener_mensaje("movimientos.linea").format(
+                    monto=monto_str,
+                    detalle=f"{ing.banco}{reenvio_tag}",
+                    hora=hora_str,
+                )
+            )
+
+    if movimientos.egresos:
+        lineas.append("")
+        lineas.append(obtener_mensaje("movimientos.seccion_egresos"))
+        for egr in movimientos.egresos:
+            hora_str = (
+                egr.fecha_recibido.strftime("%H:%M")
+                if egr.fecha_recibido is not None
+                else "—"
+            )
+            monto_str = _fmt_cop(egr.monto.monto)
+            reenvio_tag = f" {tag_reenvio}" if egr.reenviado else ""
+            lineas.append(
+                obtener_mensaje("movimientos.linea").format(
+                    monto=monto_str,
+                    detalle=f"{egr.descripcion}{reenvio_tag}",
+                    hora=hora_str,
+                )
+            )
+
+    return "\n".join(lineas)
+
+
+@requiere_propietario
+async def cmd_movimientos(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
+
+    horas = 24
+    servicio: MovimientosRecientesService = context.bot_data["movimientos_service"]
+    movimientos = servicio.ejecutar(horas=horas)
+    texto = _formatear_movimientos(movimientos, horas=horas)
+    if update.effective_message:
+        await update.effective_message.reply_text(texto)
+
+
 def registrar_handlers(app: object) -> None:
     from telegram.ext import Application
 
@@ -221,3 +298,4 @@ def registrar_handlers(app: object) -> None:
         CallbackQueryHandler(cb_flujo_caja, pattern=r"^rep_c:\d{4}-\d{2}$"),
         group=1,
     )
+    app.add_handler(CommandHandler("movimientos", cmd_movimientos), group=1)

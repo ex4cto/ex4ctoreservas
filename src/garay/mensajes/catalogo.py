@@ -347,6 +347,25 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "freelancer.sin_activos": {Idioma.ES: "No hay freelancers activos para desactivar."},
     "freelancer.confirmar_eliminar": {Idioma.ES: "¿Desactivar a <b>{nombre}</b>?"},
     "freelancer.eliminado": {Idioma.ES: "✅ {nombre} fue desactivado."},
+    # --- Movimientos recientes ---
+    "movimientos.encabezado": {
+        Idioma.ES: "📋 Movimientos — últimas {horas} h"
+    },
+    "movimientos.sin_movimientos": {
+        Idioma.ES: "No hay movimientos en el período indicado."
+    },
+    "movimientos.seccion_ingresos": {
+        Idioma.ES: "💰 Ingresos:"
+    },
+    "movimientos.seccion_egresos": {
+        Idioma.ES: "💸 Egresos:"
+    },
+    "movimientos.linea": {
+        Idioma.ES: "• {monto} — {detalle} ({hora})"
+    },
+    "movimientos.tag_reenvio": {
+        Idioma.ES: "[fwd]"
+    },
     # --- Generar mes ---
     "generar_mes.sin_activos": {
         Idioma.ES: "No hay gastos fijos activos para generar."

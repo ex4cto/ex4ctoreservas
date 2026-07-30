@@ -106,3 +106,9 @@ class TestGenerarGastosRecurrentes:
 
         assert resultado[0].monto == Dinero("80000")
         assert "Servicio internet" in resultado[0].descripcion
+
+    def test_egreso_recurrente_tiene_fecha_recibido_no_none(self) -> None:
+        gastos = [_gasto()]
+        service, _, _ = _make_service(gastos=gastos)
+        resultado = service.generar(mes=7, año=2026)
+        assert resultado[0].fecha_recibido is not None

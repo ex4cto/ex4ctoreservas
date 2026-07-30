@@ -85,3 +85,14 @@ class TestRegistrarEgresoManual:
             moneda="COP",
         )
         assert e1.id != e2.id
+
+    def test_registrar_asigna_fecha_recibido_no_none(self) -> None:
+        service = _make_service()
+        egreso = service.registrar(
+            monto=Decimal("50000"),
+            descripcion="Pago varios",
+            categoria="otro",
+            fecha=datetime.date(2026, 7, 1),
+            moneda="COP",
+        )
+        assert egreso.fecha_recibido is not None

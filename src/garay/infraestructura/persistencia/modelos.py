@@ -169,6 +169,12 @@ class IngresoModel(Base):
     fecha_recibido: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+    # Sender email address from the forwarded email payload.
+    correo_origen: Mapped[str | None] = mapped_column(String, nullable=True)
+    # True if the source email was identified as a forward.
+    reenviado: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa.text("false")
+    )
 
 
 class EgresoModel(Base):
@@ -185,6 +191,12 @@ class EgresoModel(Base):
     # UTC timestamp of receipt. Null for legacy/manual records.
     fecha_recibido: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # Sender email address from the forwarded email payload.
+    correo_origen: Mapped[str | None] = mapped_column(String, nullable=True)
+    # True if the source email was identified as a forward.
+    reenviado: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa.text("false")
     )
 
 

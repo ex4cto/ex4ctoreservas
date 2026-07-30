@@ -12,6 +12,7 @@ from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRec
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
+from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -148,6 +149,10 @@ def main() -> None:
         egresos=egreso_repo,
         conciliaciones=conciliacion_repo,
     )
+    movimientos_service = MovimientosRecientesService(
+        ingresos_repo=ingreso_repo,
+        egresos_repo=egreso_repo,
+    )
 
     app.bot_data.update(
         {
@@ -168,6 +173,7 @@ def main() -> None:
             "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,
             "flujo_caja_service": flujo_caja_service,
+            "movimientos_service": movimientos_service,
             "generar_factura_service": generar_factura_service,
             "notificador_email": notificador_email,
         }

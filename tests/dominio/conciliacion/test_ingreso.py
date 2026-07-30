@@ -58,3 +58,19 @@ class TestIngreso:
         b = _ingreso(id=iid, referencia="R2")
         assert a == b
         assert hash(a) == hash(b)
+
+    def test_correo_origen_es_none_por_defecto(self) -> None:
+        i = _ingreso()
+        assert i.correo_origen is None
+
+    def test_reenviado_es_false_por_defecto(self) -> None:
+        i = _ingreso()
+        assert i.reenviado is False
+
+    def test_correo_origen_se_puede_asignar(self) -> None:
+        i = _ingreso(correo_origen="banco@bancolombia.com")
+        assert i.correo_origen == "banco@bancolombia.com"
+
+    def test_reenviado_se_puede_asignar(self) -> None:
+        i = _ingreso(reenviado=True)
+        assert i.reenviado is True

@@ -55,3 +55,19 @@ class TestEgreso:
         b = _egreso(id=eid, descripcion="B")
         assert a == b
         assert hash(a) == hash(b)
+
+    def test_correo_origen_es_none_por_defecto(self) -> None:
+        e = _egreso()
+        assert e.correo_origen is None
+
+    def test_reenviado_es_false_por_defecto(self) -> None:
+        e = _egreso()
+        assert e.reenviado is False
+
+    def test_correo_origen_se_puede_asignar(self) -> None:
+        e = _egreso(correo_origen="banco@bancolombia.com")
+        assert e.correo_origen == "banco@bancolombia.com"
+
+    def test_reenviado_se_puede_asignar(self) -> None:
+        e = _egreso(reenviado=True)
+        assert e.reenviado is True

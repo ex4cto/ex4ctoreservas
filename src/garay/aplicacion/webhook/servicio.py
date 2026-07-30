@@ -18,6 +18,8 @@ def guardar_ingreso(
     repo: IngresoRepository,
     *,
     moneda: str,
+    correo_origen: str | None = None,
+    reenviado: bool = False,
 ) -> Ingreso:
     """Convert a PagoExtraido into an Ingreso entity and persist it."""
     ingreso = Ingreso(
@@ -29,6 +31,8 @@ def guardar_ingreso(
         remitente=pago.remitente,
         clasificado=False,
         fecha_recibido=datetime.datetime.now(datetime.UTC),
+        correo_origen=correo_origen,
+        reenviado=reenviado,
     )
     repo.guardar(ingreso)
     return ingreso
@@ -40,6 +44,8 @@ def guardar_egreso(
     repo: EgresoRepository,
     *,
     moneda: str,
+    correo_origen: str | None = None,
+    reenviado: bool = False,
 ) -> Egreso:
     """Convert an EgresoExtraido into an Egreso entity and persist it."""
     egreso = Egreso(
@@ -51,6 +57,8 @@ def guardar_egreso(
         tipo=TipoEgreso.AUTOMATICO,
         referencia=referencia,
         fecha_recibido=datetime.datetime.now(datetime.UTC),
+        correo_origen=correo_origen,
+        reenviado=reenviado,
     )
     repo.guardar(egreso)
     return egreso
