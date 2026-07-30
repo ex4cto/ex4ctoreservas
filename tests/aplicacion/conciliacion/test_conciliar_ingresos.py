@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 from garay.dominio.comun.dinero import Dinero
@@ -13,6 +14,11 @@ from garay.dominio.conciliacion.entidades import Ingreso, ResultadoConciliacion
 from garay.dominio.conciliacion.motor import MotorConciliacion
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
+
+if TYPE_CHECKING:
+    from garay.aplicacion.conciliacion.conciliar_ingresos import (
+        ConciliarIngresosService,
+    )
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -80,7 +86,7 @@ def _make_service(
     conciliaciones_repo: MagicMock,
     motor: MotorConciliacion | None = None,
     ventana_dias: int = 3,
-) -> object:
+) -> ConciliarIngresosService:
     from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
 
     return ConciliarIngresosService(

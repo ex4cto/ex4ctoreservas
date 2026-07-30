@@ -98,7 +98,7 @@ def _base_bot_data(
 
 class TestGetFsm:
     def test_returns_fsm_when_present(self) -> None:
-        fsm = FSMTiquetera(servicios=[], puntos_venta=[])  # type: ignore[arg-type]
+        fsm = FSMTiquetera(servicios=[], puntos_venta=[])
         result = _get_fsm(_context({"fsm": fsm}))
         assert result is fsm
 

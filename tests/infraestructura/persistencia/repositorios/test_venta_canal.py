@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -23,7 +24,7 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
 
 
 def _venta(cliente_id: uuid.UUID, **kwargs: object) -> Venta:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         id=uuid.uuid4(),
         valor_venta=Dinero("500000"),
         neto=Dinero("450000"),

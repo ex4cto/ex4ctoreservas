@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from typing import Any
 from unittest.mock import MagicMock
 
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
@@ -20,7 +21,7 @@ _FECHA = datetime.date(2026, 7, 1)
 
 
 def _build_service(**kwargs: object) -> RegistrarVentaService:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         ventas=MagicMock(),
         reglas_repo=MagicMock(),
         tiqueteras=MagicMock(),
@@ -35,7 +36,7 @@ def _build_service(**kwargs: object) -> RegistrarVentaService:
 
 
 def _cmd(**kwargs: object) -> RegistrarVentaComando:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         valor_venta=_VALOR,
         neto=_NETO,
         servicio_ids=[_SERVICIO_ID],

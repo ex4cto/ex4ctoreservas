@@ -208,10 +208,16 @@ async def test_callback_uuid_invalido_no_falla() -> None:
 
     update = MagicMock()
     update.callback_query = query
-    ctx = _make_context()
+    repo = MagicMock()
+    ctx = _make_context(conciliacion_repo=repo)
 
-    result = await callback_conciliar(update, ctx)
-    assert result is None
+    await callback_conciliar(update, ctx)
+
+    # The callback is acknowledged, but the malformed UUID short-circuits
+    # before any repo lookup or message edit.
+    query.answer.assert_awaited_once()
+    repo.buscar_por_id.assert_not_called()
+    query.edit_message_text.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -221,7 +227,12 @@ async def test_callback_query_none_devuelve_none() -> None:
 
     update = MagicMock()
     update.callback_query = None
-    ctx = _make_context()
+    repo = MagicMock()
+    ctx = _make_context(conciliacion_repo=repo)
 
-    result = await callback_conciliar(update, ctx)
-    assert result is None
+    await callback_conciliar(update, ctx)
+
+    # With no callback_query the handler returns immediately, never touching
+    # the repository.
+    repo.buscar_por_id.assert_not_called()
+    repo.guardar.assert_not_called()

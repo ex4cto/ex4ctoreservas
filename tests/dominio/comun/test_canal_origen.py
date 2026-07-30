@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from typing import Any
 
 import pytest
 
@@ -15,7 +16,7 @@ from garay.dominio.ventas.valor_objetos import Participantes
 
 
 def _venta_base(**kwargs: object) -> Venta:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         id=uuid.uuid4(),
         valor_venta=Dinero(1_000_000),
         neto=Dinero(900_000),

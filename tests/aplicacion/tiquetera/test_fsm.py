@@ -14,6 +14,7 @@ from garay.aplicacion.tiquetera.fsm import (
     _formatear_monto,
     _parsear_monto,
 )
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
 SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
@@ -1028,8 +1029,8 @@ class TestEditarParticipantes:
 
     def test_editar_vendedor_estado_existe_en_enum(self) -> None:
         """EstadoFSM.EDITAR_VENDEDOR and EDITAR_CERRADOR must exist."""
-        assert EstadoFSM.EDITAR_VENDEDOR == "editar_vendedor"
-        assert EstadoFSM.EDITAR_CERRADOR == "editar_cerrador"
+        assert EstadoFSM.EDITAR_VENDEDOR.value == "editar_vendedor"
+        assert EstadoFSM.EDITAR_CERRADOR.value == "editar_cerrador"
 
     def test_negative_returns_none(self) -> None:
         assert _parsear_monto("-500") is None
@@ -1086,7 +1087,7 @@ def ctx_completo() -> ContextoVenta:
         destinos_numeros=[1],
         valor=Decimal("260000"),
         abono=Decimal("130000"),
-        tipo_cliente="INTERNO",
+        tipo_cliente=TipoCliente.INTERNO,
         punto_de_venta_nombre="Hotel Test",
         rol_registrante="ambos",
         neto=Decimal("180000"),
@@ -1115,7 +1116,7 @@ class TestValidarDatosConfirmacion:
     def test_hotel_habitacion_obligatorios_solo_para_interno(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
-        ctx_completo.tipo_cliente = "EXTERNO"
+        ctx_completo.tipo_cliente = TipoCliente.EXTERNO
         ctx_completo.cliente_hotel = None
         ctx_completo.cliente_habitacion = None
         faltantes = fsm._validar_datos_confirmacion(ctx_completo)
@@ -1125,14 +1126,14 @@ class TestValidarDatosConfirmacion:
     def test_hotel_obligatorio_para_interno(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
-        ctx_completo.tipo_cliente = "INTERNO"
+        ctx_completo.tipo_cliente = TipoCliente.INTERNO
         ctx_completo.cliente_hotel = None
         assert "Hotel" in fsm._validar_datos_confirmacion(ctx_completo)
 
     def test_habitacion_obligatoria_para_interno(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
-        ctx_completo.tipo_cliente = "INTERNO"
+        ctx_completo.tipo_cliente = TipoCliente.INTERNO
         ctx_completo.cliente_habitacion = None
         assert "Habitación" in fsm._validar_datos_confirmacion(ctx_completo)
 
