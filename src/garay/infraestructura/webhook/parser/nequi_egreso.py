@@ -17,7 +17,7 @@ from garay.infraestructura.webhook.schemas import EgresoExtraido
 # Pattern: "Enviaste de manera exitosa 5.000 a la llave 1047487553 de BRYAN CASTRO
 #            el 25 de julio de 2026 a las 7:05 p.m."
 _PATRON_ENVIO = re.compile(
-    r"Enviaste de manera exitosa\s+([\d.,]+)\s+a la llave\s+[\d]+\s+de\s+(.+?)"
+    r"Enviaste de manera exitosa\s+([\d.,]+)\s+a la llave\s+\S+\s+de\s+(.+?)"
     r"\s+el\s+(\d{1,2} de \w+ de \d{4})\s+a\s+las?\s+(\d{1,2}:\d{2}\s+[ap]\.m\.?)",
     re.IGNORECASE,
 )

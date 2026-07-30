@@ -173,3 +173,14 @@ def test_parsea_envio_con_nbsp_y_saltos() -> None:
     resultado = _PARSER.parsear("", cuerpo)
     assert resultado.monto == Decimal("300000")
     assert resultado.descripcion == "Envio a GRAFHIC DESIGN G D"
+
+
+def test_parsea_envio_llave_con_arroba() -> None:
+    """Bre-B keys can be @user (not only digits) — must still parse."""
+    cuerpo = (
+        "Enviaste de manera exitosa 10.000 a la llave @9019221257 de NEW DAYS HOSTELS SAS "
+        "el 13 de julio de 2026 a las 11:47 a.m."
+    )
+    resultado = _PARSER.parsear("", cuerpo)
+    assert resultado.monto == Decimal("10000")
+    assert resultado.descripcion == "Envio a NEW DAYS HOSTELS SAS"

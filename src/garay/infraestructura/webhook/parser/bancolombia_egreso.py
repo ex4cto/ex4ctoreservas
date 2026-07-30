@@ -34,7 +34,7 @@ _PATRON_TRANSFERENCIA_CUENTA = re.compile(
 # Pattern: "transferiste $6,000.00 a la llave ... desde tu cuenta *7488 a NEIDA GARCIA
 #            el 25/07/26 a las 16:26"
 _PATRON_TRANSFERENCIA_BREB = re.compile(
-    r"transferiste\s+\$([\d.,]+)\s+a\s+la\s+llave\s+[\d]+\s+desde\s+tu\s+cuenta"
+    r"transferiste\s+\$([\d.,]+)\s+a\s+la\s+llave\s+\S+\s+desde\s+tu\s+cuenta"
     r"\s+\*[\d]+\s+a\s+(.+?)\s+el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
     re.IGNORECASE,
 )

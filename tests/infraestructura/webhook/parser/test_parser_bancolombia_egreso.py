@@ -125,6 +125,17 @@ def test_parsea_transferencia_breb_descripcion() -> None:
     assert resultado.descripcion == "Transferencia a NEIDA GARCIA"
 
 
+def test_parsea_transferencia_breb_llave_con_arroba() -> None:
+    """Bre-B keys can be @user (not only digits) — must still parse."""
+    texto = (
+        "Bancolombia: transferiste $6,000.00 a la llave @9019221257 desde tu cuenta *7488 "
+        "a NEIDA GARCIA el 25/07/26 a las 16:26."
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.monto == Decimal("6000.00")
+    assert resultado.descripcion == "Transferencia a NEIDA GARCIA"
+
+
 def test_parsea_transferencia_breb_fecha_2_digitos() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
     assert resultado.fecha_egreso.year == 2026
