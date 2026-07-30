@@ -123,11 +123,12 @@ def main() -> None:
         comisiones_repo=comisiones_repo,
     )
 
-    logo_path = Path(__file__).parents[4] / "Flyer Agencia de Viajes Profesional Azul (2).png"
-    logo_url = ""
-    if logo_path.exists():
-        logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
-        logo_url = f"data:image/png;base64,{logo_b64}"
+    logo_url = settings.factura_logo_url
+    if not logo_url:
+        logo_path = Path(__file__).parents[4] / "Flyer Agencia de Viajes Profesional Azul (2).png"
+        if logo_path.exists():
+            logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
+            logo_url = f"data:image/png;base64,{logo_b64}"
 
     generar_factura_service = GenerarFacturaService(logo_url=logo_url)
     notificador_email: NotificadorEmail | None = None

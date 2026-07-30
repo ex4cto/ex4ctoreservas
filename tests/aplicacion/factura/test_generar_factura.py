@@ -117,3 +117,23 @@ class TestGenerarFacturaHtml:
         assert _fmt_cop(Decimal("500000")) == "$500.000"
         assert _fmt_cop(Decimal("1000000")) == "$1.000.000"
         assert _fmt_cop(None) == "$0"
+
+    def test_fecha_emision_usa_zona_bogota(self) -> None:
+        from unittest.mock import patch
+
+        fecha_bogota = datetime.date(2026, 7, 29)
+        with patch("garay.aplicacion.factura.servicio._hoy_bogota", return_value=fecha_bogota):
+            servicio = GenerarFacturaService()
+            html = servicio.generar(_ctx_completo(), _resultado())
+        assert "29/07/2026" in html
+
+    def test_html_contiene_llave_bre_b(self) -> None:
+        servicio = GenerarFacturaService()
+        html = servicio.generar(_ctx_completo(), _resultado())
+        assert "BRE-B" in html.upper()
+        assert "@garay58804" in html
+
+    def test_html_no_menciona_nequi(self) -> None:
+        servicio = GenerarFacturaService()
+        html = servicio.generar(_ctx_completo(), _resultado())
+        assert "nequi" not in html.lower()

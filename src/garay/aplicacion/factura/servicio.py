@@ -5,9 +5,17 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.ventas.contexto import ContextoVenta
+
+
+_BOGOTA = ZoneInfo("America/Bogota")
+
+
+def _hoy_bogota() -> datetime.date:
+    return datetime.datetime.now(_BOGOTA).date()
 
 
 def _fmt_cop(valor: Decimal | None) -> str:
@@ -20,7 +28,7 @@ def _fmt_cop(valor: Decimal | None) -> str:
 def _numero_factura(venta_id: uuid.UUID) -> str:
     hex_sin_guiones = str(venta_id).replace("-", "")
     codigo = hex_sin_guiones[:6].upper()
-    fecha = datetime.date.today().strftime("%Y%m%d")
+    fecha = _hoy_bogota().strftime("%Y%m%d")
     return f"GT-{fecha}-{codigo}"
 
 
@@ -32,7 +40,7 @@ class GenerarFacturaService:
 
     def generar(self, ctx: ContextoVenta, resultado: ResultadoRegistrarVenta) -> str:
         numero = _numero_factura(resultado.venta_id)
-        fecha_emision = datetime.date.today().strftime("%d/%m/%Y")
+        fecha_emision = _hoy_bogota().strftime("%d/%m/%Y")
         fecha_tour = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
         saldo = (ctx.valor or Decimal("0")) - (ctx.abono or Decimal("0"))
 
@@ -135,8 +143,8 @@ class GenerarFacturaService:
         <tr>
           <td style="padding:12px 14px;font-size:12px;line-height:1.8;">
             <strong style="color:#1B3B6B;">Medios de pago:</strong><br>
-            🏦 Bancolombia: <strong>085-043956-43</strong><br>
-            📱 Nequi: <strong>bre-b @garay58804</strong><br>
+            🏦 Bancolombia cta. ahorro: <strong>085-043956-43</strong><br>
+            🔑 Bancolombia llave BRE-B: <strong>@garay58804</strong><br>
             <span style="color:#555;font-size:11px;">Referencia: número de factura {numero}</span>
           </td>
         </tr>
