@@ -29,6 +29,8 @@ logs/
 *.jpeg
 *.png
 *.pdf
+# Exception: compressed logo committed to repo for Railway deployment
+!assets/logo.png
 
 # Tool config (local only)
 .atl/
