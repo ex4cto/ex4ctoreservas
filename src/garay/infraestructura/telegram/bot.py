@@ -104,7 +104,9 @@ _COMANDOS = [
     BotCommand("nuevo_egreso", "Registrar un egreso manual"),
     BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
     BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
-    BotCommand("listar_freelancers", "Ver y gestionar freelancers (solo admin)"),
+    BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
+    BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
+    BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
     BotCommand("cancelar", "Cancelar operación actual"),
 ]
 
