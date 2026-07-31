@@ -47,6 +47,26 @@ def _teclado(opciones: list[str]) -> InlineKeyboardMarkup | None:
     return InlineKeyboardMarkup(botones)
 
 
+def _teclado_estructurado(
+    opciones: list[tuple[str, str]],
+    columnas: int = 2,
+) -> InlineKeyboardMarkup | None:
+    """Render (label, callback_data) pairs in a multi-column grid.
+
+    callback_data is the encoded value (e.g. 'fam:3', 'srv:14'), never the label,
+    so it always fits Telegram's 64-byte callback_data limit.
+    """
+    if not opciones:
+        return None
+    filas: list[list[InlineKeyboardButton]] = []
+    for indice in range(0, len(opciones), columnas):
+        grupo = opciones[indice : indice + columnas]
+        filas.append(
+            [InlineKeyboardButton(label, callback_data=data) for label, data in grupo]
+        )
+    return InlineKeyboardMarkup(filas)
+
+
 def _get_contexto(context: ContextTypes.DEFAULT_TYPE) -> ContextoVenta:
     if context.user_data is None:
         return ContextoVenta()
@@ -70,7 +90,10 @@ async def _enviar_salida(
     salida: SalidaFSM,
 ) -> int:
     context.user_data["contexto"] = salida.contexto  # type: ignore[index]
-    teclado = _teclado(salida.opciones)
+    if salida.opciones_estructuradas is not None:
+        teclado = _teclado_estructurado(salida.opciones_estructuradas)
+    else:
+        teclado = _teclado(salida.opciones)
     if update.message:
         await update.message.reply_text(
             salida.mensaje,
@@ -501,6 +524,8 @@ handle_metodo_input = _make_handler(EstadoFSM.METODO_INPUT)
 handle_esperando_foto = _make_handler(EstadoFSM.ESPERANDO_FOTO)
 handle_tipo_reserva = _make_handler(EstadoFSM.TIPO_RESERVA)
 handle_punto_de_venta = _make_handler(EstadoFSM.PUNTO_DE_VENTA)
+handle_familia = _make_handler(EstadoFSM.FAMILIA)
+handle_servicio_en_familia = _make_handler(EstadoFSM.SERVICIO_EN_FAMILIA)
 handle_destino = _make_handler(EstadoFSM.DESTINO)
 handle_cliente_nombre = _make_handler(EstadoFSM.CLIENTE_NOMBRE)
 handle_cliente_telefono = _make_handler(EstadoFSM.CLIENTE_TELEFONO)

@@ -94,17 +94,20 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "_Podés modificar cualquier dato en el resumen antes de confirmar._"
         )
     },
-    "pregunta_destino_numero": {
+    "pregunta_familia": {Idioma.ES: "Elegí la familia de tours:"},
+    "pregunta_servicio_en_familia": {Idioma.ES: "Elegí el tour:"},
+    "opcion_otro_tour": {Idioma.ES: "+ Otro tour"},
+    "opcion_confirmar_destinos": {Idioma.ES: "✅ Confirmar"},
+    "opcion_quitar_tour": {Idioma.ES: "❌ {nombre}"},
+    "error_sin_destinos": {
         Idioma.ES: (
-            "Ingresá el número del tour "
-            "(podés poner varios separados por coma, ej: *15* o *15, 23*)."
+            "Necesitás al menos un tour para continuar. "
+            "Elegí una familia y agregá un tour."
         )
     },
-    "info_sin_tours_seleccionados": {Idioma.ES: "Aún no seleccionaste ningún tour."},
     "error_tipo_reserva_invalido": {
         Idioma.ES: "Opción inválida. Elegí INTERNO, EXTERNO o DIGITAL."
     },
-    "error_sin_destino_numero": {Idioma.ES: "Tenés que ingresar al menos un número de tour."},
     "error_adultos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero mayor a 0."},
     "error_adultos_minimo": {Idioma.ES: "Debe haber al menos 1 adulto."},
     "error_ninos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero >= 0."},
@@ -128,18 +131,10 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_campo_editar": {Idioma.ES: "¿Qué campo querés modificar?"},
     "error_campo_editar_invalido": {Idioma.ES: "Opción inválida. Elegí uno de los campos."},
     "error_estado_no_manejable": {Idioma.ES: "Estado no manejable."},
-    "info_destinos_seleccionados": {
+    "info_destinos_acumulados": {
         Idioma.ES: (
-            "Seleccionados: {seleccionados}\n"
-            "Agregá más números o escribí *confirmar* para continuar."
-        )
-    },
-    "info_ia_detecto_destinos": {
-        Idioma.ES: ("La IA detectó: {nombres} (ingresá los números correspondientes).")
-    },
-    "error_destino_no_encontrado": {
-        Idioma.ES: (
-            "Número(s) no encontrado(s): {invalidos}. Revisá el catálogo.\n{destinos_mensaje}"
+            "Tours seleccionados: {seleccionados}\n"
+            "Agregá otro tour o confirmá para continuar."
         )
     },
     "error_abono_supera_neto": {

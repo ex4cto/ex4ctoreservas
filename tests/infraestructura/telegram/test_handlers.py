@@ -304,7 +304,9 @@ class TestCmdFoto:
         update = self._make_update_with_photo()
         update.effective_message.reply_text = AsyncMock()
 
-        fsm = FSMTiquetera(servicios=[(1, "Tour", Decimal("100"), None)], puntos_venta=["PDV"])
+        fsm = FSMTiquetera(
+            servicios=[(1, "Tour", Decimal("100"), None, "BARÚ")], puntos_venta=["PDV"]
+        )
         fl_repo = _make_freelancer_repo(found=True)
         bot_data = {"extractor_reserva": MagicMock(), "fsm": fsm, "freelancer_repo": fl_repo}
         context = self._make_context(bot_data)
@@ -321,7 +323,9 @@ class TestCmdFoto:
         update = self._make_update_with_photo()
         update.effective_message.reply_text = AsyncMock()
 
-        fsm = FSMTiquetera(servicios=[(1, "Tour", Decimal("100"), None)], puntos_venta=["PDV"])
+        fsm = FSMTiquetera(
+            servicios=[(1, "Tour", Decimal("100"), None, "BARÚ")], puntos_venta=["PDV"]
+        )
         fl_repo = _make_freelancer_repo(found=True)
         bot_data = {"extractor_reserva": MagicMock(), "fsm": fsm, "freelancer_repo": fl_repo}
         context = self._make_context(bot_data)
@@ -340,7 +344,9 @@ class TestCmdFoto:
         update.callback_query = None
 
         extracted_ctx = ContextoVenta(cliente_nombre="Maria", adultos=2)
-        fsm = FSMTiquetera(servicios=[(1, "Tour", Decimal("100"), None)], puntos_venta=["PDV"])
+        fsm = FSMTiquetera(
+            servicios=[(1, "Tour", Decimal("100"), None, "BARÚ")], puntos_venta=["PDV"]
+        )
         fl_repo = _make_freelancer_repo(found=True)
         bot_data = {"extractor_reserva": MagicMock(), "fsm": fsm, "freelancer_repo": fl_repo}
         context = self._make_context(bot_data)

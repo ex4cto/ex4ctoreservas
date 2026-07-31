@@ -11,8 +11,8 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000")),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
@@ -96,12 +96,12 @@ class TestTipoReservaDigitalVaACanalOrigen:
 
 
 class TestCanalOrigenHandler:
-    def test_canal_valido_va_a_destino(
+    def test_canal_valido_va_a_familia(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         ctx.tipo_cliente = TipoCliente.DIGITAL
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "WhatsApp", ctx)
-        assert salida.nuevo_estado == EstadoFSM.DESTINO
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
     def test_canal_invalido_re_pregunta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
