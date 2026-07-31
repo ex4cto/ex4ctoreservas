@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.clientes.entidades import Cliente
@@ -50,3 +51,10 @@ class SQLAClienteRepository(ClienteRepository):
         with self._sf.begin() as session:
             m = session.get(ClienteModel, id)
             return to_domain(m) if m else None
+
+    def buscar_por_nombre(self, nombre: str) -> Cliente | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(ClienteModel).where(ClienteModel.nombre == nombre)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None

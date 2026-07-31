@@ -47,6 +47,13 @@ class SQLAServicioRepository(ServicioRepository):
             m = session.get(ServicioModel, id)
             return to_domain(m) if m else None
 
+    def buscar_por_nombre(self, nombre: str) -> Servicio | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(ServicioModel).where(ServicioModel.nombre == nombre)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None
+
     def listar(self) -> list[Servicio]:
         with self._sf.begin() as session:
             rows = session.execute(select(ServicioModel)).scalars().all()

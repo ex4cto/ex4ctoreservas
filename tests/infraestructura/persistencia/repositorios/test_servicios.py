@@ -67,3 +67,18 @@ def test_listar_neto_null(sf: sessionmaker[Session]) -> None:
     assert len(lista) == 1
     assert lista[0].precio_neto_adulto is None
     assert lista[0].precio_neto_nino is None
+
+
+def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=1, nombre="City Tour", descripcion="", activo=True)
+    repo.guardar(s)
+    resultado = repo.buscar_por_nombre("City Tour")
+    assert resultado is not None
+    assert resultado.id == s.id
+    assert resultado.nombre == "City Tour"
+
+
+def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    assert repo.buscar_por_nombre("No Existe") is None
