@@ -56,6 +56,15 @@ def _gasto_recurrente(nombre: str = "Arriendo") -> GastoRecurrente:
     )
 
 
+def _make_admin_repo() -> MagicMock:
+    """Freelancer repo whose lookup returns an admin — satisfies requiere_admin(_conv)."""
+    repo = MagicMock()
+    freelancer = MagicMock()
+    freelancer.es_admin = True
+    repo.buscar_por_telegram_id.return_value = freelancer
+    return repo
+
+
 def _make_context(
     gastos: list[GastoRecurrente] | None = None,
     categorias: list[str] | None = None,
@@ -72,6 +81,7 @@ def _make_context(
     ctx.bot_data = {
         "egreso_service": egreso_service,
         "recurrente_service": recurrente_service,
+        "freelancer_repo": _make_admin_repo(),
     }
     return ctx
 
@@ -96,6 +106,16 @@ class TestCmdGastosFijos:
         # Should show the "empty" message
         assert msg  # non-empty response
 
+    @pytest.mark.asyncio
+    async def test_no_admin_es_denegado(self) -> None:
+        """Non-admin user → requiere_admin returns None, no gastos list shown."""
+        update = _make_update()
+        ctx = _make_context(gastos=[_gasto_recurrente("Arriendo")])
+        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
+        result = await cmd_gastos_fijos(update, ctx)
+        assert result is None
+        ctx.bot_data["recurrente_service"].listar_activos.assert_not_called()
+
 
 class TestCrearGastoFijo:
     @pytest.mark.asyncio
@@ -105,6 +125,15 @@ class TestCrearGastoFijo:
         result = await handle_gf_nombre(update, ctx)
         assert result == GF_MONTO
         assert ctx.user_data["gf_nombre"] == "Arriendo oficina"
+
+    @pytest.mark.asyncio
+    async def test_handle_gf_nombre_no_admin_es_denegado(self) -> None:
+        """Non-admin → requiere_admin_conv ends the create-flow at its real entry point."""
+        update = _make_update(text="Arriendo oficina")
+        ctx = _make_context()
+        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
+        result = await handle_gf_nombre(update, ctx)
+        assert result == ConversationHandler.END
 
     @pytest.mark.asyncio
     async def test_handle_gf_monto_valido(self) -> None:
@@ -205,3 +234,18 @@ class TestCmdGenerarMes:
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
         assert msg  # non-empty
+
+    @pytest.mark.asyncio
+    async def test_no_admin_es_denegado(self) -> None:
+        """Non-admin user → requiere_admin returns None, generar service not called."""
+        update = _make_update()
+        ctx = _make_context()
+        gen_service = MagicMock()
+        gen_service.generar.return_value = [MagicMock()]
+        ctx.bot_data["generar_gastos_service"] = gen_service
+        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
+
+        result = await cmd_generar_mes(update, ctx)
+
+        assert result is None
+        gen_service.generar.assert_not_called()

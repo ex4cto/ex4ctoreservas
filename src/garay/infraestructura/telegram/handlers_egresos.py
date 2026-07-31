@@ -12,6 +12,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import GastoRecurrente
+from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ def _ud(context: ContextTypes.DEFAULT_TYPE) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 
 
+@requiere_admin_conv
 async def cmd_nuevo_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Entry point for /nuevo_egreso."""
     await _reply(update, obtener_mensaje("egreso.pedir_monto"))
@@ -224,6 +226,7 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
 # ---------------------------------------------------------------------------
 
 
+@requiere_admin
 async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /gastos_fijos — list active recurring expenses."""
     service = context.bot_data.get("recurrente_service")
@@ -244,6 +247,7 @@ async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return ConversationHandler.END
 
 
+@requiere_admin_conv
 async def handle_gf_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     nombre = _input_text(update).strip()
     _ud(context)["gf_nombre"] = nombre
@@ -342,6 +346,7 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
 # ---------------------------------------------------------------------------
 
 
+@requiere_admin
 async def cmd_generar_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /generar_mes — generate recurring expenses for current month."""
     service = context.bot_data.get("generar_gastos_service")
