@@ -24,6 +24,8 @@ class EstadoFSM(StrEnum):
     TIPO_RESERVA = "tipo_reserva"
     CANAL_ORIGEN = "canal_origen"
     PUNTO_DE_VENTA = "punto_de_venta"
+    FAMILIA = "familia"
+    SERVICIO_EN_FAMILIA = "servicio_en_familia"
     DESTINO = "destino"
     CLIENTE_NOMBRE = "cliente_nombre"
     CLIENTE_TELEFONO = "cliente_telefono"
@@ -55,6 +57,10 @@ class SalidaFSM:
     opciones: list[str] = field(default_factory=list)
     listo: bool = False
     contexto: ContextoVenta = field(default_factory=ContextoVenta)
+    # Structured options carry (label, callback_data) pairs. When set, the
+    # Telegram adapter renders these (encoded callback_data, multi-column grid)
+    # instead of the plain `opciones` list where label == callback_data.
+    opciones_estructuradas: list[tuple[str, str]] | None = None
 
 
 _ESTADOS_FOTO_AVANZAR: frozenset[EstadoFSM] = frozenset(
@@ -112,7 +118,7 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Tipo reserva", EstadoFSM.TIPO_RESERVA),
     ("Canal", EstadoFSM.CANAL_ORIGEN),
     ("Punto de venta", EstadoFSM.PUNTO_DE_VENTA),
-    ("Destinos", EstadoFSM.DESTINO),
+    ("Destinos", EstadoFSM.FAMILIA),
     ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
     ("Teléfono", EstadoFSM.CLIENTE_TELEFONO),
     ("Correo", EstadoFSM.CLIENTE_EMAIL),
@@ -184,12 +190,22 @@ class FSMTiquetera:
 
     def __init__(
         self,
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None]],
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
         puntos_venta: list[str],
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
         self._servicios: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
-            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n in servicios
+            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n, _ in servicios
+        }
+        # categoria → sorted list of service numeros (only non-empty families).
+        familias: dict[str, list[int]] = {}
+        for numero, _nombre, _neto_a, _neto_n, categoria in servicios:
+            familias.setdefault(categoria, []).append(numero)
+        # Deterministic order: families sorted by name, numeros sorted within each.
+        self._familias: dict[str, list[int]] = {
+            categoria: sorted(numeros)
+            for categoria, numeros in sorted(familias.items())
+            if numeros
         }
         self._puntos_venta = puntos_venta
 
@@ -213,6 +229,8 @@ class FSMTiquetera:
             EstadoFSM.TIPO_RESERVA: self._handle_tipo_reserva,
             EstadoFSM.CANAL_ORIGEN: self._handle_canal_origen,
             EstadoFSM.PUNTO_DE_VENTA: self._handle_punto_de_venta,
+            EstadoFSM.FAMILIA: self._handle_familia,
+            EstadoFSM.SERVICIO_EN_FAMILIA: self._handle_servicio_en_familia,
             EstadoFSM.DESTINO: self._handle_destino,
             EstadoFSM.CLIENTE_NOMBRE: self._handle_cliente_nombre,
             EstadoFSM.CLIENTE_TELEFONO: self._handle_cliente_telefono,
@@ -269,27 +287,71 @@ class FSMTiquetera:
 
     # ── private helpers ─────────────────────────────────────────────────────
 
-    def _destinos_mensaje(self, ctx: ContextoVenta) -> str:
-        if ctx.destinos_numeros:
-            # With selection: show only what is selected + prompt to add/confirm
-            seleccionados = []
-            num_map = {n: info[0] for n, info in self._servicios.items()}
-            for n in ctx.destinos_numeros:
-                nombre = num_map.get(n, str(n))
-                seleccionados.append(f"{n} — {nombre}")
-            return obtener_mensaje("info_destinos_seleccionados").format(
-                seleccionados=", ".join(seleccionados)
-            )
-        # No selection: show instruction + optional IA hint
-        lineas = [obtener_mensaje("pregunta_destino_numero")]
-        if ctx.destinos_nombres:
-            nombres = ", ".join(ctx.destinos_nombres)
-            lineas.append(obtener_mensaje("info_ia_detecto_destinos").format(nombres=nombres))
-        lineas.append(obtener_mensaje("info_sin_tours_seleccionados"))
-        return "\n".join(lineas)
+    def _familias_ordenadas(self) -> list[str]:
+        """Return family (categoria) names in the picker's deterministic order."""
+        return list(self._familias.keys())
 
-    def _opciones_destino(self, ctx: ContextoVenta) -> list[str]:
-        return ["confirmar"] if ctx.destinos_numeros else []
+    def _opciones_familia(self) -> list[tuple[str, str]]:
+        """Structured options for the FAMILIA state: (categoria, 'fam:{indice}')."""
+        return [
+            (categoria, f"fam:{indice}")
+            for indice, categoria in enumerate(self._familias_ordenadas())
+        ]
+
+    def _opciones_servicio_en_familia(self, categoria: str) -> list[tuple[str, str]]:
+        """Structured options for tours within a family: ('{numero} — {nombre}', 'srv:{numero}')."""
+        opciones: list[tuple[str, str]] = []
+        for numero in self._familias.get(categoria, []):
+            info = self._servicios.get(numero)
+            nombre = info[0] if info is not None else str(numero)
+            opciones.append((f"{numero} — {nombre}", f"srv:{numero}"))
+        return opciones
+
+    def _acumulador_mensaje(self, ctx: ContextoVenta) -> str:
+        """Message for the DESTINO accumulator: list selected tours by name."""
+        num_map = {n: info[0] for n, info in self._servicios.items()}
+        nombres = [num_map.get(n, str(n)) for n in ctx.destinos_numeros]
+        return obtener_mensaje("info_destinos_acumulados").format(
+            seleccionados=", ".join(nombres) if nombres else "—"
+        )
+
+    def _opciones_acumulador(
+        self, ctx: ContextoVenta
+    ) -> list[tuple[str, str]]:
+        """Structured options for the DESTINO accumulator.
+
+        Each currently-selected tour gets a removable button with encoded
+        callback_data 'del:{numero}' (~11 bytes, well under Telegram's 64-byte
+        limit). 'Otro tour' and 'Confirmar' keep label == callback_data so the
+        DESTINO handler can still match them by their message text.
+        """
+        opciones: list[tuple[str, str]] = []
+        for numero in ctx.destinos_numeros:
+            info = self._servicios.get(numero)
+            nombre = info[0] if info is not None else str(numero)
+            etiqueta = obtener_mensaje("opcion_quitar_tour").format(nombre=nombre)
+            opciones.append((etiqueta, f"del:{numero}"))
+        otro = obtener_mensaje("opcion_otro_tour")
+        confirmar = obtener_mensaje("opcion_confirmar_destinos")
+        opciones.append((otro, otro))
+        opciones.append((confirmar, confirmar))
+        return opciones
+
+    def _salida_acumulador(self, ctx: ContextoVenta) -> SalidaFSM:
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.DESTINO,
+            mensaje=self._acumulador_mensaje(ctx),
+            opciones_estructuradas=self._opciones_acumulador(ctx),
+            contexto=ctx,
+        )
+
+    def _salida_familia(self, ctx: ContextoVenta) -> SalidaFSM:
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.FAMILIA,
+            mensaje=obtener_mensaje("pregunta_familia"),
+            opciones_estructuradas=self._opciones_familia(),
+            contexto=ctx,
+        )
 
     def _calcular_neto(self, ctx: ContextoVenta) -> Decimal | None:
         """Sum neto across all selected services. Returns None if any service lacks pricing."""
@@ -430,12 +492,7 @@ class FSMTiquetera:
                 opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
                 contexto=ctx,
             )
-        return SalidaFSM(
-            nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=self._destinos_mensaje(ctx),
-            opciones=self._opciones_destino(ctx),
-            contexto=ctx,
-        )
+        return self._salida_familia(ctx)
 
     def _handle_punto_de_venta(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
@@ -467,27 +524,81 @@ class FSMTiquetera:
                 opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
                 contexto=ctx,
             )
+        return self._salida_familia(ctx)
+
+    def _handle_familia(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        familias = self._familias_ordenadas()
+        indice: int | None = None
+        if entrada.strip().startswith("fam:"):
+            try:
+                indice = int(entrada.strip().removeprefix("fam:"))
+            except ValueError:
+                indice = None
+        if indice is None or indice < 0 or indice >= len(familias):
+            return self._salida_familia(ctx)
+        ctx.familia_seleccionada = familias[indice]
         return SalidaFSM(
-            nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=self._destinos_mensaje(ctx),
-            opciones=self._opciones_destino(ctx),
+            nuevo_estado=EstadoFSM.SERVICIO_EN_FAMILIA,
+            mensaje=obtener_mensaje("pregunta_servicio_en_familia"),
+            opciones_estructuradas=self._opciones_servicio_en_familia(ctx.familia_seleccionada),
             contexto=ctx,
         )
 
+    def _handle_servicio_en_familia(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        # Defensive: stale state (e.g. bot restart mid-flow) can leave the family
+        # unset. Route back to FAMILIA so the user can re-pick instead of showing
+        # an empty grid with no escape.
+        if not ctx.familia_seleccionada:
+            return self._salida_familia(ctx)
+        categoria = ctx.familia_seleccionada
+        numeros_familia = set(self._familias.get(categoria, []))
+        numero: int | None = None
+        if entrada.strip().startswith("srv:"):
+            try:
+                numero = int(entrada.strip().removeprefix("srv:"))
+            except ValueError:
+                numero = None
+        if numero is None or numero not in numeros_familia:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.SERVICIO_EN_FAMILIA,
+                mensaje=obtener_mensaje("pregunta_servicio_en_familia"),
+                opciones_estructuradas=self._opciones_servicio_en_familia(categoria),
+                contexto=ctx,
+            )
+        if numero not in ctx.destinos_numeros:
+            ctx.destinos_numeros.append(numero)
+        return self._salida_acumulador(ctx)
+
     def _handle_destino(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        """DESTINO is the accumulator: add, remove, or confirm the selection."""
         ctx = _clonar(contexto)
         texto = entrada.strip()
 
-        if texto.lower() in ("confirmar", "listo"):
+        if texto == obtener_mensaje("opcion_otro_tour"):
+            return self._salida_familia(ctx)
+
+        # Per-tour deselection: 'del:{numero}' removes that tour and re-shows the
+        # accumulator. If it empties the selection, route back to FAMILIA (FIX 1).
+        if texto.startswith("del:"):
+            try:
+                numero = int(texto.removeprefix("del:"))
+            except ValueError:
+                numero = None
+            if numero is not None and numero in ctx.destinos_numeros:
+                ctx.destinos_numeros.remove(numero)
+            if not ctx.destinos_numeros:
+                return self._salida_familia(ctx)
+            return self._salida_acumulador(ctx)
+
+        if texto == obtener_mensaje("opcion_confirmar_destinos"):
+            # Defense-in-depth: a venta must never be registered with zero tours.
             if not ctx.destinos_numeros:
                 return SalidaFSM(
-                    nuevo_estado=EstadoFSM.DESTINO,
-                    mensaje=(
-                        obtener_mensaje("error_sin_destino_numero")
-                        + "\n"
-                        + self._destinos_mensaje(ctx)
-                    ),
-                    opciones=self._opciones_destino(ctx),
+                    nuevo_estado=EstadoFSM.FAMILIA,
+                    mensaje=obtener_mensaje("error_sin_destinos"),
+                    opciones_estructuradas=self._opciones_familia(),
                     contexto=ctx,
                 )
             if ctx.modo_edicion:
@@ -507,58 +618,8 @@ class FSMTiquetera:
                 contexto=ctx,
             )
 
-        # Deselection: "-15" or "-15, 23"
-        if texto.startswith("-"):
-            partes_quitar = [
-                p.strip().lstrip("-")
-                for p in texto.replace(",", " ").split()
-                if p.strip().lstrip("-")
-            ]
-            for parte in partes_quitar:
-                try:
-                    n = int(parte)
-                    if n in ctx.destinos_numeros:
-                        ctx.destinos_numeros.remove(n)
-                except ValueError:
-                    pass
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=self._destinos_mensaje(ctx),
-                opciones=self._opciones_destino(ctx),
-                contexto=ctx,
-            )
-
-        numeros_validos = set(self._servicios.keys())
-        partes = [p.strip() for p in texto.replace(",", " ").split() if p.strip()]
-        invalidos: list[str] = []
-        for parte in partes:
-            try:
-                n = int(parte)
-                if n in numeros_validos:
-                    if n not in ctx.destinos_numeros:
-                        ctx.destinos_numeros.append(n)
-                else:
-                    invalidos.append(parte)
-            except ValueError:
-                invalidos.append(parte)
-
-        if invalidos and not ctx.destinos_numeros:
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.DESTINO,
-                mensaje=obtener_mensaje("error_destino_no_encontrado").format(
-                    invalidos=", ".join(invalidos),
-                    destinos_mensaje=self._destinos_mensaje(ctx),
-                ),
-                opciones=self._opciones_destino(ctx),
-                contexto=ctx,
-            )
-
-        return SalidaFSM(
-            nuevo_estado=EstadoFSM.DESTINO,
-            mensaje=self._destinos_mensaje(ctx),
-            opciones=self._opciones_destino(ctx),
-            contexto=ctx,
-        )
+        # Any other input: re-render the accumulator (buttons only).
+        return self._salida_acumulador(ctx)
 
     def _handle_cliente_nombre(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
@@ -1079,6 +1140,11 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.modo_edicion = True
+        if estado_destino == EstadoFSM.FAMILIA:
+            # Editing destinations: re-pick from scratch.
+            ctx.destinos_numeros = []
+            ctx.familia_seleccionada = None
+            return self._salida_familia(ctx)
         return SalidaFSM(
             nuevo_estado=estado_destino,
             mensaje=self._mensaje_para_estado(estado_destino, ctx),
@@ -1123,7 +1189,7 @@ class FSMTiquetera:
                 actual=ctx.canal_origen or "—"
             ),
             EstadoFSM.PUNTO_DE_VENTA: obtener_mensaje("pregunta_punto_de_venta"),
-            EstadoFSM.DESTINO: self._destinos_mensaje(ctx),
+            EstadoFSM.DESTINO: self._acumulador_mensaje(ctx),
             EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_editar_cliente_nombre").format(
                 actual=ctx.cliente_nombre or "—"
             ),
@@ -1170,7 +1236,6 @@ class FSMTiquetera:
             EstadoFSM.TIPO_RESERVA: ["INTERNO", "EXTERNO", "DIGITAL"],
             EstadoFSM.CANAL_ORIGEN: [c.value for c in CanalOrigen],
             EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
-            EstadoFSM.DESTINO: self._opciones_destino(ctx),
             EstadoFSM.CLIENTE_TIPO_ID: ["CC", "NIT"],
             EstadoFSM.PARTICIPANTE_ROL: ["Ambos", "Solo vendedor", "Solo cerrador"],
         }

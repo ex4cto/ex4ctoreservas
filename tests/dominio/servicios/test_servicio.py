@@ -65,3 +65,10 @@ class TestServicio:
         s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
         assert s.precio_neto_adulto is None
         assert s.precio_neto_nino is None
+
+    def test_categoria_opcional(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour", categoria="TOURS BAHIA")
+        assert s.categoria == "TOURS BAHIA"
+
+        s2 = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
+        assert s2.categoria == ""

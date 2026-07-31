@@ -17,10 +17,10 @@ from garay.aplicacion.tiquetera.fsm import (
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000")),
-    (2, "Tour Isla", Decimal("150000"), None),
-    (3, "City Tour", None, None),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
+    (2, "Tour Isla", Decimal("150000"), None, "ISLAS"),
+    (3, "City Tour", None, None, "ISLAS"),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi", "Sin punto"]
 
@@ -57,37 +57,218 @@ class TestTipoReserva:
         assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
 
 
-class TestDestino:
-    def test_destino_numero_agrega(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s1 = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
-        assert s1.nuevo_estado == EstadoFSM.DESTINO
-        assert 1 in s1.contexto.destinos_numeros
+class TestPickerFamilia:
+    """Two-level button picker: pick familia, then tour in that familia."""
 
-    def test_destino_multiples_numeros(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.DESTINO, "1, 2", ctx)
-        assert s.nuevo_estado == EstadoFSM.DESTINO
-        assert 1 in s.contexto.destinos_numeros
-        assert 2 in s.contexto.destinos_numeros
-
-    def test_destino_numero_invalido_devuelve_error(
+    def test_punto_de_venta_avanza_a_familia(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        s = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
-        assert s.nuevo_estado == EstadoFSM.DESTINO
-        assert 9999 not in s.contexto.destinos_numeros
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-    def test_destino_confirmar_sin_seleccion_devuelve_error(
+    def test_canal_origen_avanza_a_familia(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_familia_muestra_familias_como_opciones_estructuradas(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.opciones_estructuradas is not None
+        labels = [label for label, _ in salida.opciones_estructuradas]
+        assert "BARÚ" in labels
+        assert "ISLAS" in labels
+        # callback_data must be encoded, not the raw label
+        datas = [data for _, data in salida.opciones_estructuradas]
+        assert all(d.startswith("fam:") for d in datas)
+
+    def test_familia_no_muestra_categorias_vacias(self, fsm: FSMTiquetera) -> None:
+        # Every categoria in SERVICIOS_TEST has at least one service, so 2 familias only
+        fsm_local = FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
+        salida = fsm_local.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
+        assert salida.opciones_estructuradas is not None
+        assert len(salida.opciones_estructuradas) == 2  # BARÚ, ISLAS
+
+    def test_familia_seleccionada_va_a_servicio_en_familia(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.FAMILIA, "fam:0", ctx)
+        assert salida.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
+
+    def test_familia_seleccionada_recuerda_familia_en_ctx(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.FAMILIA, "fam:0", ctx)
+        assert salida.contexto.familia_seleccionada is not None
+
+    def test_familia_invalida_repite(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.FAMILIA, "fam:999", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_familia_entrada_basura_repite(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
+        salida = fsm.procesar(EstadoFSM.FAMILIA, "no-es-fam", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+
+class TestPickerServicioEnFamilia:
+    def _familia_ctx(self, fsm: FSMTiquetera, indice_familia: int) -> ContextoVenta:
+        salida = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice_familia}", ContextoVenta())
+        return salida.contexto
+
+    def test_servicio_en_familia_muestra_tours_de_esa_familia(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # Pick the ISLAS family (services 2, 3)
+        salida = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{_indice_de(fsm, 'ISLAS')}", ContextoVenta())
+        assert salida.opciones_estructuradas is not None
+        datas = [data for _, data in salida.opciones_estructuradas]
+        assert "srv:2" in datas
+        assert "srv:3" in datas
+        assert "srv:1" not in datas  # service 1 is in a different family
+
+    def test_servicio_seleccionado_agrega_numero_y_va_a_destino(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = self._familia_ctx(fsm, _indice_de(fsm, "BARÚ"))
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.DESTINO
+        assert 1 in salida.contexto.destinos_numeros
+
+    def test_servicio_seleccionado_dedupe(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1], familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.contexto.destinos_numeros == [1]
+
+    def test_servicio_invalido_repite(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:9999", ctx)
+        assert salida.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
+
+
+class TestAcumuladorDestino:
+    """DESTINO repurposed as accumulator: add another tour or confirm."""
+
+    def test_otro_tour_vuelve_a_familia(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "+ Otro tour", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_confirmar_avanza_a_cliente_nombre(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+
+    def test_confirmar_en_modo_edicion_vuelve_a_confirmacion(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=2, ninos=0, modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        # Neto recomputed from catalog: service 1 = 100000 * 2 = 200000
+        assert salida.contexto.neto == Decimal("200000")
+
+    def test_acumulador_muestra_nombres_seleccionados(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "+ Otro tour", ctx)
+        _ = salida
+        # After selecting a second tour, the accumulator lists both by name
+        ctx2 = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
+        salida2 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx2)
+        assert "Tour Playa Blanca" in salida2.mensaje
+        assert "Tour Isla" in salida2.mensaje
+
+    def test_acumulador_ofrece_otro_tour_y_confirmar(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        labels = _labels(salida)
+        assert any("Otro tour" in lbl for lbl in labels)
+        assert any("Confirmar" in lbl for lbl in labels)
+
+
+class TestAcumuladorGuardVacio:
+    """FIX 1: confirming with an empty selection must never advance the sale."""
+
+    def test_confirmar_sin_destinos_no_avanza_a_cliente_nombre(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado not in (EstadoFSM.CLIENTE_NOMBRE, EstadoFSM.CONFIRMACION)
+
+    def test_confirmar_sin_destinos_vuelve_a_familia(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_confirmar_sin_destinos_en_edicion_no_avanza_a_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        ctx = ContextoVenta(destinos_numeros=[], modo_edicion=True)
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+
+class TestServicioEnFamiliaFallback:
+    """FIX 2: stale state (familia_seleccionada=None) routes back to FAMILIA."""
+
+    def test_servicio_sin_familia_vuelve_a_familia(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(familia_seleccionada=None)
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+        assert salida.opciones_estructuradas is not None
+        assert all(d.startswith("fam:") for _, d in salida.opciones_estructuradas)
+
+
+class TestAcumuladorDeseleccion:
+    """FIX 3: each selected tour renders a removable 'del:{numero}' button."""
+
+    def test_acumulador_muestra_boton_borrar_por_tour(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
+        assert salida.opciones_estructuradas is not None
+        datas = [d for _, d in salida.opciones_estructuradas]
+        assert "del:1" in datas
+        assert "del:2" in datas
+
+    def test_del_remueve_solo_ese_tour(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "del:1", ctx)
+        assert salida.contexto.destinos_numeros == [2]
         assert salida.nuevo_estado == EstadoFSM.DESTINO
 
-    def test_destino_confirmar_con_seleccion_avanza(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
-        ctx_con_destino = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx_con_destino)
-        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+    def test_del_ultimo_tour_vuelve_a_familia(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1])
+        salida = fsm.procesar(EstadoFSM.DESTINO, "del:1", ctx)
+        assert salida.contexto.destinos_numeros == []
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_del_boton_usa_label_con_nombre(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1], familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.opciones_estructuradas is not None
+        labels = {d: label for label, d in salida.opciones_estructuradas}
+        assert "Tour Playa Blanca" in labels["del:1"]
+
+    def test_del_callback_data_bajo_limite(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
+        assert salida.opciones_estructuradas is not None
+        for _, data in salida.opciones_estructuradas:
+            assert len(data.encode("utf-8")) <= 64
+
+
+def _indice_de(fsm: FSMTiquetera, categoria: str) -> int:
+    salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
+    assert salida.opciones_estructuradas is not None
+    for indice, (label, _) in enumerate(salida.opciones_estructuradas):
+        if label == categoria:
+            return indice
+    raise AssertionError(f"categoria {categoria!r} not found")
+
+
+def _labels(salida: object) -> list[str]:
+    from garay.aplicacion.tiquetera.fsm import SalidaFSM
+
+    assert isinstance(salida, SalidaFSM)
+    if salida.opciones_estructuradas is not None:
+        return [label for label, _ in salida.opciones_estructuradas]
+    return list(salida.opciones)
 
 
 class TestFechaSalida:
@@ -175,38 +356,15 @@ class TestFechaFormatos:
         assert salida.contexto.fecha_salida.year == 2026
 
 
-class TestDestinoDeseleccion:
-    """WU-5: deselection via '-N' prefix."""
+class TestOpcionesAcumulador:
+    """The DESTINO accumulator always offers 'Otro tour' and 'Confirmar'."""
 
-    def test_deseleccion_quita_numero(self, fsm: FSMTiquetera) -> None:
-        ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "-1", ctx)
-        assert salida.nuevo_estado == EstadoFSM.DESTINO
-        assert 1 not in salida.contexto.destinos_numeros
-
-    def test_deseleccion_numero_no_en_lista(self, fsm: FSMTiquetera) -> None:
-        ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "-99", ctx)
-        assert 1 in salida.contexto.destinos_numeros  # list unchanged
-
-    def test_deseleccion_varios(self, fsm: FSMTiquetera) -> None:
-        ctx = ContextoVenta(destinos_numeros=[1, 2])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "-1, -2", ctx)
-        assert 1 not in salida.contexto.destinos_numeros
-        assert 2 not in salida.contexto.destinos_numeros
-
-
-class TestOpcionesDestino:
-    """WU-5: context-aware destination options."""
-
-    def test_sin_seleccion_no_tiene_confirmar(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        salida = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
-        assert "confirmar" not in salida.opciones
-
-    def test_con_seleccion_tiene_confirmar(self, fsm: FSMTiquetera) -> None:
-        ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "2", ctx)
-        assert "confirmar" in salida.opciones
+    def test_acumulador_tiene_confirmar_y_otro_tour(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1], familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        labels = _labels(salida)
+        assert any("Confirmar" in lbl for lbl in labels)
+        assert any("Otro tour" in lbl for lbl in labels)
 
 
 class TestNetoAutoCalculo:
@@ -395,19 +553,20 @@ class TestDestinoDesdeIA:
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert 1 in salida.contexto.destinos_numeros
 
-    def test_encabezado_ia_detectado_aparece_con_match(self, fsm: FSMTiquetera) -> None:
-        """5.3A — cuando nombre matchea, el número se pre-selecciona y aparece en Seleccionados."""
+    def test_encabezado_ia_detectado_prepobla_numero_con_match(self, fsm: FSMTiquetera) -> None:
+        """When an IA name matches a service, its numero is pre-populated before the picker."""
         ctx = ContextoVenta(destinos_nombres=["Tour Playa Blanca"])
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert 1 in salida.contexto.destinos_numeros
-        assert "Seleccionados" in salida.mensaje
+        # After PUNTO_DE_VENTA the flow advances to the family picker
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-    def test_sin_match_muestra_hint_para_ingresar_numero(self, fsm: FSMTiquetera) -> None:
-        """5.3A — cuando nombre no matchea, muestra hint para ingresar el número manualmente."""
+    def test_sin_match_no_prepobla_numeros(self, fsm: FSMTiquetera) -> None:
+        """When no IA name matches, no numbers are pre-populated; picker still shown."""
         ctx = ContextoVenta(destinos_nombres=["Destino Inventado"])
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert salida.contexto.destinos_numeros == []
-        assert "La IA detectó" in salida.mensaje
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
     def test_nombres_sin_match_no_agregan_numeros(self, fsm: FSMTiquetera) -> None:
         """5.3B — nombres sin match no agregan números al contexto."""
@@ -431,15 +590,25 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
         ctx = s.contexto
 
-        # PUNTO_DE_VENTA
+        # PUNTO_DE_VENTA → FAMILIA
         s = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert s.nuevo_estado == EstadoFSM.DESTINO
+        assert s.nuevo_estado == EstadoFSM.FAMILIA
         ctx = s.contexto
 
-        # DESTINO — enter number then confirm (service 3 has no neto)
-        s = fsm.procesar(EstadoFSM.DESTINO, "3", ctx)
+        # FAMILIA → pick the family that holds service 3 (ISLAS)
+        indice_islas = _indice_de(fsm, "ISLAS")
+        s = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice_islas}", ctx)
+        assert s.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
         ctx = s.contexto
-        s = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
+
+        # SERVICIO_EN_FAMILIA → pick service 3 (no neto) → DESTINO accumulator
+        s = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:3", ctx)
+        assert s.nuevo_estado == EstadoFSM.DESTINO
+        assert 3 in s.contexto.destinos_numeros
+        ctx = s.contexto
+
+        # DESTINO accumulator → confirm
+        s = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
         ctx = s.contexto
 
@@ -531,17 +700,17 @@ class TestProcesarFoto:
         assert salida_proc.nuevo_estado == salida_foto.nuevo_estado
 
     def test_procesar_foto_auto_avanza_cliente_nombre_prefilled(self, fsm: FSMTiquetera) -> None:
-        """ctx with cliente_nombre set: after DESTINO→confirmar reaches CLIENTE_TELEFONO."""
+        """ctx with cliente_nombre set: after DESTINO confirm reaches CLIENTE_TELEFONO."""
         ctx = ContextoVenta(destinos_numeros=[1], cliente_nombre="Juan")
-        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
-        # DESTINO→confirmar → CLIENTE_NOMBRE → auto-advance to CLIENTE_TELEFONO
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        # DESTINO confirm → CLIENTE_NOMBRE → auto-advance to CLIENTE_TELEFONO
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
         assert salida.contexto.cliente_nombre == "Juan"
 
     def test_procesar_foto_no_avanza_sin_valor(self, fsm: FSMTiquetera) -> None:
         """ctx without cliente_nombre: stays at CLIENTE_NOMBRE."""
         ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
 
     def test_procesar_foto_pax_adultos_cero_no_avanza(self, fsm: FSMTiquetera) -> None:
@@ -581,22 +750,12 @@ class TestProcesarFoto:
 
 
 class TestDestinoMensaje:
-    """Fix 1: instruction line hidden when tours already selected."""
+    """Accumulator message lists the selected tours by name."""
 
-    def test_destinos_mensaje_sin_seleccion_muestra_instruccion(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
-        # No tours selected → instruction line must appear
-        salida = fsm.procesar(EstadoFSM.DESTINO, "9999", ctx)
-        assert "Ingresá el número del tour" in salida.mensaje
-
-    def test_destinos_mensaje_con_seleccion_omite_instruccion(self, fsm: FSMTiquetera) -> None:
-        # Tours already selected → instruction line must NOT appear, only "Seleccionados:"
-        ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "2", ctx)
-        assert "Ingresá el número del tour" not in salida.mensaje
-        assert "Seleccionados:" in salida.mensaje
-        assert "Agregá más" in salida.mensaje
+    def test_acumulador_lista_nombres_seleccionados(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(familia_seleccionada="BARÚ")
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert "Tour Playa Blanca" in salida.mensaje
 
 
 # ─── Fix 2: hotel skip detection flexible ────────────────────────────────────
@@ -849,19 +1008,20 @@ class TestFotoModo:
     def test_handle_destino_recomputa_neto_en_modo_edicion(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Editing destinations recomputes neto when modo_edicion=True and abono is set."""
+        """Confirming destinations recomputes neto when modo_edicion=True and abono is set."""
         ctx = ContextoVenta(
             modo_edicion=True,
             abono=Decimal("50000"),
             adultos=2,
             ninos=0,
+            familia_seleccionada="BARÚ",
         )
-        # First: select destination 1
-        salida = fsm.procesar(EstadoFSM.DESTINO, "1", ctx)
+        # First: select service 1 in the current family
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         ctx2 = salida.contexto
         # Now confirm with modo_edicion=True
         ctx2.modo_edicion = True
-        salida2 = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx2)
+        salida2 = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx2)
         assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida2.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
@@ -909,7 +1069,7 @@ class TestProcesarFotoModoEdicion:
             cliente_nombre="Juan",
             cliente_telefono=None,
         )
-        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "confirmar", ctx)
+        salida = fsm.procesar_foto(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         # CLIENTE_NOMBRE has value, so it auto-advances to CLIENTE_TELEFONO (no value → stops)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
 
@@ -1258,7 +1418,7 @@ class TestNetoRecalculoEnEdicion:
             neto=Decimal("999999"),
             modo_edicion=True,
         )
-        salida = fsm.procesar(EstadoFSM.DESTINO, "confirmar", ctx)
+        salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         # Service 1: 100000 x 2 adultos = 200000
         assert salida.contexto.neto == Decimal("200000")
@@ -1291,3 +1451,94 @@ class TestNetoRecalculoEnEdicion:
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         # Service 1: 100000 x 2 adultos = 200000
         assert salida.contexto.neto == Decimal("200000")
+
+
+# ─── Destination picker: edit flow, photo mode, callback_data limits ─────────
+
+
+class TestEditarDestinosPicker:
+    """Editing 'Destinos' routes to the family picker and resets the selection."""
+
+    def test_editar_destinos_va_a_familia(self, fsm: FSMTiquetera) -> None:
+        from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
+
+        campos_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
+        assert campos_map.get("Destinos") == EstadoFSM.FAMILIA
+
+    def test_editar_selector_destinos_navega_a_familia(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2])
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+        assert salida.contexto.modo_edicion is True
+
+    def test_editar_destinos_resetea_seleccion(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(destinos_numeros=[1, 2])
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
+        assert salida.contexto.destinos_numeros == []
+
+    def test_modo_edicion_persiste_por_el_picker_hasta_confirmar(self, fsm: FSMTiquetera) -> None:
+        # Enter edit for Destinos
+        ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0)
+        s1 = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
+        assert s1.contexto.modo_edicion is True
+        # Pick a family
+        indice = _indice_de(fsm, "BARÚ")
+        s2 = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice}", s1.contexto)
+        assert s2.contexto.modo_edicion is True
+        # Pick a service → DESTINO accumulator
+        s3 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", s2.contexto)
+        assert s3.contexto.modo_edicion is True
+        # Confirm → back to CONFIRMACION
+        s4 = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", s3.contexto)
+        assert s4.nuevo_estado == EstadoFSM.CONFIRMACION
+
+
+class TestPickerModoFotoRegresion:
+    """Photo mode must never enter the family/service picker."""
+
+    def test_foto_modo_no_incluye_picker_en_estados_foto_avanzar(self) -> None:
+        from garay.aplicacion.tiquetera.fsm import _ESTADOS_FOTO_AVANZAR
+
+        assert EstadoFSM.FAMILIA not in _ESTADOS_FOTO_AVANZAR
+        assert EstadoFSM.SERVICIO_EN_FAMILIA not in _ESTADOS_FOTO_AVANZAR
+
+    def test_foto_modo_salta_picker_completo(self, fsm: FSMTiquetera) -> None:
+        """With foto_modo, PUNTO_DE_VENTA jumps straight past the picker to PARTICIPANTE_ROL."""
+        ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)
+        salida = fsm.procesar_foto(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+
+    def test_foto_modo_canal_origen_salta_picker(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)
+        salida = fsm.procesar_foto(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+
+
+class TestCallbackDataLimite:
+    """Every generated tour callback_data must fit Telegram's 64-byte limit."""
+
+    def test_callback_data_de_familias_bajo_limite(self, fsm: FSMTiquetera) -> None:
+        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
+        assert salida.opciones_estructuradas is not None
+        for _, data in salida.opciones_estructuradas:
+            assert len(data.encode("utf-8")) <= 64
+
+    def test_callback_data_de_servicios_bajo_limite_catalogo_real(self) -> None:
+        import json
+        from pathlib import Path
+
+        seed_path = Path(__file__).parents[3] / "servicios_seed.json"
+        raw = json.loads(seed_path.read_text(encoding="utf-8"))
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
+            (s["numero"], s["nombre"], None, None, s["categoria"]) for s in raw
+        ]
+        puntos = ["Marie Real"]
+        fsm_real = FSMTiquetera(servicios=servicios, puntos_venta=puntos)
+        salida_fam = fsm_real.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
+        assert salida_fam.opciones_estructuradas is not None
+        # Walk every family and assert every service button callback_data ≤ 64 bytes
+        for indice in range(len(salida_fam.opciones_estructuradas)):
+            salida_srv = fsm_real.procesar(EstadoFSM.FAMILIA, f"fam:{indice}", ContextoVenta())
+            assert salida_srv.opciones_estructuradas is not None
+            for _, data in salida_srv.opciones_estructuradas:
+                assert len(data.encode("utf-8")) <= 64, f"overflow: {data!r}"

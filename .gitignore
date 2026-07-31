@@ -22,6 +22,12 @@ Thumbs.db
 logs/
 *.log
 
+# Local databases (dev/staging populated by scripts/seed.py + scripts/importar_ventas.py)
+*.db
+
+# One-off invoice render preview (regenerable por el servicio de factura)
+ejemplo_factura.html
+
 # Media / user data (reference only, not tracked)
 *.xlsx
 *.xls

@@ -15,6 +15,7 @@ class ContextoVenta:
     punto_de_venta_nombre: str | None = None
     destinos_numeros: list[int] = field(default_factory=list)
     destinos_nombres: list[str] = field(default_factory=list)
+    familia_seleccionada: str | None = None
     cliente_nombre: str | None = None
     cliente_telefono: str | None = None
     cliente_hotel: str | None = None

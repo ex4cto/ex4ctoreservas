@@ -14,10 +14,17 @@ import streamlit as st
 
 import garay.infraestructura.persistencia.tipos  # noqa: F401
 from garay.aplicacion.reportes.flujo_caja import FlujoCaja, FlujoCajaService
+from garay.aplicacion.reportes.ranking_canal import RankingCanal, RankingCanalService
+from garay.aplicacion.reportes.ranking_tour import RankingTour, RankingTourService
+from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
+    ReconciliacionVentasIngresos,
+    ReconciliacionVentasIngresosService,
+)
 from garay.aplicacion.reportes.resumen_ventas import (
     ResumenVentas,
     ResumenVentasService,
 )
+from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas, WaterfallVentasService
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
@@ -28,6 +35,7 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
+from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 
 MESES = {
@@ -82,7 +90,7 @@ mes_sel = st.sidebar.selectbox(
 
 pagina = st.sidebar.radio(
     "Vista",
-    options=["Ventas", "Flujo de caja"],
+    options=["Ventas", "Tours", "Flujo de caja"],
     index=0,
 )
 
@@ -109,6 +117,45 @@ def cargar_flujo(mes: int, año: int) -> FlujoCaja:
         ingresos=SQLAIngresoRepository(sf),
         egresos=SQLAEgresoRepository(sf),
         conciliaciones=SQLAConciliacionRepository(sf),
+    )
+    return servicio.ejecutar(mes, año)
+
+
+@st.cache_data(ttl=30)
+def cargar_waterfall(mes: int, año: int) -> WaterfallVentas:
+    sf = _get_session_factory()
+    servicio = WaterfallVentasService(
+        ventas=SQLAVentaRepository(sf),
+        comisiones=SQLAComisionRegistradaRepository(sf),
+    )
+    return servicio.ejecutar(mes, año)
+
+
+@st.cache_data(ttl=30)
+def cargar_ranking_tour(mes: int, año: int) -> RankingTour:
+    sf = _get_session_factory()
+    servicio = RankingTourService(
+        ventas=SQLAVentaRepository(sf),
+        comisiones=SQLAComisionRegistradaRepository(sf),
+        servicios=SQLAServicioRepository(sf),
+    )
+    return servicio.ejecutar(mes, año)
+
+
+@st.cache_data(ttl=30)
+def cargar_ranking_canal(mes: int, año: int) -> RankingCanal:
+    sf = _get_session_factory()
+    servicio = RankingCanalService(ventas=SQLAVentaRepository(sf))
+    return servicio.ejecutar(mes, año)
+
+
+@st.cache_data(ttl=30)
+def cargar_reconciliacion(mes: int, año: int) -> ReconciliacionVentasIngresos:
+    sf = _get_session_factory()
+    servicio = ReconciliacionVentasIngresosService(
+        ventas=SQLAVentaRepository(sf),
+        comisiones=SQLAComisionRegistradaRepository(sf),
+        ingresos=SQLAIngresoRepository(sf),
     )
     return servicio.ejecutar(mes, año)
 
@@ -405,9 +452,148 @@ def pagina_flujo(mes: int, año: int) -> None:
         )
 
 
+def pagina_tours(mes: int, año: int) -> None:
+    st.title(f"🏝️ Tours — {MESES[mes]} {año}")
+
+    wf = cargar_waterfall(mes, año)
+    if wf.valor_bruto.monto == 0:
+        st.info("No hay ventas registradas para este período.")
+        return
+
+    # Cascada bruto -> neto -> margen -> comisiones -> agencia
+    st.subheader("Cascada del mes")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Valor bruto vendido", _cop(wf.valor_bruto.monto))
+    c2.metric("Margen de ganancia", _cop(wf.margen.monto))
+    c3.metric("Ganancia agencia (Garay)", _cop(wf.ganancia_agencia.monto))
+
+    fig_wf = go.Figure(go.Waterfall(
+        orientation="v",
+        measure=["absolute", "relative", "total", "relative", "total"],
+        x=["Valor bruto", "- Costo neto", "Margen", "- Comisiones", "Agencia"],
+        y=[
+            float(wf.valor_bruto.monto),
+            -float(wf.costo_neto.monto),
+            0,
+            -float(wf.comisiones.monto),
+            0,
+        ],
+        text=[
+            _cop(wf.valor_bruto.monto),
+            f"-{_cop(wf.costo_neto.monto)}",
+            _cop(wf.margen.monto),
+            f"-{_cop(wf.comisiones.monto)}",
+            _cop(wf.ganancia_agencia.monto),
+        ],
+        textposition="outside",
+        connector={"line": {"color": "rgb(150,150,150)"}},
+        decreasing={"marker": {"color": "#E74C3C"}},
+        increasing={"marker": {"color": "#4C9BE8"}},
+        totals={"marker": {"color": "#27AE60"}},
+    ))
+    fig_wf.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(t=20, b=20),
+    )
+    st.plotly_chart(fig_wf, use_container_width=True)
+
+    # Ranking por familia de tour
+    ranking = cargar_ranking_tour(mes, año)
+    if ranking.filas:
+        st.markdown("---")
+        st.subheader("Ranking por familia de tour")
+        familias = [f.familia for f in ranking.filas]
+        col_izq, col_der = st.columns(2)
+        with col_izq:
+            fig_v = go.Figure(go.Bar(
+                x=[f.vendidos for f in ranking.filas],
+                y=familias,
+                orientation="h",
+                marker_color="#4C9BE8",
+                text=[f.vendidos for f in ranking.filas],
+                textposition="outside",
+            ))
+            fig_v.update_layout(
+                title="Más vendidos (unidades)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=40, b=20),
+                yaxis={"autorange": "reversed"},
+            )
+            st.plotly_chart(fig_v, use_container_width=True)
+        with col_der:
+            fig_m = go.Figure(go.Bar(
+                x=[float(f.margen.monto) for f in ranking.filas],
+                y=familias,
+                orientation="h",
+                marker_color="#27AE60",
+                text=[_cop_k(f.margen.monto) for f in ranking.filas],
+                textposition="outside",
+            ))
+            fig_m.update_layout(
+                title="Mayor utilidad (margen)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=40, b=20),
+                yaxis={"autorange": "reversed"},
+            )
+            st.plotly_chart(fig_m, use_container_width=True)
+        st.dataframe(
+            {
+                "Familia": familias,
+                "Vendidos": [f.vendidos for f in ranking.filas],
+                "Valor": [_cop(f.valor.monto) for f in ranking.filas],
+                "Margen": [_cop(f.margen.monto) for f in ranking.filas],
+                "Agencia": [_cop(f.agencia.monto) for f in ranking.filas],
+            },
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    # Ranking por canal
+    canal = cargar_ranking_canal(mes, año)
+    if canal.filas:
+        st.markdown("---")
+        st.subheader("Ventas por canal")
+        col_c_izq, col_c_der = st.columns(2)
+        with col_c_izq:
+            fig_c = go.Figure(go.Pie(
+                labels=[f.canal for f in canal.filas],
+                values=[float(f.valor.monto) for f in canal.filas],
+                hole=0.4,
+                textinfo="label+percent",
+            ))
+            fig_c.update_layout(margin=dict(t=20, b=20), showlegend=False)
+            st.plotly_chart(fig_c, use_container_width=True)
+        with col_c_der:
+            st.dataframe(
+                {
+                    "Canal": [f.canal for f in canal.filas],
+                    "Ventas": [f.cantidad for f in canal.filas],
+                    "Valor": [_cop(f.valor.monto) for f in canal.filas],
+                    "Margen": [_cop(f.margen.monto) for f in canal.filas],
+                },
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    # Conciliación agencia vs banco
+    rec = cargar_reconciliacion(mes, año)
+    if rec.total_ingresos_banco.monto > 0:
+        st.markdown("---")
+        st.subheader("Conciliación agencia ↔ banco")
+        rc1, rc2, rc3 = st.columns(3)
+        rc1.metric("Agencia esperada", _cop(rec.total_agencia_esperada.monto))
+        rc2.metric("Ingresos al banco", _cop(rec.total_ingresos_banco.monto))
+        rc3.metric("Desviación", f"{rec.porcentaje_desviacion:.1f}%")
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 if pagina == "Ventas":
     pagina_ventas(mes_sel, año_sel)
+elif pagina == "Tours":
+    pagina_tours(mes_sel, año_sel)
 else:
     pagina_flujo(mes_sel, año_sel)

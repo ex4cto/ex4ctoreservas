@@ -19,6 +19,7 @@ def to_orm(s: Servicio) -> ServicioModel:
         activo=s.activo,
         precio_neto_adulto=s.precio_neto_adulto,
         precio_neto_nino=s.precio_neto_nino,
+        categoria=s.categoria,
     )
 
 
@@ -31,6 +32,7 @@ def to_domain(m: ServicioModel) -> Servicio:
         activo=m.activo,
         precio_neto_adulto=m.precio_neto_adulto,
         precio_neto_nino=m.precio_neto_nino,
+        categoria=m.categoria,
     )
 
 
@@ -46,6 +48,13 @@ class SQLAServicioRepository(ServicioRepository):
         with self._sf.begin() as session:
             m = session.get(ServicioModel, id)
             return to_domain(m) if m else None
+
+    def buscar_por_nombre(self, nombre: str) -> Servicio | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(ServicioModel).where(ServicioModel.nombre == nombre)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None
 
     def listar(self) -> list[Servicio]:
         with self._sf.begin() as session:

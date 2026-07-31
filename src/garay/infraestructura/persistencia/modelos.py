@@ -47,6 +47,7 @@ class ServicioModel(Base):
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     precio_neto_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     precio_neto_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    categoria: Mapped[str] = mapped_column(String, nullable=False, default="", server_default="")
 
 
 class ClienteModel(Base):

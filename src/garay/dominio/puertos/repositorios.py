@@ -165,6 +165,9 @@ class ClienteRepository(ABC):
     @abstractmethod
     def buscar_por_id(self, id: uuid.UUID) -> Cliente | None: ...
 
+    @abstractmethod
+    def buscar_por_nombre(self, nombre: str) -> Cliente | None: ...
+
 
 class ServicioRepository(ABC):
     @abstractmethod
@@ -172,6 +175,9 @@ class ServicioRepository(ABC):
 
     @abstractmethod
     def buscar_por_id(self, id: uuid.UUID) -> Servicio | None: ...
+
+    @abstractmethod
+    def buscar_por_nombre(self, nombre: str) -> Servicio | None: ...
 
     @abstractmethod
     def listar(self) -> list[Servicio]: ...
@@ -183,6 +189,9 @@ class PuntoDeVentaRepository(ABC):
 
     @abstractmethod
     def buscar_por_id(self, id: uuid.UUID) -> PuntoDeVenta | None: ...
+
+    @abstractmethod
+    def buscar_por_nombre(self, nombre: str) -> PuntoDeVenta | None: ...
 
     @abstractmethod
     def listar(self) -> list[PuntoDeVenta]: ...

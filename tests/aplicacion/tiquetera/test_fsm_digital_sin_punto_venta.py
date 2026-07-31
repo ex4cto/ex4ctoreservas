@@ -16,9 +16,9 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000")),
-    (2, "Tour Isla", Decimal("150000"), None),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
+    (2, "Tour Isla", Decimal("150000"), None, "ISLAS"),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi"]
 
@@ -49,23 +49,23 @@ def _ctx_digital_completo_sin_punto(fsm: FSMTiquetera) -> ContextoVenta:
     return ctx
 
 
-class TestCanalOrigenNormalVaADestino:
-    """Cambio 1: _handle_canal_origen normal path must go to DESTINO, not PUNTO_DE_VENTA."""
+class TestCanalOrigenNormalVaAFamilia:
+    """Cambio 1: _handle_canal_origen normal path must go to FAMILIA (destination picker)."""
 
-    def test_canal_origen_normal_va_a_destino(self, fsm: FSMTiquetera) -> None:
+    def test_canal_origen_normal_va_a_familia(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta()
         ctx.tipo_cliente = TipoCliente.DIGITAL
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "WhatsApp", ctx)
-        assert salida.nuevo_estado == EstadoFSM.DESTINO
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-    def test_canal_origen_normal_va_a_destino_con_diferentes_canales(
+    def test_canal_origen_normal_va_a_familia_con_diferentes_canales(
         self, fsm: FSMTiquetera
     ) -> None:
         """Triangulation: ensure same routing holds for other valid canal values."""
         ctx = ContextoVenta()
         ctx.tipo_cliente = TipoCliente.DIGITAL
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
-        assert salida.nuevo_estado == EstadoFSM.DESTINO
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
 
 class TestCanalOrigenFotoModoVaAParticipanteRol:

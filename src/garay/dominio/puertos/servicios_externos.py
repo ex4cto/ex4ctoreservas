@@ -1,9 +1,41 @@
 from __future__ import annotations
 
+import datetime
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.tiquetera.valor_objetos import DatosExtraidos
 from garay.dominio.ventas.contexto import ContextoVenta
+
+
+@dataclass(frozen=True)
+class FilaVentaImportada:
+    """Una fila cruda de venta leida de la hoja de contabilidad, ya deduplicada.
+
+    Representa lo que dice la planilla, antes de resolver FKs (cliente, servicio,
+    punto de venta). El canal es el eje de venta (Hotel / Externas / Crespo).
+    """
+
+    canal: str
+    cliente_nombre: str
+    fecha: datetime.date
+    descripcion: str
+    valor: Dinero
+    neto: Dinero
+    margen: Dinero
+    agencia: Dinero
+    comision_vendedor: Dinero
+    comision_cerrador: Dinero
+    vendedor_nombre: str | None
+    cerrador_nombre: str | None
+
+
+class LectorVentasExcel(ABC):
+    @abstractmethod
+    def leer(self, ruta: str) -> list[FilaVentaImportada]:
+        """Lee y deduplica las ventas de la planilla de contabilidad."""
+        ...
 
 
 class ExtractorIA(ABC):

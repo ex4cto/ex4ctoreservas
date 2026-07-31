@@ -37,6 +37,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_editar_selector,
     handle_editar_vendedor,
     handle_esperando_foto,
+    handle_familia,
     handle_fecha_salida,
     handle_iniciar_venta,
     handle_metodo_input,
@@ -48,6 +49,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_pax_adultos,
     handle_pax_ninos,
     handle_punto_de_venta,
+    handle_servicio_en_familia,
     handle_tipo_reserva,
 )
 from garay.infraestructura.telegram.handlers_egresos import (
@@ -149,6 +151,12 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             estados[EstadoFSM.PUNTO_DE_VENTA]: [
                 _CB(handle_punto_de_venta),
                 MessageHandler(_TEXT, handle_punto_de_venta),
+            ],
+            estados[EstadoFSM.FAMILIA]: [
+                _CB(handle_familia),
+            ],
+            estados[EstadoFSM.SERVICIO_EN_FAMILIA]: [
+                _CB(handle_servicio_en_familia),
             ],
             estados[EstadoFSM.DESTINO]: [
                 _CB(handle_destino),

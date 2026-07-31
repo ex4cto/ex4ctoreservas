@@ -62,21 +62,25 @@ class TestClavesNuevasBatchB:
         msg = obtener_mensaje("pregunta_metodo_input")
         assert "registrar" in msg.lower()
 
-    def test_pregunta_destino_numero(self) -> None:
-        msg = obtener_mensaje("pregunta_destino_numero")
-        assert "número" in msg.lower() or "numero" in msg.lower()
+    def test_pregunta_familia(self) -> None:
+        msg = obtener_mensaje("pregunta_familia")
+        assert "familia" in msg.lower() or "categor" in msg.lower()
 
-    def test_info_sin_tours_seleccionados(self) -> None:
-        msg = obtener_mensaje("info_sin_tours_seleccionados")
-        assert "seleccionaste" in msg.lower()
+    def test_pregunta_servicio_en_familia(self) -> None:
+        msg = obtener_mensaje("pregunta_servicio_en_familia")
+        assert "tour" in msg.lower()
 
     def test_error_tipo_reserva_invalido(self) -> None:
         msg = obtener_mensaje("error_tipo_reserva_invalido")
         assert "INTERNO" in msg
 
-    def test_error_sin_destino_numero(self) -> None:
-        msg = obtener_mensaje("error_sin_destino_numero")
-        assert "número" in msg.lower() or "numero" in msg.lower()
+    def test_opcion_otro_tour(self) -> None:
+        msg = obtener_mensaje("opcion_otro_tour")
+        assert "tour" in msg.lower()
+
+    def test_opcion_confirmar_destinos(self) -> None:
+        msg = obtener_mensaje("opcion_confirmar_destinos")
+        assert "confirmar" in msg.lower()
 
     def test_error_adultos_invalido(self) -> None:
         msg = obtener_mensaje("error_adultos_invalido")
@@ -136,23 +140,11 @@ class TestClavesNuevasBatchB:
 
 
 class TestClavesTemplateBatchC:
-    def test_info_destinos_seleccionados_format(self) -> None:
-        template = obtener_mensaje("info_destinos_seleccionados")
-        result = template.format(seleccionados="15 — Playa Blanca, 23 — Cartagena")
+    def test_info_destinos_acumulados_format(self) -> None:
+        template = obtener_mensaje("info_destinos_acumulados")
+        result = template.format(seleccionados="Playa Blanca, Cartagena")
         assert "{" not in result
-        assert "Seleccionados:" in result
-
-    def test_info_ia_detecto_destinos_format(self) -> None:
-        template = obtener_mensaje("info_ia_detecto_destinos")
-        result = template.format(nombres="Playa Blanca")
-        assert "{" not in result
-        assert "IA" in result or "detectó" in result
-
-    def test_error_destino_no_encontrado_format(self) -> None:
-        template = obtener_mensaje("error_destino_no_encontrado")
-        result = template.format(invalidos="99", destinos_mensaje="Ingresá el número...")
-        assert "{" not in result
-        assert "99" in result
+        assert "Playa Blanca" in result
 
     def test_error_abono_supera_neto_format(self) -> None:
         template = obtener_mensaje("error_abono_supera_neto")

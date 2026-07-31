@@ -217,3 +217,67 @@ async def test_cb_flujo_caja_parsea_mes_y_ano() -> None:
 
     svc.ejecutar.assert_called_once_with(7, 2026)
     query.edit_message_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _formatear_tours
+# ---------------------------------------------------------------------------
+
+
+def test_formatear_tours_incluye_cascada_familias_y_conciliacion() -> None:
+    from decimal import Decimal
+
+    from garay.aplicacion.reportes.ranking_tour import FilaRankingTour, RankingTour
+    from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
+        ReconciliacionVentasIngresos,
+    )
+    from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas
+    from garay.dominio.comun.dinero import Dinero
+    from garay.infraestructura.telegram.handlers_reportes import _formatear_tours
+
+    wf = WaterfallVentas(
+        mes=7, año=2026,
+        valor_bruto=Dinero(48638000), costo_neto=Dinero(33821000),
+        margen=Dinero(14817000), comisiones=Dinero(7985700),
+        ganancia_agencia=Dinero(6831300),
+    )
+    rk = RankingTour(mes=7, año=2026, filas=(
+        FilaRankingTour(
+            familia="TOURS 4 ISLAS", vendidos=19, valor=Dinero(13558000),
+            neto=Dinero(9415000), margen=Dinero(4143000), agencia=Dinero(1979200),
+        ),
+    ))
+    rc = ReconciliacionVentasIngresos(
+        mes=7, año=2026,
+        total_agencia_esperada=Dinero(6831300), total_ingresos_banco=Dinero(6753033),
+        diferencia=Dinero(-78267), porcentaje_desviacion=Decimal("-1.1"),
+    )
+    texto = _formatear_tours(wf, rk, rc, 7, 2026)
+    assert "48,638,000" in texto
+    assert "6,831,300" in texto
+    assert "TOURS 4 ISLAS" in texto
+    assert "6,753,033" in texto
+
+
+def test_formatear_tours_sin_ventas() -> None:
+    from decimal import Decimal
+
+    from garay.aplicacion.reportes.ranking_tour import RankingTour
+    from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
+        ReconciliacionVentasIngresos,
+    )
+    from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas
+    from garay.dominio.comun.dinero import Dinero
+    from garay.infraestructura.telegram.handlers_reportes import _formatear_tours
+
+    z = Dinero(0)
+    wf = WaterfallVentas(
+        mes=7, año=2026, valor_bruto=z, costo_neto=z, margen=z, comisiones=z,
+        ganancia_agencia=z,
+    )
+    rk = RankingTour(mes=7, año=2026, filas=())
+    rc = ReconciliacionVentasIngresos(
+        mes=7, año=2026, total_agencia_esperada=z, total_ingresos_banco=z,
+        diferencia=z, porcentaje_desviacion=Decimal("0"),
+    )
+    assert "No hay datos" in _formatear_tours(wf, rk, rc, 7, 2026)

@@ -39,6 +39,13 @@ class SQLAPuntoDeVentaRepository(PuntoDeVentaRepository):
             m = session.get(PuntoDeVentaModel, id)
             return to_domain(m) if m else None
 
+    def buscar_por_nombre(self, nombre: str) -> PuntoDeVenta | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(PuntoDeVentaModel).where(PuntoDeVentaModel.nombre == nombre)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None
+
     def listar(self) -> list[PuntoDeVenta]:
         with self._sf.begin() as session:
             rows = session.execute(select(PuntoDeVentaModel)).scalars().all()
