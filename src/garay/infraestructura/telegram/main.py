@@ -10,6 +10,7 @@ from telegram import Update
 
 from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
+from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
@@ -39,6 +40,7 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
     SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
+from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.gastos_recurrentes import (
     SQLAGastoRecurrenteRepository,
@@ -85,6 +87,7 @@ def main() -> None:
     egreso_repo = SQLAEgresoRepository(sf)
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
     gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
+    factura_repo = SQLAFacturaRepository(sf)
 
     egreso_service = RegistrarEgresoManualService(
         egreso_repo=egreso_repo,
@@ -143,6 +146,11 @@ def main() -> None:
             api_key=settings.resend_api_key,
             from_address=settings.resend_from,
         )
+    factura_service = GenerarYGuardarFacturaService(
+        generador=generar_factura_service,
+        facturas=factura_repo,
+        notificador=notificador_email,
+    )
 
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
@@ -196,8 +204,8 @@ def main() -> None:
             "waterfall_service": waterfall_service,
             "ranking_tour_service": ranking_tour_service,
             "reconciliacion_service": reconciliacion_service,
-            "generar_factura_service": generar_factura_service,
-            "notificador_email": notificador_email,
+            "factura_service": factura_service,
+            "factura_repo": factura_repo,
         }
     )
 

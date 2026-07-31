@@ -52,3 +52,22 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)
     assert repo.buscar_por_nombre("No Existe") is None
+
+
+def test_listar_devuelve_todos(sf: sessionmaker[Session]) -> None:
+    repo = SQLAClienteRepository(sf)
+    a = Cliente(id=uuid.uuid4(), nombre="Ana", tipo=TipoCliente.EXTERNO)
+    b = Cliente(id=uuid.uuid4(), nombre="Beto", tipo=TipoCliente.INTERNO)
+    repo.guardar(a)
+    repo.guardar(b)
+
+    resultado = repo.listar()
+
+    ids = {c.id for c in resultado}
+    assert a.id in ids
+    assert b.id in ids
+
+
+def test_listar_sin_datos_devuelve_lista_vacia(sf: sessionmaker[Session]) -> None:
+    repo = SQLAClienteRepository(sf)
+    assert repo.listar() == []

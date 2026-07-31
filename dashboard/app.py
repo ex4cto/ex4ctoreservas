@@ -6,13 +6,36 @@ Run with:
 
 from __future__ import annotations
 
+import csv
+import io
 from datetime import date
 from decimal import Decimal
 
+import openpyxl
 import plotly.graph_objects as go
 import streamlit as st
 
 import garay.infraestructura.persistencia.tipos  # noqa: F401
+from garay.aplicacion.reportes.consulta_clientes import (
+    ConsultaClientesService,
+    FilaClienteConsulta,
+)
+from garay.aplicacion.reportes.consulta_egresos import (
+    ConsultaEgresosService,
+    FilaEgresoConsulta,
+)
+from garay.aplicacion.reportes.consulta_facturas import (
+    ConsultaFacturasService,
+    FilaFacturaConsulta,
+)
+from garay.aplicacion.reportes.consulta_ingresos import (
+    ConsultaIngresosService,
+    FilaIngresoConsulta,
+)
+from garay.aplicacion.reportes.consulta_ventas import (
+    ConsultaVentasService,
+    FilaVentaConsulta,
+)
 from garay.aplicacion.reportes.flujo_caja import FlujoCaja, FlujoCajaService
 from garay.aplicacion.reportes.ranking_canal import RankingCanal, RankingCanalService
 from garay.aplicacion.reportes.ranking_tour import RankingTour, RankingTourService
@@ -27,6 +50,7 @@ from garay.aplicacion.reportes.resumen_ventas import (
 from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas, WaterfallVentasService
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
 )
@@ -34,6 +58,7 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
     SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
+from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
@@ -90,7 +115,7 @@ mes_sel = st.sidebar.selectbox(
 
 pagina = st.sidebar.radio(
     "Vista",
-    options=["Ventas", "Tours", "Flujo de caja"],
+    options=["Ventas", "Tours", "Flujo de caja", "Consultas"],
     index=0,
 )
 
@@ -158,6 +183,90 @@ def cargar_reconciliacion(mes: int, año: int) -> ReconciliacionVentasIngresos:
         ingresos=SQLAIngresoRepository(sf),
     )
     return servicio.ejecutar(mes, año)
+
+
+# ── Consultas loaders (date-range bound cache) ─────────────────────────────────
+
+@st.cache_data(ttl=30, max_entries=32)
+def cargar_consulta_ventas(desde: date, hasta: date) -> list[FilaVentaConsulta]:
+    sf = _get_session_factory()
+    servicio = ConsultaVentasService(
+        ventas=SQLAVentaRepository(sf),
+        clientes=SQLAClienteRepository(sf),
+        servicios=SQLAServicioRepository(sf),
+    )
+    return servicio.ejecutar(desde, hasta)
+
+
+@st.cache_data(ttl=30, max_entries=32)
+def cargar_consulta_ingresos(desde: date, hasta: date) -> list[FilaIngresoConsulta]:
+    sf = _get_session_factory()
+    servicio = ConsultaIngresosService(ingresos=SQLAIngresoRepository(sf))
+    return servicio.ejecutar(desde, hasta)
+
+
+@st.cache_data(ttl=30, max_entries=32)
+def cargar_consulta_egresos(desde: date, hasta: date) -> list[FilaEgresoConsulta]:
+    sf = _get_session_factory()
+    servicio = ConsultaEgresosService(egresos=SQLAEgresoRepository(sf))
+    return servicio.ejecutar(desde, hasta)
+
+
+@st.cache_data(ttl=30, max_entries=32)
+def cargar_consulta_clientes() -> list[FilaClienteConsulta]:
+    sf = _get_session_factory()
+    servicio = ConsultaClientesService(clientes=SQLAClienteRepository(sf))
+    return servicio.ejecutar()
+
+
+@st.cache_data(ttl=30, max_entries=32)
+def cargar_consulta_facturas(desde: date, hasta: date) -> list[FilaFacturaConsulta]:
+    sf = _get_session_factory()
+    servicio = ConsultaFacturasService(facturas=SQLAFacturaRepository(sf))
+    return servicio.ejecutar(desde, hasta)
+
+
+# ── Export helpers (raw numeric money for CSV/Excel) ───────────────────────────
+
+def _csv_bytes(columnas: list[str], filas: list[list[object]]) -> bytes:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(columnas)
+    for fila in filas:
+        writer.writerow(fila)
+    # utf-8-sig so Excel renders accented characters correctly.
+    return buffer.getvalue().encode("utf-8-sig")
+
+
+def _excel_bytes(columnas: list[str], filas: list[list[object]]) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(columnas)
+    for fila in filas:
+        ws.append(fila)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+def _descargas(nombre: str, columnas: list[str], filas: list[list[object]]) -> None:
+    col_csv, col_xlsx = st.columns(2)
+    with col_csv:
+        st.download_button(
+            "⬇️ CSV",
+            data=_csv_bytes(columnas, filas),
+            file_name=f"{nombre}.csv",
+            mime="text/csv",
+            key=f"csv_{nombre}",
+        )
+    with col_xlsx:
+        st.download_button(
+            "⬇️ Excel",
+            data=_excel_bytes(columnas, filas),
+            file_name=f"{nombre}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"xlsx_{nombre}",
+        )
 
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
@@ -589,11 +698,253 @@ def pagina_tours(mes: int, año: int) -> None:
         rc3.metric("Desviación", f"{rec.porcentaje_desviacion:.1f}%")
 
 
+def _rango_fechas(clave: str) -> tuple[date, date] | None:
+    valor = st.date_input(
+        "Rango de fechas",
+        value=(date(hoy.year, hoy.month, 1), hoy),
+        key=f"rango_{clave}",
+    )
+    if isinstance(valor, tuple) and len(valor) == 2:
+        return valor[0], valor[1]
+    st.info("Seleccioná una fecha de inicio y una de fin.")
+    return None
+
+
+def _tab_ventas() -> None:
+    rango = _rango_fechas("ventas")
+    if rango is None:
+        return
+    filas = cargar_consulta_ventas(*rango)
+    if not filas:
+        st.info("No hay ventas en el período seleccionado.")
+        return
+
+    tipos = sorted({f.tipo_cliente for f in filas})
+    canales = sorted({f.canal_origen for f in filas if f.canal_origen})
+    estados = sorted({f.estado for f in filas})
+    c1, c2, c3 = st.columns(3)
+    sel_tipo = c1.multiselect("Tipo de cliente", tipos, key="v_tipo")
+    sel_canal = c2.multiselect("Canal", canales, key="v_canal")
+    sel_estado = c3.multiselect("Estado", estados, key="v_estado")
+
+    filtradas = [
+        f
+        for f in filas
+        if (not sel_tipo or f.tipo_cliente in sel_tipo)
+        and (not sel_canal or f.canal_origen in sel_canal)
+        and (not sel_estado or f.estado in sel_estado)
+    ]
+
+    st.dataframe(
+        {
+            "Fecha": [f.fecha for f in filtradas],
+            "Cliente": [f.cliente_nombre for f in filtradas],
+            "Servicios": [f.servicios for f in filtradas],
+            "Valor": [_cop(f.valor.monto) for f in filtradas],
+            "Neto": [_cop(f.neto.monto) for f in filtradas],
+            "Ganancia": [_cop(f.ganancia.monto) for f in filtradas],
+            "Tipo": [f.tipo_cliente for f in filtradas],
+            "Canal": [f.canal_origen or "—" for f in filtradas],
+            "Vendedor": [f.vendedor or "—" for f in filtradas],
+            "Cerrador": [f.cerrador or "—" for f in filtradas],
+            "Adultos": [f.adultos for f in filtradas],
+            "Niños": [f.ninos for f in filtradas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    columnas = [
+        "Fecha", "Cliente", "Servicios", "Valor", "Neto", "Ganancia",
+        "Tipo", "Canal", "Vendedor", "Cerrador", "Adultos", "Niños",
+    ]
+    export = [
+        [
+            f.fecha.isoformat(), f.cliente_nombre, f.servicios,
+            f.valor.monto, f.neto.monto, f.ganancia.monto,
+            f.tipo_cliente, f.canal_origen or "", f.vendedor or "",
+            f.cerrador or "", f.adultos, f.ninos,
+        ]
+        for f in filtradas
+    ]
+    _descargas("ventas", columnas, export)
+
+
+def _tab_ingresos() -> None:
+    rango = _rango_fechas("ingresos")
+    if rango is None:
+        return
+    filas = cargar_consulta_ingresos(*rango)
+    if not filas:
+        st.info("No hay ingresos en el período seleccionado.")
+        return
+
+    bancos = sorted({f.banco for f in filas})
+    sel_banco = st.multiselect("Banco", bancos, key="i_banco")
+    filtradas = [f for f in filas if not sel_banco or f.banco in sel_banco]
+
+    st.dataframe(
+        {
+            "Fecha": [f.fecha for f in filtradas],
+            "Banco": [f.banco for f in filtradas],
+            "Monto": [_cop(f.monto.monto) for f in filtradas],
+            "Referencia": [f.referencia for f in filtradas],
+            "Remitente": [f.remitente or "—" for f in filtradas],
+            "Clasificado": [f.clasificado for f in filtradas],
+            "Reenviado": [f.reenviado for f in filtradas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    columnas = ["Fecha", "Banco", "Monto", "Referencia", "Remitente", "Clasificado", "Reenviado"]
+    export = [
+        [
+            f.fecha.isoformat(), f.banco, f.monto.monto, f.referencia,
+            f.remitente or "", f.clasificado, f.reenviado,
+        ]
+        for f in filtradas
+    ]
+    _descargas("ingresos", columnas, export)
+
+
+def _tab_egresos() -> None:
+    rango = _rango_fechas("egresos")
+    if rango is None:
+        return
+    filas = cargar_consulta_egresos(*rango)
+    if not filas:
+        st.info("No hay egresos en el período seleccionado.")
+        return
+
+    categorias = sorted({f.categoria for f in filas})
+    tipos = sorted({f.tipo for f in filas})
+    c1, c2 = st.columns(2)
+    sel_cat = c1.multiselect("Categoría", categorias, key="e_cat")
+    sel_tipo = c2.multiselect("Tipo", tipos, key="e_tipo")
+    filtradas = [
+        f
+        for f in filas
+        if (not sel_cat or f.categoria in sel_cat) and (not sel_tipo or f.tipo in sel_tipo)
+    ]
+
+    st.dataframe(
+        {
+            "Fecha": [f.fecha for f in filtradas],
+            "Descripción": [f.descripcion for f in filtradas],
+            "Monto": [_cop(f.monto.monto) for f in filtradas],
+            "Categoría": [f.categoria for f in filtradas],
+            "Tipo": [f.tipo for f in filtradas],
+            "Referencia": [f.referencia or "—" for f in filtradas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    columnas = ["Fecha", "Descripción", "Monto", "Categoría", "Tipo", "Referencia"]
+    export = [
+        [
+            f.fecha.isoformat(), f.descripcion, f.monto.monto,
+            f.categoria, f.tipo, f.referencia or "",
+        ]
+        for f in filtradas
+    ]
+    _descargas("egresos", columnas, export)
+
+
+def _tab_clientes() -> None:
+    filas = cargar_consulta_clientes()
+    if not filas:
+        st.info("No hay clientes registrados.")
+        return
+
+    tipos = sorted({f.tipo for f in filas})
+    sel_tipo = st.multiselect("Tipo de cliente", tipos, key="c_tipo")
+    filtradas = [f for f in filas if not sel_tipo or f.tipo in sel_tipo]
+
+    st.dataframe(
+        {
+            "Nombre": [f.nombre for f in filtradas],
+            "Tipo": [f.tipo for f in filtradas],
+            "Teléfono": [f.telefono or "—" for f in filtradas],
+            "Email": [f.email or "—" for f in filtradas],
+            "Hotel": [f.hotel or "—" for f in filtradas],
+            "Habitación": [f.numero_habitacion or "—" for f in filtradas],
+            "Identificación": [f.identificacion or "—" for f in filtradas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    columnas = ["Nombre", "Tipo", "Teléfono", "Email", "Hotel", "Habitación", "Identificación"]
+    export = [
+        [
+            f.nombre, f.tipo, f.telefono or "", f.email or "",
+            f.hotel or "", f.numero_habitacion or "", f.identificacion or "",
+        ]
+        for f in filtradas
+    ]
+    _descargas("clientes", columnas, export)
+
+
+def _tab_facturas() -> None:
+    rango = _rango_fechas("facturas")
+    if rango is None:
+        return
+    filas = cargar_consulta_facturas(*rango)
+    if not filas:
+        st.info("No hay facturas en el período seleccionado.")
+        return
+
+    estados = sorted({f.estado_envio for f in filas})
+    sel_estado = st.multiselect("Estado de envío", estados, key="f_estado")
+    filtradas = [f for f in filas if not sel_estado or f.estado_envio in sel_estado]
+
+    st.dataframe(
+        {
+            "Número": [f.numero for f in filtradas],
+            "Fecha": [f.fecha_emision for f in filtradas],
+            "Cliente": [f.cliente_nombre or "—" for f in filtradas],
+            "Email": [f.cliente_email for f in filtradas],
+            "Monto": [_cop(f.monto_total.monto) for f in filtradas],
+            "Abono": [_cop(f.abono.monto) if f.abono else "—" for f in filtradas],
+            "Estado": [f.estado_envio for f in filtradas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    columnas = ["Número", "Fecha", "Cliente", "Email", "Monto", "Abono", "Estado"]
+    export = [
+        [
+            f.numero, f.fecha_emision.isoformat(), f.cliente_nombre or "",
+            f.cliente_email, f.monto_total.monto,
+            f.abono.monto if f.abono else "", f.estado_envio,
+        ]
+        for f in filtradas
+    ]
+    _descargas("facturas", columnas, export)
+
+
+def pagina_consultas() -> None:
+    st.title("🔎 Consultas")
+    tab_v, tab_i, tab_e, tab_c, tab_f = st.tabs(
+        ["Ventas", "Ingresos", "Egresos", "Clientes", "Facturas"]
+    )
+    with tab_v:
+        _tab_ventas()
+    with tab_i:
+        _tab_ingresos()
+    with tab_e:
+        _tab_egresos()
+    with tab_c:
+        _tab_clientes()
+    with tab_f:
+        _tab_facturas()
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 if pagina == "Ventas":
     pagina_ventas(mes_sel, año_sel)
 elif pagina == "Tours":
     pagina_tours(mes_sel, año_sel)
+elif pagina == "Consultas":
+    pagina_consultas()
 else:
     pagina_flujo(mes_sel, año_sel)
