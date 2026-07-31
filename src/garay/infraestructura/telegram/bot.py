@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from telegram import BotCommand
+import asyncio
+import logging
+
+from telegram import (
+    BotCommand,
+    BotCommandScopeChat,
+    BotCommandScopeDefault,
+)
+from telegram.error import TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -13,6 +21,8 @@ from telegram.ext import (
 )
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
+from garay.config.settings import obtener_settings
+from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import handlers_reportes
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
@@ -97,25 +107,118 @@ _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
 
 
-_COMANDOS = [
+logger = logging.getLogger(__name__)
+
+
+# Baseline menu every user sees (BotCommandScopeDefault).
+_COMANDOS_FREELANCER = [
     BotCommand("nueva_venta", "Registrar una venta"),
-    BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
     BotCommand("mis_ventas", "Mis ventas del período"),
-    BotCommand("dashboard_ventas", "Dashboard de ventas (solo admin)"),
-    BotCommand("flujo_caja", "Flujo de caja mensual (solo propietario)"),
-    BotCommand("nuevo_egreso", "Registrar un egreso manual"),
-    BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
-    BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
-    BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
-    BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
-    BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
-    BotCommand("movimientos", "Movimientos recientes (solo propietario)"),
+    BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
     BotCommand("cancelar", "Cancelar operación actual"),
 ]
 
+# Admin menu = freelancer + admin-only commands.
+_COMANDOS_ADMIN = [
+    *_COMANDOS_FREELANCER,
+    BotCommand("dashboard_ventas", "Dashboard de ventas (solo admin)"),
+    BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
+    BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
+    BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
+    BotCommand("nuevo_egreso", "Registrar un egreso manual"),
+    BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
+    BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
+]
+
+# Propietario menu = admin + owner-only commands.
+_COMANDOS_PROPIETARIO = [
+    *_COMANDOS_ADMIN,
+    BotCommand("flujo_caja", "Flujo de caja mensual (solo propietario)"),
+    BotCommand("movimientos", "Movimientos recientes (solo propietario)"),
+    BotCommand("tours", "Reporte de tours (solo propietario)"),
+]
+
+_MENUS: dict[str, list[BotCommand]] = {
+    "propietario": _COMANDOS_PROPIETARIO,
+    "admin": _COMANDOS_ADMIN,
+}
+
+
+def _parsear_ids(ids_str: str) -> set[int]:
+    """Parse a comma-separated string of Telegram ids into a set of ints.
+
+    Non-numeric tokens are skipped so a misconfigured env var never crashes startup.
+    """
+    ids: set[int] = set()
+    for token in ids_str.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            ids.add(int(token))
+        except ValueError:
+            logger.warning("ID de Telegram inválido en config, ignorado: %r", token)
+    return ids
+
+
+def asignar_menus(
+    propietario_ids: set[int],
+    dev_ids: set[int],
+    admin_ids: set[int],
+) -> dict[int, str]:
+    """Resolve which per-chat menu each Telegram id should receive.
+
+    Pure function — takes/returns plain ints and strings, no PTB types.
+
+    Propietario and dev both get the ``"propietario"`` menu and OVERRIDE
+    ``"admin"`` (an id that is propietario/dev AND admin stays propietario).
+    Admins that are neither propietario nor dev get the ``"admin"`` menu.
+    Everyone else is absent (they see the default freelancer menu).
+    """
+    full = propietario_ids | dev_ids
+    resultado: dict[int, str] = {uid: "propietario" for uid in full}
+    for uid in admin_ids - full:
+        resultado[uid] = "admin"
+    return resultado
+
 
 async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
-    await app.bot.set_my_commands(_COMANDOS)
+    settings = obtener_settings()
+    propietario_ids = _parsear_ids(settings.propietario_telegram_ids)
+    dev_ids = _parsear_ids(settings.dev_telegram_ids)
+
+    admin_ids: set[int] = set()
+    repo: FreelancerRepository | None = app.bot_data.get("freelancer_repo")
+    if repo is not None:
+        # Repo is synchronous — offload so the event loop is never blocked.
+        activos = await asyncio.to_thread(repo.listar_activos)
+        admin_ids = {
+            f.telegram_user_id
+            for f in activos
+            if f.es_admin and f.telegram_user_id is not None
+        }
+    else:
+        logger.error("freelancer_repo not found in bot_data — admin menus skipped")
+
+    menus = asignar_menus(
+        propietario_ids=propietario_ids,
+        dev_ids=dev_ids,
+        admin_ids=admin_ids,
+    )
+
+    # Baseline everyone sees.
+    await app.bot.set_my_commands(_COMANDOS_FREELANCER, scope=BotCommandScopeDefault())
+
+    for uid, menu in menus.items():
+        try:
+            await app.bot.set_my_commands(
+                _MENUS.get(menu, _COMANDOS_FREELANCER),
+                scope=BotCommandScopeChat(chat_id=uid),
+            )
+        except TelegramError:
+            # e.g. BadRequest "chat not found" for users who never DM'd the bot.
+            # One bad id must never crash startup — log and continue.
+            logger.warning("No se pudo fijar el menú para chat %s", uid, exc_info=True)
 
 
 def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]

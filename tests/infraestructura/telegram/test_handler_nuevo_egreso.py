@@ -43,12 +43,21 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
     return update
 
 
+def _make_admin_repo() -> MagicMock:
+    """Freelancer repo whose lookup returns an admin — satisfies requiere_admin_conv."""
+    repo = MagicMock()
+    freelancer = MagicMock()
+    freelancer.es_admin = True
+    repo.buscar_por_telegram_id.return_value = freelancer
+    return repo
+
+
 def _make_context(categorias: list[str] | None = None) -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = {}
     service = MagicMock()
     service.listar_categorias.return_value = categorias or ["arriendo", "nomina", "otro"]
-    ctx.bot_data = {"egreso_service": service}
+    ctx.bot_data = {"egreso_service": service, "freelancer_repo": _make_admin_repo()}
     return ctx
 
 
@@ -60,6 +69,16 @@ class TestCmdNuevoEgreso:
         result = await cmd_nuevo_egreso(update, ctx)
         assert result == EGRESO_MONTO
         update.effective_message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_no_admin_es_denegado(self) -> None:
+        """Non-admin user → requiere_admin_conv ends the conversation, no monto prompt."""
+        update = _make_update()
+        ctx = _make_context()
+        repo = ctx.bot_data["freelancer_repo"]
+        repo.buscar_por_telegram_id.return_value.es_admin = False
+        result = await cmd_nuevo_egreso(update, ctx)
+        assert result == ConversationHandler.END
 
 
 class TestHandleEgresoMonto:
