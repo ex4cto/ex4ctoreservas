@@ -106,6 +106,17 @@ def test_parsea_transferencia_cuenta_descripcion() -> None:
     assert resultado.descripcion == "Transferencia a cuenta *3207904880"
 
 
+def test_parsea_transferencia_cuenta_origen_con_asterisco() -> None:
+    """Source account may carry a '*' prefix: 'desde tu cuenta *5643'."""
+    texto = (
+        "Bancolombia: Transferiste $560,000 desde tu cuenta *5643 a la cuenta "
+        "*08600002475 el 16/07/2026 a las 17:28."
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.monto == Decimal("560000")
+    assert resultado.descripcion == "Transferencia a cuenta *08600002475"
+
+
 def test_parsea_transferencia_cuenta_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
     assert resultado.fecha_egreso.year == 2026

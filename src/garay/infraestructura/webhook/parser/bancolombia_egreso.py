@@ -27,7 +27,7 @@ _PATRON_FECHA_EL = re.compile(
 
 # Pattern: "Transferiste $50,000.00 desde tu cuenta 7488 a la cuenta *3207904880"
 _PATRON_TRANSFERENCIA_CUENTA = re.compile(
-    r"Transferiste\s+\$([\d.,]+)\s+desde\s+tu\s+cuenta\s+[\d]+\s+a\s+la\s+cuenta\s+\*([\d]+)",
+    r"Transferiste\s+\$([\d.,]+)\s+desde\s+tu\s+cuenta\s+\*?[\d]+\s+a\s+la\s+cuenta\s+\*([\d]+)",
     re.IGNORECASE,
 )
 
@@ -53,17 +53,22 @@ def _parsear_monto_bilingue(texto: str) -> Decimal:
     last_comma = limpio.rfind(",")
     last_dot = limpio.rfind(".")
 
-    if last_comma > last_dot:
-        # Colombian format: comma is decimal separator
-        sin_miles = limpio.replace(".", "")
-        normalizado = sin_miles.replace(",", ".")
+    if last_comma >= 0 and last_dot < 0:
+        # Only commas: 3 digits after the last comma → thousands (560,000 → 560000);
+        # otherwise it is a decimal separator (1,50 → 1.50).
+        parte = limpio[last_comma + 1 :]
+        normalizado = (
+            limpio.replace(",", "") if len(parte) == 3 else limpio.replace(",", ".")
+        )
+    elif last_comma > last_dot:
+        # Colombian format: dot thousands, comma decimal (69.328,00 → 69328.00)
+        normalizado = limpio.replace(".", "").replace(",", ".")
     elif last_dot > last_comma and last_comma >= 0:
-        # US format: dot is decimal separator, comma is thousands
+        # US format: comma thousands, dot decimal (50,000.00 → 50000.00)
         normalizado = limpio.replace(",", "")
     elif last_dot >= 0 and last_comma < 0:
-        # Only dots — check if it's thousands separator (3 digits after last dot)
+        # Only dots — 3 digits after last dot → thousands; otherwise decimal.
         parte_decimal = limpio[last_dot + 1 :]
-        # If 3 digits after dot: thousands separator; otherwise: decimal separator.
         normalizado = limpio.replace(".", "") if len(parte_decimal) == 3 else limpio
     else:
         # Plain integer, no separators
