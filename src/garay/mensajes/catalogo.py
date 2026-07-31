@@ -327,6 +327,25 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         )
     },
     "reporte.caja.categoria_item": {Idioma.ES: "• {categoria}: ${monto}"},
+    "reporte.tours.encabezado": {
+        Idioma.ES: (
+            "🏝️ *Tours — {mes} {año}*\n"
+            "Bruto vendido: ${bruto}\n"
+            "Costo operadores: -${neto}\n"
+            "Margen: ${margen}\n"
+            "Comisiones: -${comisiones}\n"
+            "*Agencia (Garay): ${agencia}*"
+        )
+    },
+    "reporte.tours.familia_item": {Idioma.ES: "• {familia}: {vendidos} vta · margen ${margen}"},
+    "reporte.tours.conciliacion": {
+        Idioma.ES: (
+            "🏦 *Conciliación banco:*\n"
+            "Agencia esperada: ${agencia}\n"
+            "Ingresos banco: ${banco}\n"
+            "Desviación: {desviacion}%"
+        )
+    },
     "reporte.nav_anterior": {Idioma.ES: "◀ {label}"},
     "reporte.nav_siguiente": {Idioma.ES: "{label} ▶"},
     # --- Freelancers ---

@@ -13,7 +13,12 @@ from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManu
 from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
+from garay.aplicacion.reportes.ranking_tour import RankingTourService
+from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
+    ReconciliacionVentasIngresosService,
+)
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
+from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.config.settings import obtener_settings
@@ -153,6 +158,20 @@ def main() -> None:
         ingresos_repo=ingreso_repo,
         egresos_repo=egreso_repo,
     )
+    waterfall_service = WaterfallVentasService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+    )
+    ranking_tour_service = RankingTourService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+        servicios=servicio_repo,
+    )
+    reconciliacion_service = ReconciliacionVentasIngresosService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+        ingresos=ingreso_repo,
+    )
 
     app.bot_data.update(
         {
@@ -174,6 +193,9 @@ def main() -> None:
             "resumen_ventas_service": resumen_ventas_service,
             "flujo_caja_service": flujo_caja_service,
             "movimientos_service": movimientos_service,
+            "waterfall_service": waterfall_service,
+            "ranking_tour_service": ranking_tour_service,
+            "reconciliacion_service": reconciliacion_service,
             "generar_factura_service": generar_factura_service,
             "notificador_email": notificador_email,
         }

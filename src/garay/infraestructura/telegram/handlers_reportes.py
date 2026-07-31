@@ -130,6 +130,62 @@ def _formatear_flujo_caja(flujo: object, mes: int, año: int) -> str:
     return "\n".join(lineas)
 
 
+def _formatear_tours(waterfall: object, ranking: object, reconciliacion: object,
+                     mes: int, año: int) -> str:
+    from garay.aplicacion.reportes.ranking_tour import RankingTour
+    from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
+        ReconciliacionVentasIngresos,
+    )
+    from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas
+
+    assert isinstance(waterfall, WaterfallVentas)
+    assert isinstance(ranking, RankingTour)
+    assert isinstance(reconciliacion, ReconciliacionVentasIngresos)
+
+    if waterfall.valor_bruto.monto == 0:
+        return obtener_mensaje("reporte.sin_datos")
+
+    lineas = [
+        obtener_mensaje("reporte.tours.encabezado").format(
+            mes=_MESES_ES[mes],
+            año=año,
+            bruto=f"{waterfall.valor_bruto.monto:,.0f}",
+            neto=f"{waterfall.costo_neto.monto:,.0f}",
+            margen=f"{waterfall.margen.monto:,.0f}",
+            comisiones=f"{waterfall.comisiones.monto:,.0f}",
+            agencia=f"{waterfall.ganancia_agencia.monto:,.0f}",
+        ),
+    ]
+    if ranking.filas:
+        lineas.append("")
+        lineas.append("🏝️ *Top familias:*")
+        for f in ranking.filas[:5]:
+            lineas.append(
+                obtener_mensaje("reporte.tours.familia_item").format(
+                    familia=f.familia,
+                    vendidos=f.vendidos,
+                    margen=f"{f.margen.monto:,.0f}",
+                )
+            )
+    if reconciliacion.total_ingresos_banco.monto > 0:
+        lineas.append("")
+        lineas.append(
+            obtener_mensaje("reporte.tours.conciliacion").format(
+                agencia=f"{reconciliacion.total_agencia_esperada.monto:,.0f}",
+                banco=f"{reconciliacion.total_ingresos_banco.monto:,.0f}",
+                desviacion=f"{reconciliacion.porcentaje_desviacion:.1f}",
+            )
+        )
+    return "\n".join(lineas)
+
+
+def _tours_para(context: ContextTypes.DEFAULT_TYPE, mes: int, año: int) -> str:
+    waterfall = context.bot_data["waterfall_service"].ejecutar(mes, año)
+    ranking = context.bot_data["ranking_tour_service"].ejecutar(mes, año)
+    reconciliacion = context.bot_data["reconciliacion_service"].ejecutar(mes, año)
+    return _formatear_tours(waterfall, ranking, reconciliacion, mes, año)
+
+
 @requiere_admin
 async def cmd_dashboard_ventas(
     update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -205,6 +261,32 @@ async def cb_flujo_caja(
     flujo = servicio.ejecutar(mes, año)
     texto = _formatear_flujo_caja(flujo, mes, año)
     teclado = _teclado_navegacion(mes, año, "rep_c")
+    if query.message:
+        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
+
+
+@requiere_propietario
+async def cmd_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    hoy = date.today()
+    texto = _tours_para(context, hoy.month, hoy.year)
+    teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_t")
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            texto, reply_markup=teclado, parse_mode="Markdown"
+        )
+
+
+async def cb_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    _, periodo = (query.data or "").split(":", 1)
+    año_str, mes_str = periodo.split("-")
+    mes, año = int(mes_str), int(año_str)
+
+    texto = _tours_para(context, mes, año)
+    teclado = _teclado_navegacion(mes, año, "rep_t")
     if query.message:
         await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
 
@@ -306,6 +388,11 @@ def registrar_handlers(app: object) -> None:
     )
     app.add_handler(
         CallbackQueryHandler(cb_flujo_caja, pattern=r"^rep_c:\d{4}-\d{2}$"),
+        group=1,
+    )
+    app.add_handler(CommandHandler("tours", cmd_tours), group=1)
+    app.add_handler(
+        CallbackQueryHandler(cb_tours, pattern=r"^rep_t:\d{4}-\d{2}$"),
         group=1,
     )
     app.add_handler(CommandHandler("movimientos", cmd_movimientos), group=1)
