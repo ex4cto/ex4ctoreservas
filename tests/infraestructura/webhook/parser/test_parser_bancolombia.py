@@ -97,6 +97,26 @@ def test_pago_proveedor_parsea_fecha_y_hora() -> None:
     assert resultado.fecha_pago.minute == 6
 
 
+_TEXTO_CONSIGNACION = (
+    "Bancolombia: Recibiste una consignacion por $20,000 desde el corresponsal "
+    "OPRAP BOCAGRANDE 1 en CARTAGENA DE IN, el 15/07/26 16:47. Si tienes dudas, llamanos."
+)
+
+
+def test_consignacion_corresponsal_parsea() -> None:
+    """Cash deposit at a banking correspondent: 'consignacion ... el DD/MM/YY HH:MM'."""
+    resultado = _PARSER.parsear(_TEXTO_CONSIGNACION, _TEXTO_CONSIGNACION)
+
+    assert resultado.monto == Decimal("20000")
+    assert "OPRAP BOCAGRANDE 1" in resultado.remitente
+    assert resultado.banco_origen == "Bancolombia"
+    assert resultado.fecha_pago.year == 2026
+    assert resultado.fecha_pago.month == 7
+    assert resultado.fecha_pago.day == 15
+    assert resultado.fecha_pago.hour == 16
+    assert resultado.fecha_pago.minute == 47
+
+
 def test_texto_sin_patron_lanza_error_parseo() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("Notificacion irrelevante", "Notificacion irrelevante")

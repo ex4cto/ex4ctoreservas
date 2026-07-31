@@ -35,6 +35,14 @@ _PATRON_PAGO_PROVEEDOR = re.compile(
     r"\s+en\s+tu\s+cuenta.+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
+# Cash deposit at a banking correspondent (no "a las" — date and time run together):
+# "Recibiste una consignacion por $20,000 desde el corresponsal OPRAP BOCAGRANDE 1
+#  en CARTAGENA DE IN, el 15/07/26 16:47"
+_PATRON_CONSIGNACION = re.compile(
+    r"recibiste\s+una\s+consignaci[oó]n\s+por\s+\$([\d,\.]+)\s+desde\s+el\s+corresponsal\s+(.+?)"
+    r"\s+en\s+.+?\s+el\s+(\d{2}/\d{2}/\d{2,4})\s+(\d{2}:\d{2})",
+    re.IGNORECASE | re.DOTALL,
+)
 _PATRON_ETIQUETAS_HTML = re.compile(r"<[^>]+>")
 
 
@@ -68,6 +76,10 @@ class ParserBancolombia(ParserBanco):
             remitente = m3.group(1).strip()
             monto = _parsear_monto(m3.group(2))
             fecha_pago = _parsear_fecha_hora_bancolombia(m3.group(3), m3.group(4))
+        elif (m4 := _PATRON_CONSIGNACION.search(texto)) is not None:
+            monto = _parsear_monto(m4.group(1))
+            remitente = f"Corresponsal {m4.group(2).strip()}"
+            fecha_pago = _parsear_fecha_hora_bancolombia(m4.group(3), m4.group(4))
         else:
             raise ErrorParseoBanco(
                 "No se encontro patron de pago recibido en email Bancolombia"
