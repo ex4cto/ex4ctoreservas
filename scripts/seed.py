@@ -172,6 +172,7 @@ def seed_servicios(session: Session) -> None:
                 activo=bool(entry["activo"]),
                 precio_neto_adulto=_neto_semilla(entry.get("neto_adulto")),
                 precio_neto_nino=_neto_semilla(entry.get("neto_nino")),
+                categoria=str(entry.get("categoria") or ""),
             )
         )
 

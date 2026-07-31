@@ -20,6 +20,7 @@ class Servicio:
     activo: bool = field(default=True)
     precio_neto_adulto: Decimal | None = field(default=None)
     precio_neto_nino: Decimal | None = field(default=None)
+    categoria: str = field(default="")
 
     def __post_init__(self) -> None:
         if self.numero < 1:

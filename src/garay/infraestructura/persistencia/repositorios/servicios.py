@@ -19,6 +19,7 @@ def to_orm(s: Servicio) -> ServicioModel:
         activo=s.activo,
         precio_neto_adulto=s.precio_neto_adulto,
         precio_neto_nino=s.precio_neto_nino,
+        categoria=s.categoria,
     )
 
 
@@ -31,6 +32,7 @@ def to_domain(m: ServicioModel) -> Servicio:
         activo=m.activo,
         precio_neto_adulto=m.precio_neto_adulto,
         precio_neto_nino=m.precio_neto_nino,
+        categoria=m.categoria,
     )
 
 

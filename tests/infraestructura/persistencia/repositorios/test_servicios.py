@@ -82,3 +82,26 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     assert repo.buscar_por_nombre("No Existe") is None
+
+
+def test_categoria_persiste(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(
+        id=uuid.uuid4(),
+        numero=1,
+        nombre="Tour Con Categoria",
+        categoria="TOURS BAHIA",
+    )
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.categoria == "TOURS BAHIA"
+
+
+def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=2, nombre="Sin Categoria")
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.categoria == ""
