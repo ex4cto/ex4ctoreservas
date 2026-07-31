@@ -61,6 +61,11 @@ python_version = "3.12"
 strict = true
 files = ["src", "tests"]
 
+# openpyxl no publica stubs de tipos; se usa solo en el adaptador de importacion offline.
+[[tool.mypy.overrides]]
+module = "openpyxl.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
