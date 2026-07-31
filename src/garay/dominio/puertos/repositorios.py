@@ -15,6 +15,7 @@ from garay.dominio.conciliacion.entidades import (
     GastoRecurrente,
     Ingreso,
 )
+from garay.dominio.facturas.entidades import Factura
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
@@ -167,6 +168,23 @@ class ClienteRepository(ABC):
 
     @abstractmethod
     def buscar_por_nombre(self, nombre: str) -> Cliente | None: ...
+
+    @abstractmethod
+    def listar(self) -> list[Cliente]: ...
+
+
+class FacturaRepository(ABC):
+    @abstractmethod
+    def guardar(self, factura: Factura) -> None: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> Factura | None: ...
+
+    @abstractmethod
+    def buscar_por_venta_id(self, venta_id: uuid.UUID) -> Factura | None: ...
+
+    @abstractmethod
+    def listar_por_periodo(self, desde: date, hasta: date) -> list[Factura]: ...
 
 
 class ServicioRepository(ABC):

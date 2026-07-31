@@ -380,6 +380,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "movimientos.tag_reenvio": {
         Idioma.ES: "[fwd]"
     },
+    # --- Facturas ---
+    "factura.asunto_email": {Idioma.ES: "Factura de servicio - Garay Tours"},
     # --- Generar mes ---
     "generar_mes.sin_activos": {
         Idioma.ES: "No hay gastos fijos activos para generar."

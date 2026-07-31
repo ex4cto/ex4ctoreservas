@@ -11,6 +11,7 @@ from garay.infraestructura.persistencia.modelos import (  # noqa: F401
     ComisionRegistradaModel,
     ConciliacionModel,
     EgresoModel,
+    FacturaModel,
     FreelancerModel,
     GastoRecurrenteModel,
     IngresoModel,
@@ -35,6 +36,7 @@ _EXPECTED_TABLES = {
     "conciliaciones",
     "categorias_egreso",
     "gastos_recurrentes",
+    "facturas",
 }
 
 

@@ -58,3 +58,8 @@ class SQLAClienteRepository(ClienteRepository):
                 select(ClienteModel).where(ClienteModel.nombre == nombre)
             ).scalar_one_or_none()
             return to_domain(row) if row else None
+
+    def listar(self) -> list[Cliente]:
+        with self._sf.begin() as session:
+            rows = session.execute(select(ClienteModel)).scalars().all()
+            return [to_domain(r) for r in rows]

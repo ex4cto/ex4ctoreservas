@@ -24,6 +24,7 @@ from sqlalchemy import (
     Numeric,
     Sequence,
     String,
+    Text,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -219,6 +220,25 @@ class GastoRecurrenteModel(Base):
     categoria: Mapped[str] = mapped_column(String, nullable=False)
     dia_mes: Mapped[int] = mapped_column(Integer, nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class FacturaModel(Base):
+    __tablename__ = "facturas"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    # Numero derivado de 6 chars hex del UUID de la venta; puede colisionar, no es unique.
+    numero: Mapped[str] = mapped_column(String, nullable=False)
+    # Una factura por venta: la unicidad va sobre venta_id, no sobre numero.
+    venta_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=False, unique=True
+    )
+    cliente_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    cliente_email: Mapped[str] = mapped_column(String, nullable=False)
+    monto_total: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
+    abono: Mapped[Dinero | None] = mapped_column(TipoDinero(), nullable=True)
+    fecha_emision: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    html_contenido: Mapped[str] = mapped_column(Text, nullable=False)
+    estado_envio: Mapped[str] = mapped_column(String(20), nullable=False)
 
 
 class ConciliacionModel(Base):

@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from garay.aplicacion.factura.servicio import GenerarFacturaService
+from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.dominio.clientes.entidades import Cliente
@@ -26,7 +26,6 @@ from garay.dominio.puertos.repositorios import (
     IngresoRepository,
     VentaRepository,
 )
-from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import requiere_rol
@@ -484,24 +483,16 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                                 )
                         except Exception:
                             logger.exception("Error al enviar mensaje de confirmación")
-                        if ctx_final.cliente_email:
-                            factura_service: GenerarFacturaService | None = context.bot_data.get(
-                                "generar_factura_service"
-                            )
-                            notificador_email: NotificadorEmail | None = context.bot_data.get(
-                                "notificador_email"
-                            )
-                            if factura_service is not None and notificador_email is not None:
-                                try:
-                                    html = factura_service.generar(ctx_final, resultado)
-                                    await asyncio.to_thread(
-                                        notificador_email.enviar,
-                                        ctx_final.cliente_email,
-                                        "Factura de servicio - Garay Tours",
-                                        html,
-                                    )
-                                except Exception:
-                                    logger.exception("Error al enviar factura por correo")
+                        factura_service: GenerarYGuardarFacturaService | None = (
+                            context.bot_data.get("factura_service")
+                        )
+                        if factura_service is not None:
+                            try:
+                                await asyncio.to_thread(
+                                    factura_service.ejecutar, ctx_final, resultado
+                                )
+                            except Exception:
+                                logger.exception("Error al generar/guardar la factura")
                     except Exception:
                         logger.exception("Error al registrar venta")
                         if update.effective_message:
