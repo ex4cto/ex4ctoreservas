@@ -25,6 +25,8 @@ class FilaVentaImportada:
     neto: Dinero
     margen: Dinero
     agencia: Dinero
+    comision_vendedor: Dinero
+    comision_cerrador: Dinero
     vendedor_nombre: str | None
     cerrador_nombre: str | None
 

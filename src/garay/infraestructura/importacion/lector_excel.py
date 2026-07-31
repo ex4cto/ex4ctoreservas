@@ -103,9 +103,17 @@ class LectorVentasExcelOpenpyxl(LectorVentasExcel):
             return []
         encabezados = filas_crudas[_HEADER_ROW]
         idx = {_norm(h): i for i, h in enumerate(encabezados) if h is not None}
+        # Columnas de MONTO de comision: "Vendedor 20%", "Cerrador 50%"... (el % varia
+        # por hoja). Se distinguen de las columnas de NOMBRE ("Vendedor", "Cerrador")
+        # porque llevan algo mas despues del prefijo.
+        i_com_vend = next((i for k, i in idx.items() if k.startswith("vendedor ")), None)
+        i_com_cerr = next((i for k, i in idx.items() if k.startswith("cerrador ")), None)
 
         def col(fila: tuple[object, ...], nombre_col: str) -> object:
             i = idx.get(_norm(nombre_col))
+            return fila[i] if i is not None and i < len(fila) else None
+
+        def por_indice(fila: tuple[object, ...], i: int | None) -> object:
             return fila[i] if i is not None and i < len(fila) else None
 
         resultado: list[FilaVentaImportada] = []
@@ -118,8 +126,6 @@ class LectorVentasExcelOpenpyxl(LectorVentasExcel):
             neto = _a_dinero(col(fila, "Costo Neto Total")) or Dinero("0")
             margen = _a_dinero(col(fila, "Margen de Ganancia total")) or (valor - neto)
             agencia = _a_dinero(col(fila, agencia_header)) or Dinero("0")
-            vendedor = _texto(col(fila, "Vendedor")) or None
-            cerrador = _texto(col(fila, "Cerrador")) or None
             resultado.append(
                 FilaVentaImportada(
                     canal=canal,
@@ -130,8 +136,10 @@ class LectorVentasExcelOpenpyxl(LectorVentasExcel):
                     neto=neto,
                     margen=margen,
                     agencia=agencia,
-                    vendedor_nombre=vendedor,
-                    cerrador_nombre=cerrador,
+                    comision_vendedor=_a_dinero(por_indice(fila, i_com_vend)) or Dinero("0"),
+                    comision_cerrador=_a_dinero(por_indice(fila, i_com_cerr)) or Dinero("0"),
+                    vendedor_nombre=_texto(col(fila, "Vendedor")) or None,
+                    cerrador_nombre=_texto(col(fila, "Cerrador")) or None,
                 )
             )
         return resultado

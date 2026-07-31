@@ -99,6 +99,25 @@ def test_campos_y_agencia_por_hoja(tmp_path: Path) -> None:
     assert crespo.agencia == Dinero("54000")  # de PC50 (Agencia 30%), gana el primero
 
 
+def test_lee_montos_de_comision(tmp_path: Path) -> None:
+    ruta = tmp_path / "conta.xlsx"
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    _escribir(
+        wb.create_sheet("Hotel"),
+        "RESERVAS HOTEL",
+        [*_BASE, "Agencia 60%", "Vendedor 20%", "Cerrador 20%"],
+        [[datetime.date(2026, 7, 5), "Gonzalo Lopez", "Eduardo", "Eduardo",
+          "City tour", 660000, 880000, 220000, 132000, 44000, 44000]],
+    )
+    wb.save(ruta)
+    fila = LectorVentasExcelOpenpyxl().leer(str(ruta))[0]
+    assert fila.comision_vendedor == Dinero("44000")
+    assert fila.comision_cerrador == Dinero("44000")
+    # la columna de NOMBRE "Vendedor" no se confunde con el monto "Vendedor 20%"
+    assert fila.vendedor_nombre == "Eduardo"
+
+
 def test_lee_fecha_guardada_como_texto(tmp_path: Path) -> None:
     # En la planilla real algunas fechas quedan como string; deben leerse igual.
     ruta = tmp_path / "conta.xlsx"
