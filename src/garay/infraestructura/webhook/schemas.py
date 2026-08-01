@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, model_validator
 
+from garay.infraestructura.webhook.html_texto import html_a_texto
+
 
 class PayloadEmail(BaseModel):
     message_id: str
@@ -32,13 +34,21 @@ class PayloadEmail(BaseModel):
         to_values = to_field.get("value") or []
         destinatario = to_values[0].get("address", "") if to_values else ""
 
+        cuerpo_html = data.get("html") or ""
+        cuerpo_texto = data.get("text") or ""
+        # Gmail auto-forwards of HTML-only bank emails (e.g. Nequi) arrive with an
+        # empty text/plain part. Derive text from the HTML so the parsers, which
+        # expect plain text, still match.
+        if not cuerpo_texto and cuerpo_html:
+            cuerpo_texto = html_a_texto(cuerpo_html)
+
         return {
             "message_id": data.get("messageId", ""),
             "remitente_email": remitente,
             "correo_destinatario": destinatario,
             "asunto": data.get("subject", ""),
-            "cuerpo_html": data.get("html") or "",
-            "cuerpo_texto": data.get("text") or "",
+            "cuerpo_html": cuerpo_html,
+            "cuerpo_texto": cuerpo_texto,
         }
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from decimal import Decimal, InvalidOperation
 
+from garay.infraestructura.webhook.html_texto import html_a_texto
 from garay.infraestructura.webhook.parser.base import (
     BANCO_BANCOLOMBIA,
     ErrorParseoBanco,
@@ -43,14 +44,6 @@ _PATRON_CONSIGNACION = re.compile(
     r"\s+en\s+.+?\s+el\s+(\d{2}/\d{2}/\d{2,4})\s+(\d{2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
-_PATRON_ETIQUETAS_HTML = re.compile(r"<[^>]+>")
-
-
-def _texto_desde_html(html: str) -> str:
-    sin_etiquetas = _PATRON_ETIQUETAS_HTML.sub(" ", html)
-    return " ".join(sin_etiquetas.split())
-
-
 def _parsear_monto(texto: str) -> Decimal:
     sin_comas = texto.replace(",", "")
     try:
@@ -61,7 +54,7 @@ def _parsear_monto(texto: str) -> Decimal:
 
 class ParserBancolombia(ParserBanco):
     def parsear(self, cuerpo_html: str, cuerpo_texto: str) -> PagoExtraido:
-        texto = cuerpo_texto or _texto_desde_html(cuerpo_html)
+        texto = cuerpo_texto or html_a_texto(cuerpo_html)
 
         m = _PATRON_BC_A_BC.search(texto)
         if m:
