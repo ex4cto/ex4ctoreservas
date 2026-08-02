@@ -215,10 +215,16 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
                 _MENUS.get(menu, _COMANDOS_FREELANCER),
                 scope=BotCommandScopeChat(chat_id=uid),
             )
-        except TelegramError:
-            # e.g. BadRequest "chat not found" for users who never DM'd the bot.
-            # One bad id must never crash startup — log and continue.
-            logger.warning("No se pudo fijar el menú para chat %s", uid, exc_info=True)
+        except TelegramError as exc:
+            # Expected: BadRequest "chat not found" for a configured user who never
+            # started a chat with the bot. Not a crash — log a plain warning (no
+            # traceback, so this expected condition never looks like a failure or
+            # buries real errors) and continue.
+            logger.warning(
+                "No se pudo fijar el menú para chat %s (¿el usuario inició el bot?): %s",
+                uid,
+                exc,
+            )
 
 
 def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
