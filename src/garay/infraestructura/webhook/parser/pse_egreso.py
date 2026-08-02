@@ -24,7 +24,7 @@ _PATRON_EMPRESA = re.compile(
 
 # Pattern: "Fecha de la transacción: 06/07/2026"
 _PATRON_FECHA = re.compile(
-    r"Fecha de la transacci[oó]n:\s*(\d{2}/\d{2}/\d{4})",
+    r"Fecha de la transacci[oó]n:\s*(\d{1,2}/\d{1,2}/\d{4})",
     re.IGNORECASE,
 )
 

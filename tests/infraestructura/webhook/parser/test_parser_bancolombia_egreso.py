@@ -161,3 +161,25 @@ def test_parsea_transferencia_breb_fecha_2_digitos() -> None:
 def test_texto_sin_patron_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("", "Notificacion irrelevante sin datos de egreso")
+
+
+# --- single-digit hour / day ---
+
+def test_compra_hora_un_digito() -> None:
+    texto = (
+        "Bancolombia: Compraste $10.000,00 en GAZEL EL TIGRE con tu T.Deb *9283, "
+        "el 12/07/2026 a las 9:43."
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.fecha_egreso.hour == 9
+    assert resultado.fecha_egreso.minute == 43
+
+
+def test_transferencia_breb_dia_un_digito() -> None:
+    texto = (
+        "Bancolombia: BRYAN, transferiste $6,000.00 a la llave 3015879983 desde tu cuenta *7488 "
+        "a NEIDA GARCIA el 5/07/26 a las 16:26."
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.fecha_egreso.day == 5
+    assert resultado.monto == Decimal("6000.00")
