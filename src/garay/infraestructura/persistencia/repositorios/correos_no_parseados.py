@@ -53,8 +53,11 @@ class SQLACorreoNoParseadoRepository(CorreoNoParseadoRepository):
         self._sf = sf
 
     def guardar(self, correo: CorreoNoParseado) -> None:
+        # add() (not merge()) so a duplicate `referencia` always takes the INSERT
+        # path and raises IntegrityError — the route relies on that to detect and
+        # skip an already-quarantined email instead of silently overwriting it.
         with self._sf.begin() as session:
-            session.merge(_to_orm(correo))
+            session.add(_to_orm(correo))
 
     def existe_referencia(self, referencia: str) -> bool:
         with self._sf.begin() as session:

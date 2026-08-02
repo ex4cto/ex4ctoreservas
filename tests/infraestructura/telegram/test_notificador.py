@@ -98,3 +98,15 @@ class TestNotificadorGrupoTelegram:
         req = mock_open.call_args[0][0]
         body = json.loads(req.data.decode("utf-8"))
         assert body["text"] == ""
+
+    def test_notificar_error_inesperado_se_envuelve(self) -> None:
+        """Any unexpected error (e.g. ValueError from a malformed URL) is wrapped as a
+        notifier error and never propagates raw — callers such as the webhook rely on
+        this to preserve their always-200 contract."""
+        notificador = NotificadorGrupoTelegram(token=_TOKEN)
+
+        with (
+            patch("urllib.request.urlopen", side_effect=ValueError("unknown url type")),
+            pytest.raises((NotificadorError, NotificadorNoDisponible)),
+        ):
+            notificador.notificar(_MENSAJE, _GRUPO)
