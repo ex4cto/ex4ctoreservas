@@ -16,7 +16,8 @@ from garay.infraestructura.webhook.schemas import PagoExtraido
 
 _PATRON_RECIBIDO = re.compile(
     r"Recibiste ([\d.]+(?:,\d{2})?) de (.+?) el (\d{1,2} de \w+ de \d{4})"
-    r" a las (\d{1,2}:\d{2} [ap]\.m\.?)",
+    # Nequi writes "a la 1:46" (singular) for 1:xx times, "a las" otherwise.
+    r" a las? (\d{1,2}:\d{2} [ap]\.m\.?)",
     re.IGNORECASE,
 )
 
