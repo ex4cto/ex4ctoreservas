@@ -17,14 +17,14 @@ from garay.infraestructura.webhook.schemas import PagoExtraido
 # Bancolombia-to-Bancolombia: "por $X de NOMBRE en tu cuenta ... el fecha a las hora"
 _PATRON_BC_A_BC = re.compile(
     r"recibiste\s+una\s+transferencia\s+por\s+\$([\d,\.]+)\s+de\s+(.+?)\s+en\s+tu\s+cuenta"
-    r".+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
+    r".+?el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+a\s+las\s+(\d{1,2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
 
 # External bank to Bancolombia: "de NOMBRE por $X el fecha a las hora"
 _PATRON_EXTERNO = re.compile(
     r"recibiste\s+una\s+transferencia\s+de\s+(.+?)\s+por\s+\$([\d,\.]+)"
-    r".+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
+    r".+?el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+a\s+las\s+(\d{1,2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -33,7 +33,7 @@ _PATRON_EXTERNO = re.compile(
 #  el 30/07/2026 a las 12:06"
 _PATRON_PAGO_PROVEEDOR = re.compile(
     r"recibiste\s+un\s+pago(?:\s+\w+)?\s+de\s+(.+?)\s+por\s+\$([\d,\.]+)"
-    r"\s+en\s+tu\s+cuenta.+?el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
+    r"\s+en\s+tu\s+cuenta.+?el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+a\s+las\s+(\d{1,2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
 # Cash deposit at a banking correspondent (no "a las" — date and time run together):
@@ -41,7 +41,7 @@ _PATRON_PAGO_PROVEEDOR = re.compile(
 #  en CARTAGENA DE IN, el 15/07/26 16:47"
 _PATRON_CONSIGNACION = re.compile(
     r"recibiste\s+una\s+consignaci[oó]n\s+por\s+\$([\d,\.]+)\s+desde\s+el\s+corresponsal\s+(.+?)"
-    r"\s+en\s+.+?\s+el\s+(\d{2}/\d{2}/\d{2,4})\s+(\d{2}:\d{2})",
+    r"\s+en\s+.+?\s+el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
     re.IGNORECASE | re.DOTALL,
 )
 def _parsear_monto(texto: str) -> Decimal:

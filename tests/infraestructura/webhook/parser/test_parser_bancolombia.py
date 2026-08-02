@@ -126,3 +126,48 @@ def test_monto_invalido_bc_a_bc_lanza_error() -> None:
     texto = "Recibiste una transferencia por $ABC de Ana en tu cuenta **1111, el 01/01/26 a las 09:00"  # noqa: E501
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear(texto, texto)
+
+
+# --- single-digit hour / day (banks drop the leading zero for 1-9) ---
+
+_TEXTO_BC_HORA_1_DIGITO = (
+    "Recibiste una transferencia por $1,500,000 de Juan Perez "
+    "en tu cuenta **5643, el 15/07/26 a las 9:30"
+)
+
+_TEXTO_EXTERNO_DIA_1_DIGITO = (
+    "recibiste una transferencia de Carlos Gomez por $500,000 el 5/07/26 a las 10:30"
+)
+
+_TEXTO_CONSIGNACION_DIA_1_DIGITO = (
+    "Bancolombia: Recibiste una consignacion por $20,000 desde el corresponsal "
+    "OPRAP BOCAGRANDE 1 en CARTAGENA DE IN, el 5/07/26 16:47. Si tienes dudas, llamanos."
+)
+
+
+def test_bc_a_bc_hora_un_digito() -> None:
+    resultado = _PARSER.parsear(_TEXTO_BC_HORA_1_DIGITO, _TEXTO_BC_HORA_1_DIGITO)
+    assert resultado.fecha_pago.hour == 9
+    assert resultado.fecha_pago.minute == 30
+
+
+def test_externo_dia_un_digito() -> None:
+    resultado = _PARSER.parsear(_TEXTO_EXTERNO_DIA_1_DIGITO, _TEXTO_EXTERNO_DIA_1_DIGITO)
+    assert resultado.fecha_pago.day == 5
+    assert resultado.fecha_pago.month == 7
+
+
+def test_consignacion_dia_un_digito() -> None:
+    resultado = _PARSER.parsear(_TEXTO_CONSIGNACION_DIA_1_DIGITO, _TEXTO_CONSIGNACION_DIA_1_DIGITO)
+    assert resultado.fecha_pago.day == 5
+    assert resultado.monto == Decimal("20000")
+
+
+def test_no_over_match_fecha_malformada() -> None:
+    """Broadening to \\d{1,2} must NOT match a date missing a component (single slash)."""
+    texto = (
+        "Recibiste una transferencia por $500,000 de Juan Perez "
+        "en tu cuenta **5643, el 5/2026 a las 10:30"
+    )
+    with pytest.raises(ErrorParseoBanco):
+        _PARSER.parsear(texto, texto)

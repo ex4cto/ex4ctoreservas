@@ -101,6 +101,17 @@ def test_sin_patron_lanza_error() -> None:
         _PARSER.parsear("", "Notificacion irrelevante sin datos PSE")
 
 
+def test_parsea_fecha_dia_mes_un_digito() -> None:
+    texto = _TEXTO_PSE.replace(
+        "Fecha de la transacción: 06/07/2026",
+        "Fecha de la transacción: 5/7/2026",
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.fecha_egreso.day == 5
+    assert resultado.fecha_egreso.month == 7
+    assert resultado.fecha_egreso.year == 2026
+
+
 # --- detectar_banco ---
 
 def test_detectar_banco_cuerpo_pse_retorna_pse() -> None:

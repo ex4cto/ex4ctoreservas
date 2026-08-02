@@ -22,7 +22,7 @@ _PATRON_COMPRA = re.compile(
 # Pattern for date/time used by compra and transferencia-cuenta:
 # "el 27/07/2026 a las 18:25"
 _PATRON_FECHA_EL = re.compile(
-    r"el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})"
+    r"el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+a\s+las\s+(\d{1,2}:\d{2})"
 )
 
 # Pattern: "Transferiste $50,000.00 desde tu cuenta 7488 a la cuenta *3207904880"
@@ -35,7 +35,7 @@ _PATRON_TRANSFERENCIA_CUENTA = re.compile(
 #            el 25/07/26 a las 16:26"
 _PATRON_TRANSFERENCIA_BREB = re.compile(
     r"transferiste\s+\$([\d.,]+)\s+a\s+la\s+llave\s+\S+\s+desde\s+tu\s+cuenta"
-    r"\s+\*[\d]+\s+a\s+(.+?)\s+el\s+(\d{2}/\d{2}/\d{2,4})\s+a\s+las\s+(\d{2}:\d{2})",
+    r"\s+\*[\d]+\s+a\s+(.+?)\s+el\s+(\d{1,2}/\d{1,2}/\d{2,4})\s+a\s+las\s+(\d{1,2}:\d{2})",
     re.IGNORECASE,
 )
 
