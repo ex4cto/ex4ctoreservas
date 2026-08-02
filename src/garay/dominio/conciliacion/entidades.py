@@ -144,3 +144,32 @@ class ResultadoConciliacion:
     matcheados: int
     sin_match: int
     pendientes: int
+
+
+@dataclass(eq=False)
+class CorreoNoParseado:
+    """Operational audit record for emails the webhook could not parse into an Ingreso/Egreso.
+
+    Persisted immediately so no bank notification is silently lost. A background
+    reprocess job reads pending rows, retries parsing, and marks them processed.
+    """
+
+    id: uuid.UUID
+    banco: str
+    direccion: str  # detectar_direccion result: "ingreso" | "egreso"
+    referencia: str  # email message_id — idempotency key
+    asunto: str  # email subject; reprocess needs it to recompute reenviado
+    cuerpo_texto: str
+    cuerpo_html: str
+    error_parseo: str
+    fecha_recibido: datetime.datetime
+    correo_origen: str | None = field(default=None)
+    procesado: bool = field(default=False)
+    intentos: int = field(default=0)
+    error_ultimo: str = field(default="")
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, CorreoNoParseado) and self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)

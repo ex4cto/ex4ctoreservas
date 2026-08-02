@@ -10,6 +10,7 @@ from garay.infraestructura.persistencia.modelos import (  # noqa: F401
     ClienteModel,
     ComisionRegistradaModel,
     ConciliacionModel,
+    CorreoNoParseadoModel,
     EgresoModel,
     FacturaModel,
     FreelancerModel,
@@ -37,6 +38,7 @@ _EXPECTED_TABLES = {
     "categorias_egreso",
     "gastos_recurrentes",
     "facturas",
+    "correos_no_parseados",
 }
 
 
@@ -87,3 +89,25 @@ def test_comision_registrada_has_snapshot_json() -> None:
     cols = {c["name"] for c in inspector.get_columns("comisiones_registradas")}
     assert "snapshot_json" in cols
     assert {"vendedor", "cerrador", "punto_de_venta", "referido", "agencia"}.issubset(cols)
+
+
+def test_correos_no_parseados_table_has_expected_columns() -> None:
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    inspector = sa.inspect(engine)
+    cols = {c["name"] for c in inspector.get_columns("correos_no_parseados")}
+    assert {
+        "id",
+        "banco",
+        "direccion",
+        "referencia",
+        "asunto",
+        "correo_origen",
+        "cuerpo_texto",
+        "cuerpo_html",
+        "error_parseo",
+        "fecha_recibido",
+        "procesado",
+        "intentos",
+        "error_ultimo",
+    }.issubset(cols)
