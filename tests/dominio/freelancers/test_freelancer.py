@@ -37,3 +37,33 @@ class TestFreelancer:
     def test_telegram_user_id_asignable(self) -> None:
         f = Freelancer(id=uuid.uuid4(), nombre="Carlos", telegram_user_id=123456789)
         assert f.telegram_user_id == 123456789
+
+    # --- A1: new identity fields ---
+
+    def test_nuevos_campos_aceptan_valores(self) -> None:
+        """Construct Freelancer with all five fields populated — no error."""
+        f = Freelancer(
+            id=uuid.uuid4(),
+            nombre="Bryan",
+            activo=True,
+            telegram_user_id=100,
+            es_admin=False,
+            nombre_completo="Bryan Castro Gomez",
+            cedula="12345678",
+            display="Bryan C.",
+        )
+        assert f.nombre_completo == "Bryan Castro Gomez"
+        assert f.cedula == "12345678"
+        assert f.display == "Bryan C."
+
+    def test_nuevos_campos_opcionales_son_none(self) -> None:
+        """Legacy construction (pre-A1 fields only) — new fields default to None."""
+        f = Freelancer(id=uuid.uuid4(), nombre="Carlos")
+        assert f.nombre_completo is None
+        assert f.cedula is None
+        assert f.display is None
+
+    def test_nombre_sigue_siendo_requerido(self) -> None:
+        """nombre must still raise NombreFreelancerVacio when empty."""
+        with pytest.raises(NombreFreelancerVacio):
+            Freelancer(id=uuid.uuid4(), nombre="")

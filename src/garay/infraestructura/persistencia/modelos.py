@@ -25,6 +25,7 @@ from sqlalchemy import (
     Sequence,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -67,12 +68,16 @@ class ClienteModel(Base):
 
 class FreelancerModel(Base):
     __tablename__ = "freelancers"
+    __table_args__ = (UniqueConstraint("cedula", name="uq_freelancers_cedula"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     nombre: Mapped[str] = mapped_column(String, nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True)
     es_admin: Mapped[bool] = mapped_column(Boolean, server_default=sa.text("false"), nullable=False)
+    nombre_completo: Mapped[str | None] = mapped_column(String, nullable=True)
+    cedula: Mapped[str | None] = mapped_column(String, nullable=True)
+    display: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class PuntoDeVentaModel(Base):

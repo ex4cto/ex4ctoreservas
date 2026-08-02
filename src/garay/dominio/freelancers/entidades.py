@@ -17,6 +17,9 @@ class Freelancer:
     activo: bool = field(default=True)
     telegram_user_id: int | None = field(default=None)
     es_admin: bool = field(default=False)
+    nombre_completo: str | None = field(default=None)
+    cedula: str | None = field(default=None)
+    display: str | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.nombre.strip():

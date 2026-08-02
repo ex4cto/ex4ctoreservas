@@ -159,6 +159,17 @@ class FreelancerRepository(ABC):
     @abstractmethod
     def listar_todos(self) -> list[Freelancer]: ...
 
+    @abstractmethod
+    def buscar_por_cedula(self, cedula: str) -> Freelancer | None: ...
+
+    @abstractmethod
+    def listar_por_nombre(self, nombre: str) -> list[Freelancer]: ...
+
+    @abstractmethod
+    def buscar_por_telegram_id_cualquier_estado(
+        self, telegram_user_id: int
+    ) -> Freelancer | None: ...
+
 
 class ClienteRepository(ABC):
     @abstractmethod

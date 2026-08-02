@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import sqlalchemy as sa
 
 from garay.infraestructura.persistencia.base import Base
@@ -89,6 +90,101 @@ def test_comision_registrada_has_snapshot_json() -> None:
     cols = {c["name"] for c in inspector.get_columns("comisiones_registradas")}
     assert "snapshot_json" in cols
     assert {"vendedor", "cerrador", "punto_de_venta", "referido", "agencia"}.issubset(cols)
+
+
+def test_freelancer_tiene_columnas_identidad() -> None:
+    """FreelancerModel must expose nombre_completo, cedula, and display columns."""
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    inspector = sa.inspect(engine)
+    cols = {c["name"] for c in inspector.get_columns("freelancers")}
+    assert {"nombre_completo", "cedula", "display"}.issubset(cols)
+
+
+def test_freelancer_cedula_unique_constraint_rechaza_duplicados() -> None:
+    """Inserting two rows with the same non-NULL cedula raises IntegrityError."""
+    import uuid as _uuid
+
+    from sqlalchemy.exc import IntegrityError
+
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with engine.connect() as conn:
+        conn.execute(
+            FreelancerModel.__table__.insert(),
+            [
+                {
+                    "id": _uuid.uuid4(),
+                    "nombre": "Ana",
+                    "activo": True,
+                    "telegram_user_id": None,
+                    "es_admin": False,
+                    "nombre_completo": None,
+                    "cedula": "12345678",
+                    "display": None,
+                },
+            ],
+        )
+        conn.commit()
+
+        with pytest.raises(IntegrityError):
+            conn.execute(
+                FreelancerModel.__table__.insert(),
+                [
+                    {
+                        "id": _uuid.uuid4(),
+                        "nombre": "Bob",
+                        "activo": True,
+                        "telegram_user_id": None,
+                        "es_admin": False,
+                        "nombre_completo": None,
+                        "cedula": "12345678",
+                        "display": None,
+                    },
+                ],
+            )
+            conn.commit()
+
+
+def test_freelancer_cedula_null_permitido_en_multiples_filas() -> None:
+    """Multiple rows with cedula=NULL must coexist (NULL is not a conflict)."""
+    import uuid as _uuid
+
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with engine.connect() as conn:
+        conn.execute(
+            FreelancerModel.__table__.insert(),
+            [
+                {
+                    "id": _uuid.uuid4(),
+                    "nombre": "Legacy1",
+                    "activo": True,
+                    "telegram_user_id": None,
+                    "es_admin": False,
+                    "nombre_completo": None,
+                    "cedula": None,
+                    "display": None,
+                },
+                {
+                    "id": _uuid.uuid4(),
+                    "nombre": "Legacy2",
+                    "activo": True,
+                    "telegram_user_id": None,
+                    "es_admin": False,
+                    "nombre_completo": None,
+                    "cedula": None,
+                    "display": None,
+                },
+            ],
+        )
+        conn.commit()
+
+    with engine.connect() as conn:
+        result = conn.execute(FreelancerModel.__table__.select()).fetchall()
+        assert len(result) == 2
 
 
 def test_correos_no_parseados_table_has_expected_columns() -> None:
