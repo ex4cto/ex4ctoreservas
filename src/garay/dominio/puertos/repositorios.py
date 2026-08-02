@@ -11,6 +11,7 @@ from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.conciliacion.entidades import (
     CategoriaEgreso,
     Conciliacion,
+    CorreoNoParseado,
     Egreso,
     GastoRecurrente,
     Ingreso,
@@ -232,3 +233,24 @@ class ComisionRegistradaRepository(ABC):
 
     @abstractmethod
     def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[ComisionRegistrada]: ...
+
+
+class CorreoNoParseadoRepository(ABC):
+    @abstractmethod
+    def guardar(self, correo: CorreoNoParseado) -> None: ...
+
+    @abstractmethod
+    def existe_referencia(self, referencia: str) -> bool: ...
+
+    @abstractmethod
+    def listar_pendientes(self, max_intentos: int) -> list[CorreoNoParseado]:
+        """Return rows where procesado is False AND intentos < max_intentos."""
+        ...
+
+    @abstractmethod
+    def marcar_procesado(self, id: uuid.UUID) -> None: ...
+
+    @abstractmethod
+    def registrar_intento_fallido(self, id: uuid.UUID, error: str) -> None:
+        """Increment intentos and set error_ultimo."""
+        ...

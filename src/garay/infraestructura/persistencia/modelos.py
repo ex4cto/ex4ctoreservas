@@ -241,6 +241,35 @@ class FacturaModel(Base):
     estado_envio: Mapped[str] = mapped_column(String(20), nullable=False)
 
 
+class CorreoNoParseadoModel(Base):
+    """ORM model for quarantined emails that could not be parsed into an Ingreso/Egreso."""
+
+    __tablename__ = "correos_no_parseados"
+    __table_args__ = (
+        sa.UniqueConstraint("referencia", name="uq_correos_no_parseados_referencia"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    banco: Mapped[str] = mapped_column(String, nullable=False)
+    direccion: Mapped[str] = mapped_column(String, nullable=False)
+    referencia: Mapped[str] = mapped_column(String, nullable=False)
+    asunto: Mapped[str] = mapped_column(String, nullable=False)
+    correo_origen: Mapped[str | None] = mapped_column(String, nullable=True)
+    cuerpo_texto: Mapped[str] = mapped_column(Text, nullable=False)
+    cuerpo_html: Mapped[str] = mapped_column(Text, nullable=False)
+    error_parseo: Mapped[str] = mapped_column(String, nullable=False)
+    fecha_recibido: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    procesado: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa.text("false")
+    )
+    intentos: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=sa.text("0")
+    )
+    error_ultimo: Mapped[str] = mapped_column(String, nullable=False, default="")
+
+
 class ConciliacionModel(Base):
     __tablename__ = "conciliaciones"
     __table_args__ = (sa.UniqueConstraint("ingreso_id", name="uq_conciliaciones_ingreso_id"),)
