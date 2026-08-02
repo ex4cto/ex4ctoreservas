@@ -65,6 +65,23 @@ def test_parsea_con_espacios_no_estandar_del_reenvio() -> None:
     assert resultado.fecha_pago.minute == 19
 
 
+def test_parsea_hora_singular_a_la_una() -> None:
+    """Bre-B notifications for 1:xx times say 'a la 1:46' (singular), not 'a las'."""
+    texto = (
+        "Recibiste 310.000 de Yolymar Perez Banquez el 1 de agosto de 2026 "
+        "a la 1:46 p.m, desde el banco Bold."
+    )
+    resultado = _PARSER.parsear("", texto)
+
+    assert resultado.monto == Decimal("310000.00")
+    assert resultado.remitente == "Yolymar Perez Banquez"
+    assert resultado.fecha_pago.day == 1
+    assert resultado.fecha_pago.month == 8
+    assert resultado.fecha_pago.year == 2026
+    assert resultado.fecha_pago.hour == 13
+    assert resultado.fecha_pago.minute == 46
+
+
 def test_texto_sin_patron_lanza_error_parseo() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("", "Transaccion fallida sin formato reconocido")
