@@ -42,3 +42,8 @@ class NotificadorGrupoTelegram(NotificadorGrupo):
             raise NotificadorError(f"Telegram API returned HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
             raise NotificadorNoDisponible(f"Telegram API is unreachable: {exc.reason}") from exc
+        except Exception as exc:
+            # Honor the port contract: no unexpected error (malformed URL -> ValueError,
+            # platform OSError, etc.) may escape raw, or callers relying on the
+            # NotificadorError/NotificadorNoDisponible contract would break.
+            raise NotificadorNoDisponible(f"Telegram notification failed: {exc}") from exc
