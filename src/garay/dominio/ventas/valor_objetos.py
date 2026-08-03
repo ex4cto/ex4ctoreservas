@@ -14,3 +14,5 @@ class Participantes:
     cerrador_nombre: str | None = None
     punto_de_venta_id: uuid.UUID | None = None
     referido_nombre: str | None = None
+    vendedor_id: uuid.UUID | None = None
+    cerrador_id: uuid.UUID | None = None

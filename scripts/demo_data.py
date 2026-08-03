@@ -280,6 +280,9 @@ def main() -> None:
                     punto_de_venta_id=None,
                     referido_nombre=None,
                     canal_origen=canal,
+                    # Slice B: demo sales keep ids NULL — name→id resolution is out of scope
+                    vendedor_id=None,
+                    cerrador_id=None,
                 ))
             if not session.get(ComisionRegistradaModel, vid):
                 com = comision(valor, neto)

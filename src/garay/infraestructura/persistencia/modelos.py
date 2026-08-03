@@ -122,6 +122,12 @@ class VentaModel(Base):
     )
     referido_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     canal_origen: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    vendedor_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("freelancers.id"), nullable=True
+    )
+    cerrador_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("freelancers.id"), nullable=True
+    )
 
 
 class TiqueteraModel(Base):

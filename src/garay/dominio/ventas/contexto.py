@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -30,6 +31,8 @@ class ContextoVenta:
     vendedor_nombre: str | None = None
     cerrador_nombre: str | None = None
     referido_nombre: str | None = None
+    vendedor_id: uuid.UUID | None = None
+    cerrador_id: uuid.UUID | None = None
     numero_fisico: str | None = None
     rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"
     modo_edicion: bool = False
