@@ -79,12 +79,28 @@ class SQLAVentaRepository(VentaRepository):
             rows = session.execute(select(VentaModel)).scalars().all()
             return [to_domain(r) for r in rows]
 
-    def listar_por_freelancer_y_periodo(self, nombre: str, desde: date, hasta: date) -> list[Venta]:
+    def listar_por_freelancer_y_periodo(
+        self,
+        freelancer_id: uuid.UUID,
+        nombre: str,
+        desde: date,
+        hasta: date,
+    ) -> list[Venta]:
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
                 .where(
-                    (VentaModel.vendedor_nombre == nombre) | (VentaModel.cerrador_nombre == nombre)
+                    # Stricter 4-clause: name-match ONLY when id column IS NULL
+                    (VentaModel.vendedor_id == freelancer_id)
+                    | (VentaModel.cerrador_id == freelancer_id)
+                    | (
+                        (VentaModel.vendedor_id == None)  # noqa: E711
+                        & (VentaModel.vendedor_nombre == nombre)
+                    )
+                    | (
+                        (VentaModel.cerrador_id == None)  # noqa: E711
+                        & (VentaModel.cerrador_nombre == nombre)
+                    )
                 )
                 .where(VentaModel.fecha >= desde)
                 .where(VentaModel.fecha <= hasta)

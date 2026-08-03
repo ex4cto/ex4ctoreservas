@@ -10,9 +10,41 @@ from garay.aplicacion.reportes.consulta_ventas import ConsultaVentasService
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
+
+_UUID_F = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+_UUID_G = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+
+
+def _make_freelancer(fid: uuid.UUID, nombre: str, display: str | None) -> Freelancer:
+    return Freelancer(id=fid, nombre=nombre, display=display, activo=True)
+
+
+def _make_venta_con_ids(
+    *,
+    vendedor_id: uuid.UUID | None = None,
+    vendedor_nombre: str | None = None,
+    cerrador_id: uuid.UUID | None = None,
+    cerrador_nombre: str | None = None,
+) -> Venta:
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("300000"),
+        servicio_ids=[],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 10),
+        participantes=Participantes(
+            vendedor_nombre=vendedor_nombre,
+            cerrador_nombre=cerrador_nombre,
+            vendedor_id=vendedor_id,
+            cerrador_id=cerrador_id,
+        ),
+    )
 
 
 def test_ejecutar_resuelve_fks_y_aplana() -> None:
@@ -44,7 +76,11 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
         Servicio(id=serv_b, numero=2, nombre="City Tour"),
     ]
 
-    servicio = ConsultaVentasService(ventas=ventas, clientes=clientes, servicios=servicios)
+    freelancers = MagicMock()
+    freelancers.listar_todos.return_value = []
+    servicio = ConsultaVentasService(
+        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+    )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
     assert len(filas) == 1
@@ -83,7 +119,11 @@ def test_cliente_desconocido_usa_placeholder() -> None:
     servicios = MagicMock()
     servicios.listar.return_value = []
 
-    servicio = ConsultaVentasService(ventas=ventas, clientes=clientes, servicios=servicios)
+    freelancers = MagicMock()
+    freelancers.listar_todos.return_value = []
+    servicio = ConsultaVentasService(
+        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+    )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
     assert filas[0].cliente_nombre == "—"
@@ -98,7 +138,90 @@ def test_sin_ventas_devuelve_vacio() -> None:
     servicios = MagicMock()
     servicios.listar.return_value = []
 
-    servicio = ConsultaVentasService(ventas=ventas, clientes=clientes, servicios=servicios)
+    freelancers = MagicMock()
+    freelancers.listar_todos.return_value = []
+    servicio = ConsultaVentasService(
+        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+    )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
     assert filas == []
+
+
+# ─── SC-10, SC-11, SC-12, SC-17: display name resolution ─────────────────────
+
+
+def _make_consulta_service(
+    lista_ventas: list[Venta],
+    lista_freelancers: list[Freelancer] | None = None,
+) -> ConsultaVentasService:
+    ventas_repo = MagicMock()
+    ventas_repo.listar_por_periodo.return_value = lista_ventas
+    clientes_repo = MagicMock()
+    clientes_repo.listar.return_value = []
+    servicios_repo = MagicMock()
+    servicios_repo.listar.return_value = []
+    freelancers_repo = MagicMock()
+    freelancers_repo.listar_todos.return_value = lista_freelancers or []
+    return ConsultaVentasService(
+        ventas=ventas_repo,
+        clientes=clientes_repo,
+        servicios=servicios_repo,
+        freelancers=freelancers_repo,
+    )
+
+
+class TestConsultaVentasDisplayResolution:
+    """SC-10 — id-keyed row resolves display name."""
+
+    def test_vendedor_id_resolves_display(self) -> None:
+        fl = _make_freelancer(_UUID_F, "Mairelis", "Mairelis G.")
+        venta = _make_venta_con_ids(vendedor_id=_UUID_F, vendedor_nombre="Mairele")
+        service = _make_consulta_service([venta], [fl])
+        filas = service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+
+        assert len(filas) == 1
+        assert filas[0].vendedor == "Mairelis G."
+
+    def test_null_vendedor_id_uses_snapshot(self) -> None:
+        """SC-11 — NULL-id row uses snapshot directly."""
+        venta = _make_venta_con_ids(vendedor_id=None, vendedor_nombre="Ana")
+        service = _make_consulta_service([venta], [])
+        filas = service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+
+        assert filas[0].vendedor == "Ana"
+
+    def test_listar_todos_called_once(self) -> None:
+        """SC-12 — bulk load called exactly once for N rows."""
+        fl = _make_freelancer(_UUID_F, "X", "X display")
+        ventas = [
+            _make_venta_con_ids(vendedor_id=_UUID_F, vendedor_nombre="X"),
+            _make_venta_con_ids(vendedor_id=_UUID_F, vendedor_nombre="X"),
+            _make_venta_con_ids(vendedor_id=_UUID_F, vendedor_nombre="X"),
+        ]
+        ventas_repo = MagicMock()
+        ventas_repo.listar_por_periodo.return_value = ventas
+        clientes_repo = MagicMock()
+        clientes_repo.listar.return_value = []
+        servicios_repo = MagicMock()
+        servicios_repo.listar.return_value = []
+        freelancers_repo = MagicMock()
+        freelancers_repo.listar_todos.return_value = [fl]
+        service = ConsultaVentasService(
+            ventas=ventas_repo,
+            clientes=clientes_repo,
+            servicios=servicios_repo,
+            freelancers=freelancers_repo,
+        )
+        service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+
+        freelancers_repo.listar_todos.assert_called_once()
+
+    def test_cerrador_id_resolves_display(self) -> None:
+        """SC-17 — cerrador_id set resolves display for cerrador field."""
+        fl = _make_freelancer(_UUID_G, "Luisa", "Luisa M.")
+        venta = _make_venta_con_ids(cerrador_id=_UUID_G, cerrador_nombre="Luisa")
+        service = _make_consulta_service([venta], [fl])
+        filas = service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+
+        assert filas[0].cerrador == "Luisa M."

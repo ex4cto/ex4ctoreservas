@@ -48,13 +48,17 @@ async def test_cmd_mis_ventas_sin_repos() -> None:
     assert "Error" in call_args or "error" in call_args
 
 
+_FREELANCER_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
+
+
 @pytest.mark.asyncio
 async def test_cmd_mis_ventas_sin_ventas() -> None:
-    """Empty ventas list → message mentions 0 ventas."""
+    """Empty ventas list → message mentions 0 ventas; handler passes both id and nombre (SC-15)."""
     update = _make_update()
 
     freelancer_repo = MagicMock()
     freelancer_mock = MagicMock()
+    freelancer_mock.id = _FREELANCER_ID
     freelancer_mock.nombre = "Carlos"
     freelancer_repo.buscar_por_telegram_id.return_value = freelancer_mock
 
@@ -75,6 +79,15 @@ async def test_cmd_mis_ventas_sin_ventas() -> None:
     update.effective_message.reply_text.assert_called_once()
     msg = update.effective_message.reply_text.call_args[0][0]
     assert "0" in msg
+
+    # SC-15: both freelancer.id and freelancer.nombre must be passed
+    call_kwargs = venta_repo.listar_por_freelancer_y_periodo.call_args
+    assert call_kwargs is not None, "listar_por_freelancer_y_periodo was not called"
+    args = call_kwargs.args
+    kwargs = call_kwargs.kwargs
+    all_args = list(args) + list(kwargs.values())
+    assert _FREELANCER_ID in all_args, f"freelancer.id not passed; got {all_args}"
+    assert "Carlos" in all_args, f"freelancer.nombre not passed; got {all_args}"
 
 
 # ─── _contexto_a_comando id-capture (Phase 7) ────────────────────────────────

@@ -59,6 +59,7 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
+from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
@@ -131,6 +132,7 @@ def cargar_ventas(mes: int, año: int) -> ResumenVentas:
     servicio = ResumenVentasService(
         ventas=SQLAVentaRepository(sf),
         comisiones=SQLAComisionRegistradaRepository(sf),
+        freelancers=SQLAFreelancerRepository(sf),
     )
     return servicio.ejecutar(mes, año)
 
@@ -194,6 +196,7 @@ def cargar_consulta_ventas(desde: date, hasta: date) -> list[FilaVentaConsulta]:
         ventas=SQLAVentaRepository(sf),
         clientes=SQLAClienteRepository(sf),
         servicios=SQLAServicioRepository(sf),
+        freelancers=SQLAFreelancerRepository(sf),
     )
     return servicio.ejecutar(desde, hasta)
 

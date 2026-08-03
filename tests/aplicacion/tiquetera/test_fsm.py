@@ -1321,7 +1321,8 @@ class TestEditarParticipantesPicker:
     def test_editar_cerrador_emite_picker_todos(
         self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """EDITAR_SELECTOR → 'Participantes' with rol=cerrador goes to EDITAR_VENDEDOR with picker."""
+        """EDITAR_SELECTOR → 'Participantes' with rol=cerrador goes to EDITAR_VENDEDOR with picker.
+        """
         ctx = ContextoVenta(rol_registrante="cerrador")
         s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Participantes", ctx)
         assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR
@@ -1763,7 +1764,7 @@ class TestCallbackDataLimite:
         """Every fl:{uuid} callback_data from _opciones_freelancers fits within 64 bytes."""
         for solo_activos in (True, False):
             opts = fsm_con_roster._opciones_freelancers(solo_activos=solo_activos)
-            for label, data in opts:
+            for _label, data in opts:
                 assert len(data.encode("utf-8")) <= 64, (
                     f"overflow (solo_activos={solo_activos}): {data!r}"
                 )
@@ -1776,7 +1777,8 @@ class TestEmptyRosterGuard:
     """PARTICIPANTE_ROL must not enter a button-less dead-end when no active freelancers."""
 
     def test_solo_vendedor_empty_roster_returns_error_not_dead_end(self) -> None:
-        """FSM with freelancers=[] picking 'Solo vendedor' must return error, not PARTICIPANTE_OTRO."""
+        """FSM with freelancers=[] picking 'Solo vendedor' must return error, not PARTICIPANTE_OTRO.
+        """
         fsm_vacio = FSMTiquetera(
             servicios=SERVICIOS_TEST,
             puntos_venta=PUNTOS_TEST,
@@ -1787,14 +1789,14 @@ class TestEmptyRosterGuard:
         assert s.nuevo_estado != EstadoFSM.PARTICIPANTE_OTRO or (
             s.opciones_estructuradas is not None and len(s.opciones_estructuradas) > 0
         ), "Dead-end: PARTICIPANTE_OTRO with no opciones_estructuradas"
-        # Must show the error message
-        assert "sin_freelancers_activos" not in s.mensaje or True  # key check handled below
-        # The real assertion: the FSM must return the error message key content or stay at PARTICIPANTE_ROL
+        # Must show the error message (key check handled by assertions below)
+        # The real assertion: FSM must return error message or stay at PARTICIPANTE_ROL
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         assert "freelancer" in s.mensaje.lower() or "registr" in s.mensaje.lower()
 
     def test_solo_cerrador_empty_roster_returns_error_not_dead_end(self) -> None:
-        """FSM with freelancers=[] picking 'Solo cerrador' must return error, not PARTICIPANTE_OTRO."""
+        """FSM with freelancers=[] picking 'Solo cerrador' must return error, not PARTICIPANTE_OTRO.
+        """
         fsm_vacio = FSMTiquetera(
             servicios=SERVICIOS_TEST,
             puntos_venta=PUNTOS_TEST,
@@ -1817,8 +1819,8 @@ class TestEmptyRosterGuard:
 # ─── Fix 3: End-to-end flujo completo for solo vendedor / solo cerrador ───────
 
 
-def _indice_de(fsm: FSMTiquetera, categoria: str) -> int:
-    """Return the index of a family by category name."""
+def _indice_familia_de(fsm: FSMTiquetera, categoria: str) -> int:
+    """Return the index of a family by category name (substring match)."""
     salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
     assert salida.opciones_estructuradas is not None
     for i, (label, _) in enumerate(salida.opciones_estructuradas):
@@ -1842,7 +1844,7 @@ class TestFlujoCompletoSoloParticipante:
         s = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         ctx = s.contexto
 
-        indice_islas = _indice_de(fsm, "ISLAS")
+        indice_islas = _indice_familia_de(fsm, "ISLAS")
         s = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice_islas}", ctx)
         ctx = s.contexto
 

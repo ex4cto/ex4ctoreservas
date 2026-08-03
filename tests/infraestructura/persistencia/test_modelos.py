@@ -112,7 +112,7 @@ def test_freelancer_cedula_unique_constraint_rechaza_duplicados() -> None:
 
     with engine.connect() as conn:
         conn.execute(
-            FreelancerModel.__table__.insert(),
+            FreelancerModel.__table__.insert(),  # type: ignore[attr-defined]
             [
                 {
                     "id": _uuid.uuid4(),
@@ -130,7 +130,7 @@ def test_freelancer_cedula_unique_constraint_rechaza_duplicados() -> None:
 
         with pytest.raises(IntegrityError):
             conn.execute(
-                FreelancerModel.__table__.insert(),
+                FreelancerModel.__table__.insert(),  # type: ignore[attr-defined]
                 [
                     {
                         "id": _uuid.uuid4(),
@@ -156,7 +156,7 @@ def test_freelancer_cedula_null_permitido_en_multiples_filas() -> None:
 
     with engine.connect() as conn:
         conn.execute(
-            FreelancerModel.__table__.insert(),
+            FreelancerModel.__table__.insert(),  # type: ignore[attr-defined]
             [
                 {
                     "id": _uuid.uuid4(),

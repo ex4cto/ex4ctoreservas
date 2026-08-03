@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -550,7 +551,7 @@ def _make_freelancer(
 
 def _make_context_edf(
     freelancers: list[Freelancer] | None = None,
-    user_data: dict[str, object] | None = None,
+    user_data: Mapping[str, object] | None = None,
     buscar_por_id_result: Freelancer | None = None,
     buscar_por_cedula_result: Freelancer | None = None,
     buscar_por_telegram_result: Freelancer | None = None,

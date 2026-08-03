@@ -119,7 +119,9 @@ class TestGetFsm:
 class TestContextoAComando:
     def test_ambos_sets_both_names_to_freelancer(self) -> None:
         registrant_id = uuid.uuid4()
-        bot_data, _, _ = _base_bot_data(freelancer_nombre="Maria Lopez", freelancer_id=registrant_id)
+        bot_data, _, _ = _base_bot_data(
+            freelancer_nombre="Maria Lopez", freelancer_id=registrant_id
+        )
         ctx = _full_ctx(rol_registrante="ambos", destinos_numeros=[1])
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None

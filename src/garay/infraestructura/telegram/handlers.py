@@ -576,7 +576,7 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     hasta = hoy
 
     ventas = await asyncio.to_thread(
-        venta_repo.listar_por_freelancer_y_periodo, freelancer.nombre, desde, hasta
+        venta_repo.listar_por_freelancer_y_periodo, freelancer.id, freelancer.nombre, desde, hasta
     )
     venta_ids = [v.id for v in ventas]
     comisiones = await asyncio.to_thread(comision_repo.listar_por_venta_ids, venta_ids)
