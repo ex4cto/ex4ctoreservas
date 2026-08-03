@@ -346,12 +346,27 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     # --- Freelancers ---
     "freelancer.pedir_nombre": {Idioma.ES: "¿Cuál es el nombre del freelancer?"},
     "freelancer.error_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresá el nombre:"},  # noqa: E501
-    "freelancer.error_nombre_duplicado": {Idioma.ES: "Ya existe un freelancer con ese nombre. Ingresá otro:"},  # noqa: E501
     "freelancer.pedir_telegram_id": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero, ej: 123456789)"},  # noqa: E501
     "freelancer.error_telegram_id_invalido": {Idioma.ES: "El ID debe ser un número entero. Intentá de nuevo:"},  # noqa: E501
     "freelancer.error_telegram_id_duplicado": {Idioma.ES: "Ese ID ya está asignado a otro freelancer. Ingresá otro:"},  # noqa: E501
+    # Identity fields — Slice A1
+    "freelancer.pedir_nombre_completo": {Idioma.ES: "¿Cuál es el nombre completo del freelancer?"},
+    "freelancer.error_nombre_completo_vacio": {Idioma.ES: "El nombre completo no puede estar vacío. Ingresá el nombre completo:"},  # noqa: E501
+    "freelancer.pedir_cedula": {Idioma.ES: "¿Cuál es el número de cédula? (6 a 10 dígitos)"},
+    "freelancer.error_cedula_invalida": {Idioma.ES: "Cédula inválida. Debe contener entre 6 y 10 dígitos numéricos. Intentá de nuevo:"},  # noqa: E501
+    "freelancer.error_cedula_duplicada": {Idioma.ES: "Ya existe un freelancer con esa cédula. Ingresá otra:"},  # noqa: E501
+    "freelancer.pedir_nombre_corto": {Idioma.ES: "¿Cuál es el nombre corto? (Enter para usar \"{prefill}\")"},  # noqa: E501
+    "freelancer.pedir_display_override": {Idioma.ES: "El display automático es \"{display}\". ¿Querés usarlo? (Enter para confirmar, o escribí uno nuevo)"},  # noqa: E501
+    "freelancer.telegram_id_opcional": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero) — o presioná Omitir:"},  # noqa: E501
+    "freelancer.telegram_omitido": {Idioma.ES: "Telegram omitido. El freelancer no tendrá ID de Telegram vinculado."},  # noqa: E501
     "freelancer.confirmacion_nuevo": {
-        Idioma.ES: "¿Confirmás crear este freelancer?\n\nNombre: {nombre}\nTelegram ID: {telegram_id}"  # noqa: E501
+        Idioma.ES: (
+            "¿Confirmás crear este freelancer?\n\n"
+            "Nombre: {nombre}\n"
+            "Cédula: {cedula}\n"
+            "Display: {display}\n"
+            "Telegram ID: {telegram_id}"
+        )
     },
     "freelancer.creado": {Idioma.ES: "✅ Freelancer {nombre} creado correctamente."},
     "freelancer.cancelado": {Idioma.ES: "Operación cancelada."},

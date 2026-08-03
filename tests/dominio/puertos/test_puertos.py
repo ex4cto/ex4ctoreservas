@@ -5,12 +5,12 @@ from datetime import date
 
 import pytest
 
+from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puertos.repositorios import (
     FreelancerRepository,
     IngresoRepository,
     VentaRepository,
 )
-from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puertos.servicios_externos import ExtractorIA
 from garay.dominio.tiquetera.valor_objetos import DatosExtraidos
 from garay.dominio.ventas.entidades import Venta
@@ -82,11 +82,12 @@ class TestIngresoRepository:
 class TestFreelancerRepository:
     """Verify that FreelancerRepository ABC exposes the A1 contract.
 
-    WU-1 scope: buscar_por_nombre is KEPT; three new methods are ADDED.
-    buscar_por_nombre removal happens in WU-2.
+    WU-2: buscar_por_nombre is REMOVED from port and impl.
+    The three new methods (buscar_por_cedula, listar_por_nombre,
+    buscar_por_telegram_id_cualquier_estado) are required.
     """
 
-    def test_implementacion_cumple_interfaz_con_nuevos_metodos(self) -> None:
+    def test_implementacion_cumple_interfaz_sin_buscar_por_nombre(self) -> None:
         class _Impl(FreelancerRepository):
             def guardar(self, freelancer: Freelancer) -> None:
                 pass
@@ -100,13 +101,9 @@ class TestFreelancerRepository:
             def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None:
                 return None
 
-            def buscar_por_nombre(self, nombre: str) -> Freelancer | None:
-                return None
-
             def listar_todos(self) -> list[Freelancer]:
                 return []
 
-            # New A1 methods
             def buscar_por_cedula(self, cedula: str) -> Freelancer | None:
                 return None
 
@@ -120,8 +117,16 @@ class TestFreelancerRepository:
 
         assert isinstance(_Impl(), FreelancerRepository)
 
+    def test_buscar_por_nombre_no_existe_en_la_interfaz(self) -> None:
+        """buscar_por_nombre must NOT exist as an abstractmethod in the port (WU-2 removal)."""
+        assert not hasattr(FreelancerRepository, "buscar_por_nombre") or not getattr(
+            getattr(FreelancerRepository, "buscar_por_nombre", None),
+            "__isabstractmethod__",
+            False,
+        )
+
     def test_sin_nuevos_metodos_no_instanciable(self) -> None:
-        """Missing any of the 3 new abstractmethods → TypeError."""
+        """Missing any of the 3 required abstractmethods → TypeError."""
 
         class _Incompleto(FreelancerRepository):
             def guardar(self, freelancer: Freelancer) -> None:
@@ -134,9 +139,6 @@ class TestFreelancerRepository:
                 return []
 
             def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None:
-                return None
-
-            def buscar_por_nombre(self, nombre: str) -> Freelancer | None:
                 return None
 
             def listar_todos(self) -> list[Freelancer]:

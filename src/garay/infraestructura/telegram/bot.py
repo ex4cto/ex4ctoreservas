@@ -90,16 +90,23 @@ from garay.infraestructura.telegram.handlers_egresos import (
 from garay.infraestructura.telegram.handlers_freelancers import (
     EF_CONFIRMAR,
     EF_SELECCIONAR,
+    FL_CEDULA,
     FL_CONFIRMACION,
-    FL_NOMBRE,
+    FL_DISPLAY_OVERRIDE,
+    FL_NOMBRE_COMPLETO,
+    FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
     cmd_eliminar_freelancer,
     cmd_listar_freelancers,
     cmd_nuevo_freelancer,
     handle_ef_confirmar,
     handle_ef_seleccionar,
+    handle_fl_cedula,
     handle_fl_confirmacion,
-    handle_fl_nombre,
+    handle_fl_display_override,
+    handle_fl_nombre_completo,
+    handle_fl_nombre_corto,
+    handle_fl_skip_tg,
     handle_fl_telegram_id,
 )
 
@@ -376,8 +383,14 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     nuevo_freelancer_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("nuevo_freelancer", cmd_nuevo_freelancer)],
         states={
-            FL_NOMBRE: [MessageHandler(_TEXT, handle_fl_nombre)],
-            FL_TELEGRAM_ID: [MessageHandler(_TEXT, handle_fl_telegram_id)],
+            FL_NOMBRE_COMPLETO: [MessageHandler(_TEXT, handle_fl_nombre_completo)],
+            FL_CEDULA: [MessageHandler(_TEXT, handle_fl_cedula)],
+            FL_NOMBRE_CORTO: [MessageHandler(_TEXT, handle_fl_nombre_corto)],
+            FL_DISPLAY_OVERRIDE: [MessageHandler(_TEXT, handle_fl_display_override)],
+            FL_TELEGRAM_ID: [
+                MessageHandler(_TEXT, handle_fl_telegram_id),
+                _CB(handle_fl_skip_tg, pattern="^fl_skip_tg$"),
+            ],
             FL_CONFIRMACION: [_CB(handle_fl_confirmacion)],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],

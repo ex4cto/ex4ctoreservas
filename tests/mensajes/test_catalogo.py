@@ -363,6 +363,59 @@ class TestConfirmacionResumenEspecialE:
         assert "Vendedor: (tú)" in result
 
 
+class TestClavesFreelancerIdentityA1:
+    """New freelancer.* catalog keys added in Slice A1 (WU-2)."""
+
+    CLAVES_NUEVAS: ClassVar[list[str]] = [
+        "freelancer.pedir_nombre_completo",
+        "freelancer.error_nombre_completo_vacio",
+        "freelancer.pedir_cedula",
+        "freelancer.error_cedula_invalida",
+        "freelancer.error_cedula_duplicada",
+        "freelancer.pedir_nombre_corto",
+        "freelancer.pedir_display_override",
+        "freelancer.telegram_id_opcional",
+        "freelancer.telegram_omitido",
+    ]
+
+    def test_todas_las_claves_nuevas_existen(self) -> None:
+        for clave in self.CLAVES_NUEVAS:
+            msg = obtener_mensaje(clave)
+            assert isinstance(msg, str) and len(msg) > 0, f"Key missing or empty: {clave!r}"
+
+    def test_pedir_nombre_corto_tiene_placeholder_prefill(self) -> None:
+        template = obtener_mensaje("freelancer.pedir_nombre_corto")
+        result = template.format(prefill="Bryan")
+        assert "Bryan" in result
+        assert "{" not in result
+
+    def test_pedir_display_override_tiene_placeholder_display(self) -> None:
+        template = obtener_mensaje("freelancer.pedir_display_override")
+        result = template.format(display="Bryan C.")
+        assert "Bryan C." in result
+        assert "{" not in result
+
+    def test_confirmacion_nuevo_incluye_cedula_y_display(self) -> None:
+        template = obtener_mensaje("freelancer.confirmacion_nuevo")
+        result = template.format(
+            nombre="Bryan",
+            telegram_id=12345678,
+            cedula="12345678",
+            display="Bryan C.",
+        )
+        assert "Bryan" in result
+        assert "12345678" in result
+        assert "Bryan C." in result
+        assert "{" not in result
+
+    def test_error_nombre_duplicado_no_debe_existir(self) -> None:
+        """freelancer.error_nombre_duplicado must be removed (dup-by-nombre is gone)."""
+        from garay.dominio.comun.errores import ErrorDeConfiguracion
+
+        with pytest.raises(ErrorDeConfiguracion):
+            obtener_mensaje("freelancer.error_nombre_duplicado")
+
+
 class TestClavesMovimientosPlainText:
     """FIX 2: movimientos templates must NOT contain Markdown asterisks."""
 
