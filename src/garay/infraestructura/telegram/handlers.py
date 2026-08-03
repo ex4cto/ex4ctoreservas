@@ -137,15 +137,23 @@ def _contexto_a_comando(
 
     vendedor_nombre: str | None
     cerrador_nombre: str | None
+    vendedor_id: uuid.UUID | None
+    cerrador_id: uuid.UUID | None
     if ctx.rol_registrante == "ambos":
         vendedor_nombre = freelancer.nombre
         cerrador_nombre = freelancer.nombre
+        vendedor_id = freelancer.id
+        cerrador_id = freelancer.id
     elif ctx.rol_registrante == "vendedor":
         vendedor_nombre = freelancer.nombre
         cerrador_nombre = ctx.cerrador_nombre
+        vendedor_id = freelancer.id
+        cerrador_id = ctx.cerrador_id
     elif ctx.rol_registrante == "cerrador":
         cerrador_nombre = freelancer.nombre
         vendedor_nombre = ctx.vendedor_nombre
+        cerrador_id = freelancer.id
+        vendedor_id = ctx.vendedor_id
     else:
         logger.error("rol_registrante is invalid: %s", ctx.rol_registrante)
         return None
@@ -207,6 +215,8 @@ def _contexto_a_comando(
         vendedor_nombre=vendedor_nombre,
         cerrador_nombre=cerrador_nombre,
         punto_de_venta_id=pdv_id,
+        vendedor_id=vendedor_id,
+        cerrador_id=cerrador_id,
     )
 
     return RegistrarVentaComando(

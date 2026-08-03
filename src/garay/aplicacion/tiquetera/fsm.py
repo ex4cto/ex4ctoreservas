@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
@@ -192,6 +193,7 @@ class FSMTiquetera:
         self,
         servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
         puntos_venta: list[str],
+        freelancers: list[tuple[uuid.UUID, str, bool]] | None = None,
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
         self._servicios: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
@@ -208,6 +210,8 @@ class FSMTiquetera:
             if numeros
         }
         self._puntos_venta = puntos_venta
+        # Roster of (id, nombre, activo) for the counterpart picker.
+        self._freelancers: list[tuple[uuid.UUID, str, bool]] = freelancers or []
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
@@ -305,6 +309,21 @@ class FSMTiquetera:
             info = self._servicios.get(numero)
             nombre = info[0] if info is not None else str(numero)
             opciones.append((f"{numero} — {nombre}", f"srv:{numero}"))
+        return opciones
+
+    def _opciones_freelancers(self, solo_activos: bool) -> list[tuple[str, str]]:
+        """Structured options for the freelancer picker: (label, 'fl:{id}').
+
+        When solo_activos=True, only active freelancers are included.
+        When solo_activos=False (edit flows), all freelancers are included;
+        inactive entries get an '[inactivo]' suffix on their label.
+        """
+        opciones: list[tuple[str, str]] = []
+        for fl_id, nombre, activo in self._freelancers:
+            if solo_activos and not activo:
+                continue
+            label = nombre if activo else f"{nombre} [inactivo]"
+            opciones.append((label, f"fl:{fl_id}"))
         return opciones
 
     def _acumulador_mensaje(self, ctx: ContextoVenta) -> str:
@@ -988,16 +1007,34 @@ class FSMTiquetera:
             )
         if opcion == "Solo vendedor":
             ctx.rol_registrante = "vendedor"
+            opciones_fl = self._opciones_freelancers(solo_activos=True)
+            if not opciones_fl:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                    mensaje=obtener_mensaje("tiquetera.sin_freelancers_activos"),
+                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    contexto=ctx,
+                )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
                 mensaje=obtener_mensaje("pregunta_participante_otro_cerrador"),
+                opciones_estructuradas=opciones_fl,
                 contexto=ctx,
             )
         if opcion == "Solo cerrador":
             ctx.rol_registrante = "cerrador"
+            opciones_fl = self._opciones_freelancers(solo_activos=True)
+            if not opciones_fl:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                    mensaje=obtener_mensaje("tiquetera.sin_freelancers_activos"),
+                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    contexto=ctx,
+                )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
                 mensaje=obtener_mensaje("pregunta_participante_otro_vendedor"),
+                opciones_estructuradas=opciones_fl,
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1007,12 +1044,51 @@ class FSMTiquetera:
             contexto=ctx,
         )
 
+    def _parse_fl_id(self, entrada: str) -> uuid.UUID | None:
+        """Parse a 'fl:{uuid}' callback value; return None on bad format or missing prefix."""
+        stripped = entrada.removeprefix("fl:")
+        if stripped == entrada:
+            # No prefix was removed — free text, not a picker selection.
+            return None
+        try:
+            return uuid.UUID(stripped)
+        except ValueError:
+            return None
+
+    def _lookup_fl_nombre(self, fl_id: uuid.UUID) -> str | None:
+        """Return the nombre of the freelancer with the given id, or None if not found."""
+        for rid, nombre, _ in self._freelancers:
+            if rid == fl_id:
+                return nombre
+        return None
+
     def _handle_participante_otro(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
+
+        fl_id = self._parse_fl_id(entrada.strip())
+        if fl_id is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=True),
+                contexto=ctx,
+            )
+
+        nombre = self._lookup_fl_nombre(fl_id)
+        if nombre is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=True),
+                contexto=ctx,
+            )
+
         if ctx.rol_registrante == "vendedor":
-            ctx.cerrador_nombre = entrada.strip()
+            ctx.cerrador_id = fl_id
+            ctx.cerrador_nombre = nombre
         elif ctx.rol_registrante == "cerrador":
-            ctx.vendedor_nombre = entrada.strip()
+            ctx.vendedor_id = fl_id
+            ctx.vendedor_nombre = nombre
         else:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
@@ -1145,6 +1221,14 @@ class FSMTiquetera:
             ctx.destinos_numeros = []
             ctx.familia_seleccionada = None
             return self._salida_familia(ctx)
+        if estado_destino in (EstadoFSM.EDITAR_VENDEDOR, EstadoFSM.EDITAR_CERRADOR):
+            # Participant edit: show the freelancer picker (includes inactive)
+            return SalidaFSM(
+                nuevo_estado=estado_destino,
+                mensaje=self._mensaje_para_estado(estado_destino, ctx),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=estado_destino,
             mensaje=self._mensaje_para_estado(estado_destino, ctx),
@@ -1154,13 +1238,42 @@ class FSMTiquetera:
 
     def _handle_editar_vendedor(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        ctx.vendedor_nombre = entrada.strip()
+
+        fl_id = self._parse_fl_id(entrada.strip())
+        if fl_id is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_VENDEDOR,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
+        nombre = self._lookup_fl_nombre(fl_id)
+        if nombre is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_VENDEDOR,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
+
+        if ctx.rol_registrante not in ("ambos", "vendedor", "cerrador"):
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_VENDEDOR,
+                mensaje=obtener_mensaje("error_interno_rol_no_definido"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
+
+        ctx.vendedor_id = fl_id
+        ctx.vendedor_nombre = nombre
+
         if ctx.rol_registrante == "ambos":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_CERRADOR,
                 mensaje=obtener_mensaje("pregunta_editar_cerrador").format(
                     actual=ctx.cerrador_nombre or "—"
                 ),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
                 contexto=ctx,
             )
         ctx.modo_edicion = False
@@ -1173,7 +1286,26 @@ class FSMTiquetera:
 
     def _handle_editar_cerrador(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        ctx.cerrador_nombre = entrada.strip()
+
+        fl_id = self._parse_fl_id(entrada.strip())
+        if fl_id is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_CERRADOR,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
+        nombre = self._lookup_fl_nombre(fl_id)
+        if nombre is None:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.EDITAR_CERRADOR,
+                mensaje=obtener_mensaje("error_seleccion_freelancer_invalida"),
+                opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
+                contexto=ctx,
+            )
+
+        ctx.cerrador_id = fl_id
+        ctx.cerrador_nombre = nombre
         ctx.modo_edicion = False
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,

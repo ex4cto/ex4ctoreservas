@@ -334,6 +334,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_participante_rol),
             ],
             estados[EstadoFSM.PARTICIPANTE_OTRO]: [
+                CallbackQueryHandler(handle_participante_otro, pattern="^fl:"),
                 MessageHandler(_TEXT, handle_participante_otro),
             ],
             estados[EstadoFSM.CONFIRMACION]: [
@@ -345,9 +346,11 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_editar_selector),
             ],
             estados[EstadoFSM.EDITAR_VENDEDOR]: [
+                CallbackQueryHandler(handle_editar_vendedor, pattern="^fl:"),
                 MessageHandler(_TEXT, handle_editar_vendedor),
             ],
             estados[EstadoFSM.EDITAR_CERRADOR]: [
+                CallbackQueryHandler(handle_editar_cerrador, pattern="^fl:"),
                 MessageHandler(_TEXT, handle_editar_cerrador),
             ],
         },

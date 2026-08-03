@@ -37,9 +37,10 @@ def _context(bot_data: dict) -> MagicMock:  # type: ignore[type-arg]
     return c
 
 
-def _freelancer(nombre: str = "Maria Lopez") -> MagicMock:
+def _freelancer(nombre: str = "Maria Lopez", fl_id: uuid.UUID | None = None) -> MagicMock:
     f = MagicMock()
     f.nombre = nombre
+    f.id = fl_id or uuid.uuid4()
     return f
 
 
@@ -78,10 +79,13 @@ def _base_bot_data(
     *,
     freelancer_nombre: str = "Maria Lopez",
     servicio_numero: int = 1,
-) -> tuple[dict, uuid.UUID]:  # type: ignore[type-arg]
+    freelancer_id: uuid.UUID | None = None,
+) -> tuple[dict, uuid.UUID, uuid.UUID]:  # type: ignore[type-arg]
+    """Returns (bot_data, servicio_id, freelancer_id)."""
     sid = uuid.uuid4()
+    fl_id = freelancer_id or uuid.uuid4()
     fl_repo = MagicMock()
-    fl_repo.buscar_por_telegram_id.return_value = _freelancer(freelancer_nombre)
+    fl_repo.buscar_por_telegram_id.return_value = _freelancer(freelancer_nombre, fl_id=fl_id)
     s_repo = MagicMock()
     s_repo.listar.return_value = [_servicio(servicio_numero, sid)]
     c_repo = MagicMock()
@@ -90,7 +94,7 @@ def _base_bot_data(
         "servicio_repo": s_repo,
         "cliente_repo": c_repo,
     }
-    return bot_data, sid
+    return bot_data, sid, fl_id
 
 
 # ── TestGetFsm ───────────────────────────────────────────────────────────────
@@ -114,33 +118,52 @@ class TestGetFsm:
 
 class TestContextoAComando:
     def test_ambos_sets_both_names_to_freelancer(self) -> None:
-        bot_data, _ = _base_bot_data(freelancer_nombre="Maria Lopez")
+        registrant_id = uuid.uuid4()
+        bot_data, _, _ = _base_bot_data(freelancer_nombre="Maria Lopez", freelancer_id=registrant_id)
         ctx = _full_ctx(rol_registrante="ambos", destinos_numeros=[1])
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None
         assert cmd.participantes.vendedor_nombre == "Maria Lopez"
         assert cmd.participantes.cerrador_nombre == "Maria Lopez"
+        assert cmd.participantes.vendedor_id == registrant_id
+        assert cmd.participantes.cerrador_id == registrant_id
 
     def test_vendedor_sets_vendedor_to_freelancer_cerrador_from_ctx(self) -> None:
-        bot_data, _ = _base_bot_data(freelancer_nombre="Maria")
-        ctx = _full_ctx(rol_registrante="vendedor", cerrador_nombre="Pedro")
+        registrant_id = uuid.uuid4()
+        counterpart_id = uuid.uuid4()
+        bot_data, _, _ = _base_bot_data(freelancer_nombre="Maria", freelancer_id=registrant_id)
+        ctx = _full_ctx(
+            rol_registrante="vendedor",
+            cerrador_nombre="Pedro",
+            cerrador_id=counterpart_id,
+        )
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None
         assert cmd.participantes.vendedor_nombre == "Maria"
         assert cmd.participantes.cerrador_nombre == "Pedro"
+        assert cmd.participantes.vendedor_id == registrant_id
+        assert cmd.participantes.cerrador_id == counterpart_id
 
     def test_cerrador_sets_cerrador_to_freelancer_vendedor_from_ctx(self) -> None:
-        bot_data, _ = _base_bot_data(freelancer_nombre="Maria")
-        ctx = _full_ctx(rol_registrante="cerrador", vendedor_nombre="Juan")
+        registrant_id = uuid.uuid4()
+        counterpart_id = uuid.uuid4()
+        bot_data, _, _ = _base_bot_data(freelancer_nombre="Maria", freelancer_id=registrant_id)
+        ctx = _full_ctx(
+            rol_registrante="cerrador",
+            vendedor_nombre="Juan",
+            vendedor_id=counterpart_id,
+        )
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None
         assert cmd.participantes.cerrador_nombre == "Maria"
         assert cmd.participantes.vendedor_nombre == "Juan"
+        assert cmd.participantes.cerrador_id == registrant_id
+        assert cmd.participantes.vendedor_id == counterpart_id
 
     def test_returns_none_when_effective_user_is_none(self) -> None:
         u = MagicMock()
         u.effective_user = None
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         assert _contexto_a_comando(u, _context(bot_data), _full_ctx()) is None
 
     def test_returns_none_when_freelancer_repo_missing(self) -> None:
@@ -153,17 +176,17 @@ class TestContextoAComando:
         assert _contexto_a_comando(_update(), _context(bot_data), _full_ctx()) is None
 
     def test_returns_none_when_rol_registrante_invalid(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx(rol_registrante=None)
         assert _contexto_a_comando(_update(), _context(bot_data), ctx) is None
 
     def test_returns_none_when_valor_is_none(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx(valor=None)
         assert _contexto_a_comando(_update(), _context(bot_data), ctx) is None
 
     def test_returns_none_when_destinos_empty(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx(destinos_numeros=[])
         assert _contexto_a_comando(_update(), _context(bot_data), ctx) is None
 
@@ -174,7 +197,7 @@ class TestContextoAComando:
         assert _contexto_a_comando(_update(), _context(bot_data), _full_ctx()) is None
 
     def test_returns_none_when_no_servicio_matches(self) -> None:
-        bot_data, _ = _base_bot_data(servicio_numero=99)
+        bot_data, _, _ = _base_bot_data(servicio_numero=99)
         ctx = _full_ctx(destinos_numeros=[1])
         assert _contexto_a_comando(_update(), _context(bot_data), ctx) is None
 
@@ -200,7 +223,7 @@ class TestContextoAComando:
         assert cmd.servicio_ids == [sid]
 
     def test_pdv_id_resolved_when_pdv_repo_present(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         pdv_id = uuid.uuid4()
         pdv_repo = MagicMock()
         pdv_repo.listar.return_value = [_pdv("Marie Real", pdv_id)]
@@ -211,7 +234,7 @@ class TestContextoAComando:
         assert cmd.participantes.punto_de_venta_id == pdv_id
 
     def test_pdv_id_none_when_no_match(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         pdv_repo = MagicMock()
         pdv_repo.listar.return_value = [_pdv("Otro PDV")]
         bot_data["pdv_repo"] = pdv_repo
@@ -221,7 +244,7 @@ class TestContextoAComando:
         assert cmd.participantes.punto_de_venta_id is None
 
     def test_pdv_match_is_case_insensitive(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         pdv_id = uuid.uuid4()
         pdv_repo = MagicMock()
         pdv_repo.listar.return_value = [_pdv("MARIE REAL", pdv_id)]
@@ -232,20 +255,20 @@ class TestContextoAComando:
         assert cmd.participantes.punto_de_venta_id == pdv_id
 
     def test_cliente_guardar_called_once(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx()
         _contexto_a_comando(_update(), _context(bot_data), ctx)
         bot_data["cliente_repo"].guardar.assert_called_once()
 
     def test_abono_none_when_ctx_abono_none(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx(abono=None)
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None
         assert cmd.abono is None
 
     def test_abono_set_when_ctx_abono_present(self) -> None:
-        bot_data, _ = _base_bot_data()
+        bot_data, _, _ = _base_bot_data()
         ctx = _full_ctx(abono=Decimal("50000"))
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is not None

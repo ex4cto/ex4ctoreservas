@@ -437,6 +437,23 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "generar_mes.ya_generados": {
         Idioma.ES: "Los gastos de {mes}/{año} ya fueron generados anteriormente."
     },
+    "error_seleccion_freelancer_invalida": {
+        Idioma.ES: (
+            "Selección inválida. Usá los botones para elegir un freelancer registrado."
+        )
+    },
+    "pregunta_seleccionar_vendedor": {
+        Idioma.ES: "Seleccioná el vendedor:"
+    },
+    "pregunta_seleccionar_cerrador": {
+        Idioma.ES: "Seleccioná el cerrador:"
+    },
+    "tiquetera.sin_freelancers_activos": {
+        Idioma.ES: (
+            "No hay freelancers activos registrados. "
+            "Registrá uno con /nuevo_freelancer y volvé a intentar."
+        )
+    },
 }
 
 
