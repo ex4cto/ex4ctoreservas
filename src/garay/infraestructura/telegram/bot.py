@@ -88,6 +88,10 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_gf_nombre,
 )
 from garay.infraestructura.telegram.handlers_freelancers import (
+    EDITAR_CAMPO,
+    EDITAR_CONFIRMAR,
+    EDITAR_SELECCIONAR,
+    EDITAR_VALOR,
     EF_CONFIRMAR,
     EF_SELECCIONAR,
     FL_CEDULA,
@@ -96,9 +100,15 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
+    cmd_editar_freelancer,
     cmd_eliminar_freelancer,
     cmd_listar_freelancers,
     cmd_nuevo_freelancer,
+    handle_edf_activo_toggle,
+    handle_edf_campo,
+    handle_edf_confirmar,
+    handle_edf_seleccionar,
+    handle_edf_valor,
     handle_ef_confirmar,
     handle_ef_seleccionar,
     handle_fl_cedula,
@@ -132,6 +142,7 @@ _COMANDOS_ADMIN = [
     BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
     BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
     BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
+    BotCommand("editar_freelancer", "Editar un freelancer (solo admin)"),
     BotCommand("nuevo_egreso", "Registrar un egreso manual"),
     BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
     BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
@@ -405,11 +416,32 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
 
+    editar_freelancer_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("editar_freelancer", cmd_editar_freelancer)],
+        states={
+            EDITAR_SELECCIONAR: [_CB(handle_edf_seleccionar, pattern="^edf_sel:")],
+            EDITAR_CAMPO: [
+                _CB(handle_edf_campo, pattern="^edf_campo:"),
+                _CB(handle_edf_campo, pattern="^edf_listo$"),
+            ],
+            EDITAR_VALOR: [
+                MessageHandler(_TEXT, handle_edf_valor),
+                _CB(handle_edf_valor, pattern="^edf_tg_none$"),
+            ],
+            EDITAR_CONFIRMAR: [
+                _CB(handle_edf_activo_toggle, pattern="^edf_activo:"),
+                _CB(handle_edf_confirmar, pattern="^edf_(confirmar|cancelar)$"),
+            ],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(nuevo_freelancer_conv_handler, group=5)
     app.add_handler(eliminar_freelancer_conv_handler, group=5)
+    app.add_handler(editar_freelancer_conv_handler, group=6)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

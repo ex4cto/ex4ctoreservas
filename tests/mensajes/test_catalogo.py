@@ -416,6 +416,43 @@ class TestClavesFreelancerIdentityA1:
             obtener_mensaje("freelancer.error_nombre_duplicado")
 
 
+class TestClavesFreelancerEditar:
+    """New freelancer.editar_* catalog keys added in Slice A2."""
+
+    CLAVES_NUEVAS: ClassVar[list[str]] = [
+        "freelancer.editar_seleccionar",
+        "freelancer.editar_sin_freelancers",
+        "freelancer.editar_menu_campo",
+        "freelancer.editar_pedir_nombre_completo",
+        "freelancer.editar_pedir_cedula",
+        "freelancer.editar_pedir_nombre_corto",
+        "freelancer.editar_pedir_telegram_id",
+        "freelancer.editar_activo_estado",
+        "freelancer.editar_confirmar",
+        "freelancer.editado",
+        "freelancer.error_cedula_duplicada_otro",
+        "freelancer.error_telegram_duplicado_otro",
+        "freelancer.editar_listo",
+    ]
+
+    def test_todas_las_claves_nuevas_existen(self) -> None:
+        for clave in self.CLAVES_NUEVAS:
+            msg = obtener_mensaje(clave)
+            assert isinstance(msg, str) and len(msg) > 0, f"Key missing or empty: {clave!r}"
+
+    def test_editar_confirmar_tiene_placeholders_campo_anterior_nuevo(self) -> None:
+        template = obtener_mensaje("freelancer.editar_confirmar")
+        result = template.format(campo="cédula", anterior="1234567", nuevo="9876543")
+        assert "{" not in result
+        assert "cédula" in result
+
+    def test_error_telegram_duplicado_otro_tiene_placeholder_nombre(self) -> None:
+        template = obtener_mensaje("freelancer.error_telegram_duplicado_otro")
+        result = template.format(nombre="Ana")
+        assert "{" not in result
+        assert "Ana" in result
+
+
 class TestClavesMovimientosPlainText:
     """FIX 2: movimientos templates must NOT contain Markdown asterisks."""
 

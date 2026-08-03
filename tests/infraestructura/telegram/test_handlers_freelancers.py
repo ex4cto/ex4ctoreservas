@@ -10,6 +10,10 @@ from telegram.ext import ConversationHandler
 
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.infraestructura.telegram.handlers_freelancers import (
+    EDITAR_CAMPO,
+    EDITAR_CONFIRMAR,
+    EDITAR_SELECCIONAR,
+    EDITAR_VALOR,
     EF_CONFIRMAR,
     EF_SELECCIONAR,
     FL_CEDULA,
@@ -18,9 +22,15 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
+    cmd_editar_freelancer,
     cmd_eliminar_freelancer,
     cmd_listar_freelancers,
     cmd_nuevo_freelancer,
+    handle_edf_activo_toggle,
+    handle_edf_campo,
+    handle_edf_confirmar,
+    handle_edf_seleccionar,
+    handle_edf_valor,
     handle_ef_confirmar,
     handle_ef_seleccionar,
     handle_fl_cedula,
@@ -487,3 +497,582 @@ class TestCmdEliminarFreelancer:
         ctx.bot_data["freelancer_repo"].buscar_por_id.assert_not_called()
         update.effective_message.edit_message_text = AsyncMock()
         update.effective_message.reply_text.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# A2 state constants
+# ---------------------------------------------------------------------------
+
+
+class TestEditorFreelancerStateConstants:
+    def test_editar_seleccionar_valor(self) -> None:
+        assert EDITAR_SELECCIONAR == 210
+
+    def test_editar_campo_valor(self) -> None:
+        assert EDITAR_CAMPO == 211
+
+    def test_editar_valor_valor(self) -> None:
+        assert EDITAR_VALOR == 212
+
+    def test_editar_confirmar_valor(self) -> None:
+        assert EDITAR_CONFIRMAR == 213
+
+    def test_no_collision_with_a1_constants(self) -> None:
+        a1 = {FL_TELEGRAM_ID, FL_CONFIRMACION, FL_NOMBRE_CORTO, FL_DISPLAY_OVERRIDE,
+               EF_SELECCIONAR, EF_CONFIRMAR, FL_NOMBRE_COMPLETO, FL_CEDULA}
+        a2 = {EDITAR_SELECCIONAR, EDITAR_CAMPO, EDITAR_VALOR, EDITAR_CONFIRMAR}
+        assert a1.isdisjoint(a2), f"Collision: {a1 & a2}"
+
+
+# ---------------------------------------------------------------------------
+# A2 helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_freelancer(
+    nombre: str = "Ana",
+    activo: bool = True,
+    cedula: str | None = "1234567",
+    telegram_user_id: int | None = None,
+    nombre_completo: str | None = "Ana Garcia",
+) -> Freelancer:
+    return Freelancer(
+        id=uuid.uuid4(),
+        nombre=nombre,
+        activo=activo,
+        telegram_user_id=telegram_user_id,
+        es_admin=False,
+        cedula=cedula,
+        nombre_completo=nombre_completo,
+        display=None,
+    )
+
+
+def _make_context_edf(
+    freelancers: list[Freelancer] | None = None,
+    user_data: dict[str, object] | None = None,
+    buscar_por_id_result: Freelancer | None = None,
+    buscar_por_cedula_result: Freelancer | None = None,
+    buscar_por_telegram_result: Freelancer | None = None,
+) -> MagicMock:
+    ctx = MagicMock()
+    ctx.user_data = user_data or {}
+    repo = MagicMock()
+    if freelancers is not None:
+        repo.listar_todos.return_value = freelancers
+    repo.buscar_por_id.return_value = buscar_por_id_result
+    repo.buscar_por_cedula.return_value = buscar_por_cedula_result
+    repo.buscar_por_telegram_id_cualquier_estado.return_value = buscar_por_telegram_result
+    ctx.bot_data = {"freelancer_repo": repo}
+    return ctx
+
+
+# ---------------------------------------------------------------------------
+# cmd_editar_freelancer
+# ---------------------------------------------------------------------------
+
+
+class TestCmdEditarFreelancer:
+    @pytest.mark.asyncio
+    async def test_roster_no_vacio_retorna_editar_seleccionar(self) -> None:
+        f = _make_freelancer()
+        update = _make_update()
+        ctx = _make_context_edf(freelancers=[f])
+
+        result = await cmd_editar_freelancer.__wrapped__(update, ctx)  # type: ignore[attr-defined]
+
+        assert result == EDITAR_SELECCIONAR
+        update.effective_message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_roster_vacio_retorna_end(self) -> None:
+        update = _make_update()
+        ctx = _make_context_edf(freelancers=[])
+
+        result = await cmd_editar_freelancer.__wrapped__(update, ctx)  # type: ignore[attr-defined]
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_inactivo_marcado_en_etiqueta(self) -> None:
+        fi = _make_freelancer("Inactivo", activo=False)
+        update = _make_update()
+        ctx = _make_context_edf(freelancers=[fi])
+
+        await cmd_editar_freelancer.__wrapped__(update, ctx)  # type: ignore[attr-defined]
+
+        call_kwargs = update.effective_message.reply_text.call_args
+        # The reply_markup kwarg should contain the [inactivo] marker
+        markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get("reply_markup")
+        buttons_text = " ".join(
+            btn.text for row in markup.inline_keyboard for btn in row
+        )
+        assert "[inactivo]" in buttons_text.lower()
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_seleccionar
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfSeleccionar:
+    @pytest.mark.asyncio
+    async def test_activo_almacena_id_y_retorna_editar_campo(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data=f"edf_sel:{f.id}")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_seleccionar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        assert ctx.user_data["edf_target_id"] == str(f.id)
+
+    @pytest.mark.asyncio
+    async def test_inactivo_tambien_seleccionable(self) -> None:
+        fi = _make_freelancer(activo=False)
+        update = _make_update(callback_data=f"edf_sel:{fi.id}")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_seleccionar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        assert ctx.user_data["edf_target_id"] == str(fi.id)
+
+    @pytest.mark.asyncio
+    async def test_menu_campo_enviado_con_boton_listo(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data=f"edf_sel:{f.id}")
+        ctx = _make_context_edf()
+
+        await handle_edf_seleccionar(update, ctx)
+
+        update.effective_message.reply_text.assert_called_once()
+        call_kwargs = update.effective_message.reply_text.call_args
+        markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get("reply_markup")
+        buttons_cb = [
+            btn.callback_data
+            for row in markup.inline_keyboard
+            for btn in row
+        ]
+        assert "edf_listo" in buttons_cb
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_campo
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfCampo:
+    @pytest.mark.asyncio
+    async def test_nombre_completo_retorna_editar_valor(self) -> None:
+        update = _make_update(callback_data="edf_campo:nombre_completo")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_cedula_retorna_editar_valor(self) -> None:
+        update = _make_update(callback_data="edf_campo:cedula")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_nombre_retorna_editar_valor(self) -> None:
+        update = _make_update(callback_data="edf_campo:nombre")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_telegram_id_retorna_editar_valor(self) -> None:
+        update = _make_update(callback_data="edf_campo:telegram_id")
+        ctx = _make_context_edf()
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_activo_retorna_editar_confirmar(self) -> None:
+        f = _make_freelancer()
+        target_id = str(f.id)
+        update = _make_update(callback_data="edf_campo:activo")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={"edf_target_id": target_id},
+        )
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+    @pytest.mark.asyncio
+    async def test_edf_listo_termina_conversacion(self) -> None:
+        update = _make_update(callback_data="edf_listo")
+        ctx = _make_context_edf(user_data={
+            "edf_target_id": str(uuid.uuid4()),
+            "edf_campo": "nombre",
+        })
+
+        result = await handle_edf_campo(update, ctx)
+
+        assert result == ConversationHandler.END
+        # keys cleared
+        assert "edf_target_id" not in ctx.user_data
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_valor — cedula path
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfValorCedula:
+    @pytest.mark.asyncio
+    async def test_cedula_invalida_permanece_en_editar_valor(self) -> None:
+        update = _make_update(text="123")
+        ud = {"edf_campo": "cedula", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_cedula_duplicada_otro_permanece_en_editar_valor(self) -> None:
+        otro = _make_freelancer("Otro")
+        target_id = str(uuid.uuid4())
+        update = _make_update(text="9876543")
+        ctx = _make_context_edf(
+            buscar_por_cedula_result=otro,  # different id from target
+            user_data={"edf_campo": "cedula", "edf_target_id": target_id},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_cedula_propia_no_es_duplicado(self) -> None:
+        """CRITICAL EDGE: own current cedula must NOT be treated as duplicate."""
+        f = _make_freelancer(cedula="9876543")
+        update = _make_update(text="9876543")
+        ctx = _make_context_edf(
+            buscar_por_cedula_result=f,  # same freelancer
+            user_data={"edf_campo": "cedula", "edf_target_id": str(f.id)},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+    @pytest.mark.asyncio
+    async def test_cedula_nueva_valida_avanza_a_confirmar(self) -> None:
+        update = _make_update(text="9876543")
+        ctx = _make_context_edf(
+            buscar_por_cedula_result=None,
+            user_data={"edf_campo": "cedula", "edf_target_id": str(uuid.uuid4())},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_valor — telegram_id path
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfValorTelegramId:
+    @pytest.mark.asyncio
+    async def test_no_int_permanece_en_editar_valor(self) -> None:
+        update = _make_update(text="abc")
+        ud = {"edf_campo": "telegram_id", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_duplicado_otro_permanece_en_editar_valor(self) -> None:
+        otro = _make_freelancer("Otro", telegram_user_id=99887766)
+        target_id = str(uuid.uuid4())
+        update = _make_update(text="99887766")
+        ctx = _make_context_edf(
+            buscar_por_telegram_result=otro,
+            user_data={"edf_campo": "telegram_id", "edf_target_id": target_id},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_telegram_id_propio_no_es_duplicado(self) -> None:
+        """CRITICAL EDGE: own current telegram_id must NOT be treated as duplicate."""
+        f = _make_freelancer(telegram_user_id=11223344)
+        update = _make_update(text="11223344")
+        ctx = _make_context_edf(
+            buscar_por_telegram_result=f,  # same freelancer
+            user_data={"edf_campo": "telegram_id", "edf_target_id": str(f.id)},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+    @pytest.mark.asyncio
+    async def test_edf_tg_none_establece_none_y_avanza(self) -> None:
+        update = _make_update(callback_data="edf_tg_none")
+        ud = {"edf_campo": "telegram_id", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+        assert ctx.user_data.get("edf_valor") is None
+
+    @pytest.mark.asyncio
+    async def test_telegram_id_nuevo_valido_avanza(self) -> None:
+        update = _make_update(text="55667788")
+        ctx = _make_context_edf(
+            buscar_por_telegram_result=None,
+            user_data={"edf_campo": "telegram_id", "edf_target_id": str(uuid.uuid4())},
+        )
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_valor — nombre_completo + nombre paths
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfValorNombre:
+    @pytest.mark.asyncio
+    async def test_nombre_completo_vacio_permanece_en_editar_valor(self) -> None:
+        update = _make_update(text="   ")
+        ud = {"edf_campo": "nombre_completo", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_nombre_completo_valido_avanza(self) -> None:
+        update = _make_update(text="Bryan Castro")
+        ud = {"edf_campo": "nombre_completo", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+        assert ctx.user_data["edf_valor"] == "Bryan Castro"
+
+    @pytest.mark.asyncio
+    async def test_nombre_vacio_permanece_en_editar_valor(self) -> None:
+        update = _make_update(text="")
+        ud = {"edf_campo": "nombre", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_nombre_valido_avanza(self) -> None:
+        update = _make_update(text="Bryan")
+        ud = {"edf_campo": "nombre", "edf_target_id": str(uuid.uuid4())}
+        ctx = _make_context_edf(user_data=ud)
+
+        result = await handle_edf_valor(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_activo_toggle
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfActivoToggle:
+    @pytest.mark.asyncio
+    async def test_activo_true_almacena_true(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_activo:true")
+        ctx = _make_context_edf(user_data={"edf_target_id": str(f.id), "edf_campo": "activo"})
+
+        result = await handle_edf_activo_toggle(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+        assert ctx.user_data["edf_activo"] is True
+
+    @pytest.mark.asyncio
+    async def test_activo_false_almacena_false(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_activo:false")
+        ctx = _make_context_edf(user_data={"edf_target_id": str(f.id), "edf_campo": "activo"})
+
+        result = await handle_edf_activo_toggle(update, ctx)
+
+        assert result == EDITAR_CONFIRMAR
+        assert ctx.user_data["edf_activo"] is False
+
+
+# ---------------------------------------------------------------------------
+# handle_edf_confirmar
+# ---------------------------------------------------------------------------
+
+
+class TestHandleEdfConfirmar:
+    @pytest.mark.asyncio
+    async def test_confirmar_nombre_completo_actualiza_display_y_retorna_campo(self) -> None:
+        f = _make_freelancer()
+        target_id = str(f.id)
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": target_id,
+                "edf_campo": "nombre_completo",
+                "edf_valor": "Bryan Castro Gomez",
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        # Returns to field menu, NOT END
+        assert result == EDITAR_CAMPO
+        # guardar called once
+        ctx.bot_data["freelancer_repo"].guardar.assert_called_once()
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.nombre_completo == "Bryan Castro Gomez"
+        # display re-derived
+        assert saved.display is not None
+        # edf_target_id persists for next loop
+        assert ctx.user_data.get("edf_target_id") == target_id
+
+    @pytest.mark.asyncio
+    async def test_confirmar_activo_modifica_y_retorna_campo(self) -> None:
+        f = _make_freelancer(activo=True)
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "activo",
+                "edf_activo": False,
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.activo is False
+
+    @pytest.mark.asyncio
+    async def test_cancelar_no_guarda_y_termina(self) -> None:
+        update = _make_update(callback_data="edf_cancelar")
+        ctx = _make_context_edf(
+            user_data={
+                "edf_target_id": str(uuid.uuid4()),
+                "edf_campo": "cedula",
+                "edf_valor": "9999999",
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        ctx.bot_data["freelancer_repo"].guardar.assert_not_called()
+        # all edf_* keys cleared on cancel
+        assert "edf_target_id" not in ctx.user_data
+
+    @pytest.mark.asyncio
+    async def test_confirmar_cedula_retorna_campo(self) -> None:
+        f = _make_freelancer(cedula="1234567")
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "cedula",
+                "edf_valor": "9876543",
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.cedula == "9876543"
+
+    @pytest.mark.asyncio
+    async def test_confirmar_nombre_retorna_campo(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "nombre",
+                "edf_valor": "Brayan",
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.nombre == "Brayan"
+
+    @pytest.mark.asyncio
+    async def test_confirmar_telegram_id_none_guarda_none(self) -> None:
+        f = _make_freelancer(telegram_user_id=11223344)
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "telegram_id",
+                "edf_valor": None,
+            },
+        )
+
+        result = await handle_edf_confirmar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.telegram_user_id is None
+
+    @pytest.mark.asyncio
+    async def test_target_id_persists_after_confirm(self) -> None:
+        """CRITICAL EDGE: edf_target_id must survive confirm for multi-edit loop."""
+        f = _make_freelancer(nombre="Test")
+        target_id = str(f.id)
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": target_id,
+                "edf_campo": "nombre",
+                "edf_valor": "TestNew",
+            },
+        )
+
+        await handle_edf_confirmar(update, ctx)
+
+        assert ctx.user_data.get("edf_target_id") == target_id

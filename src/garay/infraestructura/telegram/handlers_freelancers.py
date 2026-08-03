@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import uuid
 
@@ -31,6 +32,12 @@ EF_CONFIRMAR: int = 206
 
 FL_NOMBRE_COMPLETO: int = 207
 FL_CEDULA: int = 208
+
+# State constants — range 210-213 (/editar_freelancer)
+EDITAR_SELECCIONAR: int = 210
+EDITAR_CAMPO: int = 211
+EDITAR_VALOR: int = 212
+EDITAR_CONFIRMAR: int = 213
 
 # ---------------------------------------------------------------------------
 # /listar_freelancers
@@ -359,3 +366,371 @@ def _limpiar_ef(context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data is not None:
         context.user_data.pop("ef_freelancer_id", None)
         context.user_data.pop("ef_freelancer_nombre", None)
+
+
+# ---------------------------------------------------------------------------
+# /editar_freelancer — A2 multi-edit FSM
+# ---------------------------------------------------------------------------
+
+# Field label map for the field menu buttons.
+_CAMPOS_EDITABLES: list[tuple[str, str]] = [
+    ("nombre_completo", "Nombre completo"),
+    ("cedula", "Cédula"),
+    ("nombre", "Nombre corto"),
+    ("telegram_id", "Telegram ID"),
+    ("activo", "Activo"),
+]
+
+
+def _teclado_menu_campo() -> InlineKeyboardMarkup:
+    """Build the field-selection keyboard including the Listo button."""
+    botones = [
+        [InlineKeyboardButton(label, callback_data=f"edf_campo:{campo}")]
+        for campo, label in _CAMPOS_EDITABLES
+    ]
+    botones.append(
+        [
+            InlineKeyboardButton(
+                obtener_mensaje("freelancer.editar_listo"), callback_data="edf_listo"
+            )
+        ]
+    )
+    return InlineKeyboardMarkup(botones)
+
+
+def _limpiar_edf(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Pop all edf_* keys from user_data."""
+    if context.user_data is not None:
+        for key in ("edf_target_id", "edf_campo", "edf_valor", "edf_activo"):
+            context.user_data.pop(key, None)
+
+
+@requiere_admin_conv
+async def cmd_editar_freelancer(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Entry point for /editar_freelancer — lists all freelancers (active + inactive)."""
+    if update.effective_message is None:
+        return ConversationHandler.END
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    todos = repo.listar_todos() if repo else []
+    if not todos:
+        await update.effective_message.reply_text(
+            obtener_mensaje("freelancer.editar_sin_freelancers")
+        )
+        return ConversationHandler.END
+    botones = [
+        [
+            InlineKeyboardButton(
+                f"{f.nombre}{' [inactivo]' if not f.activo else ''}",
+                callback_data=f"edf_sel:{f.id}",
+            )
+        ]
+        for f in todos
+    ]
+    teclado = InlineKeyboardMarkup(botones)
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.editar_seleccionar"),
+        reply_markup=teclado,
+    )
+    return EDITAR_SELECCIONAR
+
+
+async def handle_edf_seleccionar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Callback: edf_sel:{uuid} — store target id and show field menu."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None or query is None or query.data is None:
+        return EDITAR_SELECCIONAR
+    freelancer_id_str = query.data.removeprefix("edf_sel:")
+    if context.user_data is not None:
+        context.user_data["edf_target_id"] = freelancer_id_str
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.editar_menu_campo"),
+        reply_markup=_teclado_menu_campo(),
+    )
+    return EDITAR_CAMPO
+
+
+async def handle_edf_campo(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Callback: edf_campo:{field} or edf_listo — route to value prompt or END."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None or query is None or query.data is None:
+        return EDITAR_CAMPO
+
+    data = query.data
+
+    if data == "edf_listo":
+        _limpiar_edf(context)
+        return ConversationHandler.END
+
+    campo = data.removeprefix("edf_campo:")
+    if context.user_data is not None:
+        context.user_data["edf_campo"] = campo
+
+    if campo == "activo":
+        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        target_id_str = (
+            str(context.user_data.get("edf_target_id", ""))
+            if context.user_data is not None
+            else ""
+        )
+        f = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo and target_id_str else None
+        estado_str = "Activo" if (f and f.activo) else "Inactivo"
+        teclado = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton("✅ Activar", callback_data="edf_activo:true"),
+                    InlineKeyboardButton("❌ Desactivar", callback_data="edf_activo:false"),
+                ]
+            ]
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("freelancer.editar_activo_estado").format(estado=estado_str),
+            reply_markup=teclado,
+        )
+        return EDITAR_CONFIRMAR
+
+    prompt_key_map: dict[str, str] = {
+        "nombre_completo": "freelancer.editar_pedir_nombre_completo",
+        "cedula": "freelancer.editar_pedir_cedula",
+        "nombre": "freelancer.editar_pedir_nombre_corto",
+        "telegram_id": "freelancer.editar_pedir_telegram_id",
+    }
+    prompt_key = prompt_key_map.get(campo, "freelancer.editar_pedir_nombre_completo")
+
+    extra_markup: InlineKeyboardMarkup | None = None
+    if campo == "telegram_id":
+        extra_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Quitar / Unlink", callback_data="edf_tg_none")]]
+        )
+
+    if extra_markup:
+        await update.effective_message.reply_text(
+            obtener_mensaje(prompt_key),
+            reply_markup=extra_markup,
+        )
+    else:
+        await update.effective_message.reply_text(obtener_mensaje(prompt_key))
+    return EDITAR_VALOR
+
+
+async def handle_edf_valor(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle free-text (or edf_tg_none callback) value input for the chosen field."""
+    # Check for the unlink callback first
+    query = update.callback_query
+    if query and query.data == "edf_tg_none":
+        await query.answer()
+        if context.user_data is not None:
+            context.user_data["edf_valor"] = None
+        await _mostrar_confirmacion_editar(update, context)
+        return EDITAR_CONFIRMAR
+
+    if update.effective_message is None:
+        return EDITAR_VALOR
+
+    ud = context.user_data if context.user_data is not None else {}
+    campo: str = str(ud.get("edf_campo", ""))
+    target_id_str: str = str(ud.get("edf_target_id", ""))
+    target_id: uuid.UUID | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        target_id = uuid.UUID(target_id_str)
+
+    texto = (update.effective_message.text or "").strip()
+
+    if campo == "cedula":
+        try:
+            cedula = validar_cedula(texto)
+        except CedulaInvalida:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_cedula_invalida")
+            )
+            return EDITAR_VALOR
+        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        found = repo.buscar_por_cedula(cedula) if repo else None
+        if found and target_id and found.id != target_id:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_cedula_duplicada_otro")
+            )
+            return EDITAR_VALOR
+        if context.user_data is not None:
+            context.user_data["edf_valor"] = cedula
+        await _mostrar_confirmacion_editar(update, context)
+        return EDITAR_CONFIRMAR
+
+    if campo == "telegram_id":
+        try:
+            nuevo_tg = int(texto)
+        except ValueError:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_telegram_id_invalido")
+            )
+            return EDITAR_VALOR
+        repo2: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        found_tg = (
+            repo2.buscar_por_telegram_id_cualquier_estado(nuevo_tg) if repo2 else None
+        )
+        if found_tg and target_id and found_tg.id != target_id:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_telegram_duplicado_otro").format(
+                    nombre=found_tg.nombre
+                )
+            )
+            return EDITAR_VALOR
+        if context.user_data is not None:
+            context.user_data["edf_valor"] = nuevo_tg
+        await _mostrar_confirmacion_editar(update, context)
+        return EDITAR_CONFIRMAR
+
+    if campo in ("nombre_completo", "nombre"):
+        if not texto:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_nombre_completo_vacio")
+            )
+            return EDITAR_VALOR
+        if context.user_data is not None:
+            context.user_data["edf_valor"] = texto
+        await _mostrar_confirmacion_editar(update, context)
+        return EDITAR_CONFIRMAR
+
+    # Fallback — unknown field, treat as error
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.error_nombre_completo_vacio")
+    )
+    return EDITAR_VALOR
+
+
+async def _mostrar_confirmacion_editar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Send the edf confirm/cancel prompt with field diff."""
+    if update.effective_message is None:
+        return
+    ud = context.user_data or {}
+    campo = str(ud.get("edf_campo", ""))
+    nuevo = ud.get("edf_valor")
+    nuevo_str = str(nuevo) if nuevo is not None else "—"
+    teclado = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✅ Confirmar", callback_data="edf_confirmar"),
+                InlineKeyboardButton("❌ Cancelar", callback_data="edf_cancelar"),
+            ]
+        ]
+    )
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.editar_confirmar").format(
+            campo=campo, anterior="(actual)", nuevo=nuevo_str
+        ),
+        reply_markup=teclado,
+        parse_mode="HTML",
+    )
+
+
+async def handle_edf_activo_toggle(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Callback: edf_activo:{true|false} — store boolean and show confirm prompt."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None or query is None or query.data is None:
+        return EDITAR_CONFIRMAR
+    valor_bool = query.data.removeprefix("edf_activo:") == "true"
+    if context.user_data is not None:
+        context.user_data["edf_activo"] = valor_bool
+    ud = context.user_data or {}
+    nuevo_str = "Activo" if valor_bool else "Inactivo"
+    teclado = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✅ Confirmar", callback_data="edf_confirmar"),
+                InlineKeyboardButton("❌ Cancelar", callback_data="edf_cancelar"),
+            ]
+        ]
+    )
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.editar_confirmar").format(
+            campo="activo", anterior="(actual)", nuevo=nuevo_str
+        ),
+        reply_markup=teclado,
+        parse_mode="HTML",
+    )
+    _ = ud  # suppress unused warning
+    return EDITAR_CONFIRMAR
+
+
+async def handle_edf_confirmar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Callback: edf_confirmar or edf_cancelar — save mutation or abort."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None:
+        return ConversationHandler.END
+
+    accion = query.data if query else ""
+    ud = context.user_data if context.user_data is not None else {}
+
+    if accion == "edf_cancelar":
+        _limpiar_edf(context)
+        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
+        return ConversationHandler.END
+
+    # --- confirm branch ---
+    target_id_str = str(ud.get("edf_target_id", ""))
+    campo = str(ud.get("edf_campo", ""))
+
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    try:
+        target_uuid = uuid.UUID(target_id_str)
+    except (ValueError, AttributeError):
+        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
+        return ConversationHandler.END
+
+    f = repo.buscar_por_id(target_uuid) if repo else None
+    if f is None:
+        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
+        return ConversationHandler.END
+
+    # Mutate exactly one field
+    if campo == "nombre_completo":
+        nuevo_nc: str = str(ud.get("edf_valor", ""))
+        f.nombre_completo = nuevo_nc
+        f.display = derivar_display(nuevo_nc)
+    elif campo == "cedula":
+        f.cedula = str(ud.get("edf_valor", "")) or None
+    elif campo == "nombre":
+        f.nombre = str(ud.get("edf_valor", ""))
+    elif campo == "telegram_id":
+        raw_tg = ud.get("edf_valor")
+        f.telegram_user_id = int(raw_tg) if isinstance(raw_tg, int) else None
+    elif campo == "activo":
+        f.activo = bool(ud.get("edf_activo", f.activo))
+
+    if repo:
+        repo.guardar(f)
+
+    await update.effective_message.reply_text(obtener_mensaje("freelancer.editado"))
+
+    # Clear field/value keys but KEEP edf_target_id for the multi-edit loop
+    if context.user_data is not None:
+        for key in ("edf_campo", "edf_valor", "edf_activo"):
+            context.user_data.pop(key, None)
+
+    # Return to field menu for the same freelancer
+    await update.effective_message.reply_text(
+        obtener_mensaje("freelancer.editar_menu_campo"),
+        reply_markup=_teclado_menu_campo(),
+    )
+    return EDITAR_CAMPO

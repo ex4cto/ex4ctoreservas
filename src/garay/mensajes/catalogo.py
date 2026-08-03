@@ -376,6 +376,36 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "freelancer.sin_activos": {Idioma.ES: "No hay freelancers activos para desactivar."},
     "freelancer.confirmar_eliminar": {Idioma.ES: "¿Desactivar a <b>{nombre}</b>?"},
     "freelancer.eliminado": {Idioma.ES: "✅ {nombre} fue desactivado."},
+    # --- Freelancer edit — Slice A2 ---
+    "freelancer.editar_seleccionar": {Idioma.ES: "Seleccioná el freelancer a editar:"},
+    "freelancer.editar_sin_freelancers": {Idioma.ES: "No hay freelancers registrados para editar."},
+    "freelancer.editar_menu_campo": {Idioma.ES: "¿Qué campo querés editar?"},
+    "freelancer.editar_pedir_nombre_completo": {Idioma.ES: "Ingresá el nuevo nombre completo:"},
+    "freelancer.editar_pedir_cedula": {Idioma.ES: "Ingresá la nueva cédula (6 a 10 dígitos):"},
+    "freelancer.editar_pedir_nombre_corto": {
+        Idioma.ES: (
+            "Ingresá el nuevo nombre corto (se usa para conciliar /mis_ventas).\n"
+            "⚠️ Cambiar este campo afecta la coincidencia histórica hasta Slice C."
+        )
+    },
+    "freelancer.editar_pedir_telegram_id": {
+        Idioma.ES: (
+            "Ingresá el nuevo ID de Telegram (número entero) — "
+            "o presioná «Quitar» para desvincularlo:"
+        )
+    },
+    "freelancer.editar_activo_estado": {Idioma.ES: "Estado actual: {estado}\n¿Qué querés hacer?"},
+    "freelancer.editar_confirmar": {
+        Idioma.ES: "¿Confirmás cambiar <b>{campo}</b>?\n\nAnterior: {anterior}\nNuevo: {nuevo}"
+    },
+    "freelancer.editado": {Idioma.ES: "✅ Cambio guardado correctamente."},
+    "freelancer.error_cedula_duplicada_otro": {
+        Idioma.ES: "Esa cédula ya pertenece a otro freelancer. Ingresá una diferente:"
+    },
+    "freelancer.error_telegram_duplicado_otro": {
+        Idioma.ES: "Ese ID de Telegram ya es de {nombre}. Ingresá uno diferente:"
+    },
+    "freelancer.editar_listo": {Idioma.ES: "Listo"},
     # --- Movimientos recientes ---
     "movimientos.encabezado": {
         Idioma.ES: "📋 Movimientos — últimas {horas} h"
