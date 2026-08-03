@@ -12,16 +12,23 @@ from garay.dominio.freelancers.entidades import Freelancer
 from garay.infraestructura.telegram.handlers_freelancers import (
     EF_CONFIRMAR,
     EF_SELECCIONAR,
+    FL_CEDULA,
     FL_CONFIRMACION,
-    FL_NOMBRE,
+    FL_DISPLAY_OVERRIDE,
+    FL_NOMBRE_COMPLETO,
+    FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
     cmd_eliminar_freelancer,
     cmd_listar_freelancers,
     cmd_nuevo_freelancer,
     handle_ef_confirmar,
     handle_ef_seleccionar,
+    handle_fl_cedula,
     handle_fl_confirmacion,
-    handle_fl_nombre,
+    handle_fl_display_override,
+    handle_fl_nombre_completo,
+    handle_fl_nombre_corto,
+    handle_fl_skip_tg,
     handle_fl_telegram_id,
 )
 
@@ -104,78 +111,205 @@ class TestCmdListarFreelancers:
 
 
 # ---------------------------------------------------------------------------
-# /nuevo_freelancer
+# /nuevo_freelancer — new A1 flow
 # ---------------------------------------------------------------------------
 
 
 class TestCmdNuevoFreelancer:
     @pytest.mark.asyncio
-    async def test_entry_pide_nombre(self) -> None:
+    async def test_entry_pide_nombre_completo(self) -> None:
         update = _make_update()
         ctx = _make_context()
 
         result = await cmd_nuevo_freelancer.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
-        assert result == FL_NOMBRE
+        assert result == FL_NOMBRE_COMPLETO
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
         assert "nombre" in msg.lower()
 
+
+class TestHandleFlNombreCompleto:
     @pytest.mark.asyncio
-    async def test_nombre_vacio_permanece_en_estado(self) -> None:
+    async def test_vacio_permanece_en_estado(self) -> None:
         update = _make_update(text="   ")
         ctx = _make_context()
 
-        result = await handle_fl_nombre(update, ctx)
+        result = await handle_fl_nombre_completo(update, ctx)
 
-        assert result == FL_NOMBRE
+        assert result == FL_NOMBRE_COMPLETO
 
     @pytest.mark.asyncio
-    async def test_nombre_duplicado_permanece_en_estado(self) -> None:
-        update = _make_update(text="Ana")
+    async def test_valido_almacena_y_avanza_a_cedula(self) -> None:
+        update = _make_update(text="Bryan Castro Gomez")
         ctx = _make_context()
-        ctx.bot_data["freelancer_repo"].buscar_por_nombre.return_value = _freelancer("Ana")
 
-        result = await handle_fl_nombre(update, ctx)
+        result = await handle_fl_nombre_completo(update, ctx)
 
-        assert result == FL_NOMBRE
-        msg = update.effective_message.reply_text.call_args[0][0]
-        assert "duplicado" in msg.lower() or "existe" in msg.lower()
+        assert result == FL_CEDULA
+        assert ctx.user_data["fl_nombre_completo"] == "Bryan Castro Gomez"
+        # default short name = first token
+        assert ctx.user_data["fl_nombre"] == "Bryan"
 
     @pytest.mark.asyncio
-    async def test_nombre_valido_avanza_a_telegram_id(self) -> None:
-        update = _make_update(text="Pedro")
+    async def test_nombre_completo_un_token_prefill_es_el_mismo(self) -> None:
+        update = _make_update(text="Madonna")
         ctx = _make_context()
-        ctx.bot_data["freelancer_repo"].buscar_por_nombre.return_value = None
 
-        result = await handle_fl_nombre(update, ctx)
+        result = await handle_fl_nombre_completo(update, ctx)
 
-        assert result == FL_TELEGRAM_ID
-        assert ctx.user_data["fl_nombre"] == "Pedro"
+        assert result == FL_CEDULA
+        assert ctx.user_data["fl_nombre"] == "Madonna"
+
+
+class TestHandleFlCedula:
+    @pytest.mark.asyncio
+    async def test_cedula_invalida_permanece_en_estado(self) -> None:
+        update = _make_update(text="123")
+        ctx = _make_context(user_data={"fl_nombre_completo": "Bryan C", "fl_nombre": "Bryan"})
+
+        result = await handle_fl_cedula(update, ctx)
+
+        assert result == FL_CEDULA
 
     @pytest.mark.asyncio
-    async def test_telegram_id_invalido_permanece_en_estado(self) -> None:
-        update = _make_update(text="abc")
-        ctx = _make_context(user_data={"fl_nombre": "Pedro"})
-
-        result = await handle_fl_telegram_id(update, ctx)
-
-        assert result == FL_TELEGRAM_ID
-
-    @pytest.mark.asyncio
-    async def test_telegram_id_duplicado_permanece_en_estado(self) -> None:
-        update = _make_update(text="99999")
-        ctx = _make_context(user_data={"fl_nombre": "Pedro"})
-        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value = _freelancer("Pedro")
-
-        result = await handle_fl_telegram_id(update, ctx)
-
-        assert result == FL_TELEGRAM_ID
-
-    @pytest.mark.asyncio
-    async def test_telegram_id_valido_avanza_a_confirmacion(self) -> None:
+    async def test_cedula_duplicada_permanece_en_estado(self) -> None:
         update = _make_update(text="12345678")
-        ctx = _make_context(user_data={"fl_nombre": "Pedro"})
+        ctx = _make_context(user_data={"fl_nombre_completo": "Bryan C", "fl_nombre": "Bryan"})
+        ctx.bot_data["freelancer_repo"].buscar_por_cedula.return_value = _freelancer("Otro")
+
+        result = await handle_fl_cedula(update, ctx)
+
+        assert result == FL_CEDULA
+
+    @pytest.mark.asyncio
+    async def test_cedula_valida_almacena_y_avanza_a_nombre_corto(self) -> None:
+        update = _make_update(text="12345678")
+        ctx = _make_context(user_data={"fl_nombre_completo": "Bryan Castro", "fl_nombre": "Bryan"})
+        ctx.bot_data["freelancer_repo"].buscar_por_cedula.return_value = None
+
+        result = await handle_fl_cedula(update, ctx)
+
+        assert result == FL_NOMBRE_CORTO
+        assert ctx.user_data["fl_cedula"] == "12345678"
+
+
+class TestHandleFlNombreCorto:
+    @pytest.mark.asyncio
+    async def test_texto_vacio_usa_prefill(self) -> None:
+        update = _make_update(text="")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_nombre": "Bryan",
+                "fl_cedula": "12345678",
+            }
+        )
+
+        result = await handle_fl_nombre_corto(update, ctx)
+
+        # empty text → keep prefill → advance (FL_DISPLAY_OVERRIDE)
+        assert result == FL_DISPLAY_OVERRIDE
+        assert ctx.user_data["fl_nombre"] == "Bryan"
+
+    @pytest.mark.asyncio
+    async def test_texto_provisto_sobreescribe_prefill(self) -> None:
+        update = _make_update(text="Bry")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_nombre": "Bryan",
+                "fl_cedula": "12345678",
+            }
+        )
+
+        result = await handle_fl_nombre_corto(update, ctx)
+
+        assert result == FL_DISPLAY_OVERRIDE
+        assert ctx.user_data["fl_nombre"] == "Bry"
+
+
+class TestHandleFlDisplayOverride:
+    @pytest.mark.asyncio
+    async def test_vacio_usa_display_auto(self) -> None:
+        update = _make_update(text="")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_nombre": "Bryan",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
+
+        result = await handle_fl_display_override(update, ctx)
+
+        assert result == FL_TELEGRAM_ID
+        assert ctx.user_data["fl_display"] == "Bryan C."
+
+    @pytest.mark.asyncio
+    async def test_texto_provisto_sobreescribe_display(self) -> None:
+        update = _make_update(text="B. Castro")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_nombre": "Bryan",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
+
+        result = await handle_fl_display_override(update, ctx)
+
+        assert result == FL_TELEGRAM_ID
+        assert ctx.user_data["fl_display"] == "B. Castro"
+
+
+class TestHandleFlTelegramId:
+    @pytest.mark.asyncio
+    async def test_invalido_permanece_en_estado(self) -> None:
+        update = _make_update(text="abc")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
+
+        result = await handle_fl_telegram_id(update, ctx)
+
+        assert result == FL_TELEGRAM_ID
+
+    @pytest.mark.asyncio
+    async def test_duplicado_permanece_en_estado(self) -> None:
+        update = _make_update(text="99999")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
+        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value = _freelancer("Otro")
+
+        result = await handle_fl_telegram_id(update, ctx)
+
+        assert result == FL_TELEGRAM_ID
+
+    @pytest.mark.asyncio
+    async def test_valido_avanza_a_confirmacion(self) -> None:
+        update = _make_update(text="12345678")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
         ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value = None
 
         result = await handle_fl_telegram_id(update, ctx)
@@ -183,22 +317,84 @@ class TestCmdNuevoFreelancer:
         assert result == FL_CONFIRMACION
         assert ctx.user_data["fl_telegram_id"] == 12345678
 
+
+class TestHandleFlSkipTg:
     @pytest.mark.asyncio
-    async def test_confirmacion_crear_guarda_y_termina(self) -> None:
+    async def test_skip_establece_telegram_none_y_avanza(self) -> None:
+        update = _make_update(callback_data="fl_skip_tg")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+            }
+        )
+
+        result = await handle_fl_skip_tg(update, ctx)
+
+        assert result == FL_CONFIRMACION
+        assert ctx.user_data["fl_telegram_id"] is None
+
+
+class TestHandleFlConfirmacion:
+    @pytest.mark.asyncio
+    async def test_confirmar_crea_freelancer_con_todos_los_campos(self) -> None:
         update = _make_update(callback_data="fl_confirmar")
-        ctx = _make_context(user_data={"fl_nombre": "Pedro", "fl_telegram_id": 12345678})
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+                "fl_telegram_id": 100,
+            }
+        )
 
         result = await handle_fl_confirmacion(update, ctx)
 
         assert result == ConversationHandler.END
         ctx.bot_data["freelancer_repo"].guardar.assert_called_once()
-        # user_data cleaned up
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.nombre == "Bryan"
+        assert saved.nombre_completo == "Bryan Castro"
+        assert saved.cedula == "12345678"
+        assert saved.display == "Bryan C."
+        assert saved.telegram_user_id == 100
+        # user_data cleaned
         assert "fl_nombre" not in ctx.user_data
 
     @pytest.mark.asyncio
-    async def test_confirmacion_cancelar_termina(self) -> None:
+    async def test_confirmar_con_telegram_none(self) -> None:
+        update = _make_update(callback_data="fl_confirmar")
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+                "fl_telegram_id": None,
+            }
+        )
+
+        result = await handle_fl_confirmacion(update, ctx)
+
+        assert result == ConversationHandler.END
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.telegram_user_id is None
+
+    @pytest.mark.asyncio
+    async def test_cancelar_no_guarda_y_termina(self) -> None:
         update = _make_update(callback_data="fl_cancelar")
-        ctx = _make_context(user_data={"fl_nombre": "Pedro", "fl_telegram_id": 12345678})
+        ctx = _make_context(
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+                "fl_telegram_id": 100,
+            }
+        )
 
         result = await handle_fl_confirmacion(update, ctx)
 

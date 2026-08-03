@@ -82,17 +82,21 @@ class TestExtractorReservaFoto:
 
         assert ctx.numero_fisico == "42"
 
-    def test_servicio_nombre_mapea_a_vendedor_nombre(
+    def test_vendedor_nombre_es_none_independientemente_de_servicio_nombre(
         self, extractor: ExtractorReservaFoto, mock_extractor_ia: MagicMock
     ) -> None:
-        """Scenario 3 — servicio_nombre maps to ctx.vendedor_nombre."""
+        """Scenario 3 — vendedor_nombre must be None regardless of servicio_nombre value.
+
+        Bug A1: vendedor_nombre=datos.servicio_nombre was wrong — it corrupted the field.
+        The fix sets vendedor_nombre=None always (the flow collects vendedor separately).
+        """
         datos = DatosExtraidos(servicio_nombre="Carlos")
         mock_extractor_ia.extraer_de_foto.return_value = datos
 
         with patch("garay.infraestructura.ia.extractor_reserva.os.unlink"):
             ctx = extractor.extraer_de_foto(b"bytes")
 
-        assert ctx.vendedor_nombre == "Carlos"
+        assert ctx.vendedor_nombre is None
 
     def test_destinos_tuple_a_destinos_nombres_list(
         self, extractor: ExtractorReservaFoto, mock_extractor_ia: MagicMock

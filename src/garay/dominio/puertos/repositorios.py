@@ -154,9 +154,6 @@ class FreelancerRepository(ABC):
     def buscar_por_telegram_id(self, telegram_user_id: int) -> Freelancer | None: ...
 
     @abstractmethod
-    def buscar_por_nombre(self, nombre: str) -> Freelancer | None: ...
-
-    @abstractmethod
     def listar_todos(self) -> list[Freelancer]: ...
 
     @abstractmethod

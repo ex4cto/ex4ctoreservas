@@ -67,13 +67,6 @@ class SQLAFreelancerRepository(FreelancerRepository):
             ).scalar_one_or_none()
             return to_domain(row) if row else None
 
-    def buscar_por_nombre(self, nombre: str) -> Freelancer | None:
-        with self._sf.begin() as session:
-            row = session.execute(
-                select(FreelancerModel).where(FreelancerModel.nombre == nombre)
-            ).scalar_one_or_none()
-            return to_domain(row) if row else None
-
     def listar_todos(self) -> list[Freelancer]:
         with self._sf.begin() as session:
             rows = (

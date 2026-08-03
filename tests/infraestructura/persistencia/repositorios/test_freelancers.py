@@ -67,21 +67,6 @@ def test_es_admin_default_false(sf: sessionmaker[Session]) -> None:
     assert resultado.es_admin is False
 
 
-def test_buscar_por_nombre_encontrado(sf: sessionmaker[Session]) -> None:
-    """buscar_por_nombre returns the freelancer when the name matches exactly."""
-    repo = SQLAFreelancerRepository(sf)
-    f = Freelancer(id=uuid.uuid4(), nombre="Maria Auxiliadora", activo=True, telegram_user_id=None)
-    repo.guardar(f)
-    resultado = repo.buscar_por_nombre("Maria Auxiliadora")
-    assert resultado is not None
-    assert resultado.nombre == "Maria Auxiliadora"
-
-
-def test_buscar_por_nombre_no_encontrado(sf: sessionmaker[Session]) -> None:
-    """buscar_por_nombre returns None when the name does not match."""
-    repo = SQLAFreelancerRepository(sf)
-    assert repo.buscar_por_nombre("Nadie Inexistente") is None
-
 
 def test_listar_todos_activos_e_inactivos(sf: sessionmaker[Session]) -> None:
     """listar_todos returns both active and inactive freelancers ordered by name."""
