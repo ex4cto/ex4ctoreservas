@@ -21,6 +21,7 @@ from garay.infraestructura.persistencia.repositorios.clientes import SQLACliente
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
 )
+from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
@@ -52,6 +53,7 @@ def main() -> None:
         puntos=SQLAPuntoDeVentaRepository(sf),
         comisiones=SQLAComisionRegistradaRepository(sf),
         alias=alias,
+        freelancer_repo=SQLAFreelancerRepository(sf),
     )
     r = servicio.ejecutar(ruta, mes, anio)
     print(

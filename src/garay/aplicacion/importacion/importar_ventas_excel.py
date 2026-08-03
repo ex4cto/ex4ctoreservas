@@ -16,7 +16,10 @@ import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 
-from garay.aplicacion.importacion.errores import DescripcionSinMapeo
+from garay.aplicacion.importacion.errores import (
+    DescripcionSinMapeo,
+    ImportacionConNombresNoResueltos,
+)
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.snapshot import SnapshotReglas
@@ -26,6 +29,7 @@ from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     ComisionRegistradaRepository,
+    FreelancerRepository,
     PuntoDeVentaRepository,
     ServicioRepository,
     VentaRepository,
@@ -68,6 +72,7 @@ class ImportarVentasExcelService:
         puntos: PuntoDeVentaRepository,
         comisiones: ComisionRegistradaRepository,
         alias: dict[str, int],
+        freelancer_repo: FreelancerRepository,
     ) -> None:
         self._lector = lector
         self._ventas = ventas
@@ -76,6 +81,7 @@ class ImportarVentasExcelService:
         self._puntos = puntos
         self._comisiones = comisiones
         self._alias = alias
+        self._freelancers = freelancer_repo
 
     def ejecutar(self, ruta: str, mes: int, anio: int) -> ResultadoImportacion:
         filas = [
@@ -87,14 +93,41 @@ class ImportarVentasExcelService:
         punto_crespo = self._puntos.buscar_por_nombre(_CANAL_CRESPO)
         punto_crespo_id = punto_crespo.id if punto_crespo is not None else None
 
+        # PASS 1: resolve all participant names; abort before any persistence on failure.
+        no_encontrados: list[tuple[int, str]] = []
+        ambiguos: list[tuple[int, str]] = []
+        resoluciones: dict[int, tuple[uuid.UUID | None, uuid.UUID | None]] = {}
+        omitidas_pass1 = 0
+        for i, f in enumerate(filas):
+            if f.valor <= _CERO or f.neto > f.valor:
+                omitidas_pass1 += 1
+                continue
+            fila_num = i + 1
+            vendedor_id, vendedor_err = self._resolver_freelancer_id(f.vendedor_nombre)
+            cerrador_id, cerrador_err = self._resolver_freelancer_id(f.cerrador_nombre)
+            if vendedor_err == "no_encontrado":
+                no_encontrados.append((fila_num, f.vendedor_nombre))  # type: ignore[arg-type]
+            elif vendedor_err == "ambiguo":
+                ambiguos.append((fila_num, f.vendedor_nombre))  # type: ignore[arg-type]
+            if cerrador_err == "no_encontrado":
+                no_encontrados.append((fila_num, f.cerrador_nombre))  # type: ignore[arg-type]
+            elif cerrador_err == "ambiguo":
+                ambiguos.append((fila_num, f.cerrador_nombre))  # type: ignore[arg-type]
+            resoluciones[i] = (vendedor_id, cerrador_id)
+
+        if no_encontrados or ambiguos:
+            raise ImportacionConNombresNoResueltos(no_encontrados, ambiguos)
+
+        # PASS 2: persist — only reached when all names are resolved.
         clientes_creados = 0
         omitidas = 0
         total_valor = _CERO
         total_agencia = _CERO
-        for f in filas:
+        for i, f in enumerate(filas):
             if f.valor <= _CERO or f.neto > f.valor:
                 omitidas += 1
                 continue
+            vendedor_id, cerrador_id = resoluciones[i]
             servicio_id = self._resolver_servicio(f.descripcion, servicios_por_numero)
             cliente_id, creado = self._resolver_cliente(f)
             if creado:
@@ -114,6 +147,8 @@ class ImportarVentasExcelService:
                     cerrador_nombre=f.cerrador_nombre,
                     punto_de_venta_id=punto_id,
                     referido_nombre=None,
+                    vendedor_id=vendedor_id,
+                    cerrador_id=cerrador_id,
                 ),
                 estado=EstadoVenta.PROCESADA,
                 canal_origen=f.canal,
@@ -132,6 +167,23 @@ class ImportarVentasExcelService:
             total_valor=total_valor,
             total_agencia=total_agencia,
         )
+
+    def _resolver_freelancer_id(
+        self, nombre: str | None
+    ) -> tuple[uuid.UUID | None, str | None]:
+        """Resolve a participant name to a freelancer id via the repo.
+
+        Returns (id, None) on exact match, (None, "no_encontrado") on 0 matches,
+        (None, "ambiguo") on >=2 matches, and (None, None) when nombre is blank.
+        """
+        if not nombre:
+            return None, None
+        coincidencias = self._freelancers.listar_por_nombre(nombre)
+        if len(coincidencias) == 1:
+            return coincidencias[0].id, None
+        if len(coincidencias) == 0:
+            return None, "no_encontrado"
+        return None, "ambiguo"
 
     def _resolver_servicio(
         self, descripcion: str, servicios_por_numero: dict[int, Servicio]
