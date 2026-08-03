@@ -9,7 +9,7 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
-from garay.infraestructura.persistencia.modelos import ClienteModel
+from garay.infraestructura.persistencia.modelos import ClienteModel, FreelancerModel, VentaModel
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 
 
@@ -169,6 +169,89 @@ def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) 
         "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
     assert len(results) == 0
+
+
+def _make_freelancer(sf: sessionmaker[Session]) -> uuid.UUID:
+    """Insert a FreelancerModel row so FK constraints are satisfied."""
+    f_id = uuid.uuid4()
+    with sf.begin() as s:
+        s.add(
+            FreelancerModel(
+                id=f_id,
+                nombre="Test Freelancer",
+                activo=True,
+                telegram_user_id=None,
+                es_admin=False,
+            )
+        )
+    return f_id
+
+
+def test_vendedor_id_cerrador_id_round_trip(sf: sessionmaker[Session]) -> None:
+    """Slice B: guardar a Venta with vendedor_id/cerrador_id and load it back preserves both ids."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    f1_id = _make_freelancer(sf)
+    f2_id = _make_freelancer(sf)
+
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("600000"),
+        neto=Dinero("540000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 1),
+        participantes=Participantes(
+            vendedor_nombre="Ana",
+            cerrador_nombre="Luis",
+            vendedor_id=f1_id,
+            cerrador_id=f2_id,
+        ),
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+
+    assert resultado is not None
+    assert resultado.participantes.vendedor_id == f1_id
+    assert resultado.participantes.cerrador_id == f2_id
+    assert resultado.participantes.vendedor_nombre == "Ana"
+    assert resultado.participantes.cerrador_nombre == "Luis"
+
+
+def test_historical_null_ids_load_as_none(sf: sessionmaker[Session]) -> None:
+    """Slice B: a VentaModel row with null ids loads with vendedor_id=None, cerrador_id=None."""
+    cliente_id = _make_cliente(sf)
+    venta_id = uuid.uuid4()
+
+    with sf.begin() as s:
+        s.add(
+            VentaModel(
+                id=venta_id,
+                valor_venta=Dinero("100000"),
+                neto=Dinero("90000"),
+                abono=None,
+                servicio_ids=[],
+                cliente_id=cliente_id,
+                tipo_cliente="EXTERNO",
+                fecha=datetime.date(2026, 7, 1),
+                adultos=1,
+                ninos=0,
+                estado="PENDIENTE",
+                vendedor_nombre="Kike",
+                cerrador_nombre=None,
+                vendedor_id=None,
+                cerrador_id=None,
+            )
+        )
+
+    repo = SQLAVentaRepository(sf)
+    resultado = repo.buscar_por_id(venta_id)
+
+    assert resultado is not None
+    assert resultado.participantes.vendedor_id is None
+    assert resultado.participantes.cerrador_id is None
+    assert resultado.participantes.vendedor_nombre == "Kike"
 
 
 def test_listar_por_periodo(sf: sessionmaker[Session]) -> None:
