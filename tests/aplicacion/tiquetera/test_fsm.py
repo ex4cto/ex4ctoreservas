@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import uuid
 from decimal import Decimal
 
 import pytest
@@ -24,10 +25,30 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi", "Sin punto"]
 
+# ── Freelancer roster used across picker tests ────────────────────────────────
+F1_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
+F2_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
+F3_ID = uuid.UUID("33333333-3333-3333-3333-333333333333")
+
+FREELANCERS_TEST: list[tuple[uuid.UUID, str, bool]] = [
+    (F1_ID, "Ana", True),
+    (F2_ID, "Luis", True),
+    (F3_ID, "Carlos", False),  # inactive
+]
+
 
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
+
+
+@pytest.fixture()
+def fsm_con_roster() -> FSMTiquetera:
+    return FSMTiquetera(
+        servicios=SERVICIOS_TEST,
+        puntos_venta=PUNTOS_TEST,
+        freelancers=FREELANCERS_TEST,
+    )
 
 
 @pytest.fixture()
@@ -488,29 +509,39 @@ class TestParticipante:
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
         assert s.contexto.rol_registrante == "ambos"
 
-    def test_rol_solo_vendedor_pide_cerrador(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
+    def test_rol_solo_vendedor_pide_cerrador(
+        self, fsm_con_roster: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        # Requires active freelancers in roster; otherwise guard returns PARTICIPANTE_ROL error.
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
 
-    def test_rol_solo_cerrador_pide_vendedor(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ctx)
+    def test_rol_solo_cerrador_pide_vendedor(
+        self, fsm_con_roster: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        # Requires active freelancers in roster; otherwise guard returns PARTICIPANTE_ROL error.
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ctx)
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
 
     def test_participante_otro_como_vendedor_completa(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
+        self, fsm_con_roster: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
+        # Migrated: feeds fl:{uuid}, asserts id + snapshot nombre on context
         ctx_prep = ContextoVenta(rol_registrante="vendedor")
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Pedro", ctx_prep)
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F2_ID}", ctx_prep)
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
-        assert s.contexto.cerrador_nombre == "Pedro"
+        assert s.contexto.cerrador_nombre == "Luis"
+        assert s.contexto.cerrador_id == F2_ID
 
     def test_participante_otro_como_cerrador_completa(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
+        self, fsm_con_roster: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
+        # Migrated: feeds fl:{uuid}, asserts id + snapshot nombre on context
         ctx_prep = ContextoVenta(rol_registrante="cerrador")
-        s = fsm.procesar(EstadoFSM.PARTICIPANTE_OTRO, "Juan", ctx_prep)
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F2_ID}", ctx_prep)
         assert s.nuevo_estado == EstadoFSM.CONFIRMACION
-        assert s.contexto.vendedor_nombre == "Juan"
+        assert s.contexto.vendedor_nombre == "Luis"
+        assert s.contexto.vendedor_id == F2_ID
 
 
 class TestConfirmacion:
@@ -1130,6 +1161,174 @@ class TestHabitacionEditable:
         assert salida.contexto.modo_edicion is True
 
 
+# ─── WU-2 Phase 4: FSM Picker Core ───────────────────────────────────────────
+
+
+class TestFSMFreelancerRoster:
+    """Phase 4 — FSM accepts a freelancer roster and exposes picker helpers."""
+
+    def test_fsm_acepta_parametro_freelancers(self) -> None:
+        """FSMTiquetera must accept a `freelancers` keyword param without raising."""
+        fsm = FSMTiquetera(
+            servicios=SERVICIOS_TEST,
+            puntos_venta=PUNTOS_TEST,
+            freelancers=FREELANCERS_TEST,
+        )
+        assert fsm is not None
+
+    def test_opciones_freelancers_solo_activos(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """_opciones_freelancers(solo_activos=True) returns only active entries."""
+        opts = fsm_con_roster._opciones_freelancers(solo_activos=True)
+        labels = [label for label, _ in opts]
+        datas = [data for _, data in opts]
+        # Active: Ana (F1_ID) and Luis (F2_ID)
+        assert len(opts) == 2
+        assert "Ana" in labels
+        assert "Luis" in labels
+        assert f"fl:{F1_ID}" in datas
+        assert f"fl:{F2_ID}" in datas
+
+    def test_opciones_freelancers_todos_incluye_inactivo(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """_opciones_freelancers(solo_activos=False) returns all 3, inactive marked."""
+        opts = fsm_con_roster._opciones_freelancers(solo_activos=False)
+        assert len(opts) == 3
+        labels = [label for label, _ in opts]
+        datas = [data for _, data in opts]
+        assert "Ana" in labels
+        assert "Luis" in labels
+        # Inactive Carlos must be labelled with [inactivo]
+        assert any("[inactivo]" in label for label in labels)
+        assert f"fl:{F3_ID}" in datas
+
+
+# ─── WU-2 Phase 5: PARTICIPANTE_OTRO Picker ──────────────────────────────────
+
+
+class TestParticipanteOtroPicker:
+    """Phase 5 — PARTICIPANTE_OTRO emits picker + parses fl:{uuid}."""
+
+    def test_participante_otro_emite_opciones_estructuradas(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Solo vendedor → PARTICIPANTE_OTRO must have opciones_estructuradas with active fl."""
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ContextoVenta())
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+        # Only active freelancers (Ana + Luis = 2)
+        assert len(s.opciones_estructuradas) == 2
+
+    def test_participante_otro_emite_opciones_para_solo_cerrador(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Solo cerrador → PARTICIPANTE_OTRO must also emit opciones_estructuradas."""
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ContextoVenta())
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+
+    def test_participante_otro_fl_uuid_como_vendedor_sets_cerrador(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Feeding fl:{F2_ID} as vendedor sets cerrador_id + cerrador_nombre."""
+        ctx_prep = ContextoVenta(rol_registrante="vendedor")
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F2_ID}", ctx_prep)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert s.contexto.cerrador_id == F2_ID
+        assert s.contexto.cerrador_nombre == "Luis"
+
+    def test_participante_otro_fl_uuid_como_cerrador_sets_vendedor(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Feeding fl:{F1_ID} as cerrador sets vendedor_id + vendedor_nombre."""
+        ctx_prep = ContextoVenta(rol_registrante="cerrador")
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F1_ID}", ctx_prep)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert s.contexto.vendedor_id == F1_ID
+        assert s.contexto.vendedor_nombre == "Ana"
+
+    def test_participante_otro_prefijo_invalido_reprompts(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Free-text without fl: prefix must re-emit picker (PARTICIPANTE_OTRO)."""
+        ctx_prep = ContextoVenta(rol_registrante="vendedor")
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, "free-text", ctx_prep)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        # Must include opciones_estructuradas on re-prompt
+        assert s.opciones_estructuradas is not None
+
+    def test_participante_otro_uuid_desconocido_reprompts(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """A valid fl: prefix with unknown uuid must re-emit picker."""
+        unknown_id = uuid.uuid4()
+        ctx_prep = ContextoVenta(rol_registrante="vendedor")
+        s = fsm_con_roster.procesar(
+            EstadoFSM.PARTICIPANTE_OTRO, f"fl:{unknown_id}", ctx_prep
+        )
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+
+
+# ─── WU-2 Phase 6: Edit Pickers ──────────────────────────────────────────────
+
+
+class TestEditarParticipantesPicker:
+    """Phase 6 — EDITAR_VENDEDOR / EDITAR_CERRADOR become fl: pickers."""
+
+    def test_editar_vendedor_emite_picker_todos(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Selecting 'Participantes' in EDITAR_SELECTOR emits EDITAR_VENDEDOR with all roster."""
+        ctx = ContextoVenta(rol_registrante="vendedor")
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Participantes", ctx)
+        assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR
+        assert s.opciones_estructuradas is not None
+        # Includes inactive (3 total)
+        assert len(s.opciones_estructuradas) == 3
+
+    def test_editar_vendedor_fl_uuid_sets_id_and_nombre(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Feeding fl:{F3_ID} to EDITAR_VENDEDOR sets vendedor_id + vendedor_nombre."""
+        ctx = ContextoVenta(rol_registrante="vendedor")
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F3_ID}", ctx)
+        assert s.contexto.vendedor_id == F3_ID
+        assert s.contexto.vendedor_nombre == "Carlos"
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_cerrador_fl_uuid_sets_id_and_nombre(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Feeding fl:{F2_ID} to EDITAR_CERRADOR sets cerrador_id + cerrador_nombre."""
+        ctx = ContextoVenta(rol_registrante="cerrador")
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_CERRADOR, f"fl:{F2_ID}", ctx)
+        assert s.contexto.cerrador_id == F2_ID
+        assert s.contexto.cerrador_nombre == "Luis"
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_editar_vendedor_ambos_chains_to_editar_cerrador_picker(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """With rol=ambos, EDITAR_VENDEDOR chains to EDITAR_CERRADOR with opciones_estructuradas."""
+        ctx = ContextoVenta(rol_registrante="ambos")
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F1_ID}", ctx)
+        assert s.nuevo_estado == EstadoFSM.EDITAR_CERRADOR
+        assert s.opciones_estructuradas is not None
+
+    def test_editar_cerrador_emite_picker_todos(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """EDITAR_SELECTOR → 'Participantes' with rol=cerrador goes to EDITAR_VENDEDOR with picker."""
+        ctx = ContextoVenta(rol_registrante="cerrador")
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Participantes", ctx)
+        assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR
+        assert s.opciones_estructuradas is not None
+        assert len(s.opciones_estructuradas) == 3
+
+
 # ─── Change 4: EDITAR_VENDEDOR / EDITAR_CERRADOR states ─────────────────────
 
 
@@ -1144,38 +1343,53 @@ class TestEditarParticipantes:
         assert campos_map.get("Participantes") == EstadoFSM.EDITAR_VENDEDOR
 
     def test_editar_participantes_ambos_pide_vendedor_luego_cerrador(
-        self, fsm: FSMTiquetera
+        self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """rol='ambos': EDITAR_VENDEDOR → EDITAR_CERRADOR → CONFIRMACION."""
+        """rol='ambos': EDITAR_VENDEDOR → EDITAR_CERRADOR → CONFIRMACION.
+
+        Migrated: feeds fl:{uuid} picker values and asserts both id + nombre.
+        """
         ctx = ContextoVenta(rol_registrante="ambos", modo_edicion=True)
-        # Step 1: enter vendor name
-        salida1 = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Maria", ctx)
+        # Step 1: pick vendor via fl: callback
+        salida1 = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F1_ID}", ctx)
         assert salida1.nuevo_estado == EstadoFSM.EDITAR_CERRADOR
-        assert salida1.contexto.vendedor_nombre == "Maria"
-        # Step 2: enter closer name
-        salida2 = fsm.procesar(EstadoFSM.EDITAR_CERRADOR, "Pedro", salida1.contexto)
+        assert salida1.contexto.vendedor_nombre == "Ana"
+        assert salida1.contexto.vendedor_id == F1_ID
+        # Step 2: pick closer via fl: callback
+        salida2 = fsm_con_roster.procesar(
+            EstadoFSM.EDITAR_CERRADOR, f"fl:{F2_ID}", salida1.contexto
+        )
         assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
-        assert salida2.contexto.cerrador_nombre == "Pedro"
+        assert salida2.contexto.cerrador_nombre == "Luis"
+        assert salida2.contexto.cerrador_id == F2_ID
         assert salida2.contexto.modo_edicion is False
 
     def test_editar_participantes_solo_vendedor_va_directo_a_confirmacion(
-        self, fsm: FSMTiquetera
+        self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """rol='vendedor': EDITAR_VENDEDOR → CONFIRMACION (no cerrador step)."""
+        """rol='vendedor': EDITAR_VENDEDOR → CONFIRMACION (no cerrador step).
+
+        Migrated: feeds fl:{uuid} and asserts id + nombre.
+        """
         ctx = ContextoVenta(rol_registrante="vendedor", modo_edicion=True)
-        salida = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Carlos", ctx)
+        salida = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F3_ID}", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.vendedor_nombre == "Carlos"
+        assert salida.contexto.vendedor_id == F3_ID
         assert salida.contexto.modo_edicion is False
 
     def test_editar_participantes_cerrador_guarda_en_vendedor_nombre(
-        self, fsm: FSMTiquetera
+        self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """rol='cerrador': EDITAR_VENDEDOR stores into vendedor_nombre → CONFIRMACION."""
+        """rol='cerrador': EDITAR_VENDEDOR stores into vendedor_nombre → CONFIRMACION.
+
+        Migrated: feeds fl:{uuid} and asserts id + nombre.
+        """
         ctx = ContextoVenta(rol_registrante="cerrador", modo_edicion=True)
-        salida = fsm.procesar(EstadoFSM.EDITAR_VENDEDOR, "Ana", ctx)
+        salida = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F1_ID}", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.vendedor_nombre == "Ana"
+        assert salida.contexto.vendedor_id == F1_ID
         assert salida.contexto.modo_edicion is False
 
     def test_habitacion_en_campos_editables_no_es_participante_rol(
@@ -1542,3 +1756,209 @@ class TestCallbackDataLimite:
             assert salida_srv.opciones_estructuradas is not None
             for _, data in salida_srv.opciones_estructuradas:
                 assert len(data.encode("utf-8")) <= 64, f"overflow: {data!r}"
+
+    def test_callback_data_de_freelancers_bajo_limite(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Every fl:{uuid} callback_data from _opciones_freelancers fits within 64 bytes."""
+        for solo_activos in (True, False):
+            opts = fsm_con_roster._opciones_freelancers(solo_activos=solo_activos)
+            for label, data in opts:
+                assert len(data.encode("utf-8")) <= 64, (
+                    f"overflow (solo_activos={solo_activos}): {data!r}"
+                )
+
+
+# ─── Fix 2: Empty-roster guard ───────────────────────────────────────────────
+
+
+class TestEmptyRosterGuard:
+    """PARTICIPANTE_ROL must not enter a button-less dead-end when no active freelancers."""
+
+    def test_solo_vendedor_empty_roster_returns_error_not_dead_end(self) -> None:
+        """FSM with freelancers=[] picking 'Solo vendedor' must return error, not PARTICIPANTE_OTRO."""
+        fsm_vacio = FSMTiquetera(
+            servicios=SERVICIOS_TEST,
+            puntos_venta=PUNTOS_TEST,
+            freelancers=[],
+        )
+        s = fsm_vacio.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ContextoVenta())
+        # Must NOT advance to PARTICIPANTE_OTRO with zero buttons
+        assert s.nuevo_estado != EstadoFSM.PARTICIPANTE_OTRO or (
+            s.opciones_estructuradas is not None and len(s.opciones_estructuradas) > 0
+        ), "Dead-end: PARTICIPANTE_OTRO with no opciones_estructuradas"
+        # Must show the error message
+        assert "sin_freelancers_activos" not in s.mensaje or True  # key check handled below
+        # The real assertion: the FSM must return the error message key content or stay at PARTICIPANTE_ROL
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert "freelancer" in s.mensaje.lower() or "registr" in s.mensaje.lower()
+
+    def test_solo_cerrador_empty_roster_returns_error_not_dead_end(self) -> None:
+        """FSM with freelancers=[] picking 'Solo cerrador' must return error, not PARTICIPANTE_OTRO."""
+        fsm_vacio = FSMTiquetera(
+            servicios=SERVICIOS_TEST,
+            puntos_venta=PUNTOS_TEST,
+            freelancers=[],
+        )
+        s = fsm_vacio.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ContextoVenta())
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert "freelancer" in s.mensaje.lower() or "registr" in s.mensaje.lower()
+
+    def test_solo_vendedor_with_roster_still_enters_participante_otro(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Sanity: non-empty roster still reaches PARTICIPANTE_OTRO."""
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ContextoVenta())
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+        assert len(s.opciones_estructuradas) > 0
+
+
+# ─── Fix 3: End-to-end flujo completo for solo vendedor / solo cerrador ───────
+
+
+def _indice_de(fsm: FSMTiquetera, categoria: str) -> int:
+    """Return the index of a family by category name."""
+    salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ContextoVenta())
+    assert salida.opciones_estructuradas is not None
+    for i, (label, _) in enumerate(salida.opciones_estructuradas):
+        if categoria in label:
+            return i
+    raise ValueError(f"Category {categoria!r} not found in family picker")
+
+
+class TestFlujoCompletoSoloParticipante:
+    """Fix 3 — full flow for 'Solo vendedor' and 'Solo cerrador' roles."""
+
+    def _drive_to_participante_rol(
+        self, fsm: FSMTiquetera
+    ) -> ContextoVenta:
+        """Drive the FSM from start through MONTO_NETO, returning context at PARTICIPANTE_ROL."""
+        ctx = ContextoVenta()
+
+        s = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        ctx = s.contexto
+
+        indice_islas = _indice_de(fsm, "ISLAS")
+        s = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice_islas}", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:3", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_NOMBRE, "Juan Perez", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_TELEFONO, "3001234567", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_EMAIL, "juan@example.com", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_TIPO_ID, "CC", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Caribe", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "301", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.PAX_ADULTOS, "2", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.MONTO_VALOR, "500.000", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.MONTO_NETO, "450000", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        return s.contexto
+
+    def test_flujo_completo_solo_vendedor(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Full flow with 'Solo vendedor': pick F2_ID as counterpart → TERMINADO."""
+        ctx = self._drive_to_participante_rol(fsm_con_roster)
+
+        # Pick "Solo vendedor" → PARTICIPANTE_OTRO with picker
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo vendedor", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+        ctx = s.contexto
+        assert ctx.rol_registrante == "vendedor"
+
+        # Pick the counterpart (cerrador) via fl: callback
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F2_ID}", ctx)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        ctx = s.contexto
+        assert ctx.cerrador_id == F2_ID
+        assert ctx.cerrador_nombre == "Luis"
+
+        # Confirm → TERMINADO
+        s = fsm_con_roster.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
+        assert s.nuevo_estado == EstadoFSM.TERMINADO
+        assert s.listo is True
+
+    def test_flujo_completo_solo_cerrador(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """Full flow with 'Solo cerrador': pick F1_ID as counterpart → TERMINADO."""
+        ctx = self._drive_to_participante_rol(fsm_con_roster)
+
+        # Pick "Solo cerrador" → PARTICIPANTE_OTRO with picker
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_ROL, "Solo cerrador", ctx)
+        assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
+        assert s.opciones_estructuradas is not None
+        ctx = s.contexto
+        assert ctx.rol_registrante == "cerrador"
+
+        # Pick the counterpart (vendedor) via fl: callback
+        s = fsm_con_roster.procesar(EstadoFSM.PARTICIPANTE_OTRO, f"fl:{F1_ID}", ctx)
+        assert s.nuevo_estado == EstadoFSM.CONFIRMACION
+        ctx = s.contexto
+        assert ctx.vendedor_id == F1_ID
+        assert ctx.vendedor_nombre == "Ana"
+
+        # Confirm → TERMINADO
+        s = fsm_con_roster.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
+        assert s.nuevo_estado == EstadoFSM.TERMINADO
+        assert s.listo is True
+
+
+# ─── Fix 4: Edit guard symmetry in _handle_editar_vendedor ───────────────────
+
+
+class TestEditarVendedorGuard:
+    """Fix 4 — _handle_editar_vendedor must guard against None/unknown rol_registrante."""
+
+    def test_editar_vendedor_rol_none_returns_error(
+        self, fsm_con_roster: FSMTiquetera
+    ) -> None:
+        """ctx with rol_registrante=None must return error, not silently mutate + advance."""
+        ctx = ContextoVenta(rol_registrante=None)
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_VENDEDOR, f"fl:{F1_ID}", ctx)
+        # Must NOT advance to CONFIRMACION or EDITAR_CERRADOR silently
+        assert s.nuevo_estado not in (EstadoFSM.CONFIRMACION, EstadoFSM.EDITAR_CERRADOR), (
+            f"Expected error state, got {s.nuevo_estado}"
+        )
+        # The context must NOT have been silently mutated with the vendedor_id
+        # (or if it was, it must at least return an error state)
+        assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR

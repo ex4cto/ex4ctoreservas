@@ -111,7 +111,11 @@ def main() -> None:
             "No puntos_de_venta found in DB — seed the database before starting the bot"
         )
 
-    fsm = FSMTiquetera(servicios=servicios, puntos_venta=puntos_venta)
+    fsm = FSMTiquetera(
+        servicios=servicios,
+        puntos_venta=puntos_venta,
+        freelancers=[(f.id, f.nombre, f.activo) for f in freelancer_repo.listar_todos()],
+    )
 
     extractor_ia = ExtractorClaude(
         api_key=settings.anthropic_api_key,
