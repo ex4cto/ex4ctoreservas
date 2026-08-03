@@ -106,3 +106,106 @@ def test_buscar_por_telegram_id_no_devuelve_inactivos(sf: sessionmaker[Session])
     repo.guardar(f)
     resultado = repo.buscar_por_telegram_id(77770000)
     assert resultado is None
+
+
+# --- A1: new repository methods ---
+
+
+def test_buscar_por_cedula_encontrado(sf: sessionmaker[Session]) -> None:
+    """buscar_por_cedula returns the freelancer when cedula matches."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(
+        id=uuid.uuid4(), nombre="Ana", activo=True, cedula="12345678"
+    )
+    repo.guardar(f)
+    resultado = repo.buscar_por_cedula("12345678")
+    assert resultado is not None
+    assert resultado.cedula == "12345678"
+    assert resultado.nombre == "Ana"
+
+
+def test_buscar_por_cedula_no_encontrado(sf: sessionmaker[Session]) -> None:
+    """buscar_por_cedula returns None when cedula is not found."""
+    repo = SQLAFreelancerRepository(sf)
+    assert repo.buscar_por_cedula("99999999") is None
+
+
+def test_listar_por_nombre_lista_vacia(sf: sessionmaker[Session]) -> None:
+    """listar_por_nombre returns empty list when no match."""
+    repo = SQLAFreelancerRepository(sf)
+    assert repo.listar_por_nombre("Nadie") == []
+
+
+def test_listar_por_nombre_coincidencia_exacta(sf: sessionmaker[Session]) -> None:
+    """listar_por_nombre returns the matching freelancer (exact name)."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(id=uuid.uuid4(), nombre="Kike", activo=True)
+    repo.guardar(f)
+    resultado = repo.listar_por_nombre("Kike")
+    assert len(resultado) == 1
+    assert resultado[0].nombre == "Kike"
+
+
+def test_listar_por_nombre_case_insensitive(sf: sessionmaker[Session]) -> None:
+    """listar_por_nombre matches with lowercase query."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(id=uuid.uuid4(), nombre="Kike", activo=True)
+    repo.guardar(f)
+    resultado = repo.listar_por_nombre("kike")
+    assert len(resultado) == 1
+
+
+def test_listar_por_nombre_espacios_en_query(sf: sessionmaker[Session]) -> None:
+    """listar_por_nombre matches even when query has surrounding spaces."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(id=uuid.uuid4(), nombre="Kike", activo=True)
+    repo.guardar(f)
+    resultado = repo.listar_por_nombre(" Kike ")
+    assert len(resultado) == 1
+
+
+def test_listar_por_nombre_multiples_coincidencias(sf: sessionmaker[Session]) -> None:
+    """listar_por_nombre returns all rows when multiple names match."""
+    repo = SQLAFreelancerRepository(sf)
+    f1 = Freelancer(id=uuid.uuid4(), nombre="Kike", activo=True)
+    f2 = Freelancer(id=uuid.uuid4(), nombre="Kike", activo=False)
+    repo.guardar(f1)
+    repo.guardar(f2)
+    resultado = repo.listar_por_nombre("Kike")
+    assert len(resultado) == 2
+
+
+def test_buscar_por_telegram_id_cualquier_estado_devuelve_inactivo(
+    sf: sessionmaker[Session],
+) -> None:
+    """buscar_por_telegram_id_cualquier_estado returns freelancer regardless of activo."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(
+        id=uuid.uuid4(), nombre="Inactivo", activo=False, telegram_user_id=55500000
+    )
+    repo.guardar(f)
+    resultado = repo.buscar_por_telegram_id_cualquier_estado(55500000)
+    assert resultado is not None
+    assert resultado.activo is False
+
+
+def test_buscar_por_telegram_id_cualquier_estado_devuelve_activo(
+    sf: sessionmaker[Session],
+) -> None:
+    """buscar_por_telegram_id_cualquier_estado returns active freelancer."""
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(
+        id=uuid.uuid4(), nombre="Activo", activo=True, telegram_user_id=66600000
+    )
+    repo.guardar(f)
+    resultado = repo.buscar_por_telegram_id_cualquier_estado(66600000)
+    assert resultado is not None
+    assert resultado.activo is True
+
+
+def test_buscar_por_telegram_id_cualquier_estado_no_encontrado(
+    sf: sessionmaker[Session],
+) -> None:
+    """buscar_por_telegram_id_cualquier_estado returns None when not found."""
+    repo = SQLAFreelancerRepository(sf)
+    assert repo.buscar_por_telegram_id_cualquier_estado(77700000) is None

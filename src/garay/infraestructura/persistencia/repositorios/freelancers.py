@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.freelancers.entidades import Freelancer
@@ -17,6 +17,9 @@ def to_orm(f: Freelancer) -> FreelancerModel:
         activo=f.activo,
         telegram_user_id=f.telegram_user_id,
         es_admin=f.es_admin,
+        nombre_completo=f.nombre_completo,
+        cedula=f.cedula,
+        display=f.display,
     )
 
 
@@ -27,6 +30,9 @@ def to_domain(m: FreelancerModel) -> Freelancer:
         activo=m.activo,
         telegram_user_id=m.telegram_user_id,
         es_admin=m.es_admin,
+        nombre_completo=m.nombre_completo,
+        cedula=m.cedula,
+        display=m.display,
     )
 
 
@@ -78,3 +84,35 @@ class SQLAFreelancerRepository(FreelancerRepository):
                 .all()
             )
             return [to_domain(r) for r in rows]
+
+    def buscar_por_cedula(self, cedula: str) -> Freelancer | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(FreelancerModel).where(FreelancerModel.cedula == cedula)
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None
+
+    def listar_por_nombre(self, nombre: str) -> list[Freelancer]:
+        normalized = nombre.strip().lower()
+        with self._sf.begin() as session:
+            rows = (
+                session.execute(
+                    select(FreelancerModel).where(
+                        func.lower(func.trim(FreelancerModel.nombre)) == normalized
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [to_domain(r) for r in rows]
+
+    def buscar_por_telegram_id_cualquier_estado(
+        self, telegram_user_id: int
+    ) -> Freelancer | None:
+        with self._sf.begin() as session:
+            row = session.execute(
+                select(FreelancerModel).where(
+                    FreelancerModel.telegram_user_id == telegram_user_id
+                )
+            ).scalar_one_or_none()
+            return to_domain(row) if row else None

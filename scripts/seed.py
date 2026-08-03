@@ -211,7 +211,11 @@ def seed_reglas_comision(session: Session) -> None:
 
 
 def seed_freelancers(session: Session) -> None:
-    """Insert the eight initial freelancers."""
+    """Insert the eight initial freelancers.
+
+    WARNING: Do NOT re-run this seed after prod enrichment — merge would overwrite
+    enriched rows (nombre_completo, cedula, display) with NULL values.
+    """
     for nombre in FREELANCERS:
         session.merge(
             FreelancerModel(
@@ -237,7 +241,11 @@ def seed_categorias_egreso(session: Session) -> None:
 
 
 def seed_freelancers_admin(session: Session) -> None:
-    """Insert admin freelancers with es_admin=True."""
+    """Insert admin freelancers with es_admin=True.
+
+    WARNING: Do NOT re-run this seed after prod enrichment — merge would overwrite
+    enriched rows (nombre_completo, cedula, display) with NULL values.
+    """
     for nombre, telegram_user_id in FREELANCERS_ADMIN:
         session.merge(
             FreelancerModel(

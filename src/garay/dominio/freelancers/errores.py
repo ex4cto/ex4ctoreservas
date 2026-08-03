@@ -7,3 +7,7 @@ from garay.dominio.comun.errores import ErrorDeDominio
 
 class NombreFreelancerVacio(ErrorDeDominio):
     """El nombre del freelancer no puede estar vacio."""
+
+
+class CedulaInvalida(ErrorDeDominio):
+    """La cedula proporcionada no cumple el formato requerido (6-10 digitos)."""
