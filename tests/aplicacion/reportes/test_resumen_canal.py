@@ -67,7 +67,13 @@ def _make_service(
     ventas_repo.listar_por_periodo.return_value = ventas
     comisiones_repo = MagicMock()
     comisiones_repo.listar_por_venta_ids.return_value = comisiones
-    return ResumenVentasService(ventas=ventas_repo, comisiones=comisiones_repo)
+    freelancer_repo = MagicMock()
+    freelancer_repo.listar_todos.return_value = []
+    return ResumenVentasService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+        freelancers=freelancer_repo,
+    )
 
 
 class TestResumenCanalOrigen:

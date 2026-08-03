@@ -29,7 +29,11 @@ class TestVentaRepository:
                 return []
 
             def listar_por_freelancer_y_periodo(
-                self, nombre: str, desde: date, hasta: date
+                self,
+                freelancer_id: uuid.UUID,
+                nombre: str,
+                desde: date,
+                hasta: date,
             ) -> list[Venta]:
                 return []
 

@@ -8,9 +8,9 @@ button clicks reach the FSM.
 from __future__ import annotations
 
 from decimal import Decimal
+from re import Pattern
 from unittest.mock import MagicMock, patch
 
-import pytest
 from telegram.ext import CallbackQueryHandler, ConversationHandler
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
@@ -36,7 +36,7 @@ def _build_handler() -> ConversationHandler:  # type: ignore[type-arg]
         app = crear_aplicacion(token)
 
     # The first handler added is the main ConversationHandler for tiquetera.
-    return app.handlers[0][0]  # type: ignore[index]
+    return app.handlers[0][0]  # type: ignore[return-value]
 
 
 def _fl_states_with_callback(conv: ConversationHandler) -> dict[int, bool]:  # type: ignore[type-arg]
@@ -44,10 +44,12 @@ def _fl_states_with_callback(conv: ConversationHandler) -> dict[int, bool]:  # t
     result: dict[int, bool] = {}
     for state_int, handlers in conv.states.items():
         has_fl = any(
-            isinstance(h, CallbackQueryHandler) and "fl:" in (h.pattern.pattern if h.pattern else "")
+            isinstance(h, CallbackQueryHandler)
+            and isinstance(h.pattern, Pattern)
+            and "fl:" in h.pattern.pattern
             for h in handlers
         )
-        result[state_int] = has_fl
+        result[state_int] = has_fl  # type: ignore[index]
     return result
 
 
@@ -62,12 +64,12 @@ class TestBotWiringFlCallbacks:
         fl_handlers = [
             h for h in handlers
             if isinstance(h, CallbackQueryHandler)
-            and h.pattern is not None
+            and isinstance(h.pattern, Pattern)
             and "fl:" in h.pattern.pattern
         ]
         assert len(fl_handlers) >= 1, (
-            f"PARTICIPANTE_OTRO (state {state_int}) has no CallbackQueryHandler with 'fl:' pattern. "
-            f"Handlers found: {handlers}"
+            f"PARTICIPANTE_OTRO (state {state_int}) has no CallbackQueryHandler"
+            f" with 'fl:' pattern. Handlers found: {handlers}"
         )
 
     def test_editar_vendedor_has_fl_callback(self) -> None:
@@ -78,12 +80,12 @@ class TestBotWiringFlCallbacks:
         fl_handlers = [
             h for h in handlers
             if isinstance(h, CallbackQueryHandler)
-            and h.pattern is not None
+            and isinstance(h.pattern, Pattern)
             and "fl:" in h.pattern.pattern
         ]
         assert len(fl_handlers) >= 1, (
-            f"EDITAR_VENDEDOR (state {state_int}) has no CallbackQueryHandler with 'fl:' pattern. "
-            f"Handlers found: {handlers}"
+            f"EDITAR_VENDEDOR (state {state_int}) has no CallbackQueryHandler"
+            f" with 'fl:' pattern. Handlers found: {handlers}"
         )
 
     def test_editar_cerrador_has_fl_callback(self) -> None:
@@ -94,10 +96,10 @@ class TestBotWiringFlCallbacks:
         fl_handlers = [
             h for h in handlers
             if isinstance(h, CallbackQueryHandler)
-            and h.pattern is not None
+            and isinstance(h.pattern, Pattern)
             and "fl:" in h.pattern.pattern
         ]
         assert len(fl_handlers) >= 1, (
-            f"EDITAR_CERRADOR (state {state_int}) has no CallbackQueryHandler with 'fl:' pattern. "
-            f"Handlers found: {handlers}"
+            f"EDITAR_CERRADOR (state {state_int}) has no CallbackQueryHandler"
+            f" with 'fl:' pattern. Handlers found: {handlers}"
         )

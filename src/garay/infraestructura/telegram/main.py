@@ -160,6 +160,7 @@ def main() -> None:
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
         comisiones=comisiones_repo,
+        freelancers=freelancer_repo,
     )
     flujo_caja_service = FlujoCajaService(
         ingresos=ingreso_repo,

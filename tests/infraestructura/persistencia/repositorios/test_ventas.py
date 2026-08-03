@@ -92,8 +92,13 @@ def test_listar(sf: sessionmaker[Session]) -> None:
     assert len(repo.listar()) == 2
 
 
+_UUID_F = uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
+_UUID_OTHER = uuid.UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
+_UUID_OTHER2 = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
+
+
 def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> None:
-    """Freelancer as vendedor — should be returned."""
+    """Freelancer as vendedor by name (NULL id) — should be returned."""
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
     v = Venta(
@@ -113,14 +118,17 @@ def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> 
     )
     repo.guardar(v)
     results = repo.listar_por_freelancer_y_periodo(
-        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+        freelancer_id=_UUID_OTHER,
+        nombre="Carlos",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
     )
     assert len(results) == 1
     assert results[0].id == v.id
 
 
 def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> None:
-    """Freelancer as cerrador (OR logic) — should also be returned."""
+    """Freelancer as cerrador by name (NULL id) — should also be returned."""
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
     v = Venta(
@@ -140,7 +148,10 @@ def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> 
     )
     repo.guardar(v)
     results = repo.listar_por_freelancer_y_periodo(
-        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+        freelancer_id=_UUID_OTHER,
+        nombre="Carlos",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
     )
     assert len(results) == 1
 
@@ -166,8 +177,102 @@ def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) 
     )
     repo.guardar(v)
     results = repo.listar_por_freelancer_y_periodo(
-        "Carlos", datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
+        freelancer_id=_UUID_OTHER,
+        nombre="Carlos",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
     )
+    assert len(results) == 0
+
+
+def test_listar_por_freelancer_y_periodo_id_linked(sf: sessionmaker[Session]) -> None:
+    """SC-13 partial: venta with vendedor_id=UUID_F is returned when queried by id."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    f_id = _make_freelancer(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("400000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 15),
+        participantes=Participantes(
+            vendedor_nombre="other_name",
+            vendedor_id=f_id,
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        freelancer_id=f_id,
+        nombre="different",  # name doesn't match but id does
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
+    )
+    assert len(results) == 1
+    assert results[0].id == v.id
+
+
+def test_listar_por_freelancer_y_periodo_null_id_name_match(sf: sessionmaker[Session]) -> None:
+    """Name match only when vendedor_id IS NULL."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("400000"),
+        neto=Dinero("300000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 15),
+        participantes=Participantes(
+            vendedor_nombre="Kike",
+            vendedor_id=None,
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        freelancer_id=_UUID_OTHER,  # different id — will NOT match by id
+        nombre="Kike",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
+    )
+    assert len(results) == 1
+    assert results[0].id == v.id
+
+
+def test_listar_por_freelancer_y_periodo_excludes_different_id_name_collision(
+    sf: sessionmaker[Session],
+) -> None:
+    """SC-13 override: row with vendedor_id=UUID_OTHER2 and name='Kike' is NOT returned
+    when querying with freelancer_id=UUID_F, nombre='Kike', because id is NOT NULL
+    and doesn't match UUID_F."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    other_f_id = _make_freelancer(sf)  # some other freelancer id
+    f_id = _make_freelancer(sf)  # the querying freelancer
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("300000"),
+        neto=Dinero("200000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 15),
+        participantes=Participantes(
+            vendedor_nombre="Kike",
+            vendedor_id=other_f_id,  # non-NULL id, belongs to someone else
+        ),
+    )
+    repo.guardar(v)
+    results = repo.listar_por_freelancer_y_periodo(
+        freelancer_id=f_id,
+        nombre="Kike",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
+    )
+    # NOT returned: vendedor_id is not NULL and doesn't match f_id; name match is skipped
     assert len(results) == 0
 
 
