@@ -22,6 +22,9 @@ class ReglasComision:
     porcentaje_cerrador: Decimal
     porcentaje_referido_maximo: Decimal
 
+    punto_de_venta_nombre: str | None = None
+    numero_personas: int | None = None
+
     def __post_init__(self) -> None:
         if self.porcentaje_vendedor < _CERO or self.porcentaje_cerrador < _CERO:
             raise PorcentajeInvalidoRegla(
@@ -38,6 +41,10 @@ class ReglasComision:
             raise PorcentajeInvalidoRegla(
                 f"El referido no puede superar el {_TECHO_REFERIDO}%. "
                 f"Recibido: {self.porcentaje_referido_maximo}."
+            )
+        if self.numero_personas not in (None, 1, 2):
+            raise ValueError(
+                f"numero_personas debe ser None, 1 o 2. Recibido: {self.numero_personas}."
             )
 
     def __eq__(self, other: object) -> bool:
