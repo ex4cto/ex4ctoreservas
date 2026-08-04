@@ -108,3 +108,61 @@ class TestReglasComisionModelSchema:
             ).scalar_one()
         assert row.punto_de_venta_nombre == "Crespo"
         assert row.numero_personas == 1
+
+
+class TestBuscarPorTipoClienteCoexistencia:
+    """B1 co-existence: buscar_por_tipo_cliente must return only the global row
+    even when Crespo-specific rows with the same tipo_cliente are present.
+
+    This test was added as part of the CRITICAL-1 fix in Slice 1a — hardening
+    buscar_por_tipo_cliente to filter IS NULL on punto_de_venta_nombre and
+    numero_personas so that seeded Crespo rows never trigger MultipleResultsFound.
+    """
+
+    def test_buscar_por_tipo_cliente_returns_global_row_only_when_crespo_row_coexists(
+        self, sf: sessionmaker[Session]
+    ) -> None:
+        """Insert global EXTERNO row + 2 Crespo EXTERNO rows; assert no exception
+        and that the returned rule is the global one (punto_de_venta_nombre=None)."""
+        repo = SQLAReglasComisionRepository(sf)
+
+        global_id = uuid.uuid4()
+        global_rule = ReglasComision(
+            id=global_id,
+            tipo_cliente=TipoCliente.EXTERNO,
+            porcentaje_vendedor=Decimal("20.00"),
+            porcentaje_cerrador=Decimal("10.00"),
+            porcentaje_referido_maximo=Decimal("5.00"),
+            punto_de_venta_nombre=None,
+            numero_personas=None,
+        )
+        crespo_1p = ReglasComision(
+            id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            porcentaje_vendedor=Decimal("50.00"),
+            porcentaje_cerrador=Decimal("0.00"),
+            porcentaje_referido_maximo=Decimal("10.00"),
+            punto_de_venta_nombre="Crespo",
+            numero_personas=1,
+        )
+        crespo_2p = ReglasComision(
+            id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            porcentaje_vendedor=Decimal("30.00"),
+            porcentaje_cerrador=Decimal("30.00"),
+            porcentaje_referido_maximo=Decimal("10.00"),
+            punto_de_venta_nombre="Crespo",
+            numero_personas=2,
+        )
+
+        repo.guardar(global_rule)
+        repo.guardar(crespo_1p)
+        repo.guardar(crespo_2p)
+
+        # Must NOT raise MultipleResultsFound; must return the global row.
+        resultado = repo.buscar_por_tipo_cliente(TipoCliente.EXTERNO)
+
+        assert resultado is not None
+        assert resultado.id == global_id
+        assert resultado.punto_de_venta_nombre is None
+        assert resultado.numero_personas is None

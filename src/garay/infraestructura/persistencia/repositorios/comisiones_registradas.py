@@ -30,6 +30,8 @@ def _dict_to_snapshot(raw: dict[str, object]) -> SnapshotReglas:
     # Use .get() with default None for backward compat: old snapshots lack these keys.
     np_raw = raw.get("numero_personas")
     numero_personas = int(str(np_raw)) if np_raw is not None else None
+    pdvn_raw = raw.get("punto_de_venta_nombre")
+    punto_de_venta_nombre: str | None = str(pdvn_raw) if pdvn_raw is not None else None
     return SnapshotReglas(
         tipo_cliente=TipoCliente(str(raw["tipo_cliente"])),
         porcentaje_vendedor=Decimal(str(raw["porcentaje_vendedor"])),
@@ -37,7 +39,7 @@ def _dict_to_snapshot(raw: dict[str, object]) -> SnapshotReglas:
         porcentaje_referido_maximo=Decimal(str(raw["porcentaje_referido_maximo"])),
         porcentaje_capa_punto=Decimal(str(raw["porcentaje_capa_punto"])),
         numero_personas=numero_personas,
-        punto_de_venta_nombre=raw.get("punto_de_venta_nombre"),  # type: ignore[arg-type]
+        punto_de_venta_nombre=punto_de_venta_nombre,
     )
 
 

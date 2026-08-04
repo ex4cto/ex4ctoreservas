@@ -42,8 +42,16 @@ class SQLAReglasComisionRepository(ReglasComisionRepository):
             session.merge(to_orm(reglas))
 
     def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None:
+        # Filters IS NULL on punto_de_venta_nombre and numero_personas so that
+        # point-specific rows (e.g. Crespo) never appear in this result set.
+        # Without these guards, scalar_one_or_none() raises MultipleResultsFound
+        # whenever two rows share the same tipo_cliente (design B1).
         with self._sf.begin() as session:
             row = session.execute(
-                select(ReglasComisionModel).where(ReglasComisionModel.tipo_cliente == str(tipo))
+                select(ReglasComisionModel).where(
+                    ReglasComisionModel.tipo_cliente == str(tipo),
+                    ReglasComisionModel.punto_de_venta_nombre.is_(None),
+                    ReglasComisionModel.numero_personas.is_(None),
+                )
             ).scalar_one_or_none()
             return to_domain(row) if row else None
