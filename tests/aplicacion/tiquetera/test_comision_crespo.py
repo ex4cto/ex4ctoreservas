@@ -12,8 +12,6 @@ import datetime
 import uuid
 from decimal import Decimal
 
-import pytest
-
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero

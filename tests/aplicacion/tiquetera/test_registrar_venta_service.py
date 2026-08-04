@@ -393,7 +393,6 @@ class TestServiceUsasBuscarRegla:
         motor.calcular.return_value = MagicMock()
 
         call_order: list[str] = []
-        original_buscar_por_id = puntos_repo.buscar_por_id.side_effect
 
         def track_punto(*args: object, **kwargs: object) -> object:
             call_order.append("punto")

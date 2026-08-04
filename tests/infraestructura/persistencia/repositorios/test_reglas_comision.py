@@ -183,7 +183,7 @@ class TestBuscarRegla:
     def test_buscar_regla_crespo_absent_returns_global_when_no_punto(
         self, sf: sessionmaker[Session]
     ) -> None:
-        """When called without punto (None, None), returns global row even with Crespo rows present."""
+        """When called without punto (None, None), returns global row even with Crespo rows."""
         repo = SQLAReglasComisionRepository(sf)
         global_row = self._make_global(TipoCliente.EXTERNO, "20", "10")
         crespo_1p = self._make_crespo(1, "50", "0")
