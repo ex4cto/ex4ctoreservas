@@ -233,6 +233,27 @@ class ReglasComisionRepository(ABC):
     def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None: ...
 
     @abstractmethod
+    def buscar_regla(
+        self,
+        tipo: TipoCliente,
+        punto_nombre: str | None,
+        numero_personas: int | None,
+    ) -> ReglasComision | None:
+        """Two-step rule selector.
+
+        Step 1 (point-specific): if punto_nombre and numero_personas are BOTH
+        non-None, search for a row matching (punto_de_venta_nombre, numero_personas),
+        ignoring tipo_cliente.  Returns it if found.
+
+        Step 2 (global fallback): search for
+        (tipo_cliente==tipo, punto_de_venta_nombre IS NULL, numero_personas IS NULL).
+
+        C3 precondition: exactly one of (punto_nombre, numero_personas) being
+        non-None is an invalid combination and MUST raise ValueError.
+        """
+        ...
+
+    @abstractmethod
     def guardar(self, reglas: ReglasComision) -> None: ...
 
 
