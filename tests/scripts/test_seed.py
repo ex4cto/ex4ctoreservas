@@ -7,10 +7,10 @@ from decimal import Decimal
 import sqlalchemy as sa
 from scripts.seed import (
     seed_freelancers,
+    seed_id,
     seed_puntos_de_venta,
     seed_reglas_comision,
     seed_servicios,
-    seed_id,
 )
 from sqlalchemy.orm import sessionmaker
 
