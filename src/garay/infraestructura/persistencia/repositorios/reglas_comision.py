@@ -16,6 +16,8 @@ def to_orm(r: ReglasComision) -> ReglasComisionModel:
         porcentaje_vendedor=r.porcentaje_vendedor,
         porcentaje_cerrador=r.porcentaje_cerrador,
         porcentaje_referido_maximo=r.porcentaje_referido_maximo,
+        punto_de_venta_nombre=r.punto_de_venta_nombre,
+        numero_personas=r.numero_personas,
     )
 
 
@@ -26,6 +28,8 @@ def to_domain(m: ReglasComisionModel) -> ReglasComision:
         porcentaje_vendedor=m.porcentaje_vendedor,
         porcentaje_cerrador=m.porcentaje_cerrador,
         porcentaje_referido_maximo=m.porcentaje_referido_maximo,
+        punto_de_venta_nombre=m.punto_de_venta_nombre,
+        numero_personas=m.numero_personas,
     )
 
 
