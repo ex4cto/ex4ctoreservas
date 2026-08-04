@@ -126,6 +126,30 @@ REGLAS: list[dict[str, object]] = [
     },
 ]
 
+# Point-specific rules for Crespo.
+# tipo_cliente=EXTERNO is a sentinel value required by the NOT NULL constraint;
+# the selector (buscar_regla) ignores tipo_cliente when matching punto-specific rows.
+REGLAS_CRESPO: list[dict[str, object]] = [
+    {
+        "key": "regla:crespo:1p",
+        "tipo_cliente": TipoCliente.EXTERNO,
+        "vendedor": Decimal("50"),
+        "cerrador": Decimal("0"),
+        "referido_max": Decimal("10"),
+        "punto_de_venta_nombre": "Crespo",
+        "numero_personas": 1,
+    },
+    {
+        "key": "regla:crespo:2p",
+        "tipo_cliente": TipoCliente.EXTERNO,
+        "vendedor": Decimal("30"),
+        "cerrador": Decimal("30"),
+        "referido_max": Decimal("10"),
+        "punto_de_venta_nombre": "Crespo",
+        "numero_personas": 2,
+    },
+]
+
 FREELANCERS: list[str] = [
     "Tania",
     "Eduardo",
@@ -192,7 +216,7 @@ def seed_puntos_de_venta(session: Session) -> None:
 
 
 def seed_reglas_comision(session: Session) -> None:
-    """Insert one commission rule per client type."""
+    """Insert global commission rules (one per client type) and Crespo point-specific rules."""
     for regla in REGLAS:
         tipo = regla["tipo_cliente"]
         assert isinstance(tipo, TipoCliente)
@@ -206,6 +230,24 @@ def seed_reglas_comision(session: Session) -> None:
                 porcentaje_vendedor=vendedor,
                 porcentaje_cerrador=cerrador,
                 porcentaje_referido_maximo=referido_max,
+                punto_de_venta_nombre=None,
+                numero_personas=None,
+            )
+        )
+
+    for regla in REGLAS_CRESPO:
+        key = str(regla["key"])
+        tipo = regla["tipo_cliente"]
+        assert isinstance(tipo, TipoCliente)
+        session.merge(
+            ReglasComisionModel(
+                id=seed_id(key),
+                tipo_cliente=tipo.value,
+                porcentaje_vendedor=Decimal(str(regla["vendedor"])),
+                porcentaje_cerrador=Decimal(str(regla["cerrador"])),
+                porcentaje_referido_maximo=Decimal(str(regla["referido_max"])),
+                punto_de_venta_nombre=str(regla["punto_de_venta_nombre"]),
+                numero_personas=int(str(regla["numero_personas"])),
             )
         )
 

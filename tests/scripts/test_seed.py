@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import sqlalchemy as sa
 from scripts.seed import (
     seed_freelancers,
+    seed_id,
     seed_puntos_de_venta,
     seed_reglas_comision,
     seed_servicios,
 )
 from sqlalchemy.orm import sessionmaker
 
+from garay.dominio.comun.tipos import TipoCliente
 from garay.infraestructura.persistencia import modelos  # noqa: F401 — registers all ORM models
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (
@@ -28,7 +32,7 @@ def _make_session_factory() -> sessionmaker:  # type: ignore[type-arg]
 
 
 def test_seed_completo_sqlite() -> None:
-    """Seed populates all tables with the expected row counts."""
+    """Seed populates all tables with the expected row counts (3 global + 2 Crespo = 5)."""
     sf = _make_session_factory()
 
     with sf.begin() as session:
@@ -46,7 +50,7 @@ def test_seed_completo_sqlite() -> None:
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(ReglasComisionModel)).scalar()
-            == 3
+            == 5
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
@@ -73,7 +77,7 @@ def test_seed_idempotente_sqlite() -> None:
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(ReglasComisionModel)).scalar()
-            == 3
+            == 5
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
@@ -109,9 +113,7 @@ def test_seed_puntos_porcentaje_capa() -> None:
 
 
 def test_seed_reglas_tipo_cliente_valores() -> None:
-    """Commission rules store the correct string values for tipo_cliente."""
-    from garay.dominio.comun.tipos import TipoCliente
-
+    """Commission rules store the correct string values for tipo_cliente (global rows)."""
     sf = _make_session_factory()
     with sf.begin() as session:
         seed_reglas_comision(session)
@@ -119,9 +121,47 @@ def test_seed_reglas_tipo_cliente_valores() -> None:
     with sf.begin() as session:
         rows = session.execute(sa.select(ReglasComisionModel)).scalars().all()
 
-    tipos = {r.tipo_cliente for r in rows}
+    # Global rows still cover all three tipos (Crespo rows also carry EXTERNO sentinel).
+    tipos = {r.tipo_cliente for r in rows if r.punto_de_venta_nombre is None}
     expected = {TipoCliente.INTERNO.value, TipoCliente.EXTERNO.value, TipoCliente.DIGITAL.value}
     assert tipos == expected
+
+
+def test_seed_crespo_rows_exist() -> None:
+    """Crespo commission rows are seeded with correct values (JD-4 / T-seed)."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_reglas_comision(session)
+
+    with sf.begin() as session:
+        crespo_rows = (
+            session.execute(
+                sa.select(ReglasComisionModel).where(
+                    ReglasComisionModel.punto_de_venta_nombre == "Crespo"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert len(crespo_rows) == 2
+
+    by_personas = {r.numero_personas: r for r in crespo_rows}
+    assert set(by_personas.keys()) == {1, 2}
+
+    row_1p = by_personas[1]
+    assert row_1p.id == seed_id("regla:crespo:1p")
+    assert row_1p.tipo_cliente == TipoCliente.EXTERNO.value  # sentinel
+    assert Decimal(str(row_1p.porcentaje_vendedor)) == Decimal("50")
+    assert Decimal(str(row_1p.porcentaje_cerrador)) == Decimal("0")
+    assert Decimal(str(row_1p.porcentaje_referido_maximo)) == Decimal("10")
+
+    row_2p = by_personas[2]
+    assert row_2p.id == seed_id("regla:crespo:2p")
+    assert row_2p.tipo_cliente == TipoCliente.EXTERNO.value  # sentinel
+    assert Decimal(str(row_2p.porcentaje_vendedor)) == Decimal("30")
+    assert Decimal(str(row_2p.porcentaje_cerrador)) == Decimal("30")
+    assert Decimal(str(row_2p.porcentaje_referido_maximo)) == Decimal("10")
 
 
 def test_seed_freelancers_activos() -> None:

@@ -65,3 +65,54 @@ class TestReglasComision:
         assert a != c
         assert hash(a) == hash(b)
         assert hash(a) != hash(c)
+
+
+class TestReglasComisionCamposNuevos:
+    """WU-1: punto_de_venta_nombre and numero_personas fields (REQ-06 / JD-6)."""
+
+    def test_acepta_punto_de_venta_nombre_none_por_defecto(self) -> None:
+        r = _reglas()
+        assert r.punto_de_venta_nombre is None
+
+    def test_acepta_punto_de_venta_nombre_no_none(self) -> None:
+        r = _reglas(punto_de_venta_nombre="Crespo")
+        assert r.punto_de_venta_nombre == "Crespo"
+
+    def test_acepta_numero_personas_none_por_defecto(self) -> None:
+        r = _reglas()
+        assert r.numero_personas is None
+
+    def test_acepta_numero_personas_1(self) -> None:
+        r = _reglas(numero_personas=1)
+        assert r.numero_personas == 1
+
+    def test_acepta_numero_personas_2(self) -> None:
+        r = _reglas(numero_personas=2)
+        assert r.numero_personas == 2
+
+    def test_numero_personas_0_invalido(self) -> None:
+        with pytest.raises(ValueError):
+            _reglas(numero_personas=0)
+
+    def test_numero_personas_3_invalido(self) -> None:
+        with pytest.raises(ValueError):
+            _reglas(numero_personas=3)
+
+    def test_numero_personas_negativo_invalido(self) -> None:
+        with pytest.raises(ValueError):
+            _reglas(numero_personas=-1)
+
+    def test_campos_nuevos_son_ultimos_no_rompe_posicionales(self) -> None:
+        # Non-defaulted fields must all come before defaulted fields.
+        # This constructs with keyword args matching all non-defaulted fields positionally.
+        r = ReglasComision(
+            id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            porcentaje_vendedor=Decimal("30"),
+            porcentaje_cerrador=Decimal("30"),
+            porcentaje_referido_maximo=Decimal("10"),
+            punto_de_venta_nombre="Crespo",
+            numero_personas=1,
+        )
+        assert r.punto_de_venta_nombre == "Crespo"
+        assert r.numero_personas == 1

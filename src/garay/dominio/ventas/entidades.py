@@ -11,6 +11,7 @@ from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
 from garay.dominio.ventas.errores import (
     AbonoSuperaValorVenta,
     CantidadInvalida,
+    DigitalConPuntoDeVenta,
     GananciaNegativa,
     MonedaIncompatible,
     ValorVentaInvalido,
@@ -58,6 +59,13 @@ class Venta:
             raise CantidadInvalida("El número de niños no puede ser negativo.")
         if self.abono is not None and self.abono > self.valor_venta:
             raise AbonoSuperaValorVenta("El abono no puede superar el valor de la venta.")
+        if (
+            self.tipo_cliente == TipoCliente.DIGITAL
+            and self.participantes.punto_de_venta_id is not None
+        ):
+            raise DigitalConPuntoDeVenta(
+                "Una venta DIGITAL no puede tener un punto de venta asociado."
+            )
 
     @property
     def ganancia(self) -> Dinero:

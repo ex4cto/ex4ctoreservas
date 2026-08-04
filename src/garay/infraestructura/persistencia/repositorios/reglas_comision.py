@@ -16,6 +16,8 @@ def to_orm(r: ReglasComision) -> ReglasComisionModel:
         porcentaje_vendedor=r.porcentaje_vendedor,
         porcentaje_cerrador=r.porcentaje_cerrador,
         porcentaje_referido_maximo=r.porcentaje_referido_maximo,
+        punto_de_venta_nombre=r.punto_de_venta_nombre,
+        numero_personas=r.numero_personas,
     )
 
 
@@ -26,6 +28,8 @@ def to_domain(m: ReglasComisionModel) -> ReglasComision:
         porcentaje_vendedor=m.porcentaje_vendedor,
         porcentaje_cerrador=m.porcentaje_cerrador,
         porcentaje_referido_maximo=m.porcentaje_referido_maximo,
+        punto_de_venta_nombre=m.punto_de_venta_nombre,
+        numero_personas=m.numero_personas,
     )
 
 
@@ -38,8 +42,16 @@ class SQLAReglasComisionRepository(ReglasComisionRepository):
             session.merge(to_orm(reglas))
 
     def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None:
+        # Filters IS NULL on punto_de_venta_nombre and numero_personas so that
+        # point-specific rows (e.g. Crespo) never appear in this result set.
+        # Without these guards, scalar_one_or_none() raises MultipleResultsFound
+        # whenever two rows share the same tipo_cliente (design B1).
         with self._sf.begin() as session:
             row = session.execute(
-                select(ReglasComisionModel).where(ReglasComisionModel.tipo_cliente == str(tipo))
+                select(ReglasComisionModel).where(
+                    ReglasComisionModel.tipo_cliente == str(tipo),
+                    ReglasComisionModel.punto_de_venta_nombre.is_(None),
+                    ReglasComisionModel.numero_personas.is_(None),
+                )
             ).scalar_one_or_none()
             return to_domain(row) if row else None

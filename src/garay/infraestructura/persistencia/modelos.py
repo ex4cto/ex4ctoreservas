@@ -90,12 +90,22 @@ class PuntoDeVentaModel(Base):
 
 class ReglasComisionModel(Base):
     __tablename__ = "reglas_comision"
+    __table_args__ = (
+        UniqueConstraint(
+            "tipo_cliente",
+            "punto_de_venta_nombre",
+            "numero_personas",
+            name="uq_reglas_tipo_punto_personas",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
-    tipo_cliente: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    tipo_cliente: Mapped[str] = mapped_column(String, nullable=False)
     porcentaje_vendedor: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     porcentaje_cerrador: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     porcentaje_referido_maximo: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    punto_de_venta_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    numero_personas: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class VentaModel(Base):
