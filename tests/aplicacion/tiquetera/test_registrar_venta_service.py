@@ -178,7 +178,7 @@ class TestRegistrarVentaSinFotoNoCreaTiquetera:
 class TestRegistrarVentaRaisesSimReglas:
     def test_registrar_venta_raises_si_no_hay_reglas(self) -> None:
         reglas_repo = MagicMock()
-        reglas_repo.buscar_por_tipo_cliente.return_value = None
+        reglas_repo.buscar_regla.return_value = None
 
         service = _build_service(reglas_repo=reglas_repo)
         cmd = _cmd()
@@ -289,3 +289,227 @@ class TestRegistrarVentaPersistsComision:
         saved = comisiones_repo.guardar.call_args.args[0]
         assert isinstance(saved, ComisionRegistrada)
         assert saved.venta_id == resultado.venta_id
+
+
+# ---------------------------------------------------------------------------
+# WU-9: _derivar_numero_personas unit tests
+# ---------------------------------------------------------------------------
+
+class TestDerivarNumeroPersonas:
+    """Unit tests for _derivar_numero_personas helper (design S2)."""
+
+    def _fn(self, vendedor_id: uuid.UUID | None, cerrador_id: uuid.UUID | None) -> int | None:
+        from garay.aplicacion.tiquetera.servicio import _derivar_numero_personas
+
+        p = Participantes(vendedor_id=vendedor_id, cerrador_id=cerrador_id)
+        return _derivar_numero_personas(p)
+
+    def test_same_person_returns_1(self) -> None:
+        """(A, A) → 1: same vendedor and cerrador."""
+        uid = uuid.uuid4()
+        assert self._fn(uid, uid) == 1
+
+    def test_different_persons_returns_2(self) -> None:
+        """(A, B) → 2: distinct vendedor and cerrador."""
+        assert self._fn(uuid.uuid4(), uuid.uuid4()) == 2
+
+    def test_both_none_returns_none(self) -> None:
+        """(None, None) → None: no ids present, cannot determine count."""
+        assert self._fn(None, None) is None
+
+    def test_vendedor_none_cerrador_present_returns_none(self) -> None:
+        """(None, B) → None: only cerrador present — cannot determine count (design S2)."""
+        # Per design S2: returns None if EITHER id is None.
+        assert self._fn(None, uuid.uuid4()) is None
+
+    def test_vendedor_present_cerrador_none_returns_none(self) -> None:
+        """(A, None) → None: only vendedor present, returns None."""
+        assert self._fn(uuid.uuid4(), None) is None
+
+
+# ---------------------------------------------------------------------------
+# WU-9: service reorder + buscar_regla integration tests
+# ---------------------------------------------------------------------------
+
+def _cmd_with_participantes(
+    *,
+    vendedor_id: uuid.UUID | None = None,
+    cerrador_id: uuid.UUID | None = None,
+    punto_de_venta_id: uuid.UUID | None = None,
+    tipo_cliente: TipoCliente = TipoCliente.EXTERNO,
+) -> RegistrarVentaComando:
+    return RegistrarVentaComando(
+        valor_venta=_VALOR_VENTA,
+        neto=_NETO,
+        servicio_ids=[_SERVICIO_ID],
+        cliente_id=_CLIENTE_ID,
+        tipo_cliente=tipo_cliente,
+        fecha=_FECHA,
+        participantes=Participantes(
+            vendedor_nombre="Ana",
+            cerrador_nombre="Ana",
+            punto_de_venta_id=punto_de_venta_id,
+            vendedor_id=vendedor_id,
+            cerrador_id=cerrador_id,
+        ),
+        adultos=2,
+        ninos=0,
+        porcentaje_referido=Decimal("0"),
+        servicio_nombres=[],
+    )
+
+
+class TestServiceUsasBuscarRegla:
+    """WU-9: service must call buscar_regla (not buscar_por_tipo_cliente)."""
+
+    def test_service_calls_buscar_regla_not_buscar_por_tipo_cliente(self) -> None:
+        reglas_repo = MagicMock()
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        service = _build_service(reglas_repo=reglas_repo, motor=motor)
+        cmd = _cmd()
+
+        service.ejecutar(cmd)
+
+        reglas_repo.buscar_regla.assert_called_once()
+        reglas_repo.buscar_por_tipo_cliente.assert_not_called()
+
+    def test_service_resolves_punto_before_buscar_regla(self) -> None:
+        """punto must be resolved before buscar_regla is called (design S1 ordering)."""
+        punto_id = uuid.uuid4()
+        fake_punto = MagicMock()
+        fake_punto.nombre = "OtroLugar"
+        puntos_repo = MagicMock()
+        puntos_repo.buscar_por_id.return_value = fake_punto
+        reglas_repo = MagicMock()
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        call_order: list[str] = []
+
+        def track_punto(*args: object, **kwargs: object) -> object:
+            call_order.append("punto")
+            return fake_punto
+
+        def track_regla(*args: object, **kwargs: object) -> object:
+            call_order.append("regla")
+            return MagicMock()
+
+        puntos_repo.buscar_por_id.side_effect = track_punto
+        reglas_repo.buscar_regla.side_effect = track_regla
+
+        service = _build_service(
+            puntos_repo=puntos_repo, reglas_repo=reglas_repo, motor=motor
+        )
+        cmd = _cmd_with_participantes(punto_de_venta_id=punto_id)
+        service.ejecutar(cmd)
+
+        assert call_order.index("punto") < call_order.index("regla")
+
+    def test_service_fail_fast_when_crespo_rule_absent(self) -> None:
+        """S3: if buscar_regla returns None, raise ReglasComisionNoEncontradas."""
+        reglas_repo = MagicMock()
+        reglas_repo.buscar_regla.return_value = None
+
+        service = _build_service(reglas_repo=reglas_repo)
+        cmd = _cmd()
+
+        with pytest.raises(ReglasComisionNoEncontradas):
+            service.ejecutar(cmd)
+
+    def test_service_passes_correct_args_to_buscar_regla_non_crespo(self) -> None:
+        """For non-Crespo sale: buscar_regla(tipo, None, None)."""
+        reglas_repo = MagicMock()
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+        puntos_repo = MagicMock()
+        puntos_repo.buscar_por_id.return_value = None
+
+        service = _build_service(
+            reglas_repo=reglas_repo, motor=motor, puntos_repo=puntos_repo
+        )
+        cmd = _cmd_with_participantes(tipo_cliente=TipoCliente.INTERNO)
+        service.ejecutar(cmd)
+
+        call = reglas_repo.buscar_regla.call_args
+        assert call.args[0] == TipoCliente.INTERNO
+        assert call.args[1] is None
+        assert call.args[2] is None
+
+    def test_service_passes_crespo_punto_and_numero_personas_to_buscar_regla(
+        self,
+    ) -> None:
+        """For Crespo 1-person sale: buscar_regla(tipo, 'Crespo', 1)."""
+        punto_id = uuid.uuid4()
+        fake_punto = MagicMock()
+        fake_punto.nombre = "Crespo"
+        puntos_repo = MagicMock()
+        puntos_repo.buscar_por_id.return_value = fake_punto
+        reglas_repo = MagicMock()
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        uid = uuid.uuid4()
+        service = _build_service(
+            puntos_repo=puntos_repo, reglas_repo=reglas_repo, motor=motor
+        )
+        cmd = _cmd_with_participantes(
+            punto_de_venta_id=punto_id,
+            vendedor_id=uid,
+            cerrador_id=uid,  # same person → 1
+            tipo_cliente=TipoCliente.EXTERNO,
+        )
+        service.ejecutar(cmd)
+
+        call = reglas_repo.buscar_regla.call_args
+        assert call.args[0] == TipoCliente.EXTERNO
+        assert call.args[1] == "Crespo"
+        assert call.args[2] == 1
+
+    def test_non_crespo_punto_with_two_participants_uses_global_rule(self) -> None:
+        """CRITICAL-1 (REQ-08b): a non-Crespo punto with both vendedor_id and
+        cerrador_id set (distinct) must resolve the global EXTERNO rule and NOT
+        raise ReglasComisionNoEncontradas.
+
+        Before the Crespo gate fix, the service passed punto_nombre='Marie Real'
+        and numero_personas=2 unconditionally, causing buscar_regla to attempt a
+        point-specific step-1 lookup that found nothing and returned None — which
+        then raised ReglasComisionNoEncontradas, breaking every non-Crespo sale
+        at a named punto when both participant IDs were identified.
+        """
+        punto_id = uuid.uuid4()
+        fake_punto = MagicMock()
+        fake_punto.nombre = "Marie Real"  # non-Crespo punto
+        puntos_repo = MagicMock()
+        puntos_repo.buscar_por_id.return_value = fake_punto
+
+        reglas_repo = MagicMock()
+        # Simulate global EXTERNO rule being available
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        service = _build_service(
+            puntos_repo=puntos_repo, reglas_repo=reglas_repo, motor=motor
+        )
+        # Both vendedor_id and cerrador_id set and distinct — 2 participants
+        cmd = _cmd_with_participantes(
+            punto_de_venta_id=punto_id,
+            vendedor_id=uuid.uuid4(),
+            cerrador_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+        )
+
+        # Must NOT raise — should succeed using the global EXTERNO rule
+        service.ejecutar(cmd)
+
+        # Service must call buscar_regla with (EXTERNO, None, None) — global lookup
+        call = reglas_repo.buscar_regla.call_args
+        assert call.args[0] == TipoCliente.EXTERNO
+        assert call.args[1] is None  # no point-specific lookup for non-Crespo
+        assert call.args[2] is None

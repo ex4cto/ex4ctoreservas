@@ -19,10 +19,26 @@ from garay.dominio.puertos.repositorios import (
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
+from garay.dominio.ventas.valor_objetos import Participantes
 
 
 def _fmt_cop(d: Dinero) -> str:
     return "$" + f"{int(d.monto):,}".replace(",", ".")
+
+
+def _derivar_numero_personas(participantes: Participantes) -> int | None:
+    """Derive the number of distinct people involved in a sale.
+
+    Returns:
+        1  — vendedor_id and cerrador_id are both non-None AND equal (same person).
+        2  — vendedor_id and cerrador_id are both non-None AND different persons.
+        None — either id is None; cannot determine count (design S2).
+    """
+    vid = participantes.vendedor_id
+    cid = participantes.cerrador_id
+    if vid is None or cid is None:
+        return None
+    return 1 if vid == cid else 2
 
 
 class RegistrarVentaService:
@@ -66,25 +82,37 @@ class RegistrarVentaService:
             canal_origen=cmd.canal_origen,
         )
 
-        # 2. Fetch commission rules — raise if not found
-        reglas = self._reglas_repo.buscar_por_tipo_cliente(cmd.tipo_cliente)
-        if reglas is None:
-            raise ReglasComisionNoEncontradas(
-                f"No se encontraron reglas de comision para el tipo de cliente: {cmd.tipo_cliente}"
-            )
-
-        # 3. Resolve punto de venta if present
+        # 2. Resolve punto de venta FIRST — needed to determine if Crespo (design S1).
         punto = None
         if cmd.participantes.punto_de_venta_id is not None:
             punto = self._puntos_repo.buscar_por_id(cmd.participantes.punto_de_venta_id)
 
-        # 4. Calculate commission breakdown
+        # 3. Gate: point-specific lookup is only applicable for the Crespo punto (design S1).
+        #    For every other punto the service falls through to the global rule by passing
+        #    None/None, which triggers step-2 in buscar_regla (global tipo_cliente lookup).
+        es_crespo = punto is not None and punto.nombre == "Crespo"
+        lookup_punto = punto.nombre if (es_crespo and punto is not None) else None
+        lookup_personas = _derivar_numero_personas(cmd.participantes) if es_crespo else None
+
+        # 4. Fetch commission rules via two-step selector — raise if not found (design S3).
+        reglas = self._reglas_repo.buscar_regla(
+            cmd.tipo_cliente,
+            lookup_punto,
+            lookup_personas,
+        )
+        if reglas is None:
+            raise ReglasComisionNoEncontradas(
+                f"No se encontraron reglas de comision para tipo={cmd.tipo_cliente!r}, "
+                f"punto={lookup_punto!r}, personas={lookup_personas!r}"
+            )
+
+        # 5. Calculate commission breakdown
         desglose = self._motor.calcular(venta, reglas, punto, cmd.porcentaje_referido)
 
-        # 5. Persist the sale
+        # 6. Persist the sale
         self._ventas.guardar(venta)
 
-        # 5b. Persist commission record
+        # 6b. Persist commission record
         comision = ComisionRegistrada(
             venta_id=venta.id,
             desglose=desglose,
@@ -92,7 +120,7 @@ class RegistrarVentaService:
         )
         self._comisiones_repo.guardar(comision)
 
-        # 6. Create tiquetera if a reference photo was provided
+        # 7. Create tiquetera if a reference photo was provided
         if cmd.foto_referencia is not None:
             tiquetera = Tiquetera(
                 id=uuid.uuid4(),
@@ -103,7 +131,7 @@ class RegistrarVentaService:
             )
             self._tiqueteras.guardar(tiquetera)
 
-        # 7. Notify the group
+        # 8. Notify the group
         vendedor = cmd.participantes.vendedor_nombre or "—"
         cerrador = cmd.participantes.cerrador_nombre or "—"
 
