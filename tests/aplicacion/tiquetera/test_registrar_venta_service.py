@@ -317,13 +317,9 @@ class TestDerivarNumeroPersonas:
         """(None, None) → None: no ids present, cannot determine count."""
         assert self._fn(None, None) is None
 
-    def test_vendedor_none_cerrador_present_returns_2(self) -> None:
-        """(None, B) → 2: only cerrador present, treated as 2 distinct people."""
-        # This case arises when vendedor_id is absent but cerrador_id is set.
-        # Per design S2: return 2 if both non-None and different; only both-None → None.
-        # When vendedor_id is None but cerrador_id is set we must NOT return None.
-        # The design says: returns None if EITHER is None (both-None must NOT become 1 or 2).
-        # Re-reading design S2: "returns None if either is None" — so (None, B) → None.
+    def test_vendedor_none_cerrador_present_returns_none(self) -> None:
+        """(None, B) → None: only cerrador present — cannot determine count (design S2)."""
+        # Per design S2: returns None if EITHER id is None.
         assert self._fn(None, uuid.uuid4()) is None
 
     def test_vendedor_present_cerrador_none_returns_none(self) -> None:
@@ -474,3 +470,46 @@ class TestServiceUsasBuscarRegla:
         assert call.args[0] == TipoCliente.EXTERNO
         assert call.args[1] == "Crespo"
         assert call.args[2] == 1
+
+    def test_non_crespo_punto_with_two_participants_uses_global_rule(self) -> None:
+        """CRITICAL-1 (REQ-08b): a non-Crespo punto with both vendedor_id and
+        cerrador_id set (distinct) must resolve the global EXTERNO rule and NOT
+        raise ReglasComisionNoEncontradas.
+
+        Before the Crespo gate fix, the service passed punto_nombre='Marie Real'
+        and numero_personas=2 unconditionally, causing buscar_regla to attempt a
+        point-specific step-1 lookup that found nothing and returned None — which
+        then raised ReglasComisionNoEncontradas, breaking every non-Crespo sale
+        at a named punto when both participant IDs were identified.
+        """
+        punto_id = uuid.uuid4()
+        fake_punto = MagicMock()
+        fake_punto.nombre = "Marie Real"  # non-Crespo punto
+        puntos_repo = MagicMock()
+        puntos_repo.buscar_por_id.return_value = fake_punto
+
+        reglas_repo = MagicMock()
+        # Simulate global EXTERNO rule being available
+        reglas_repo.buscar_regla.return_value = MagicMock()
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        service = _build_service(
+            puntos_repo=puntos_repo, reglas_repo=reglas_repo, motor=motor
+        )
+        # Both vendedor_id and cerrador_id set and distinct — 2 participants
+        cmd = _cmd_with_participantes(
+            punto_de_venta_id=punto_id,
+            vendedor_id=uuid.uuid4(),
+            cerrador_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+        )
+
+        # Must NOT raise — should succeed using the global EXTERNO rule
+        service.ejecutar(cmd)
+
+        # Service must call buscar_regla with (EXTERNO, None, None) — global lookup
+        call = reglas_repo.buscar_regla.call_args
+        assert call.args[0] == TipoCliente.EXTERNO
+        assert call.args[1] is None  # no point-specific lookup for non-Crespo
+        assert call.args[2] is None

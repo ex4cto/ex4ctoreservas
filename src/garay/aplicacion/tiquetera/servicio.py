@@ -87,20 +87,23 @@ class RegistrarVentaService:
         if cmd.participantes.punto_de_venta_id is not None:
             punto = self._puntos_repo.buscar_por_id(cmd.participantes.punto_de_venta_id)
 
-        # 3. Derive numero_personas — only meaningful for Crespo point-specific lookup.
-        punto_nombre = punto.nombre if punto is not None else None
-        numero_personas = _derivar_numero_personas(cmd.participantes)
+        # 3. Gate: point-specific lookup is only applicable for the Crespo punto (design S1).
+        #    For every other punto the service falls through to the global rule by passing
+        #    None/None, which triggers step-2 in buscar_regla (global tipo_cliente lookup).
+        es_crespo = punto is not None and punto.nombre == "Crespo"
+        lookup_punto = punto.nombre if (es_crespo and punto is not None) else None
+        lookup_personas = _derivar_numero_personas(cmd.participantes) if es_crespo else None
 
         # 4. Fetch commission rules via two-step selector — raise if not found (design S3).
         reglas = self._reglas_repo.buscar_regla(
             cmd.tipo_cliente,
-            punto_nombre,
-            numero_personas,
+            lookup_punto,
+            lookup_personas,
         )
         if reglas is None:
             raise ReglasComisionNoEncontradas(
                 f"No se encontraron reglas de comision para tipo={cmd.tipo_cliente!r}, "
-                f"punto={punto_nombre!r}, personas={numero_personas!r}"
+                f"punto={lookup_punto!r}, personas={lookup_personas!r}"
             )
 
         # 5. Calculate commission breakdown
