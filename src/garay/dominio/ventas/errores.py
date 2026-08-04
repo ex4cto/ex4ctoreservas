@@ -20,3 +20,7 @@ class CantidadInvalida(ErrorDeDominio):
 
 class AbonoSuperaValorVenta(ErrorDeDominio):
     """El abono no puede superar el valor de la venta."""
+
+
+class DigitalConPuntoDeVenta(ErrorDeDominio):
+    """Una venta DIGITAL no puede tener un punto de venta asociado."""

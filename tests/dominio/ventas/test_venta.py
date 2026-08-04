@@ -114,3 +114,63 @@ class TestAbono:
     def test_venta_sin_abono_es_none(self) -> None:
         venta = _venta()
         assert venta.abono is None
+
+
+class TestDigitalConPuntoDeVenta:
+    """WU-3: DigitalConPuntoDeVenta domain invariant (REQ-04)."""
+
+    def test_digital_con_punto_de_venta_id_levanta_error(self) -> None:
+        from garay.dominio.ventas.errores import DigitalConPuntoDeVenta
+
+        with pytest.raises(DigitalConPuntoDeVenta):
+            Venta(
+                id=uuid.uuid4(),
+                valor_venta=Dinero(1_000_000),
+                neto=Dinero(900_000),
+                servicio_ids=[uuid.uuid4()],
+                cliente_id=uuid.uuid4(),
+                tipo_cliente=TipoCliente.DIGITAL,
+                fecha=datetime.date(2024, 1, 15),
+                participantes=Participantes(punto_de_venta_id=uuid.uuid4()),
+            )
+
+    def test_digital_sin_punto_de_venta_id_valido(self) -> None:
+        # DIGITAL with punto_de_venta_id=None is allowed
+        venta = Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(1_000_000),
+            neto=Dinero(900_000),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.DIGITAL,
+            fecha=datetime.date(2024, 1, 15),
+            participantes=Participantes(punto_de_venta_id=None),
+        )
+        assert venta.tipo_cliente == TipoCliente.DIGITAL
+
+    def test_externo_con_punto_de_venta_id_valido(self) -> None:
+        # Non-DIGITAL tipo_cliente may have punto_de_venta_id (REQ-08b)
+        venta = Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(1_000_000),
+            neto=Dinero(900_000),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2024, 1, 15),
+            participantes=Participantes(punto_de_venta_id=uuid.uuid4()),
+        )
+        assert venta.tipo_cliente == TipoCliente.EXTERNO
+
+    def test_interno_con_punto_de_venta_id_valido(self) -> None:
+        venta = Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(1_000_000),
+            neto=Dinero(900_000),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.INTERNO,
+            fecha=datetime.date(2024, 1, 15),
+            participantes=Participantes(punto_de_venta_id=uuid.uuid4()),
+        )
+        assert venta.tipo_cliente == TipoCliente.INTERNO
