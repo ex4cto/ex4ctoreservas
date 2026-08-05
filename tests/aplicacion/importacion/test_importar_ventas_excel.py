@@ -14,6 +14,8 @@ from garay.aplicacion.importacion.errores import (
 )
 from garay.aplicacion.importacion.importar_ventas_excel import ImportarVentasExcelService
 from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.freelancers.entidades import Freelancer
@@ -57,6 +59,8 @@ def _build(
     cliente_existente: Cliente | None = None,
     punto: PuntoDeVenta | None = None,
     resolver: Callable[[str], list[Freelancer]] | None = None,
+    reglas_repo: MagicMock | None = None,
+    motor: MotorComisiones | MagicMock | None = None,
 ) -> tuple[ImportarVentasExcelService, MagicMock, MagicMock, MagicMock, MagicMock]:
     lector = MagicMock()
     lector.leer.return_value = filas
@@ -76,6 +80,8 @@ def _build(
         freelancers.listar_por_nombre.side_effect = resolver
     else:
         freelancers.listar_por_nombre.return_value = [_default_freelancer]
+    _reglas_repo = reglas_repo if reglas_repo is not None else MagicMock()
+    _motor = motor if motor is not None else MagicMock()
     svc = ImportarVentasExcelService(
         lector,
         ventas,
@@ -85,6 +91,8 @@ def _build(
         comisiones,
         {"playa tranquila": 12} if alias is None else alias,
         freelancers,
+        reglas_repo=_reglas_repo,
+        motor=_motor,
     )
     return svc, ventas, clientes, comisiones, freelancers
 
@@ -128,16 +136,25 @@ def test_usa_cliente_existente() -> None:
     assert ventas.guardar.call_args.args[0].cliente_id == existente.id
 
 
-def test_crespo_asigna_punto_y_hebert_como_residual() -> None:
+def test_crespo_asigna_punto_y_capa_motor() -> None:
+    # ganancia = valor - neto = 560000 - 380000 = 180000
+    # Crespo 1P rule (same person): capa = 20% of 180000 = 36000
     punto = PuntoDeVenta(id=uuid.uuid4(), nombre="Crespo", porcentaje_capa=Decimal("20"))
-    # margen 180000, agencia 54000, vend 0, cerr 90000 -> residual Hebert 36000
     fila = _fila(canal="Crespo", valor=560000, neto=380000, agencia=54000, vend=0, cerr=90000)
-    svc, ventas, _, comisiones, _ = _build([fila], punto=punto)
+    reglas_repo = MagicMock()
+    reglas_repo.buscar_regla.return_value = _CRESPO_REGLA_1P
+    svc, ventas, _, comisiones, _ = _build(
+        [fila],
+        punto=punto,
+        reglas_repo=reglas_repo,
+        motor=_MOTOR_REAL,
+    )
     svc.ejecutar("x.xlsx", 7, 2026)
     venta = ventas.guardar.call_args.args[0]
     assert venta.participantes.punto_de_venta_id == punto.id
     desglose = comisiones.guardar.call_args.args[0].desglose
-    assert desglose.punto_de_venta == Dinero(36000)  # Hebert = margen - agencia - vend - cerr
+    # Motor path: capa = 20% of 180000 = 36000
+    assert desglose.punto_de_venta == Dinero(36000)
 
 
 def test_descripcion_sin_mapeo_falla() -> None:
@@ -349,3 +366,183 @@ def test_filas_omitidas_no_resuelven() -> None:
     ventas.guardar.assert_called_once()
     # listar_por_nombre called exactly once (omitted row skipped)
     freelancers.listar_por_nombre.assert_called_once_with("Eduardo")
+
+
+# ---------------------------------------------------------------------------
+# T10 / T11 — Crespo Excel parity (REQ-07)
+# ---------------------------------------------------------------------------
+# These tests assert that _desglose for Crespo rows goes through buscar_regla
+# + motor.calcular and produces IDENTICAL breakdowns to the live bot flow.
+#
+# Commission base: venta.ganancia = valor - neto (NOT spreadsheet margen).
+# ganancia = 500000 - 400000 = 100000
+#
+# T10: 1-persona (vendedor_id == cerrador_id):
+#   crespo_1p rule: 50% vendedor, 0% cerrador, 20% capa (punto), agencia=residual
+#   Expected: vendedor=50000, cerrador=0, capa=20000, agencia=30000
+#
+# T11: 2-personas (vendedor_id != cerrador_id):
+#   crespo_2p rule: 30% vendedor, 30% cerrador, 20% capa, agencia=residual
+#   Expected: vendedor=30000, cerrador=30000, capa=20000, agencia=20000
+# ---------------------------------------------------------------------------
+
+_MOTOR_REAL = MotorComisiones()
+
+_CRESPO_REGLA_1P = ReglasComision(
+    id=uuid.uuid4(),
+    tipo_cliente=TipoCliente.EXTERNO,
+    porcentaje_vendedor=Decimal("50"),
+    porcentaje_cerrador=Decimal("0"),
+    porcentaje_referido_maximo=Decimal("10"),
+    punto_de_venta_nombre="Crespo",
+    numero_personas=1,
+)
+
+_CRESPO_REGLA_2P = ReglasComision(
+    id=uuid.uuid4(),
+    tipo_cliente=TipoCliente.EXTERNO,
+    porcentaje_vendedor=Decimal("30"),
+    porcentaje_cerrador=Decimal("30"),
+    porcentaje_referido_maximo=Decimal("10"),
+    punto_de_venta_nombre="Crespo",
+    numero_personas=2,
+)
+
+_UUID_A = uuid.uuid4()
+_UUID_B = uuid.uuid4()
+
+
+def _freelancer_resolver_ab(nombre: str) -> list[Freelancer]:
+    """Resolver: 'Ana' -> _UUID_A, 'Luis' -> _UUID_B."""
+    if nombre == "Ana":
+        return [Freelancer(id=_UUID_A, nombre="Ana")]
+    return [Freelancer(id=_UUID_B, nombre="Luis")]
+
+
+def _crespo_punto_obj() -> PuntoDeVenta:
+    return PuntoDeVenta(id=uuid.uuid4(), nombre="Crespo", porcentaje_capa=Decimal("20"))
+
+
+class TestT10CrespoExcel1Persona:
+    """T10: Crespo Excel row, 1 persona (same vendedor+cerrador) — parity with live flow."""
+
+    def _setup(self) -> tuple[ImportarVentasExcelService, MagicMock]:
+        punto = _crespo_punto_obj()
+        reglas_repo = MagicMock()
+        # buscar_regla returns 1-persona rule when called with (EXTERNO, "Crespo", 1)
+        reglas_repo.buscar_regla.return_value = _CRESPO_REGLA_1P
+        # Single person: vendedor == cerrador (same name, same id)
+        fila = FilaVentaImportada(
+            canal="Crespo",
+            cliente_nombre="Test Cliente",
+            fecha=datetime.date(2026, 7, 3),
+            descripcion="Playa tranquila",
+            valor=Dinero(500000),
+            neto=Dinero(400000),
+            margen=Dinero(100000),
+            agencia=Dinero(0),          # spreadsheet values ignored for Crespo path
+            comision_vendedor=Dinero(0),
+            comision_cerrador=Dinero(0),
+            vendedor_nombre="Ana",
+            cerrador_nombre="Ana",
+        )
+        svc, _, _, comisiones, _ = _build(
+            [fila],
+            punto=punto,
+            resolver=lambda nombre: [Freelancer(id=_UUID_A, nombre=nombre)],
+            reglas_repo=reglas_repo,
+            motor=_MOTOR_REAL,
+        )
+        svc.ejecutar("x.xlsx", 7, 2026)
+        return svc, comisiones
+
+    def test_vendedor_y_cerrador_combinados(self) -> None:
+        """1 persona: vendedor gets 50 000 (50%), cerrador gets 0 (0%)."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        # Combined (same person): vendedor=50000, cerrador=0
+        assert desglose.vendedor == Dinero("50000.00")
+        assert desglose.cerrador == Dinero("0.00")
+
+    def test_capa(self) -> None:
+        """1 persona: capa = 20% of ganancia = 20 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.punto_de_venta == Dinero("20000.00")
+
+    def test_agencia(self) -> None:
+        """1 persona: agencia (residual) = 100000 - 50000 - 0 - 20000 = 30 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.agencia == Dinero("30000.00")
+
+    def test_suma_exacta(self) -> None:
+        """Invariante: vendedor + cerrador + capa + agencia == ganancia."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        total = desglose.vendedor + desglose.cerrador + desglose.punto_de_venta + desglose.agencia
+        assert total == Dinero("100000.00")
+
+
+class TestT11CrespoExcel2Personas:
+    """T11: Crespo Excel row, 2 personas (different vendedor+cerrador) — parity with live flow."""
+
+    def _setup(self) -> tuple[ImportarVentasExcelService, MagicMock]:
+        punto = _crespo_punto_obj()
+        reglas_repo = MagicMock()
+        # buscar_regla returns 2-personas rule when called with (EXTERNO, "Crespo", 2)
+        reglas_repo.buscar_regla.return_value = _CRESPO_REGLA_2P
+        fila = FilaVentaImportada(
+            canal="Crespo",
+            cliente_nombre="Test Cliente 2",
+            fecha=datetime.date(2026, 7, 4),
+            descripcion="Playa tranquila",
+            valor=Dinero(500000),
+            neto=Dinero(400000),
+            margen=Dinero(100000),
+            agencia=Dinero(0),          # spreadsheet values ignored for Crespo path
+            comision_vendedor=Dinero(0),
+            comision_cerrador=Dinero(0),
+            vendedor_nombre="Ana",
+            cerrador_nombre="Luis",
+        )
+        svc, _, _, comisiones, _ = _build(
+            [fila],
+            punto=punto,
+            resolver=_freelancer_resolver_ab,
+            reglas_repo=reglas_repo,
+            motor=_MOTOR_REAL,
+        )
+        svc.ejecutar("x.xlsx", 7, 2026)
+        return svc, comisiones
+
+    def test_vendedor(self) -> None:
+        """2 personas: vendedor = 30% of ganancia = 30 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.vendedor == Dinero("30000.00")
+
+    def test_cerrador(self) -> None:
+        """2 personas: cerrador = 30% of ganancia = 30 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.cerrador == Dinero("30000.00")
+
+    def test_capa(self) -> None:
+        """2 personas: capa = 20% of ganancia = 20 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.punto_de_venta == Dinero("20000.00")
+
+    def test_agencia(self) -> None:
+        """2 personas: agencia (residual) = 100000 - 30000 - 30000 - 20000 = 20 000."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        assert desglose.agencia == Dinero("20000.00")
+
+    def test_suma_exacta(self) -> None:
+        """Invariante: vendedor + cerrador + capa + agencia == ganancia."""
+        _, comisiones = self._setup()
+        desglose = comisiones.guardar.call_args.args[0].desglose
+        total = desglose.vendedor + desglose.cerrador + desglose.punto_de_venta + desglose.agencia
+        assert total == Dinero("100000.00")
