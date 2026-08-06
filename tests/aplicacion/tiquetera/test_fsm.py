@@ -1027,23 +1027,29 @@ class TestFotoModo:
     def test_foto_modo_salta_a_participante_rol_despues_de_punto_de_venta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """With foto_modo=True, _handle_punto_de_venta jumps to PARTICIPANTE_ROL."""
+        """With foto_modo=True non-Crespo, _handle_punto_de_venta goes to TIPO_RESERVA.
+        After TIPO_RESERVA answers, the handler jumps to PARTICIPANTE_ROL."""
         ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        assert s1.contexto.foto_modo is True  # kept for TIPO_RESERVA handler
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
 
     def test_foto_modo_false_after_punto_de_venta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """foto_modo is reset to False in the returned context."""
+        """foto_modo is preserved at TIPO_RESERVA then consumed when TIPO_RESERVA answers."""
         ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.contexto.foto_modo is False
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.contexto.foto_modo is True  # NOT consumed yet
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
+        assert s2.contexto.foto_modo is False  # consumed at TIPO_RESERVA
 
     def test_foto_modo_computa_neto_cuando_datos_disponibles(
         self, fsm: FSMTiquetera
     ) -> None:
-        """When foto_modo=True and abono/adultos are set, neto is auto-computed."""
+        """When foto_modo=True, neto is auto-computed at TIPO_RESERVA, not PUNTO_DE_VENTA."""
         ctx = ContextoVenta(
             foto_modo=True,
             abono=Decimal("50000"),
@@ -1051,9 +1057,11 @@ class TestFotoModo:
             ninos=0,
             destinos_numeros=[1],  # Tour Playa Blanca: neto_adulto=100000
         )
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
-        assert salida.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
     def test_handle_destino_recomputa_neto_en_modo_edicion(
         self, fsm: FSMTiquetera
@@ -1434,31 +1442,37 @@ class TestEditarParticipantes:
 
 
 class TestFotoModoSaltaParticipanteRol:
-    """Cambio 3: foto_modo=True must route to PARTICIPANTE_ROL after PUNTO_DE_VENTA."""
+    """Cambio 3: foto_modo=True non-Crespo routes through TIPO_RESERVA then PARTICIPANTE_ROL.
+    Crespo jumps directly to PARTICIPANTE_ROL with tipo=EXTERNO (no TIPO_RESERVA needed)."""
 
     def test_foto_modo_salta_a_participante_rol_no_confirmacion(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """Con foto_modo=True, _handle_punto_de_venta va a PARTICIPANTE_ROL, no CONFIRMACION."""
+        """Con foto_modo=True non-Crespo, PUNTO_DE_VENTA va a TIPO_RESERVA (no CONFIRMACION)."""
         ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
 
     def test_foto_modo_opciones_participante_rol(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """La salida debe tener las opciones de rol."""
+        """La salida de TIPO_RESERVA en foto_modo tiene las opciones de rol."""
         ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert "Ambos" in salida.opciones
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
+        assert "Ambos" in s2.opciones
 
     def test_foto_modo_false_se_resetea(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """foto_modo se resetea a False en el contexto retornado."""
+        """foto_modo se resetea a False al salir de TIPO_RESERVA en foto mode."""
         ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.contexto.foto_modo is False
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.contexto.foto_modo is True  # preserved at TIPO_RESERVA
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
+        assert s2.contexto.foto_modo is False
 
 
 # ─── Validación en _handle_confirmacion ──────────────────────────────────────
@@ -1673,7 +1687,7 @@ class TestNetoRecalculoEnEdicion:
         assert salida.contexto.neto == Decimal("200000")
 
     def test_foto_modo_recalcula_neto_desde_catalogo(self, fsm: FSMTiquetera) -> None:
-        # IA extracted a wrong neto; catalog must override it
+        # IA extracted a wrong neto; catalog must override it when TIPO_RESERVA is answered
         ctx = ContextoVenta(
             destinos_numeros=[1],
             adultos=2,
@@ -1682,9 +1696,11 @@ class TestNetoRecalculoEnEdicion:
             neto=Decimal("999999"),
             foto_modo=True,
         )
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
         # Service 1: 100000 x 2 adultos = 200000
-        assert salida.contexto.neto == Decimal("200000")
+        assert s2.contexto.neto == Decimal("200000")
 
 
 # ─── Destination picker: edit flow, photo mode, callback_data limits ─────────
@@ -1737,10 +1753,14 @@ class TestPickerModoFotoRegresion:
         assert EstadoFSM.SERVICIO_EN_FAMILIA not in _ESTADOS_FOTO_AVANZAR
 
     def test_foto_modo_salta_picker_completo(self, fsm: FSMTiquetera) -> None:
-        """With foto_modo, PUNTO_DE_VENTA jumps straight past the picker to PARTICIPANTE_ROL."""
+        """With foto_modo, non-Crespo PUNTO_DE_VENTA routes through TIPO_RESERVA then
+        PARTICIPANTE_ROL, skipping the family/service picker entirely."""
         ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)
-        salida = fsm.procesar_foto(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        s1 = fsm.procesar_foto(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
+        # TIPO_RESERVA is NOT in _ESTADOS_FOTO_AVANZAR, so procesar_foto stops here
+        assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
+        s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
 
     def test_foto_modo_canal_origen_salta_picker(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)

@@ -461,8 +461,8 @@ class FSMTiquetera:
             if ctx.modo_edicion:
                 ctx.canal_origen = None  # presencial has no canal
                 ctx.tipo_cliente = None  # will be determined at TIPO_RESERVA or Crespo branch
-                ctx.modo_edicion = False
-                # If it was digital before and no punto set, ask for punto
+                # If no punto set yet, ask for it (keep modo_edicion=True so
+                # _handle_punto_de_venta routes back to CONFIRMACION afterwards).
                 if not ctx.punto_de_venta_nombre:
                     return SalidaFSM(
                         nuevo_estado=EstadoFSM.PUNTO_DE_VENTA,
@@ -470,10 +470,22 @@ class FSMTiquetera:
                         opciones=list(self._puntos_venta),
                         contexto=ctx,
                     )
+                # Punto already set — apply Crespo sentinel or re-ask TIPO_RESERVA.
+                if ctx.punto_de_venta_nombre == "Crespo":
+                    ctx.tipo_cliente = TipoCliente.EXTERNO
+                    ctx.modo_edicion = False
+                    return SalidaFSM(
+                        nuevo_estado=EstadoFSM.CONFIRMACION,
+                        mensaje=self._construir_resumen(ctx),
+                        opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                        contexto=ctx,
+                    )
+                # Non-Crespo presencial with existing punto: re-ask TIPO_RESERVA.
+                # Keep modo_edicion=True so the handler returns to CONFIRMACION.
                 return SalidaFSM(
-                    nuevo_estado=EstadoFSM.CONFIRMACION,
-                    mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    nuevo_estado=EstadoFSM.TIPO_RESERVA,
+                    mensaje=obtener_mensaje("pregunta_tipo_reserva"),
+                    opciones=["INTERNO", "EXTERNO"],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -515,7 +527,19 @@ class FSMTiquetera:
                 opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
                 contexto=ctx,
             )
-        # Non-edit: punto was already chosen at PUNTO_DE_VENTA, go to FAMILIA
+        if ctx.foto_modo:
+            # Photo presencial non-Crespo: consume foto_modo and jump to PARTICIPANTE_ROL
+            ctx.foto_modo = False
+            computed = self._calcular_neto(ctx)
+            if computed is not None:
+                ctx.neto = computed
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                mensaje=obtener_mensaje("pregunta_rol_venta"),
+                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                contexto=ctx,
+            )
+        # Non-edit, non-foto: punto was already chosen at PUNTO_DE_VENTA, go to FAMILIA
         return self._salida_familia(ctx)
 
     def _handle_canal_origen(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
@@ -563,6 +587,31 @@ class FSMTiquetera:
                 if nombre.lower().strip() in nombres_norm and numero not in ctx.destinos_numeros:
                     ctx.destinos_numeros.append(numero)
         if ctx.modo_edicion:
+            # Determine what the nuevo punto is (already set on ctx above).
+            nuevo_punto = ctx.punto_de_venta_nombre
+            viejo_punto = contexto.punto_de_venta_nombre  # pre-edit value
+            if nuevo_punto == "Crespo":
+                # New punto is Crespo → sentinel EXTERNO, go to CONFIRMACION.
+                ctx.tipo_cliente = TipoCliente.EXTERNO
+                ctx.modo_edicion = False
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.CONFIRMACION,
+                    mensaje=self._construir_resumen(ctx),
+                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    contexto=ctx,
+                )
+            if viejo_punto == "Crespo" or ctx.tipo_cliente is None:
+                # Was Crespo→non-Crespo, or tipo is unresolved (e.g. Digital→Presencial
+                # edit path cleared tipo): must ask TIPO_RESERVA.
+                # Keep modo_edicion=True so _handle_tipo_reserva returns to CONFIRMACION.
+                ctx.tipo_cliente = None
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.TIPO_RESERVA,
+                    mensaje=obtener_mensaje("pregunta_tipo_reserva"),
+                    opciones=["INTERNO", "EXTERNO"],
+                    contexto=ctx,
+                )
+            # Non-Crespo → non-Crespo edit with existing tipo: keep it, return to CONFIRMACION.
             ctx.modo_edicion = False
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
@@ -570,22 +619,25 @@ class FSMTiquetera:
                 opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
                 contexto=ctx,
             )
-        if ctx.foto_modo:
-            ctx.foto_modo = False
-            computed = self._calcular_neto(ctx)
-            if computed is not None:
-                ctx.neto = computed
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
-                contexto=ctx,
-            )
-        # Crespo: skip TIPO_RESERVA, set sentinel EXTERNO, go directly to FAMILIA
+        # Crespo: skip TIPO_RESERVA, set sentinel EXTERNO.
+        # In foto mode, jump to PARTICIPANTE_ROL; otherwise go to FAMILIA.
         if ctx.punto_de_venta_nombre == "Crespo":
             ctx.tipo_cliente = TipoCliente.EXTERNO
+            if ctx.foto_modo:
+                ctx.foto_modo = False
+                computed = self._calcular_neto(ctx)
+                if computed is not None:
+                    ctx.neto = computed
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                    mensaje=obtener_mensaje("pregunta_rol_venta"),
+                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    contexto=ctx,
+                )
             return self._salida_familia(ctx)
-        # Non-Crespo presencial: ask TIPO_RESERVA (INTERNO or EXTERNO only)
+        # Non-Crespo presencial: in foto mode keep foto_modo=True so TIPO_RESERVA
+        # handler will consume it and jump to PARTICIPANTE_ROL.
+        # In normal mode ask TIPO_RESERVA (INTERNO or EXTERNO only).
         return SalidaFSM(
             nuevo_estado=EstadoFSM.TIPO_RESERVA,
             mensaje=obtener_mensaje("pregunta_tipo_reserva"),
@@ -1261,13 +1313,6 @@ class FSMTiquetera:
             )
         # Bounce "Tipo reserva" edit for Crespo (type is fixed as sentinel EXTERNO)
         if label_elegido == "Tipo reserva" and ctx.punto_de_venta_nombre == "Crespo":
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
-                mensaje=obtener_mensaje("error_campo_editar_invalido"),
-                opciones=self._opciones_editables(ctx),
-                contexto=ctx,
-            )
-        if label_elegido == "Punto de venta" and ctx.tipo_cliente == TipoCliente.DIGITAL:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
                 mensaje=obtener_mensaje("error_campo_editar_invalido"),
