@@ -380,8 +380,8 @@ class TestCmdFoto:
         with patch(wait_for_path, new=AsyncMock(return_value=extracted_ctx)):
             result = await cmd_foto(update, context)
 
-        # Should start at TIPO_RESERVA
-        assert result == ESTADO_PTB[EstadoFSM.TIPO_RESERVA]
+        # After Slice 3: photo entry starts at MODALIDAD_VENTA (not TIPO_RESERVA)
+        assert result == ESTADO_PTB[EstadoFSM.MODALIDAD_VENTA]
         # user_data should have the extracted ctx
         assert context.user_data["contexto"] is extracted_ctx
 
