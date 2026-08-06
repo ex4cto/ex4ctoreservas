@@ -412,14 +412,14 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     ctx.foto_modo = True  # jump to PARTICIPANTE_ROL after PUNTO_DE_VENTA
 
-    # Start the FSM at TIPO_RESERVA with the pre-filled ctx
+    # Start the FSM at MODALIDAD_VENTA with the pre-filled ctx
     # (photo entry skips METODO_INPUT — user already chose Foto implicitly)
     salida = SalidaFSM(
         mensaje="\n".join(lineas)
         + "\n\n"
-        + obtener_mensaje("pregunta_tipo_reserva"),
-        opciones=["INTERNO", "EXTERNO", "DIGITAL"],
-        nuevo_estado=EstadoFSM.TIPO_RESERVA,
+        + obtener_mensaje("pregunta_modalidad_venta"),
+        opciones=["Presencial", "Digital"],
+        nuevo_estado=EstadoFSM.MODALIDAD_VENTA,
         contexto=ctx,
         listo=False,
     )
@@ -523,6 +523,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
 # Pre-built handlers for each FSM state
 handle_metodo_input = _make_handler(EstadoFSM.METODO_INPUT)
 handle_esperando_foto = _make_handler(EstadoFSM.ESPERANDO_FOTO)
+handle_modalidad_venta = _make_handler(EstadoFSM.MODALIDAD_VENTA)
 handle_tipo_reserva = _make_handler(EstadoFSM.TIPO_RESERVA)
 handle_punto_de_venta = _make_handler(EstadoFSM.PUNTO_DE_VENTA)
 handle_familia = _make_handler(EstadoFSM.FAMILIA)

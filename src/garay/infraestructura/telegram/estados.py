@@ -8,6 +8,7 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM
 ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.METODO_INPUT: 20,
     EstadoFSM.ESPERANDO_FOTO: 22,
+    EstadoFSM.MODALIDAD_VENTA: 29,
     EstadoFSM.TIPO_RESERVA: 0,
     EstadoFSM.CANAL_ORIGEN: 28,
     EstadoFSM.PUNTO_DE_VENTA: 1,
