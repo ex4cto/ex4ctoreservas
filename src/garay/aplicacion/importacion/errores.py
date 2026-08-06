@@ -40,3 +40,41 @@ class ImportacionConNombresNoResueltos(ErrorImportacion):
                 f"Ambiguos / mas de un match ({len(self.ambiguos)}): {lineas}"
             )
         return "Importacion abortada, nada fue persistido. " + " | ".join(partes)
+
+
+class VentaCrespoSinParticipantes(ErrorImportacion):
+    """One or more Crespo rows are missing the vendedor or cerrador name needed to
+    determine the number of people in the sale (1 vs 2 personas for buscar_regla).
+
+    Aborts the entire import before any persistence (all-or-nothing, consistent
+    with ImportacionConNombresNoResueltos).  The error message names every
+    offending row number so the operator knows exactly which rows to fix.
+    """
+
+    def __init__(self, filas: list[int]) -> None:
+        self.filas = filas
+        super().__init__(self._mensaje())
+
+    def _mensaje(self) -> str:
+        nums = ", ".join(str(i) for i in self.filas)
+        return (
+            "Importacion abortada, nada fue persistido. "
+            f"Filas Crespo sin vendedor o cerrador (se requieren para determinar "
+            f"1 o 2 personas): {nums}"
+        )
+
+
+class PuntoCrespoNoConfigurado(ErrorImportacion):
+    """The batch contains Crespo rows but the 'Crespo' punto de venta was not found
+    in the database.  This is a seeding/configuration error: without the Crespo punto
+    the motor cannot compute the 20% capa, and the commission would be silently zeroed.
+
+    Raised before any persistence so the operator can seed the punto and re-run.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Importacion abortada: el lote contiene filas Crespo pero el punto de venta "
+            "'Crespo' no existe en la base de datos. "
+            "Ejecute el seed (scripts/seed.py) y vuelva a importar."
+        )

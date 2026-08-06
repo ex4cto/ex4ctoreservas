@@ -5,9 +5,12 @@ Escribe cada fila (ya deduplicada por el lector) como una `Venta` + su
 venta). NO reusa `RegistrarVentaService`: la comision se SNAPSHOTEA de la planilla
 (no se recalcula), no notifica, y usa `uuid5` determinista para ser idempotente.
 
-Hebert (el 20% del dueno del restaurante en Crespo) queda como la comision del
-punto de venta: `punto = margen - agencia - vendedor - cerrador` (residual). En
-Hotel/Externas ese residual es ~0.
+Crespo presencial rows: commission is derived via buscar_regla + motor.calcular
+(same path as the live bot flow, for REQ-07 parity). Commission base is
+venta.ganancia = valor - neto.
+
+Hotel/Externas rows: commission is snapshotted from the spreadsheet residual
+(historical behavior preserved).
 """
 
 from __future__ import annotations
@@ -19,9 +22,14 @@ from decimal import Decimal
 from garay.aplicacion.importacion.errores import (
     DescripcionSinMapeo,
     ImportacionConNombresNoResueltos,
+    PuntoCrespoNoConfigurado,
+    VentaCrespoSinParticipantes,
 )
+from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
+from garay.aplicacion.tiquetera.servicio import _derivar_numero_personas
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.entidades import ComisionRegistrada
+from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.comisiones.snapshot import SnapshotReglas
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
@@ -31,10 +39,12 @@ from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
     PuntoDeVentaRepository,
+    ReglasComisionRepository,
     ServicioRepository,
     VentaRepository,
 )
 from garay.dominio.puertos.servicios_externos import FilaVentaImportada, LectorVentasExcel
+from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -73,6 +83,9 @@ class ImportarVentasExcelService:
         comisiones: ComisionRegistradaRepository,
         alias: dict[str, int],
         freelancer_repo: FreelancerRepository,
+        *,
+        reglas_repo: ReglasComisionRepository,
+        motor: MotorComisiones,
     ) -> None:
         self._lector = lector
         self._ventas = ventas
@@ -82,6 +95,8 @@ class ImportarVentasExcelService:
         self._comisiones = comisiones
         self._alias = alias
         self._freelancers = freelancer_repo
+        self._reglas_repo = reglas_repo
+        self._motor = motor
 
     def ejecutar(self, ruta: str, mes: int, anio: int) -> ResultadoImportacion:
         filas = [
@@ -93,9 +108,21 @@ class ImportarVentasExcelService:
         punto_crespo = self._puntos.buscar_por_nombre(_CANAL_CRESPO)
         punto_crespo_id = punto_crespo.id if punto_crespo is not None else None
 
+        # FIX-C: If the batch has any Crespo rows, the Crespo punto must be seeded.
+        # Without it, motor.calcular receives None and silently zeroes the 20% capa,
+        # corrupting every Crespo commission for the run.  Fail loudly before persistence.
+        tiene_crespo = any(
+            f.canal == _CANAL_CRESPO
+            for f in filas
+            if f.valor > _CERO and f.neto <= f.valor
+        )
+        if tiene_crespo and punto_crespo is None:
+            raise PuntoCrespoNoConfigurado()
+
         # PASS 1: resolve all participant names; abort before any persistence on failure.
         no_encontrados: list[tuple[int, str]] = []
         ambiguos: list[tuple[int, str]] = []
+        crespo_sin_participantes: list[int] = []
         resoluciones: dict[int, tuple[uuid.UUID | None, uuid.UUID | None]] = {}
         omitidas_pass1 = 0
         for i, f in enumerate(filas):
@@ -115,8 +142,19 @@ class ImportarVentasExcelService:
                 ambiguos.append((fila_num, f.cerrador_nombre))  # type: ignore[arg-type]
             resoluciones[i] = (vendedor_id, cerrador_id)
 
+            # FIX-B: Crespo rows need both vendedor_id and cerrador_id resolved so
+            # _derivar_numero_personas can return 1 or 2.  A blank name on a Crespo
+            # row means numero_personas is None, which makes buscar_regla raise a
+            # raw ValueError from the C3 guard.  Detect this in PASS 1 (before any
+            # persistence) and collect all offending rows for a descriptive domain error.
+            if f.canal == _CANAL_CRESPO and (vendedor_id is None or cerrador_id is None):
+                crespo_sin_participantes.append(fila_num)
+
         if no_encontrados or ambiguos:
             raise ImportacionConNombresNoResueltos(no_encontrados, ambiguos)
+
+        if crespo_sin_participantes:
+            raise VentaCrespoSinParticipantes(crespo_sin_participantes)
 
         # PASS 2: persist — only reached when all names are resolved.
         clientes_creados = 0
@@ -153,12 +191,21 @@ class ImportarVentasExcelService:
                 estado=EstadoVenta.PROCESADA,
                 canal_origen=f.canal,
             )
+            # FIX-A: Compute desglose BEFORE persisting the venta.
+            # SQLAVentaRepository.guardar commits immediately (uses `with sf.begin()`).
+            # If _desglose raises (e.g. buscar_regla returns None for a missing rule),
+            # the Venta would be orphaned with no ComisionRegistrada.  Computing first
+            # ensures a raise leaves nothing persisted for that row.
+            desglose = self._desglose(f, venta, punto_crespo)
             self._ventas.guardar(venta)
             self._comisiones.guardar(
-                ComisionRegistrada(venta_id=venta.id, desglose=self._desglose(f), fecha=f.fecha)
+                ComisionRegistrada(venta_id=venta.id, desglose=desglose, fecha=f.fecha)
             )
             total_valor = total_valor + f.valor
-            total_agencia = total_agencia + f.agencia
+            # NOTE: total_agencia is a mixed-basis total — motor-derived for Crespo rows
+            # (desglose.agencia = ganancia residual after capa + vendedor + cerrador),
+            # spreadsheet-derived for all other rows (Hotel, Externas, etc.) — REQ-07.
+            total_agencia = total_agencia + desglose.agencia
 
         return ResultadoImportacion(
             ventas_creadas=len(filas) - omitidas,
@@ -213,8 +260,30 @@ class ImportarVentasExcelService:
         )
         return uuid.uuid5(_NS, clave)
 
-    def _desglose(self, f: FilaVentaImportada) -> DesgloseComision:
-        punto = f.margen - f.agencia - f.comision_vendedor - f.comision_cerrador
+    def _desglose(
+        self,
+        f: FilaVentaImportada,
+        venta: Venta,
+        punto_crespo: PuntoDeVenta | None,
+    ) -> DesgloseComision:
+        # Crespo presencial path: derive personas, look up rule, calculate via motor.
+        # Commission base is venta.ganancia = valor - neto (REQ-07 parity with live flow).
+        if f.canal == _CANAL_CRESPO:
+            numero_personas = _derivar_numero_personas(venta.participantes)
+            reglas = self._reglas_repo.buscar_regla(
+                _tipo_cliente(f.canal),
+                _CANAL_CRESPO,
+                numero_personas,
+            )
+            if reglas is None:
+                raise ReglasComisionNoEncontradas(
+                    f"No se encontraron reglas de comision para Crespo, "
+                    f"personas={numero_personas!r}"
+                )
+            return self._motor.calcular(venta, reglas, punto_crespo, Decimal("0"))
+
+        # Historical spreadsheet path for all non-Crespo rows (Hotel, Externas, etc.).
+        punto_residual = f.margen - f.agencia - f.comision_vendedor - f.comision_cerrador
         margen = f.margen.monto
 
         def pct(x: Dinero) -> Decimal:
@@ -225,12 +294,12 @@ class ImportarVentasExcelService:
             porcentaje_vendedor=pct(f.comision_vendedor),
             porcentaje_cerrador=pct(f.comision_cerrador),
             porcentaje_referido_maximo=Decimal("0"),
-            porcentaje_capa_punto=pct(punto),
+            porcentaje_capa_punto=pct(punto_residual),
         )
         return DesgloseComision(
             vendedor=f.comision_vendedor,
             cerrador=f.comision_cerrador,
-            punto_de_venta=punto,
+            punto_de_venta=punto_residual,
             referido=_CERO,
             agencia=f.agencia,
             snapshot=snapshot,

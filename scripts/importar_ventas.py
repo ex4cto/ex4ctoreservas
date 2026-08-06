@@ -15,6 +15,7 @@ from pathlib import Path
 
 from garay.aplicacion.importacion.importar_ventas_excel import ImportarVentasExcelService
 from garay.config import obtener_settings
+from garay.dominio.comisiones.motor import MotorComisiones
 from garay.infraestructura.importacion.lector_excel import LectorVentasExcelOpenpyxl
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
@@ -24,6 +25,9 @@ from garay.infraestructura.persistencia.repositorios.comisiones_registradas impo
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
+)
+from garay.infraestructura.persistencia.repositorios.reglas_comision import (
+    SQLAReglasComisionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
@@ -54,6 +58,8 @@ def main() -> None:
         comisiones=SQLAComisionRegistradaRepository(sf),
         alias=alias,
         freelancer_repo=SQLAFreelancerRepository(sf),
+        reglas_repo=SQLAReglasComisionRepository(sf),
+        motor=MotorComisiones(),
     )
     r = servicio.ejecutar(ruta, mes, anio)
     print(
