@@ -22,7 +22,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "venta_registrada": {Idioma.ES: "Venta registrada correctamente."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "pregunta_tipo_reserva": {
-        Idioma.ES: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO, DIGITAL"
+        Idioma.ES: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO"
     },
     "pregunta_punto_de_venta": {Idioma.ES: "¿Cuál es el punto de venta?"},
     "pregunta_destino": {Idioma.ES: "Seleccioná los destinos (podés elegir varios):"},

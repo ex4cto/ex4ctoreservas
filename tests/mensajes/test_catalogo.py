@@ -106,6 +106,14 @@ class TestClavesNuevasBatchB:
         msg = obtener_mensaje("pregunta_rol_venta")
         assert "rol" in msg.lower()
 
+    def test_pregunta_tipo_reserva_sin_digital(self) -> None:
+        # DIGITAL se elige antes, en MODALIDAD_VENTA (Slice 3); TIPO_RESERVA
+        # solo ofrece INTERNO/EXTERNO, así que el texto no debe mencionar DIGITAL.
+        msg = obtener_mensaje("pregunta_tipo_reserva")
+        assert "INTERNO" in msg
+        assert "EXTERNO" in msg
+        assert "DIGITAL" not in msg
+
     def test_pregunta_neto_sin_precio(self) -> None:
         template = obtener_mensaje("pregunta_neto_sin_precio")
         assert "{tours}" in template
