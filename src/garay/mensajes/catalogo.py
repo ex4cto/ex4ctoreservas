@@ -82,6 +82,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Adultos: {adultos} | Niños: {ninos}\n"
             "Valor: {valor}\n"
             "Abono: {abono}\n"
+            "Saldo pendiente: {saldo_pendiente}\n"
             "Neto: {neto}\n"
             "Vendedor: {vendedor}\n"
             "Cerrador: {cerrador}\n\n"

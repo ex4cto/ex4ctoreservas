@@ -353,6 +353,7 @@ class TestConfirmacionResumenEspecialE:
             ninos=0,
             valor="$200.000",
             abono="$100.000",
+            saldo_pendiente="$100.000",
             neto="$150.000",
             vendedor="(tú)",
             cerrador="María García",

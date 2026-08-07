@@ -1525,6 +1525,12 @@ class FSMTiquetera:
         hab_str = "—" if ctx.sin_hotel else (ctx.cliente_habitacion or "—")
         vendedor_str = ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, "ambos", "vendedor")
         cerrador_str = ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, "ambos", "cerrador")
+        if ctx.valor is None:
+            saldo_pendiente = None
+        elif ctx.abono is None:
+            saldo_pendiente = ctx.valor
+        else:
+            saldo_pendiente = ctx.valor - ctx.abono
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
@@ -1541,6 +1547,7 @@ class FSMTiquetera:
             ninos=ctx.ninos or 0,
             valor=_formatear_monto(ctx.valor),
             abono=_formatear_monto(ctx.abono),
+            saldo_pendiente=_formatear_monto(saldo_pendiente),
             neto=_formatear_monto(ctx.neto),
             vendedor=vendedor_str,
             cerrador=cerrador_str,
