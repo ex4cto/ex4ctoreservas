@@ -123,8 +123,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_rol_venta": {Idioma.ES: "¿Cuál fue tu rol en esta venta?"},
     "pregunta_neto_sin_precio": {
         Idioma.ES: (
-            "¿Cuál es el monto neto? "
-            "(no se encontró precio en el catálogo para algún tour seleccionado)"
+            "No hay precio en el catálogo para: {tours}.\n"
+            "Ingresá el monto neto TOTAL de la venta (todos los tours)."
         )
     },
     "error_neto_invalido": {Idioma.ES: "Monto inválido. Ingresá un número >= 0."},

@@ -107,8 +107,12 @@ class TestClavesNuevasBatchB:
         assert "rol" in msg.lower()
 
     def test_pregunta_neto_sin_precio(self) -> None:
-        msg = obtener_mensaje("pregunta_neto_sin_precio")
-        assert "neto" in msg.lower()
+        template = obtener_mensaje("pregunta_neto_sin_precio")
+        assert "{tours}" in template
+        result = template.format(tours="COCOTERA (CLASSIC)")
+        assert "neto" in result.lower()
+        assert "COCOTERA (CLASSIC)" in result
+        assert "{" not in result
 
     def test_error_neto_invalido(self) -> None:
         msg = obtener_mensaje("error_neto_invalido")

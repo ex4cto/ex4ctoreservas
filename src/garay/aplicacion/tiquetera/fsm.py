@@ -395,6 +395,15 @@ class FSMTiquetera:
                 total += efectivo_nino * ctx.ninos
         return total
 
+    def _tours_sin_precio(self, ctx: ContextoVenta) -> list[str]:
+        """Names of selected tours that have no neto_adulto in the catalog."""
+        nombres = []
+        for numero in ctx.destinos_numeros:
+            info = self._servicios.get(numero)
+            if info is not None and info[1] is None:
+                nombres.append(info[0])
+        return nombres
+
     # ── private handlers ────────────────────────────────────────────────────
 
     def _handle_metodo_input(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
@@ -1056,9 +1065,11 @@ class FSMTiquetera:
                 opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
                 contexto=ctx,
             )
+        sin_precio = self._tours_sin_precio(ctx)
+        tours_str = ", ".join(sin_precio) if sin_precio else "algún tour seleccionado"
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_NETO,
-            mensaje=obtener_mensaje("pregunta_neto_sin_precio"),
+            mensaje=obtener_mensaje("pregunta_neto_sin_precio").format(tours=tours_str),
             contexto=ctx,
         )
 
