@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import uuid
 from datetime import date
 
@@ -31,6 +32,11 @@ def to_orm(v: Venta) -> VentaModel:
         punto_de_venta_id=v.participantes.punto_de_venta_id,
         referido_nombre=v.participantes.referido_nombre,
         canal_origen=v.canal_origen,
+        fechas_por_servicio=(
+            {str(k): val.isoformat() for k, val in v.fechas_por_servicio.items()}
+            if v.fechas_por_servicio is not None
+            else None
+        ),
         vendedor_id=v.participantes.vendedor_id,
         cerrador_id=v.participantes.cerrador_id,
     )
@@ -50,6 +56,14 @@ def to_domain(m: VentaModel) -> Venta:
         ninos=m.ninos,
         estado=EstadoVenta(m.estado),
         canal_origen=m.canal_origen,
+        fechas_por_servicio=(
+            {
+                uuid.UUID(k): datetime.datetime.fromisoformat(v)
+                for k, v in m.fechas_por_servicio.items()
+            }
+            if m.fechas_por_servicio is not None
+            else None
+        ),
         participantes=Participantes(
             vendedor_nombre=m.vendedor_nombre,
             cerrador_nombre=m.cerrador_nombre,
