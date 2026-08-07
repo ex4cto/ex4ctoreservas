@@ -70,29 +70,35 @@ def _ctx_externo_completo() -> ContextoVenta:
 
 
 class TestTipoReservaDigitalVaACanalOrigen:
-    def test_tipo_reserva_digital_va_a_canal_origen(
+    """After Slice 3: DIGITAL is decided at MODALIDAD_VENTA (not TIPO_RESERVA).
+    Tests migrated to use MODALIDAD_VENTA as the decision point.
+    """
+
+    def test_modalidad_venta_digital_va_a_canal_origen(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "DIGITAL", ctx)
+        salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Digital", ctx)
         assert salida.nuevo_estado == EstadoFSM.CANAL_ORIGEN
 
-    def test_tipo_reserva_digital_muestra_6_opciones(
+    def test_modalidad_venta_digital_muestra_6_opciones_canal(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "DIGITAL", ctx)
+        salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Digital", ctx)
         assert len(salida.opciones) == 6
 
-    def test_tipo_reserva_interno_no_va_a_canal_origen(
+    def test_tipo_reserva_interno_va_a_familia(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
+        # After Slice 3: TIPO_RESERVA comes after PUNTO_DE_VENTA, routes to FAMILIA
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-    def test_tipo_reserva_externo_no_va_a_canal_origen(
+    def test_tipo_reserva_externo_va_a_familia(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
+        # After Slice 3: TIPO_RESERVA comes after PUNTO_DE_VENTA, routes to FAMILIA
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
 
 class TestCanalOrigenHandler:

@@ -144,28 +144,33 @@ class TestGuardEditarSelectorPuntoVentaEnDigital:
 
 
 class TestTipoReservaRoutingInteligente:
-    """Cambio 6: _handle_tipo_reserva modo_edicion must do smart routing."""
+    """After Slice 3: smart modal routing moved from TIPO_RESERVA to MODALIDAD_VENTA.
 
-    def test_tipo_reserva_digital_a_externo_va_a_punto_de_venta(
+    Switching between Presencial and Digital now happens at MODALIDAD_VENTA in edit mode.
+    TIPO_RESERVA is only for presencial non-Crespo and always returns to CONFIRMACION in edit.
+    """
+
+    def test_modalidad_presencial_con_sin_punto_va_a_punto_de_venta(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Changing from DIGITAL to EXTERNO with no punto_de_venta → PUNTO_DE_VENTA."""
+        """Changing to Presencial when no punto set → PUNTO_DE_VENTA."""
         ctx = _ctx_digital_completo_sin_punto(fsm)
         ctx.tipo_cliente = TipoCliente.DIGITAL  # currently DIGITAL
         ctx.modo_edicion = True
         ctx.punto_de_venta_nombre = None  # no punto set
-        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
+        ctx.canal_origen = None
+        salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Presencial", ctx)
         assert salida.nuevo_estado == EstadoFSM.PUNTO_DE_VENTA
 
-    def test_tipo_reserva_externo_a_digital_va_a_canal_origen(
+    def test_modalidad_digital_sin_canal_va_a_canal_origen(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Changing from EXTERNO to DIGITAL with no canal_origen → CANAL_ORIGEN."""
+        """Changing to Digital when no canal_origen → CANAL_ORIGEN."""
         ctx = _ctx_digital_completo_sin_punto(fsm)
         ctx.tipo_cliente = TipoCliente.EXTERNO
         ctx.canal_origen = None  # non-DIGITAL: no canal
         ctx.modo_edicion = True
-        salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "DIGITAL", ctx)
+        salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Digital", ctx)
         assert salida.nuevo_estado == EstadoFSM.CANAL_ORIGEN
 
 

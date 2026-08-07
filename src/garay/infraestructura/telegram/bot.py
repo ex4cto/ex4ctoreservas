@@ -51,6 +51,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_fecha_salida,
     handle_iniciar_venta,
     handle_metodo_input,
+    handle_modalidad_venta,
     handle_monto_abono,
     handle_monto_neto,
     handle_monto_valor,
@@ -266,6 +267,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(filters.PHOTO, cmd_foto),
                 MessageHandler(filters.Document.IMAGE, cmd_foto),
                 MessageHandler(_TEXT, handle_esperando_foto),
+            ],
+            estados[EstadoFSM.MODALIDAD_VENTA]: [
+                _CB(handle_modalidad_venta),
+                MessageHandler(_TEXT, handle_modalidad_venta),
             ],
             estados[EstadoFSM.TIPO_RESERVA]: [
                 _CB(handle_tipo_reserva),

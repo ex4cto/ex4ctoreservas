@@ -105,8 +105,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Elegí una familia y agregá un tour."
         )
     },
+    "pregunta_modalidad_venta": {
+        Idioma.ES: "¿Qué modalidad de venta es?\nOpciones: Presencial, Digital"
+    },
+    "error_modalidad_invalida": {
+        Idioma.ES: "Opción inválida. Elegí Presencial o Digital."
+    },
     "error_tipo_reserva_invalido": {
-        Idioma.ES: "Opción inválida. Elegí INTERNO, EXTERNO o DIGITAL."
+        Idioma.ES: "Opción inválida. Elegí INTERNO o EXTERNO."
     },
     "error_adultos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero mayor a 0."},
     "error_adultos_minimo": {Idioma.ES: "Debe haber al menos 1 adulto."},
