@@ -169,8 +169,10 @@ def _contexto_a_comando(
     if not ctx.destinos_numeros or ctx.fecha_salida is None:
         logger.error("Missing destinos or fecha_salida")
         return None
-    # Guard: every selected tour must have a date before we can build the command.
-    if ctx.destinos_numeros and ctx.fechas_por_servicio:
+    # Guard: when more than one tour is selected every tour must have a per-tour date.
+    # Checking len > 1 catches the edge case where fechas_por_servicio is empty but
+    # multiple tours were selected — the old guard was skipped in that case.
+    if len(ctx.destinos_numeros) > 1:
         missing = [n for n in ctx.destinos_numeros if n not in ctx.fechas_por_servicio]
         if missing:
             logger.error("Tours missing a date: %s", missing)
