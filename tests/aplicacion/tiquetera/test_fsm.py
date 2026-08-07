@@ -939,6 +939,10 @@ class TestEditarSelector:
         ctx = ContextoVenta(modo_edicion=True)
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        # "25/12" without a year uses the current year — verify the parsed date is stored.
+        assert salida.contexto.fecha_salida == datetime.datetime(
+            datetime.datetime.now().year, 12, 25
+        )
 
     def test_editar_monto_abono_vuelve_a_confirmacion_cuando_neto_conocido(
         self, fsm: FSMTiquetera

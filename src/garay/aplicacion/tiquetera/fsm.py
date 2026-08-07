@@ -172,6 +172,18 @@ def _parsear_monto(texto: str) -> Decimal | None:
         return None
 
 
+def _siguiente_tour_sin_fecha(ctx: ContextoVenta) -> int | None:
+    """Return the numero of the first tour in ctx.destinos_numeros that has no date yet.
+
+    Returns None when every tour already has a date in ctx.fechas_por_servicio, or when
+    ctx.destinos_numeros is empty (bare context / legacy path).
+    """
+    for numero in ctx.destinos_numeros:
+        if numero not in ctx.fechas_por_servicio:
+            return numero
+    return None
+
+
 def _parsear_fecha(texto: str) -> datetime.datetime | None:
     """Try DD/MM, DD/MM/YY, DD/MM/YYYY, DD/MM/YYYY HH:MM."""
     texto = texto.strip()
@@ -870,7 +882,7 @@ class FSMTiquetera:
                 )
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje=obtener_mensaje("pregunta_fecha_salida"),
+                mensaje=self._mensaje_entrada_fecha_salida(ctx),
                 contexto=ctx,
             )
         ctx.sin_hotel = False
@@ -902,7 +914,7 @@ class FSMTiquetera:
             )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.FECHA_SALIDA,
-            mensaje=obtener_mensaje("pregunta_fecha_salida"),
+            mensaje=self._mensaje_entrada_fecha_salida(ctx),
             contexto=ctx,
         )
 
@@ -915,7 +927,33 @@ class FSMTiquetera:
                 mensaje=obtener_mensaje("error_fecha_invalida"),
                 contexto=ctx,
             )
-        ctx.fecha_salida = fecha
+
+        # Determine which tour we are currently answering — the first one without a date.
+        tour_actual = _siguiente_tour_sin_fecha(ctx)
+        if tour_actual is not None:
+            ctx.fechas_por_servicio[tour_actual] = fecha
+        else:
+            # No pending tour (e.g. bare ctx with no destinos_numeros) — legacy path.
+            ctx.fecha_salida = fecha
+
+        # Check if all tours now have a date.
+        siguiente = _siguiente_tour_sin_fecha(ctx)
+        if siguiente is not None:
+            # More tours need dates — stay in FECHA_SALIDA and ask for the next one.
+            if siguiente in self._servicios:
+                nombre = self._servicios[siguiente][0]
+            else:
+                nombre = str(siguiente)
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                mensaje=obtener_mensaje("pregunta_fecha_salida_tour").format(tour=nombre),
+                contexto=ctx,
+            )
+
+        # All tours have dates — compute primary date and advance.
+        if ctx.fechas_por_servicio:
+            ctx.fecha_salida = min(ctx.fechas_por_servicio.values())
+
         if ctx.modo_edicion:
             ctx.modo_edicion = False
             return SalidaFSM(
@@ -1340,6 +1378,25 @@ class FSMTiquetera:
             ctx.destinos_numeros = []
             ctx.familia_seleccionada = None
             return self._salida_familia(ctx)
+        if estado_destino == EstadoFSM.FECHA_SALIDA:
+            # Editing date: clear per-tour dates so the loop re-runs from scratch.
+            ctx.fechas_por_servicio = {}
+            # For single-tour, show the edit prompt with the current date so the user
+            # can see what they are replacing.  For multi-tour, use the per-tour prompt.
+            if len(ctx.destinos_numeros) <= 1:
+                fecha_actual = (
+                    ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else "—"
+                )
+                msg = obtener_mensaje("pregunta_editar_fecha_salida").format(
+                    actual=fecha_actual
+                )
+            else:
+                msg = self._mensaje_entrada_fecha_salida(ctx)
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                mensaje=msg,
+                contexto=ctx,
+            )
         if estado_destino in (EstadoFSM.EDITAR_VENDEDOR, EstadoFSM.EDITAR_CERRADOR):
             # Participant edit: show the freelancer picker (includes inactive)
             return SalidaFSM(
@@ -1433,6 +1490,20 @@ class FSMTiquetera:
             contexto=ctx,
         )
 
+    def _mensaje_entrada_fecha_salida(self, ctx: ContextoVenta) -> str:
+        """Return the FECHA_SALIDA entry prompt appropriate for the current context.
+
+        For a single-tour sale, returns the original catalog text verbatim to preserve
+        byte-identical behavior.  For multi-tour sales, names the first undated tour.
+        """
+        if len(ctx.destinos_numeros) <= 1:
+            return obtener_mensaje("pregunta_fecha_salida")
+        siguiente = _siguiente_tour_sin_fecha(ctx)
+        if siguiente is None:
+            return obtener_mensaje("pregunta_fecha_salida")
+        nombre = self._servicios[siguiente][0] if siguiente in self._servicios else str(siguiente)
+        return obtener_mensaje("pregunta_fecha_salida_tour").format(tour=nombre)
+
     def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
         msgs: dict[EstadoFSM, str] = {
             EstadoFSM.MODALIDAD_VENTA: obtener_mensaje("pregunta_modalidad_venta"),
@@ -1508,6 +1579,11 @@ class FSMTiquetera:
         if estado == EstadoFSM.CLIENTE_HABITACION:
             return ctx.cliente_habitacion
         if estado == EstadoFSM.FECHA_SALIDA:
+            # Stop auto-advance when we are mid-loop (fechas_por_servicio has been partially
+            # populated but some tours still need a date).  Fall through to the legacy path
+            # when fechas_por_servicio is empty (photo extraction pre-set fecha_salida only).
+            if ctx.fechas_por_servicio and _siguiente_tour_sin_fecha(ctx) is not None:
+                return None
             return ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else None
         if estado == EstadoFSM.PAX_ADULTOS:
             return str(ctx.adultos) if ctx.adultos is not None and ctx.adultos >= 1 else None

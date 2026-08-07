@@ -169,6 +169,14 @@ def _contexto_a_comando(
     if not ctx.destinos_numeros or ctx.fecha_salida is None:
         logger.error("Missing destinos or fecha_salida")
         return None
+    # Guard: when more than one tour is selected every tour must have a per-tour date.
+    # Checking len > 1 catches the edge case where fechas_por_servicio is empty but
+    # multiple tours were selected — the old guard was skipped in that case.
+    if len(ctx.destinos_numeros) > 1:
+        missing = [n for n in ctx.destinos_numeros if n not in ctx.fechas_por_servicio]
+        if missing:
+            logger.error("Tours missing a date: %s", missing)
+            return None
     if not ctx.cliente_nombre:
         logger.error("Missing cliente_nombre")
         return None
@@ -182,6 +190,20 @@ def _contexto_a_comando(
     if not servicio_ids:
         logger.error("No servicio_ids resolved from destinos_numeros=%s", ctx.destinos_numeros)
         return None
+
+    # Translate per-tour dates from numero keys to servicio-id keys.
+    fechas_id: dict[uuid.UUID, datetime.datetime] = {}
+    if ctx.fechas_por_servicio:
+        fechas_id = {
+            servicio_map[n]: dt
+            for n, dt in ctx.fechas_por_servicio.items()
+            if n in servicio_map
+        }
+    # Derive primary date: min across per-tour datetimes, or fall back to ctx.fecha_salida.
+    if fechas_id:
+        fecha_principal = min(dt.date() for dt in fechas_id.values())
+    else:
+        fecha_principal = ctx.fecha_salida.date()
 
     pdv_id: uuid.UUID | None = None
     if ctx.punto_de_venta_nombre:
@@ -225,7 +247,7 @@ def _contexto_a_comando(
         servicio_ids=servicio_ids,
         cliente_id=nuevo_cliente.id,
         tipo_cliente=ctx.tipo_cliente,
-        fecha=ctx.fecha_salida.date(),
+        fecha=fecha_principal,
         participantes=participantes,
         adultos=ctx.adultos if ctx.adultos is not None else 0,
         ninos=ctx.ninos if ctx.ninos is not None else 0,
@@ -237,6 +259,7 @@ def _contexto_a_comando(
         hotel=ctx.cliente_hotel,
         habitacion=ctx.cliente_habitacion,
         canal_origen=ctx.canal_origen,
+        fechas_por_servicio=fechas_id if fechas_id else None,
     )
 
 
