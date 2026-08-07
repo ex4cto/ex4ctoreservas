@@ -1019,19 +1019,17 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.abono = monto
+        if ctx.valor is not None and ctx.abono > ctx.valor:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.MONTO_ABONO,
+                mensaje=obtener_mensaje("error_abono_supera_valor").format(
+                    abono=_formatear_monto(monto),
+                    valor=_formatear_monto(ctx.valor),
+                ),
+                contexto=ctx,
+            )
         neto = self._calcular_neto(ctx)
         if neto is not None:
-            if ctx.abono > neto:
-                abono_fmt = _formatear_monto(monto)
-                neto_fmt = _formatear_monto(neto)
-                return SalidaFSM(
-                    nuevo_estado=EstadoFSM.MONTO_ABONO,
-                    mensaje=obtener_mensaje("error_abono_supera_neto").format(
-                        abono=abono_fmt,
-                        neto=neto_fmt,
-                    ),
-                    contexto=ctx,
-                )
             if ctx.valor is not None and neto > ctx.valor:
                 neto_fmt = _formatear_monto(neto)
                 valor_fmt = _formatear_monto(ctx.valor)
@@ -1525,6 +1523,12 @@ class FSMTiquetera:
         hab_str = "—" if ctx.sin_hotel else (ctx.cliente_habitacion or "—")
         vendedor_str = ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, "ambos", "vendedor")
         cerrador_str = ctx.cerrador_nombre or _tú_si(ctx.rol_registrante, "ambos", "cerrador")
+        if ctx.valor is None:
+            saldo_pendiente = None
+        elif ctx.abono is None:
+            saldo_pendiente = ctx.valor
+        else:
+            saldo_pendiente = ctx.valor - ctx.abono
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
@@ -1541,6 +1545,7 @@ class FSMTiquetera:
             ninos=ctx.ninos or 0,
             valor=_formatear_monto(ctx.valor),
             abono=_formatear_monto(ctx.abono),
+            saldo_pendiente=_formatear_monto(saldo_pendiente),
             neto=_formatear_monto(ctx.neto),
             vendedor=vendedor_str,
             cerrador=cerrador_str,

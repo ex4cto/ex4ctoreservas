@@ -146,9 +146,9 @@ class TestClavesTemplateBatchC:
         assert "{" not in result
         assert "Playa Blanca" in result
 
-    def test_error_abono_supera_neto_format(self) -> None:
-        template = obtener_mensaje("error_abono_supera_neto")
-        result = template.format(abono="$500.000", neto="$400.000")
+    def test_error_abono_supera_valor_format(self) -> None:
+        template = obtener_mensaje("error_abono_supera_valor")
+        result = template.format(abono="$500.000", valor="$400.000")
         assert "{" not in result
         assert "$500.000" in result
 
@@ -353,6 +353,7 @@ class TestConfirmacionResumenEspecialE:
             ninos=0,
             valor="$200.000",
             abono="$100.000",
+            saldo_pendiente="$100.000",
             neto="$150.000",
             vendedor="(tú)",
             cerrador="María García",

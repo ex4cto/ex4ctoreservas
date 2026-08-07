@@ -82,6 +82,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Adultos: {adultos} | Niños: {ninos}\n"
             "Valor: {valor}\n"
             "Abono: {abono}\n"
+            "Saldo pendiente: {saldo_pendiente}\n"
             "Neto: {neto}\n"
             "Vendedor: {vendedor}\n"
             "Cerrador: {cerrador}\n\n"
@@ -143,8 +144,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Agregá otro tour o confirmá para continuar."
         )
     },
-    "error_abono_supera_neto": {
-        Idioma.ES: ("El abono ({abono}) no puede superar el neto calculado ({neto}).")
+    "error_abono_supera_valor": {
+        Idioma.ES: ("El abono ({abono}) no puede superar el valor de la venta ({valor}).")
     },
     "error_neto_supera_valor_detalle": {
         Idioma.ES: (
