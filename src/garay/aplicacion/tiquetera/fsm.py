@@ -577,10 +577,7 @@ class FSMTiquetera:
 
     def _handle_punto_de_venta(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        if entrada.strip() == "Sin punto":
-            ctx.punto_de_venta_nombre = None
-        else:
-            ctx.punto_de_venta_nombre = entrada.strip()
+        ctx.punto_de_venta_nombre = entrada.strip()
         if ctx.destinos_nombres:
             nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
             for numero, (nombre, _, _) in self._servicios.items():
@@ -1531,10 +1528,7 @@ class FSMTiquetera:
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
-            punto_de_venta=(
-                ctx.punto_de_venta_nombre
-                or ("—" if ctx.tipo_cliente == TipoCliente.DIGITAL else "Sin punto")
-            ),
+            punto_de_venta=ctx.punto_de_venta_nombre or "—",
             destinos=destinos_str,
             cliente_nombre=ctx.cliente_nombre or "—",
             cliente_telefono=ctx.cliente_telefono or "—",

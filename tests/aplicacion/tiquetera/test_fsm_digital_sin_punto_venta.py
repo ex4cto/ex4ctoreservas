@@ -185,11 +185,12 @@ class TestConstruirResumenDigitalMuestraGuion:
         # Should contain the em-dash for the punto_de_venta field
         assert "—" in resumen
 
-    def test_construir_resumen_no_digital_sin_punto_muestra_sin_punto(
+    def test_construir_resumen_no_digital_sin_punto_muestra_guion(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Triangulation: non-DIGITAL without punto_de_venta shows 'Sin punto', not '—'."""
+        """After removing dead 'Sin punto' display: any None punto shows '—'."""
         ctx = _ctx_digital_completo_sin_punto(fsm)
         ctx.tipo_cliente = TipoCliente.EXTERNO
         resumen = fsm._construir_resumen(ctx)
-        assert "Sin punto" in resumen
+        assert "Sin punto" not in resumen
+        assert "—" in resumen
