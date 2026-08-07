@@ -389,3 +389,137 @@ def test_listar_por_periodo(sf: sessionmaker[Session]) -> None:
     repo.guardar(v_out)
     results = repo.listar_por_periodo(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
     assert len(results) == 2
+
+
+# ---------------------------------------------------------------------------
+# Slice 1 — fechas_por_servicio storage (RED → GREEN via domain+model changes)
+# ---------------------------------------------------------------------------
+
+
+def test_fechas_por_servicio_round_trip(sf: sessionmaker[Session]) -> None:
+    """Venta with a 2-entry fechas_por_servicio map survives guardar/buscar_por_id."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    sid1 = uuid.uuid4()
+    sid2 = uuid.uuid4()
+    dt1 = datetime.datetime(2026, 8, 10, 9, 0, 0)
+    dt2 = datetime.datetime(2026, 8, 11, 20, 30, 0)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("800000"),
+        neto=Dinero("700000"),
+        servicio_ids=[sid1, sid2],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 10),
+        participantes=Participantes(),
+        fechas_por_servicio={sid1: dt1, sid2: dt2},
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.fechas_por_servicio == {sid1: dt1, sid2: dt2}
+
+
+def test_fechas_por_servicio_none_round_trip(sf: sessionmaker[Session]) -> None:
+    """Legacy Venta without fechas_por_servicio persists and reads back as None."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("300000"),
+        neto=Dinero("270000"),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 1),
+        participantes=Participantes(),
+        # fechas_por_servicio intentionally omitted → defaults to None
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.fechas_por_servicio is None
+
+
+def test_listar_por_periodo_still_filters_on_scalar_fecha(sf: sessionmaker[Session]) -> None:
+    """Regression: listar_por_periodo filters on Venta.fecha, not fechas_por_servicio."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    sid = uuid.uuid4()
+    # Venta inside range; fechas_por_servicio map date is outside range (should not affect filter)
+    v_in = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("100000"),
+        neto=Dinero("90000"),
+        servicio_ids=[sid],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.INTERNO,
+        fecha=datetime.date(2026, 7, 15),  # inside
+        participantes=Participantes(),
+        fechas_por_servicio={sid: datetime.datetime(2026, 6, 1, 9, 0)},  # outside — irrelevant
+    )
+    # Venta outside range (scalar fecha outside)
+    v_out = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("100000"),
+        neto=Dinero("90000"),
+        servicio_ids=[sid],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.INTERNO,
+        fecha=datetime.date(2026, 6, 1),  # outside
+        participantes=Participantes(),
+        # inside datetime — must not pull in the venta
+        fechas_por_servicio={sid: datetime.datetime(2026, 7, 20, 9, 0)},
+    )
+    repo.guardar(v_in)
+    repo.guardar(v_out)
+    results = repo.listar_por_periodo(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+    ids = {r.id for r in results}
+    assert v_in.id in ids
+    assert v_out.id not in ids
+
+
+def test_listar_por_freelancer_y_periodo_still_filters_on_scalar_fecha(
+    sf: sessionmaker[Session],
+) -> None:
+    """Regression: listar_por_freelancer_y_periodo filters on Venta.fecha, not the JSON map."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    sid = uuid.uuid4()
+    # Venta inside range for freelancer
+    v_in = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("200000"),
+        neto=Dinero("180000"),
+        servicio_ids=[sid],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 15),  # inside
+        participantes=Participantes(vendedor_nombre="Pedro"),
+        fechas_por_servicio={sid: datetime.datetime(2026, 5, 1, 8, 0)},  # outside — irrelevant
+    )
+    # Venta outside range for same freelancer
+    v_out = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("200000"),
+        neto=Dinero("180000"),
+        servicio_ids=[sid],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 6, 1),  # outside
+        participantes=Participantes(vendedor_nombre="Pedro"),
+        # inside datetime — must not pull in the venta
+        fechas_por_servicio={sid: datetime.datetime(2026, 7, 20, 8, 0)},
+    )
+    repo.guardar(v_in)
+    repo.guardar(v_out)
+    results = repo.listar_por_freelancer_y_periodo(
+        freelancer_id=uuid.uuid4(),
+        nombre="Pedro",
+        desde=datetime.date(2026, 7, 1),
+        hasta=datetime.date(2026, 7, 31),
+    )
+    ids = {r.id for r in results}
+    assert v_in.id in ids
+    assert v_out.id not in ids
