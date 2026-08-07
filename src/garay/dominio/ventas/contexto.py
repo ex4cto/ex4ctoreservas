@@ -41,3 +41,4 @@ class ContextoVenta:
     cliente_identificacion: str | None = None
     cliente_tipo_identificacion: str | None = None
     canal_origen: str | None = None
+    fechas_por_servicio: dict[int, datetime.datetime] = field(default_factory=dict)

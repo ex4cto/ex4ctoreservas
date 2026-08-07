@@ -34,6 +34,7 @@ class RegistrarVentaComando:
     hotel: str | None = None
     habitacion: str | None = None
     canal_origen: str | None = None
+    fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None
 
 
 @dataclass(frozen=True)
