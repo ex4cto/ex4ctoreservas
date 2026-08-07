@@ -424,12 +424,15 @@ class TestNetoAutoCalculo:
         assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         assert salida.contexto.neto == Decimal("300000")  # 150000*1 + 150000*1 (proxy)
 
-    def test_neto_abono_supera_calculado_error(self, fsm: FSMTiquetera) -> None:
-        # Abono > neto calculado → MONTO_ABONO with error
+    def test_abono_mayor_que_neto_pero_menor_que_valor_avanza(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # Bug 2b fix: guard is now against valor, not neto.
+        # valor=None → abono guard skips; neto=100000 is set; advances to PARTICIPANTE_ROL.
         ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0)
-        # neto calculado = 100000; abono = 200000
+        # neto calculado = 100000; abono = 200000; valor = None → guard does not fire
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "200000", ctx)
-        assert salida.nuevo_estado == EstadoFSM.MONTO_ABONO
+        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
 
     def test_neto_supera_valor_venta_vuelve_a_monto_valor(self, fsm: FSMTiquetera) -> None:
         # neto auto-calculated (100000) > valor_venta (50000) → MONTO_VALOR with error

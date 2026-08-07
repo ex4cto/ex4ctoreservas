@@ -144,8 +144,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Agregá otro tour o confirmá para continuar."
         )
     },
-    "error_abono_supera_neto": {
-        Idioma.ES: ("El abono ({abono}) no puede superar el neto calculado ({neto}).")
+    "error_abono_supera_valor": {
+        Idioma.ES: ("El abono ({abono}) no puede superar el valor de la venta ({valor}).")
     },
     "error_neto_supera_valor_detalle": {
         Idioma.ES: (

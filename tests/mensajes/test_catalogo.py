@@ -146,9 +146,9 @@ class TestClavesTemplateBatchC:
         assert "{" not in result
         assert "Playa Blanca" in result
 
-    def test_error_abono_supera_neto_format(self) -> None:
-        template = obtener_mensaje("error_abono_supera_neto")
-        result = template.format(abono="$500.000", neto="$400.000")
+    def test_error_abono_supera_valor_format(self) -> None:
+        template = obtener_mensaje("error_abono_supera_valor")
+        result = template.format(abono="$500.000", valor="$400.000")
         assert "{" not in result
         assert "$500.000" in result
 

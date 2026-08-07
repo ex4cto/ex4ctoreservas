@@ -1019,19 +1019,17 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.abono = monto
+        if ctx.valor is not None and ctx.abono > ctx.valor:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.MONTO_ABONO,
+                mensaje=obtener_mensaje("error_abono_supera_valor").format(
+                    abono=_formatear_monto(monto),
+                    valor=_formatear_monto(ctx.valor),
+                ),
+                contexto=ctx,
+            )
         neto = self._calcular_neto(ctx)
         if neto is not None:
-            if ctx.abono > neto:
-                abono_fmt = _formatear_monto(monto)
-                neto_fmt = _formatear_monto(neto)
-                return SalidaFSM(
-                    nuevo_estado=EstadoFSM.MONTO_ABONO,
-                    mensaje=obtener_mensaje("error_abono_supera_neto").format(
-                        abono=abono_fmt,
-                        neto=neto_fmt,
-                    ),
-                    contexto=ctx,
-                )
             if ctx.valor is not None and neto > ctx.valor:
                 neto_fmt = _formatear_monto(neto)
                 valor_fmt = _formatear_monto(ctx.valor)
