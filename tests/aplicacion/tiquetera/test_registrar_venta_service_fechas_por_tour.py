@@ -115,3 +115,79 @@ class TestRegistrarVentaConFechasPorServicio:
         comisiones_repo.guardar.assert_called_once()
         comision = comisiones_repo.guardar.call_args[0][0]
         assert comision.fecha == _FECHA
+
+
+class TestNotificacionGrupoFechasPorServicio:
+    """Group-notification date rendering (Slice 3 — display)."""
+
+    def _cmd(
+        self,
+        fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None,
+        servicio_ids: list[uuid.UUID],
+        servicio_nombres: list[str],
+    ) -> RegistrarVentaComando:
+        return RegistrarVentaComando(
+            valor_venta=_VALOR_VENTA,
+            neto=_NETO,
+            servicio_ids=servicio_ids,
+            cliente_id=_CLIENTE_ID,
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=_FECHA,
+            participantes=Participantes(vendedor_nombre="Ana", cerrador_nombre="Luis"),
+            adultos=2,
+            ninos=0,
+            servicio_nombres=servicio_nombres,
+            fechas_por_servicio=fechas_por_servicio,
+        )
+
+    def _mensaje_notificado(self, cmd: RegistrarVentaComando) -> str:
+        notificador = MagicMock()
+        service = _build_service()
+        service._notificador = notificador
+        service.ejecutar(cmd)
+        notificador.notificar.assert_called_once()
+        mensaje: str = notificador.notificar.call_args[0][0]
+        return mensaje
+
+    def test_single_tour_date_line_unchanged(self) -> None:
+        """One tour → '📅 Fecha: DD/MM/YYYY' (byte-identical parity)."""
+        cmd = self._cmd(
+            fechas_por_servicio=None,
+            servicio_ids=[_S1_ID],
+            servicio_nombres=["Islas del Rosario"],
+        )
+        mensaje = self._mensaje_notificado(cmd)
+        assert "📅 Fecha: 20/12/2026" in mensaje
+        assert "Islas del Rosario 20/12" not in mensaje
+
+    def test_two_tours_compact_date_line(self) -> None:
+        """Two tours → compact 'nombre DD/MM HH:MM, ...' after the 📅 prefix."""
+        dt1 = datetime.datetime(2026, 12, 20, 8, 0)
+        dt2 = datetime.datetime(2026, 12, 22, 19, 0)
+        cmd = self._cmd(
+            fechas_por_servicio={_S1_ID: dt1, _S2_ID: dt2},
+            servicio_ids=[_S1_ID, _S2_ID],
+            servicio_nombres=["Islas del Rosario", "Bahía Rumbera"],
+        )
+        mensaje = self._mensaje_notificado(cmd)
+        assert (
+            "📅 Fecha: Islas del Rosario 20/12 08:00, Bahía Rumbera 22/12 19:00"
+            in mensaje
+        )
+
+    def test_three_tours_compact_date_line_in_order(self) -> None:
+        """Three tours render in servicio_ids order after the prefix."""
+        s3 = uuid.uuid4()
+        dt1 = datetime.datetime(2026, 12, 20, 8, 0)
+        dt2 = datetime.datetime(2026, 12, 22, 19, 0)
+        dt3 = datetime.datetime(2026, 12, 18, 6, 30)
+        cmd = self._cmd(
+            fechas_por_servicio={_S1_ID: dt1, _S2_ID: dt2, s3: dt3},
+            servicio_ids=[_S1_ID, _S2_ID, s3],
+            servicio_nombres=["Islas del Rosario", "Bahía Rumbera", "City Tour"],
+        )
+        mensaje = self._mensaje_notificado(cmd)
+        assert (
+            "📅 Fecha: Islas del Rosario 20/12 08:00, "
+            "Bahía Rumbera 22/12 19:00, City Tour 18/12 06:30" in mensaje
+        )

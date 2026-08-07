@@ -140,3 +140,62 @@ class TestGenerarFacturaHtml:
         servicio = GenerarFacturaService()
         html = servicio.generar(_ctx_completo(), _resultado())
         assert "nequi" not in html.lower()
+
+
+class TestFacturaFechasPorTour:
+    """Per-tour date rendering in the invoice 'Fecha del tour' cell (Slice 3)."""
+
+    def test_single_tour_date_only(self) -> None:
+        """One tour → '%d/%m/%Y', no name and no hour (byte-identical parity)."""
+        ctx = _ctx_completo()
+        ctx.destinos_numeros = [1]
+        ctx.destinos_nombres = ["Islas del Rosario"]
+        ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
+        ctx.fechas_por_servicio = {1: datetime.datetime(2026, 8, 15, 8, 0)}
+        html = GenerarFacturaService().generar(ctx, _resultado())
+        assert "15/08/2026" in html
+        assert "Islas del Rosario 15/08 08:00" not in html
+
+    def test_two_tours_compact_string_in_cell(self) -> None:
+        """Two tours → compact 'nombre DD/MM HH:MM, ...' in the same cell."""
+        ctx = _ctx_completo()
+        ctx.destinos_numeros = [1, 2]
+        ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
+        ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
+        ctx.fechas_por_servicio = {
+            1: datetime.datetime(2026, 8, 15, 8, 0),
+            2: datetime.datetime(2026, 8, 15, 19, 0),
+        }
+        html = GenerarFacturaService().generar(ctx, _resultado())
+        assert (
+            "Islas del Rosario 15/08 08:00, Bahía Rumbera 15/08 19:00" in html
+        )
+
+    def test_three_tours_compact_string_in_order(self) -> None:
+        """Three tours render in destinos_numeros order."""
+        ctx = _ctx_completo()
+        ctx.destinos_numeros = [1, 2, 3]
+        ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera", "City Tour"]
+        ctx.fecha_salida = datetime.datetime(2026, 8, 10, 9, 0)
+        ctx.fechas_por_servicio = {
+            1: datetime.datetime(2026, 8, 15, 8, 0),
+            2: datetime.datetime(2026, 8, 15, 19, 0),
+            3: datetime.datetime(2026, 8, 10, 9, 0),
+        }
+        html = GenerarFacturaService().generar(ctx, _resultado())
+        assert (
+            "Islas del Rosario 15/08 08:00, "
+            "Bahía Rumbera 15/08 19:00, "
+            "City Tour 10/08 09:00" in html
+        )
+
+    def test_multi_tour_missing_entry_falls_back_to_scalar(self) -> None:
+        """Missing per-tour date falls back to the scalar for that tour."""
+        ctx = _ctx_completo()
+        ctx.destinos_numeros = [1, 2]
+        ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
+        ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
+        ctx.fechas_por_servicio = {1: datetime.datetime(2026, 8, 15, 8, 0)}
+        html = GenerarFacturaService().generar(ctx, _resultado())
+        assert "Islas del Rosario 15/08 08:00" in html
+        assert "Bahía Rumbera 15/08 08:00" in html

@@ -5,11 +5,13 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
-from garay.infraestructura.telegram.handlers import _contexto_a_comando
+from garay.infraestructura.telegram.handlers import _contexto_a_comando, cmd_mis_ventas
 
 
 def _update(telegram_id: int = 12345) -> MagicMock:
@@ -236,3 +238,90 @@ class TestNightTourTimePrecision:
         translated = cmd.fechas_por_servicio[sid1]
         assert translated.hour == 22
         assert translated.minute == 30
+
+
+def _venta(
+    fecha: datetime.date,
+    fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None,
+    monto: Decimal = Decimal("500000"),
+) -> MagicMock:
+    v = MagicMock()
+    v.id = uuid.uuid4()
+    v.fecha = fecha
+    v.valor_venta.monto = monto
+    v.canal_origen = None
+    v.fechas_por_servicio = fechas_por_servicio
+    return v
+
+
+def _mis_ventas_context(ventas: list[MagicMock]) -> MagicMock:
+    freelancer = MagicMock()
+    freelancer.id = uuid.uuid4()
+    freelancer.nombre = "Carlos"
+    freelancer_repo = MagicMock()
+    freelancer_repo.buscar_por_telegram_id.return_value = freelancer
+
+    venta_repo = MagicMock()
+    venta_repo.listar_por_freelancer_y_periodo.return_value = ventas
+
+    comision_repo = MagicMock()
+    comision_repo.listar_por_venta_ids.return_value = []
+
+    ctx = MagicMock()
+    ctx.bot_data = {
+        "freelancer_repo": freelancer_repo,
+        "venta_repo": venta_repo,
+        "comision_registrada_repo": comision_repo,
+    }
+    return ctx
+
+
+def _mis_ventas_update(user_id: int = 123) -> MagicMock:
+    update = MagicMock()
+    update.effective_user = MagicMock()
+    update.effective_user.id = user_id
+    update.effective_message = AsyncMock()
+    return update
+
+
+class TestMisVentasVariasFechasMarker:
+    """/mis_ventas appends ' (varias fechas)' only when a sale spans >1 tour date."""
+
+    async def _mensaje(self, ventas: list[MagicMock]) -> str:
+        update = _mis_ventas_update()
+        context = _mis_ventas_context(ventas)
+        await cmd_mis_ventas.__wrapped__(update, context)  # type: ignore[attr-defined]
+        msg: str = update.effective_message.reply_text.call_args[0][0]
+        return msg
+
+    @pytest.mark.asyncio
+    async def test_single_tour_no_marker(self) -> None:
+        """fechas_por_servicio None → no marker."""
+        v = _venta(datetime.date(2026, 12, 20), None)
+        msg = await self._mensaje([v])
+        assert "20/12" in msg
+        assert "(varias fechas)" not in msg
+
+    @pytest.mark.asyncio
+    async def test_one_entry_map_no_marker(self) -> None:
+        """A map with a single entry (one tour) → no marker."""
+        v = _venta(
+            datetime.date(2026, 12, 20),
+            {uuid.uuid4(): datetime.datetime(2026, 12, 20, 8, 0)},
+        )
+        msg = await self._mensaje([v])
+        assert "(varias fechas)" not in msg
+
+    @pytest.mark.asyncio
+    async def test_multi_tour_marker_present(self) -> None:
+        """A map with >1 entry → ' (varias fechas)' appended to the line."""
+        v = _venta(
+            datetime.date(2026, 12, 20),
+            {
+                uuid.uuid4(): datetime.datetime(2026, 12, 20, 8, 0),
+                uuid.uuid4(): datetime.datetime(2026, 12, 22, 19, 0),
+            },
+        )
+        msg = await self._mensaje([v])
+        assert "20/12" in msg
+        assert "(varias fechas)" in msg

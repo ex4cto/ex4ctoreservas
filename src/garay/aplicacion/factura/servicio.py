@@ -7,6 +7,7 @@ import uuid
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from garay.aplicacion.comun.fechas import formatear_fechas_compactas
 from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.ventas.contexto import ContextoVenta
 
@@ -22,6 +23,21 @@ def _fmt_cop(valor: Decimal | None) -> str:
     if valor is None:
         return "$0"
     return "$" + f"{int(valor):,}".replace(",", ".")
+
+
+def _render_fecha_tour(ctx: ContextoVenta) -> str:
+    """Render the tour-date cell: scalar for one tour, compact per-tour otherwise."""
+    if ctx.fecha_salida is None:
+        return "—"
+    if len(ctx.destinos_numeros) > 1:
+        pares = [
+            (nombre, ctx.fechas_por_servicio.get(numero, ctx.fecha_salida))
+            for numero, nombre in zip(
+                ctx.destinos_numeros, ctx.destinos_nombres, strict=False
+            )
+        ]
+        return formatear_fechas_compactas(pares)
+    return ctx.fecha_salida.strftime("%d/%m/%Y")
 
 
 def _numero_factura(venta_id: uuid.UUID) -> str:
@@ -40,7 +56,7 @@ class GenerarFacturaService:
     def generar(self, ctx: ContextoVenta, resultado: ResultadoRegistrarVenta) -> str:
         numero = _numero_factura(resultado.venta_id)
         fecha_emision = _hoy_bogota().strftime("%d/%m/%Y")
-        fecha_tour = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
+        fecha_tour = _render_fecha_tour(ctx)
         saldo = (ctx.valor or Decimal("0")) - (ctx.abono or Decimal("0"))
 
         logo_html = (
