@@ -175,3 +175,21 @@ def test_seed_freelancers_activos() -> None:
 
     assert all(r.activo for r in rows)
     assert all(r.telegram_user_id is None for r in rows)
+
+
+def test_seed_playa_linda_tiene_precio_neto() -> None:
+    """Service #124 (PLAYA LINDA) must have precio_neto_adulto == 55000 after bug-1B fix."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_servicios(session)
+
+    with sf.begin() as session:
+        row = session.execute(
+            sa.select(ServicioModel).where(ServicioModel.numero == 124)
+        ).scalar_one()
+
+    assert row.precio_neto_adulto == Decimal("55000"), (
+        f"Expected 55000 for #124 PLAYA LINDA, got {row.precio_neto_adulto}"
+    )
+    # neto_nino intentionally stays null (no children price in the catalog)
+    assert row.precio_neto_nino is None
