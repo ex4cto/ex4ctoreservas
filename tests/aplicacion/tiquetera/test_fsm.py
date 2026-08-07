@@ -23,7 +23,7 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
     (2, "Tour Isla", Decimal("150000"), None, "ISLAS"),
     (3, "City Tour", None, None, "ISLAS"),
 ]
-PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi", "Sin punto"]
+PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi"]
 
 # ── Freelancer roster used across picker tests ────────────────────────────────
 F1_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")

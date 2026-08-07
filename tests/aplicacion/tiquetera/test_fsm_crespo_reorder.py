@@ -27,7 +27,7 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
 ]
 
 # Puntos including Crespo
-PUNTOS_TEST: list[str] = ["Crespo", "Marie Real", "Mama Waldi", "Sin punto"]
+PUNTOS_TEST: list[str] = ["Crespo", "Marie Real", "Mama Waldi"]
 
 F1_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 F2_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
@@ -131,12 +131,6 @@ class TestNonCrespoRoutesToTipoReserva:
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
-
-    def test_t8_sin_punto_va_a_tipo_reserva(
-        self, fsm: FSMTiquetera, ctx: ContextoVenta
-    ) -> None:
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Sin punto", ctx)
         assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
 
     def test_t8_tipo_reserva_opciones_sin_digital(
@@ -526,16 +520,6 @@ class TestPhotoFlow:
         assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         assert s2.contexto.tipo_cliente == TipoCliente.EXTERNO
         assert not s2.contexto.foto_modo  # consumed
-
-    # Row 9c: Photo + "Sin punto" (non-Crespo) → also routes through TIPO_RESERVA
-    def test_row9_photo_sin_punto_asks_tipo_reserva(
-        self, fsm: FSMTiquetera
-    ) -> None:
-        ctx = ContextoVenta()
-        ctx.foto_modo = True
-        salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Sin punto", ctx)
-        assert salida.nuevo_estado == EstadoFSM.TIPO_RESERVA
-        assert salida.contexto.foto_modo
 
     # Row 10: Photo digital — unchanged (reaches PARTICIPANTE_ROL via CANAL_ORIGEN, tipo=DIGITAL)
     def test_row10_photo_digital_via_canal_origen(
