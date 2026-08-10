@@ -96,3 +96,84 @@ def test_message_id_vacio_retorna_ok_sin_guardar(
 
     assert response.status_code == 200
     mock_ingreso_repo.guardar.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Non-transaction pre-filter gate
+# ---------------------------------------------------------------------------
+
+_PAYLOAD_NO_TRANSACCION_BANCOLOMBIA = {
+    "message_id": "mkt-001",
+    "remitente_email": "alertas@notificacionesbancolombia.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Novedades para tu plata",
+    "cuerpo_html": "",
+    "cuerpo_texto": (
+        "Si todo sube, ¿qué pasa con tu plata? "
+        "Haz que crezca con un fondo de inversión."
+    ),
+}
+
+_PAYLOAD_NO_TRANSACCION_NEQUI = {
+    "message_id": "sec-001",
+    "remitente_email": "somos@nequi.com.co",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Cuida tu info",
+    "cuerpo_html": "",
+    "cuerpo_texto": (
+        "En temporada de declaración cuida tu info y tu plata. "
+        "Repórtalo a correosospechoso@nequi.com"
+    ),
+}
+
+
+def test_email_no_transaccion_retorna_200_sin_cuarentena_ni_notificacion(
+    client: TestClient,
+    mock_ingreso_repo: MagicMock,
+    mock_correo_repo: MagicMock,
+    mock_notificador: MagicMock,
+) -> None:
+    """A non-transaction email from a known bank must return 200 OK, not quarantine."""
+    response = client.post(
+        f"/webhook/email?secret={_SECRET}",
+        json=_PAYLOAD_NO_TRANSACCION_BANCOLOMBIA,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"estado": "ok"}
+    mock_correo_repo.guardar.assert_not_called()
+    mock_notificador.notificar.assert_not_called()
+    mock_ingreso_repo.guardar.assert_not_called()
+
+
+def test_email_no_transaccion_nequi_retorna_200_sin_cuarentena(
+    client: TestClient,
+    mock_ingreso_repo: MagicMock,
+    mock_correo_repo: MagicMock,
+    mock_notificador: MagicMock,
+) -> None:
+    """A Nequi security/marketing email must also be silently ignored."""
+    response = client.post(
+        f"/webhook/email?secret={_SECRET}",
+        json=_PAYLOAD_NO_TRANSACCION_NEQUI,
+    )
+
+    assert response.status_code == 200
+    mock_correo_repo.guardar.assert_not_called()
+    mock_notificador.notificar.assert_not_called()
+
+
+def test_email_transaccion_real_sigue_parseando(
+    client: TestClient,
+    mock_ingreso_repo: MagicMock,
+    mock_correo_repo: MagicMock,
+) -> None:
+    """Regression: a real transaction body must NOT be blocked by the gate."""
+    response = client.post(
+        f"/webhook/email?secret={_SECRET}",
+        json=_PAYLOAD_BANCOLOMBIA,
+    )
+
+    assert response.status_code == 200
+    mock_ingreso_repo.guardar.assert_called_once()
+    mock_correo_repo.guardar.assert_not_called()

@@ -26,8 +26,10 @@ _PATRON_FECHA_EL = re.compile(
 )
 
 # Pattern: "Transferiste $50,000.00 desde tu cuenta 7488 a la cuenta *3207904880"
+# The destination-account asterisk may be followed by an optional space
+# before the digits (e.g. "* 08600002475" in real prod emails).
 _PATRON_TRANSFERENCIA_CUENTA = re.compile(
-    r"Transferiste\s+\$([\d.,]+)\s+desde\s+tu\s+cuenta\s+\*?[\d]+\s+a\s+la\s+cuenta\s+\*([\d]+)",
+    r"Transferiste\s+\$([\d.,]+)\s+desde\s+tu\s+cuenta\s+\*?[\d]+\s+a\s+la\s+cuenta\s+\*\s*([\d]+)",
     re.IGNORECASE,
 )
 

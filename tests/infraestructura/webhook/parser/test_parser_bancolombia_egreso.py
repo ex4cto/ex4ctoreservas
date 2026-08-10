@@ -183,3 +183,20 @@ def test_transferencia_breb_dia_un_digito() -> None:
     resultado = _PARSER.parsear("", texto)
     assert resultado.fecha_egreso.day == 5
     assert resultado.monto == Decimal("6000.00")
+
+
+# --- spaced-account destination (prod bug regression) ---
+
+def test_transferencia_cuenta_destino_con_espacio_tras_asterisco() -> None:
+    """Account destination '* 08600002475' (space after *) must parse correctly.
+
+    Real failing email body from prod quarantine on 2026-08-10.
+    """
+    texto = (
+        "Transferiste $580,000 desde tu cuenta *5643 a la cuenta * 08600002475 "
+        "el 10/08/2026 a las 10:55."
+    )
+    resultado = _PARSER.parsear("", texto)
+    assert resultado.monto == Decimal("580000")
+    assert resultado.fecha_egreso.date().isoformat() == "2026-08-10"
+    assert "08600002475" in resultado.descripcion

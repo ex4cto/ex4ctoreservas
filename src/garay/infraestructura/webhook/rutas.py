@@ -33,6 +33,7 @@ from garay.infraestructura.webhook.parser.base import (
     ErrorParseoBanco,
     detectar_banco,
     detectar_direccion,
+    es_transaccion,
 )
 from garay.infraestructura.webhook.parser.fabrica import obtener_parser, obtener_parser_egreso
 from garay.infraestructura.webhook.schemas import PayloadEmail
@@ -171,6 +172,14 @@ def recibir_email(
     banco = detectar_banco(payload.remitente_email, cuerpo)
     if banco is None:
         logger.warning("Unknown bank sender: %s — skipping", payload.remitente_email)
+        return {"estado": "ok"}
+
+    if not es_transaccion(cuerpo):
+        logger.warning(
+            "DIAG skip: non-transaction email from=%r asunto=%r — ignoring",
+            payload.remitente_email[:100],
+            payload.asunto[:80],
+        )
         return {"estado": "ok"}
 
     direccion = detectar_direccion(cuerpo)
