@@ -740,10 +740,33 @@ class FSMTiquetera:
                     contexto=ctx,
                 )
             if ctx.modo_edicion:
-                ctx.modo_edicion = False
+                # 1. Prune dates for tours no longer in the selection.
+                #    Remember whether per-tour dates were in use BEFORE pruning.
+                had_per_tour_dates = bool(ctx.fechas_por_servicio)
+                ctx.fechas_por_servicio = {
+                    n: f
+                    for n, f in ctx.fechas_por_servicio.items()
+                    if n in ctx.destinos_numeros
+                }
+                # 2. Recompute neto with the new tour set (must happen before routing
+                #    because the FECHA_SALIDA completion path does not recompute it).
                 computed = self._calcular_neto(ctx)
                 if computed is not None:
                     ctx.neto = computed
+                # 3. If this sale was using per-tour dates and any selected tour still
+                #    lacks a date, enter the capture loop (keeping modo_edicion=True so
+                #    the loop returns here after completion).
+                if had_per_tour_dates and _siguiente_tour_sin_fecha(ctx) is not None:
+                    return SalidaFSM(
+                        nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                        mensaje=self._mensaje_entrada_fecha_salida(ctx),
+                        contexto=ctx,
+                    )
+                # 4. All selected tours already have dates (or no per-tour dates were
+                #    in use) — recompute min and return to CONFIRMACION.
+                ctx.modo_edicion = False
+                if ctx.fechas_por_servicio:
+                    ctx.fecha_salida = min(ctx.fechas_por_servicio.values())
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
