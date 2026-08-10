@@ -84,6 +84,35 @@ class ParserEgreso(ABC):
         ...
 
 
+_SENALES_TRANSACCION: frozenset[str] = frozenset(
+    [
+        "recibiste",
+        "transferiste",
+        "compraste",
+        "enviaste",
+        "pagaste con nequi",
+        "hiciste un pago",
+        "consignaci",
+    ]
+)
+
+
+def es_transaccion(cuerpo: str) -> bool:
+    """Return True if the email body contains at least one transaction signal.
+
+    Conservative gate: only returns False when NO transaction signal is present.
+    If any signal is found, the email is treated as a transaction and normal
+    parsing continues (parse → quarantine on failure).
+
+    Signals cover every bank verb used by the Nequi, Bancolombia, and PSE
+    parsers, plus the existing PSE body markers via ``_es_pse``.
+    """
+    cuerpo_lower = " ".join(cuerpo.lower().split())
+    if any(senal in cuerpo_lower for senal in _SENALES_TRANSACCION):
+        return True
+    return _es_pse(cuerpo_lower)
+
+
 def _es_pse(cuerpo_lower: str) -> bool:
     """Return True if the email body contains strong PSE markers."""
     if "serviciopse" in cuerpo_lower or "achcolombia" in cuerpo_lower:
