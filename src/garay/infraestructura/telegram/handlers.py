@@ -623,6 +623,8 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         lineas.append("\n*Detalle:*")
         for v in ventas[-10:]:
             linea = f"• {v.fecha.strftime('%d/%m')} — ${v.valor_venta.monto:,.0f}"
+            if v.fechas_por_servicio is not None and len(v.fechas_por_servicio) > 1:
+                linea += " (varias fechas)"
             if v.canal_origen:
                 linea += f" · 📲 {v.canal_origen}"
             lineas.append(linea)

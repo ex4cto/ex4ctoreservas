@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 
+from garay.aplicacion.comun.fechas import formatear_fechas_compactas
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, ResultadoRegistrarVenta
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.dominio.comisiones.entidades import ComisionRegistrada
@@ -24,6 +26,18 @@ from garay.dominio.ventas.valor_objetos import Participantes
 
 def _fmt_cop(d: Dinero) -> str:
     return "$" + f"{int(d.monto):,}".replace(",", ".")
+
+
+def _render_fecha(cmd: RegistrarVentaComando) -> str:
+    """Render the sale date line: scalar for one tour, compact per-tour otherwise."""
+    if len(cmd.servicio_ids) > 1 and cmd.fechas_por_servicio:
+        fecha_base = datetime.datetime.combine(cmd.fecha, datetime.time())
+        pares = [
+            (nombre, cmd.fechas_por_servicio.get(sid, fecha_base))
+            for sid, nombre in zip(cmd.servicio_ids, cmd.servicio_nombres, strict=False)
+        ]
+        return formatear_fechas_compactas(pares)
+    return cmd.fecha.strftime("%d/%m/%Y")
 
 
 def _derivar_numero_personas(participantes: Participantes) -> int | None:
@@ -141,7 +155,7 @@ class RegistrarVentaService:
         if cmd.servicio_nombres:
             lineas.append(f"📍 Destino: {', '.join(cmd.servicio_nombres)}")
 
-        lineas.append(f"📅 Fecha: {cmd.fecha.strftime('%d/%m/%Y')}")
+        lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
 
         if cmd.cliente_nombre:
             lineas.append(f"👤 Cliente: {cmd.cliente_nombre}")

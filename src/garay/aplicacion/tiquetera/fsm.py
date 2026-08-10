@@ -14,6 +14,7 @@ from enum import StrEnum
 
 from rapidfuzz import fuzz
 
+from garay.aplicacion.comun.fechas import formatear_fechas_compactas
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
@@ -1605,7 +1606,21 @@ class FSMTiquetera:
             destinos_str = ", ".join(ctx.destinos_nombres) + " (pendiente confirmar)"
         else:
             destinos_str = "—"
-        fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
+        if (
+            len(ctx.destinos_numeros) > 1
+            and ctx.fecha_salida is not None
+            and ctx.fechas_por_servicio
+        ):
+            pares = [
+                (
+                    self._servicios[n][0] if n in self._servicios else str(n),
+                    ctx.fechas_por_servicio.get(n, ctx.fecha_salida),
+                )
+                for n in ctx.destinos_numeros
+            ]
+            fecha_str = formatear_fechas_compactas(pares)
+        else:
+            fecha_str = ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
         hotel_str = "Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
         hab_str = "—" if ctx.sin_hotel else (ctx.cliente_habitacion or "—")
         vendedor_str = ctx.vendedor_nombre or _tú_si(ctx.rol_registrante, "ambos", "vendedor")
