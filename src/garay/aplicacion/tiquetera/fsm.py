@@ -1606,7 +1606,11 @@ class FSMTiquetera:
             destinos_str = ", ".join(ctx.destinos_nombres) + " (pendiente confirmar)"
         else:
             destinos_str = "—"
-        if len(ctx.destinos_numeros) > 1 and ctx.fecha_salida is not None:
+        if (
+            len(ctx.destinos_numeros) > 1
+            and ctx.fecha_salida is not None
+            and ctx.fechas_por_servicio
+        ):
             pares = [
                 (
                     self._servicios[n][0] if n in self._servicios else str(n),

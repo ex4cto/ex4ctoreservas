@@ -29,7 +29,7 @@ def _render_fecha_tour(ctx: ContextoVenta) -> str:
     """Render the tour-date cell: scalar for one tour, compact per-tour otherwise."""
     if ctx.fecha_salida is None:
         return "—"
-    if len(ctx.destinos_numeros) > 1:
+    if len(ctx.destinos_numeros) > 1 and ctx.fechas_por_servicio:
         pares = [
             (nombre, ctx.fechas_por_servicio.get(numero, ctx.fecha_salida))
             for numero, nombre in zip(

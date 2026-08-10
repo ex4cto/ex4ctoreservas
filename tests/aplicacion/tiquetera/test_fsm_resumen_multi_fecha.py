@@ -105,3 +105,18 @@ class TestResumenMultiTourCompact:
         # Tour 1 uses its own date; tour 2 falls back to fecha_salida scalar.
         assert "Islas del Rosario 12/08 08:00" in resumen
         assert "Bahía Rumbera 12/08 08:00" in resumen
+
+    def test_multi_tour_empty_fechas_degrades_to_scalar(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """Two tours with fechas_por_servicio={} must degrade to scalar DD/MM/YYYY,
+        not render '00:00' midnight artifacts from a dict-miss fallback."""
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Islas del Rosario", "Bahía Rumbera"],
+            fecha_salida=datetime.datetime(2025, 8, 12, 8, 0),
+            fechas_por_servicio={},
+        )
+        resumen = fsm._construir_resumen(ctx)
+        assert "12/08/2025" in resumen
+        assert "00:00" not in resumen

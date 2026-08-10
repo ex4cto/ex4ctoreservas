@@ -30,7 +30,7 @@ def _fmt_cop(d: Dinero) -> str:
 
 def _render_fecha(cmd: RegistrarVentaComando) -> str:
     """Render the sale date line: scalar for one tour, compact per-tour otherwise."""
-    if len(cmd.servicio_ids) > 1 and cmd.fechas_por_servicio is not None:
+    if len(cmd.servicio_ids) > 1 and cmd.fechas_por_servicio:
         fecha_base = datetime.datetime.combine(cmd.fecha, datetime.time())
         pares = [
             (nombre, cmd.fechas_por_servicio.get(sid, fecha_base))

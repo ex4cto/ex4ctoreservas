@@ -191,3 +191,15 @@ class TestNotificacionGrupoFechasPorServicio:
             "📅 Fecha: Islas del Rosario 20/12 08:00, "
             "Bahía Rumbera 22/12 19:00, City Tour 18/12 06:30" in mensaje
         )
+
+    def test_two_tours_empty_fechas_dict_degrades_to_scalar(self) -> None:
+        """Two tours with fechas_por_servicio={} must degrade to scalar DD/MM/YYYY,
+        not render '00:00' midnight artifacts from a dict-miss fallback."""
+        cmd = self._cmd(
+            fechas_por_servicio={},
+            servicio_ids=[_S1_ID, _S2_ID],
+            servicio_nombres=["Islas del Rosario", "Bahía Rumbera"],
+        )
+        mensaje = self._mensaje_notificado(cmd)
+        assert "📅 Fecha: 20/12/2026" in mensaje
+        assert "00:00" not in mensaje

@@ -199,3 +199,15 @@ class TestFacturaFechasPorTour:
         html = GenerarFacturaService().generar(ctx, _resultado())
         assert "Islas del Rosario 15/08 08:00" in html
         assert "Bahía Rumbera 15/08 08:00" in html
+
+    def test_multi_tour_empty_fechas_degrades_to_scalar(self) -> None:
+        """Two tours with fechas_por_servicio={} must degrade to scalar DD/MM/YYYY,
+        not render '00:00' midnight artifacts from a dict-miss fallback."""
+        ctx = _ctx_completo()
+        ctx.destinos_numeros = [1, 2]
+        ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
+        ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
+        ctx.fechas_por_servicio = {}
+        html = GenerarFacturaService().generar(ctx, _resultado())
+        assert "15/08/2026" in html
+        assert "00:00" not in html
