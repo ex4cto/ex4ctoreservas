@@ -1,8 +1,9 @@
-"""Tests for webhook quarantine + dual-alert behavior — TDD RED phase.
+"""Tests for webhook quarantine + dev-only alert behavior.
 
 Covers:
 - Quarantining unparseable emails (ingreso and egreso paths).
-- Dual alerts: dev IDs get a technical HTML alert; grupo_id gets a plain Spanish alert.
+- Dev-only alerts: dev IDs get a technical HTML alert; grupo_id NEVER receives
+  a parse-failure alert (owner decision: group alerts on parse failure removed).
 - Alert failures (NotificadorError) never break the 200 response or persistence.
 - Duplicate quarantine (IntegrityError) is swallowed gracefully.
 - Empty dev_telegram_ids produces no alert calls.
@@ -18,10 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from garay.aplicacion.webhook.app import crear_app
 from garay.infraestructura.telegram.errores import NotificadorError
-from garay.infraestructura.webhook.alertas import (
-    construir_alerta_dev,
-    construir_alerta_freelancer,
-)
+from garay.infraestructura.webhook.alertas import construir_alerta_dev
 from tests.infraestructura.webhook.conftest import _SECRET
 
 # ---------------------------------------------------------------------------
@@ -208,12 +206,15 @@ def test_parse_error_envia_alerta_dev(
     assert len(dev_calls) == 2
 
 
-def test_parse_error_envia_alerta_freelancer(
+def test_parse_error_nunca_alerta_grupo(
     mock_ingreso_repo: MagicMock,
     mock_egreso_repo: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """On parse error, notificador.notificar is called with the grupo_id."""
+    """On parse error, notificador.notificar is NEVER called with grupo_id.
+
+    Owner decision: parse-failure alerts go only to dev IDs, not the group.
+    """
     mock_correo_repo = MagicMock()
     mock_notificador = MagicMock()
 
@@ -223,6 +224,7 @@ def test_parse_error_envia_alerta_freelancer(
         mock_correo_repo,
         mock_notificador,
         monkeypatch,
+        dev_ids=_DEV_IDS_STR,
         grupo_id=_GRUPO_ID,
     )
 
@@ -237,12 +239,23 @@ def test_parse_error_envia_alerta_freelancer(
             json=_PAYLOAD_BANCOLOMBIA_INGRESO,
         )
 
+    # The group must NEVER receive a parse-failure alert.
     grupo_calls = [
-        call
-        for call in mock_notificador.notificar.call_args_list
-        if call[0][1] == _GRUPO_ID
+        c
+        for c in mock_notificador.notificar.call_args_list
+        if c[0][1] == _GRUPO_ID
     ]
-    assert len(grupo_calls) == 1
+    assert len(grupo_calls) == 0, (
+        f"Expected no group alerts on parse failure but got {len(grupo_calls)}: {grupo_calls}"
+    )
+
+    # Dev IDs must still be notified (regression guard).
+    dev_calls = [
+        c
+        for c in mock_notificador.notificar.call_args_list
+        if c[0][1] in ("111111111", "222222222")
+    ]
+    assert len(dev_calls) == 2
 
 
 def test_alerta_falla_no_rompe_200(
@@ -388,14 +401,3 @@ def test_construir_alerta_dev_trunca_snippet() -> None:
     assert "A" * 500 in msg
 
 
-def test_construir_alerta_freelancer_escapa_banco() -> None:
-    """banco field is HTML-escaped in the freelancer alert."""
-    msg = construir_alerta_freelancer(banco="<Banco&Raro>")
-    assert "<Banco&Raro>" not in msg
-    assert "&lt;Banco&amp;Raro&gt;" in msg
-
-
-def test_construir_alerta_freelancer_contiene_banco() -> None:
-    """Freelancer alert message includes the bank name."""
-    msg = construir_alerta_freelancer(banco="Nequi")
-    assert "Nequi" in msg
