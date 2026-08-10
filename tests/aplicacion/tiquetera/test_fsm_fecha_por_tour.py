@@ -456,3 +456,278 @@ class TestPhotoMultiTourFullMap:
         # Must NOT be stuck at FECHA_SALIDA — advances to PAX_ADULTOS
         assert salida.nuevo_estado != EstadoFSM.FECHA_SALIDA
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
+
+
+# ---------------------------------------------------------------------------
+# T-ED1: Edit Destinos — prune stale dates and re-capture missing ones (Slice 4)
+# ---------------------------------------------------------------------------
+
+# Catalog categories for the SERVICIOS_2TOURS fixture:
+#   service 1 → "BARÚ"   (fam index 0 when families are sorted)
+#   service 2 → "ISLAS"  (fam index 1)
+#   service 3 → "ISLAS"  (fam index 1)
+_CATEGORIA_POR_SERVICIO: dict[int, str] = {1: "BARÚ", 2: "ISLAS", 3: "ISLAS"}
+
+
+def _indice_familia(fsm: FSMTiquetera, categoria: str) -> int:
+    """Return the fam-index for *categoria* in the current FSM instance."""
+    s = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ContextoVenta())
+    assert s.opciones_estructuradas is not None
+    for idx, (label, _) in enumerate(s.opciones_estructuradas):
+        if label == categoria:
+            return idx
+    raise AssertionError(f"categoria {categoria!r} not found in picker")
+
+
+def _add_tour_via_picker(
+    fsm: FSMTiquetera, ctx: ContextoVenta, numero: int
+) -> ContextoVenta:
+    """Navigate FAMILIA → SERVICIO_EN_FAMILIA to add *numero* to the accumulator."""
+    categoria = _CATEGORIA_POR_SERVICIO[numero]
+    fam_idx = _indice_familia(fsm, categoria)
+    # Pick the family
+    s1 = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{fam_idx}", ctx)
+    # Pick the service
+    s2 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, f"srv:{numero}", s1.contexto)
+    return s2.contexto
+
+
+def _reach_familia_edit(fsm: FSMTiquetera, ctx: ContextoVenta) -> ContextoVenta:
+    """Press EDITAR_SELECTOR 'Destinos' and return the resulting context (now at FAMILIA)."""
+    s = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
+    assert s.nuevo_estado == EstadoFSM.FAMILIA
+    return s.contexto
+
+
+class TestEditarDestinosPruneAndRecapture:
+    """Slice 4: confirm-in-edit on DESTINO prunes stale dates and routes to FECHA_SALIDA
+    for any tour without a date, then returns to CONFIRMACION when all dates are filled.
+    """
+
+    # ── T-ED1a: Partial replace [1,2]→[1,3]: key 2 pruned, route to FECHA_SALIDA for tour 3
+    def test_partial_replace_prunes_stale_date(self, fsm: FSMTiquetera) -> None:
+        """After re-picking [1,3] from [1,2], key 2 must be pruned from fechas_por_servicio."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        # Edit Destinos → re-pick [1, 3] via proper FAMILIA → SERVICIO_EN_FAMILIA
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        # Key 2 must be pruned; key 1 must survive
+        assert 2 not in result.contexto.fechas_por_servicio
+        assert 1 in result.contexto.fechas_por_servicio
+        assert result.contexto.fechas_por_servicio[1] == date1
+
+    def test_partial_replace_routes_to_fecha_salida_for_missing_tour(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """After re-picking [1,3], FSM must route to FECHA_SALIDA (tour 3 has no date)."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
+
+    def test_partial_replace_prompt_names_tour_3(self, fsm: FSMTiquetera) -> None:
+        """The FECHA_SALIDA prompt must name 'City Tour' (tour 3, the missing one).
+
+        The state must be FECHA_SALIDA, not CONFIRMACION — otherwise the mensaje
+        assertion would pass trivially via the resumen which also names the tours.
+        """
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        # Must be at FECHA_SALIDA (not CONFIRMACION, which also names tours in the resumen)
+        assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        # "City Tour" is the name for service 3 — the per-tour date prompt names it
+        assert "City Tour" in result.mensaje
+
+    def test_partial_replace_capture_tour3_then_back_to_confirmacion(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        """Feed tour 3's date → FSM returns to CONFIRMACION; fecha_salida == min(date1, date3)."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        date3 = datetime.datetime(2026, 12, 18)  # earlier than date1
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        at_fecha = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        assert at_fecha.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        # Now feed tour 3's date
+        final = fsm.procesar(EstadoFSM.FECHA_SALIDA, "18/12/2026", at_fecha.contexto)
+        assert final.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert final.contexto.fecha_salida == min(date1, date3)
+        assert final.contexto.fechas_por_servicio[3] == date3
+
+    # ── T-ED1b: Same set re-picked [1,2]→[1,2]: no recapture, dates preserved
+    def test_same_set_repicked_goes_to_confirmacion(self, fsm: FSMTiquetera) -> None:
+        """Re-picking the same tours [1,2] that already have dates → CONFIRMACION, no recapture."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 2)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        assert result.nuevo_estado == EstadoFSM.CONFIRMACION
+
+    def test_same_set_repicked_preserves_dates(self, fsm: FSMTiquetera) -> None:
+        """Re-picking [1,2] with existing dates → both dates preserved, state == CONFIRMACION."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm, acc1, 2)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        assert result.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert result.contexto.fechas_por_servicio == {1: date1, 2: date2}
+        assert result.contexto.fecha_salida == date1
+
+    # ── T-ED1c: Removal [1,2]→[1]: dict pruned to {1}, fecha_salida==date1
+    def test_removal_prunes_dict_to_kept_tour(self, fsm: FSMTiquetera) -> None:
+        """Re-picking only [1] from [1,2] → fechas_por_servicio == {1: date1}."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        assert result.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert result.contexto.fechas_por_servicio == {1: date1}
+        assert result.contexto.fecha_salida == date1
+
+    # ── T-ED1d: Full replace [1,2]→[3]: dict empty after prune → FECHA_SALIDA
+    def test_full_replace_empty_dict_routes_to_fecha_salida(self, fsm: FSMTiquetera) -> None:
+        """Re-picking [3] from [1,2] (none kept) → fechas pruned to {}, route to FECHA_SALIDA."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        assert result.contexto.fechas_por_servicio == {}
+
+    def test_full_replace_capture_date_then_confirmacion(self, fsm: FSMTiquetera) -> None:
+        """After full replace to [3], capture its date → CONFIRMACION, fecha_salida == date3."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        date3 = datetime.datetime(2026, 12, 15)
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 3)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        at_fecha = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        assert at_fecha.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        final = fsm.procesar(EstadoFSM.FECHA_SALIDA, "15/12/2026", at_fecha.contexto)
+        assert final.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert final.contexto.fecha_salida == date3
+        assert final.contexto.fechas_por_servicio == {3: date3}
+
+    # ── T-ED1e: Neto recomputed after edit
+    def test_neto_recomputed_after_destinos_edit(self, fsm: FSMTiquetera) -> None:
+        """ctx.neto must reflect the NEW tour set after Destinos edit, not the stale value."""
+        date1 = datetime.datetime(2026, 12, 20)
+        date2 = datetime.datetime(2026, 12, 22)
+        # Start: [1, 2] both priced, adultos=1 → neto = 100000 + 150000 = 250000
+        stale_neto = Decimal("250000")
+        ctx = ContextoVenta(
+            destinos_numeros=[1, 2],
+            destinos_nombres=["Tour Playa Blanca", "Tour Isla"],
+            adultos=1,
+            ninos=0,
+            neto=stale_neto,
+            fechas_por_servicio={1: date1, 2: date2},
+            fecha_salida=date1,
+        )
+        # Edit Destinos → keep only tour 1 (neto should become 100000)
+        fam_ctx = _reach_familia_edit(fsm, ctx)
+        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
+        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        # Should be at CONFIRMACION (tour 1 already has a date) with updated neto
+        assert result.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert result.contexto.neto == Decimal("100000")
