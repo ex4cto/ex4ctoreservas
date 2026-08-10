@@ -161,6 +161,7 @@ def test_email_no_transaccion_nequi_retorna_200_sin_cuarentena(
     assert response.status_code == 200
     mock_correo_repo.guardar.assert_not_called()
     mock_notificador.notificar.assert_not_called()
+    mock_ingreso_repo.guardar.assert_not_called()
 
 
 def test_email_transaccion_real_sigue_parseando(
@@ -177,3 +178,57 @@ def test_email_transaccion_real_sigue_parseando(
     assert response.status_code == 200
     mock_ingreso_repo.guardar.assert_called_once()
     mock_correo_repo.guardar.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# PSE end-to-end route test
+# ---------------------------------------------------------------------------
+
+# Real PSE egreso body — mirrors _TEXTO_PSE from test_parser_pse_egreso.py.
+# Sender is a generic Gmail address; detectar_banco falls back to body
+# detection and returns "PSE" because _es_pse fires on "serviciopse" / "cus:".
+_TEXTO_PSE_EGRESO = (
+    "PSE - Transacción Aprobada ✅ CUS 455692497\n"
+    "De: serviciopse@achcolombia.com.co\n"
+    "¡Hola, Julio Cesar Garay Manzur!\n"
+    " Los siguientes son los datos de tu transacción:\n"
+    "Valor: $ 124.200,00\n"
+    "Empresa: WOMPI S.A.S\n"
+    "Descripción: Sent from PayJoy PaymentOptionsProvidersSDK.\n"
+    "Fecha de la transacción: 06/07/2026\n"
+    "CUS: 455692497\n"
+    "Gracias por utilizar nuestro servicio.\n"
+)
+
+_PAYLOAD_PSE_EGRESO = {
+    "message_id": "pse-001",
+    "remitente_email": "agenciagaraytour1@gmail.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "PSE - Transacción Aprobada",
+    "cuerpo_html": "",
+    "cuerpo_texto": _TEXTO_PSE_EGRESO,
+}
+
+
+def test_email_pse_egreso_persiste_y_no_cuarentena(
+    client: TestClient,
+    mock_egreso_repo: MagicMock,
+    mock_ingreso_repo: MagicMock,
+    mock_correo_repo: MagicMock,
+    mock_notificador: MagicMock,
+) -> None:
+    """A real PSE egreso email must be parsed, persisted, and never quarantined.
+
+    PSE passes the es_transaccion gate via _es_pse body markers (not a verb),
+    and detectar_direccion routes it to egreso via the same markers.
+    """
+    response = client.post(
+        f"/webhook/email?secret={_SECRET}",
+        json=_PAYLOAD_PSE_EGRESO,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"estado": "ok"}
+    mock_egreso_repo.guardar.assert_called_once()
+    mock_correo_repo.guardar.assert_not_called()
+    mock_notificador.notificar.assert_not_called()
