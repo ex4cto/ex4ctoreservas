@@ -24,10 +24,7 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
 from garay.infraestructura.telegram.errores import NotificadorError, NotificadorNoDisponible
-from garay.infraestructura.webhook.alertas import (
-    construir_alerta_dev,
-    construir_alerta_freelancer,
-)
+from garay.infraestructura.webhook.alertas import construir_alerta_dev
 from garay.infraestructura.webhook.parser.base import (
     DIRECCION_EGRESO,
     ErrorParseoBanco,
@@ -66,11 +63,14 @@ def _quarantine_and_alert(
     correo_repo: CorreoNoParseadoRepository,
     notificador: NotificadorGrupo,
 ) -> None:
-    """Persist an unparseable email and send best-effort alerts.
+    """Persist an unparseable email and send best-effort DEV alerts.
 
     Persistence happens first.  Each Telegram call is individually wrapped so
     a network or API failure never prevents the other alerts from being sent,
     and never causes the route to return non-200.
+
+    Only developer/admin Telegram IDs are notified.  The freelancer group chat
+    does NOT receive parse-failure alerts (owner decision).
     """
     # --- 1. Persist ---
     correo = CorreoNoParseado(
@@ -113,17 +113,6 @@ def _quarantine_and_alert(
         except (NotificadorError, NotificadorNoDisponible):
             logger.warning(
                 "DIAG alert: failed to notify dev_id=%s — continuing", dev_id
-            )
-
-    # --- 3. Best-effort freelancer group alert ---
-    grupo_id = settings.grupo_id.strip()
-    if grupo_id:
-        freelancer_msg = construir_alerta_freelancer(banco=banco)
-        try:
-            notificador.notificar(freelancer_msg, grupo_id)
-        except (NotificadorError, NotificadorNoDisponible):
-            logger.warning(
-                "DIAG alert: failed to notify grupo_id=%s — continuing", grupo_id
             )
 
 
