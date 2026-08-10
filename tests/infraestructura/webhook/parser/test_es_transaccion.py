@@ -6,7 +6,6 @@ import pytest
 
 from garay.infraestructura.webhook.parser.base import es_transaccion
 
-
 # ---------------------------------------------------------------------------
 # TRUE cases — every transaction verb must be recognized
 # ---------------------------------------------------------------------------
