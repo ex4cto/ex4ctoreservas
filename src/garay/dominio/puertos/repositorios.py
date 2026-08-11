@@ -30,7 +30,13 @@ class VentaRepository(ABC):
     def guardar(self, venta: Venta) -> None: ...
 
     @abstractmethod
-    def buscar_por_id(self, id: uuid.UUID) -> Venta | None: ...
+    def buscar_por_id(self, id: uuid.UUID) -> Venta | None:
+        """Return the venta regardless of anulada state.
+
+        The anular flow relies on loading an anulada venta to raise VentaYaAnulada;
+        listar* methods exclude anulada ventas.
+        """
+        ...
 
     @abstractmethod
     def listar(self) -> list[Venta]: ...

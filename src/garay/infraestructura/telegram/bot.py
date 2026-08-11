@@ -121,6 +121,17 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     handle_fl_skip_tg,
     handle_fl_telegram_id,
 )
+from garay.infraestructura.telegram.handlers_gestion_ventas import (
+    GV_CONFIRMAR,
+    GV_DETALLE,
+    GV_MOTIVO,
+    GV_SELECCIONAR,
+    cmd_gestionar_ventas,
+    handle_gv_confirmar,
+    handle_gv_detalle,
+    handle_gv_motivo,
+    handle_gv_seleccionar,
+)
 
 _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
@@ -148,6 +159,7 @@ _COMANDOS_ADMIN = [
     BotCommand("nuevo_egreso", "Registrar un egreso manual"),
     BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
     BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
+    BotCommand("gestionar_ventas", "Gestionar ventas (anular, etc.)"),
 ]
 
 # Propietario menu = admin + owner-only commands.
@@ -449,12 +461,24 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
 
+    gestionar_ventas_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("gestionar_ventas", cmd_gestionar_ventas)],
+        states={
+            GV_SELECCIONAR: [_CB(handle_gv_seleccionar, pattern="^gv_sel:")],
+            GV_DETALLE: [_CB(handle_gv_detalle, pattern="^gv_(anular|cancelar)$")],
+            GV_MOTIVO: [MessageHandler(_TEXT, handle_gv_motivo)],
+            GV_CONFIRMAR: [_CB(handle_gv_confirmar, pattern="^gv_(confirmar|cancelar)$")],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(nuevo_freelancer_conv_handler, group=5)
     app.add_handler(eliminar_freelancer_conv_handler, group=5)
     app.add_handler(editar_freelancer_conv_handler, group=6)
+    app.add_handler(gestionar_ventas_conv_handler, group=7)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

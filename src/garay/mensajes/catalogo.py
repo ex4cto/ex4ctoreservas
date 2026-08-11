@@ -471,6 +471,50 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_reservas": {
         Idioma.ES: "Listo: {cantidad} reserva(s) registrada(s) para {cliente}."
     },
+    # --- Gestión de ventas (B2) ---
+    "gestion_ventas.seleccionar": {
+        Idioma.ES: "Selecciona una venta para gestionar:"
+    },
+    "gestion_ventas.sin_ventas": {
+        Idioma.ES: "No hay ventas registradas en los últimos 30 días."
+    },
+    "gestion_ventas.detalle": {
+        Idioma.ES: (
+            "<b>Detalle de la venta</b>\n"
+            "Cliente: {cliente}\n"
+            "Tours: {tours}\n"
+            "Fecha: {fecha}\n"
+            "Valor: ${valor:,.0f}"
+        )
+    },
+    "gestion_ventas.boton_anular": {Idioma.ES: "Anular"},
+    "gestion_ventas.boton_cancelar": {Idioma.ES: "Cancelar"},
+    "gestion_ventas.pedir_motivo": {
+        Idioma.ES: "Escribe el motivo de la anulación (obligatorio):"
+    },
+    "gestion_ventas.motivo_vacio": {
+        Idioma.ES: "El motivo no puede estar vacío. Escribe el motivo:"
+    },
+    "gestion_ventas.confirmar": {
+        Idioma.ES: (
+            "¿Confirmas la anulación?\n\n"
+            "Motivo: <b>{motivo}</b>"
+        )
+    },
+    "gestion_ventas.boton_confirmar": {Idioma.ES: "Confirmar"},
+    "gestion_ventas.anulada": {
+        Idioma.ES: "La venta fue anulada correctamente."
+    },
+    "gestion_ventas.cancelado": {Idioma.ES: "Operación cancelada."},
+    "gestion_ventas.no_encontrada": {
+        Idioma.ES: "No se encontró la venta. Es posible que haya sido eliminada."
+    },
+    "gestion_ventas.ya_anulada": {
+        Idioma.ES: "Esta venta ya fue anulada anteriormente."
+    },
+    "gestion_ventas.error_generico": {
+        Idioma.ES: "Ocurrió un error al procesar la solicitud. Intenta de nuevo."
+    },
 }
 
 
