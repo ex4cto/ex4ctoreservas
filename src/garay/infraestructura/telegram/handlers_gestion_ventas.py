@@ -1,4 +1,4 @@
-"""PTB handlers for /gestionar_ventas — anular venta flow (Slice B2)."""
+"""PTB handlers for /gestionar_ventas — anular and editar fecha flow (Slice B2 + B3)."""
 
 from __future__ import annotations
 
@@ -10,8 +10,11 @@ import uuid
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+# Reuse the canonical date parser from the FSM (avoids duplicating parsing logic).
+from garay.aplicacion.tiquetera.fsm import _parsear_fecha
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
-from garay.aplicacion.ventas.comandos import AnularVentaComando
+from garay.aplicacion.ventas.comandos import AnularVentaComando, EditarFechaVentaComando
+from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     FreelancerRepository,
@@ -30,16 +33,19 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data is not None:
         context.user_data.pop("gv_venta_id", None)
         context.user_data.pop("gv_motivo", None)
+        context.user_data.pop("gv_accion", None)
+        context.user_data.pop("gv_nueva_fecha", None)
 
 
 # ---------------------------------------------------------------------------
-# State constants — range 220-223 (freelancers: 200-213)
+# State constants — range 220-224 (freelancers: 200-213)
 # ---------------------------------------------------------------------------
 
 GV_SELECCIONAR: int = 220
 GV_DETALLE: int = 221
 GV_MOTIVO: int = 222
 GV_CONFIRMAR: int = 223
+GV_EDIT_FECHA: int = 224
 
 _ROLLING_DAYS = 30
 _MAX_VENTAS = 15
@@ -156,10 +162,20 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     keyboard = [
+        [InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.boton_editar"),
+            callback_data="gv_editar",
+        )],
         [
-            InlineKeyboardButton("Anular", callback_data="gv_anular"),
-            InlineKeyboardButton("Cancelar", callback_data="gv_cancelar"),
-        ]
+            InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_anular"),
+                callback_data="gv_anular",
+            ),
+            InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_cancelar"),
+                callback_data="gv_cancelar",
+            ),
+        ],
     ]
 
     if update.effective_message:
@@ -185,12 +201,24 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     data = query.data
 
     if data == "gv_anular":
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "anular"
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.pedir_motivo"),
                 parse_mode="HTML",
             )
         return GV_MOTIVO
+
+    if data == "gv_editar":
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar"
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.pedir_fecha"),
+                parse_mode="HTML",
+            )
+        return GV_EDIT_FECHA
 
     if data == "gv_cancelar":
         if update.effective_message:
@@ -201,9 +229,40 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         _limpiar(context)
         return ConversationHandler.END
 
-    # Future: "gv_editar" can be added here for B3
     _limpiar(context)
     return ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_FECHA state — text input for new date
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Receive a date string for the new tour date; validates using the canonical parser."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return ConversationHandler.END
+
+    text = update.message.text if update.message else ""
+
+    # Reuse the canonical parser from FSM (imported at top — avoids duplicating logic).
+    parsed = _parsear_fecha(text or "")
+    if parsed is None:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.fecha_invalida"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_FECHA
+
+    if context.user_data is not None:
+        context.user_data["gv_nueva_fecha"] = parsed.isoformat()
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +288,22 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if context.user_data is not None:
         context.user_data["gv_motivo"] = motivo
 
-    confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
+    user_data = context.user_data or {}
+    gv_accion: str = user_data.get("gv_accion", "anular")
+
+    if gv_accion == "editar":
+        gv_nueva_fecha_str: str | None = user_data.get("gv_nueva_fecha")
+        if gv_nueva_fecha_str:
+            nueva_fecha_dt = datetime.datetime.fromisoformat(gv_nueva_fecha_str)
+            confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar").format(
+                fecha=f"{nueva_fecha_dt:%d/%m/%Y %H:%M}",
+                motivo=motivo,
+            )
+        else:
+            confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
+    else:
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
+
     keyboard = [
         [
             InlineKeyboardButton("Confirmar", callback_data="gv_confirmar"),
@@ -277,6 +351,117 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ConversationHandler.END
 
     user_data = context.user_data or {}
+    gv_accion: str = user_data.get("gv_accion", "anular")
+
+    if gv_accion == "editar":
+        return await _handle_confirmar_editar(update, context, user_data, user)
+
+    # Default: anular path.
+    return await _handle_confirmar_anular(update, context, user_data, user)
+
+
+async def _handle_confirmar_editar(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-fecha action."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nueva_fecha_str: str | None = user_data.get("gv_nueva_fecha")
+
+    if not venta_id_str or not motivo or not nueva_fecha_str:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+
+    # Resolve realizada_por nombre
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarFechaVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nueva_fecha=datetime.datetime.fromisoformat(nueva_fecha_str),
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    editar_service: EditarFechaVentaService | None = context.bot_data.get(
+        "editar_fecha_venta_service"
+    )
+    if editar_service is None:
+        logger.error("editar_fecha_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+
+    try:
+        await asyncio.to_thread(editar_service.ejecutar, cmd)
+    except VentaYaAnulada:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.ya_anulada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+    except VentaNoEncontrada:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.no_encontrada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+    except MotivoRequerido:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.motivo_vacio"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+    except Exception:
+        logger.exception("Unexpected error in handle_gv_confirmar (editar)")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return ConversationHandler.END
+
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.editada"),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return ConversationHandler.END
+
+
+async def _handle_confirmar_anular(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the anular action."""
     venta_id_str: str | None = user_data.get("gv_venta_id")
     motivo: str | None = user_data.get("gv_motivo")
 
@@ -290,17 +475,18 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ConversationHandler.END
 
     # Resolve realizada_por nombre
+    user_id_anular: int = getattr(user, "id", 0)
     freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     nombre: str | None = None
     if freelancer_repo is not None:
-        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user.id)
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id_anular)
         if fl is not None:
             nombre = fl.nombre
 
     cmd = AnularVentaComando(
         venta_id=uuid.UUID(venta_id_str),
         motivo=motivo,
-        realizada_por_telegram_id=user.id,
+        realizada_por_telegram_id=user_id_anular,
         realizada_por_nombre=nombre,
     )
 
