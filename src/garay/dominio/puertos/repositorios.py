@@ -21,6 +21,7 @@ from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.tiquetera.entidades import Tiquetera
+from garay.dominio.ventas.auditoria import AuditoriaVenta
 from garay.dominio.ventas.entidades import Venta
 
 
@@ -266,6 +267,14 @@ class ComisionRegistradaRepository(ABC):
 
     @abstractmethod
     def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[ComisionRegistrada]: ...
+
+
+class AuditoriaVentaRepository(ABC):
+    @abstractmethod
+    def guardar(self, registro: AuditoriaVenta) -> None: ...
+
+    @abstractmethod
+    def listar_por_venta_id(self, venta_id: uuid.UUID) -> list[AuditoriaVenta]: ...
 
 
 class CorreoNoParseadoRepository(ABC):

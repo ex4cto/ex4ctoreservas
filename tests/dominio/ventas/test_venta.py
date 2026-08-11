@@ -16,6 +16,7 @@ from garay.dominio.ventas.errores import (
     GananciaNegativa,
     MonedaIncompatible,
     ValorVentaInvalido,
+    VentaYaAnulada,
 )
 from garay.dominio.ventas.valor_objetos import Participantes
 
@@ -114,6 +115,24 @@ class TestAbono:
     def test_venta_sin_abono_es_none(self) -> None:
         venta = _venta()
         assert venta.abono is None
+
+
+class TestAnular:
+    """B1: soft-delete via Venta.anular()."""
+
+    def test_venta_nueva_tiene_anulada_false(self) -> None:
+        assert _venta().anulada is False
+
+    def test_anular_cambia_anulada_a_true(self) -> None:
+        venta = _venta()
+        venta.anular()
+        assert venta.anulada is True
+
+    def test_anular_dos_veces_levanta_venta_ya_anulada(self) -> None:
+        venta = _venta()
+        venta.anular()
+        with pytest.raises(VentaYaAnulada):
+            venta.anular()
 
 
 class TestDigitalConPuntoDeVenta:
