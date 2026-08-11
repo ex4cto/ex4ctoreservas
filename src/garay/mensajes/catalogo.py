@@ -492,6 +492,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.pedir_motivo": {
         Idioma.ES: "Escribe el motivo de la anulación (obligatorio):"
     },
+    "gestion_ventas.pedir_motivo_editar": {
+        Idioma.ES: "Escribe el motivo del cambio de fecha (obligatorio):"
+    },
     "gestion_ventas.motivo_vacio": {
         Idioma.ES: "El motivo no puede estar vacío. Escribe el motivo:"
     },
@@ -514,6 +517,29 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "gestion_ventas.error_generico": {
         Idioma.ES: "Ocurrió un error al procesar la solicitud. Intenta de nuevo."
+    },
+    # --- Gestión de ventas B3: editar fecha ---
+    "gestion_ventas.boton_editar": {Idioma.ES: "✏️ Editar fecha"},
+    "gestion_ventas.pedir_fecha": {
+        Idioma.ES: (
+            "Escribe la nueva fecha del tour.\n"
+            "Formato: DD/MM/AAAA HH:MM (o DD/MM/AAAA si no hay hora específica)."
+        )
+    },
+    "gestion_ventas.fecha_invalida": {
+        Idioma.ES: (
+            "Fecha inválida. Usa el formato DD/MM/AAAA HH:MM o DD/MM/AAAA."
+        )
+    },
+    "gestion_ventas.confirmar_editar": {
+        Idioma.ES: (
+            "¿Confirmas el cambio de fecha?\n\n"
+            "Nueva fecha: <b>{fecha}</b>\n"
+            "Motivo: <b>{motivo}</b>"
+        )
+    },
+    "gestion_ventas.editada": {
+        Idioma.ES: "La fecha de la venta fue actualizada correctamente."
     },
 }
 

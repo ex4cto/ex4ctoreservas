@@ -76,6 +76,23 @@ class Venta:
             raise VentaYaAnulada("La venta ya fue anulada.")
         self.anulada = True
 
+    def cambiar_fecha(self, nueva_fecha: datetime.datetime) -> None:
+        """Update the tour date. Raises VentaYaAnulada if the venta is already anulada.
+
+        Updates the scalar ``fecha`` field and, when ``fechas_por_servicio`` has
+        exactly one entry, replaces that entry's value with ``nueva_fecha``
+        (the servicio_id key is preserved).
+        If ``fechas_por_servicio`` is None or has multiple entries only the
+        scalar ``fecha`` is updated — the multi-tour case is not in scope for
+        Slice B3.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar la fecha de una venta ya anulada.")
+        self.fecha = nueva_fecha.date()
+        if self.fechas_por_servicio is not None and len(self.fechas_por_servicio) == 1:
+            (sid,) = tuple(self.fechas_por_servicio)
+            self.fechas_por_servicio[sid] = nueva_fecha
+
     @property
     def ganancia(self) -> Dinero:
         return self.valor_venta - self.neto

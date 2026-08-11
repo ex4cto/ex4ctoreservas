@@ -6,7 +6,6 @@ No Telegram imports. Fully testable in isolation.
 from __future__ import annotations
 
 import copy
-import datetime
 import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
@@ -14,7 +13,12 @@ from enum import StrEnum
 
 from rapidfuzz import fuzz
 
-from garay.aplicacion.comun.fechas import formatear_fechas_compactas
+from garay.aplicacion.comun.fechas import (
+    formatear_fechas_compactas,
+)
+from garay.aplicacion.comun.fechas import (
+    parsear_fecha as _parsear_fecha,
+)
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
@@ -183,23 +187,6 @@ def _siguiente_tour_sin_fecha(ctx: ContextoVenta) -> int | None:
     for numero in ctx.destinos_numeros:
         if numero not in ctx.fechas_por_servicio:
             return numero
-    return None
-
-
-def _parsear_fecha(texto: str) -> datetime.datetime | None:
-    """Try DD/MM, DD/MM/YY, DD/MM/YYYY, DD/MM/YYYY HH:MM."""
-    texto = texto.strip()
-    now = datetime.datetime.now()
-    formatos_con_año = ["%d/%m/%Y %H:%M", "%d/%m/%Y", "%d/%m/%y"]
-    for fmt in formatos_con_año:
-        try:
-            return datetime.datetime.strptime(texto, fmt)
-        except ValueError:
-            continue
-    try:
-        return datetime.datetime.strptime(f"{texto}/{now.year}", "%d/%m/%Y")
-    except ValueError:
-        pass
     return None
 
 

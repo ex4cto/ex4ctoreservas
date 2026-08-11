@@ -124,11 +124,13 @@ from garay.infraestructura.telegram.handlers_freelancers import (
 from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_CONFIRMAR,
     GV_DETALLE,
+    GV_EDIT_FECHA,
     GV_MOTIVO,
     GV_SELECCIONAR,
     cmd_gestionar_ventas,
     handle_gv_confirmar,
     handle_gv_detalle,
+    handle_gv_edit_fecha,
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
@@ -465,9 +467,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         entry_points=[CommandHandler("gestionar_ventas", cmd_gestionar_ventas)],
         states={
             GV_SELECCIONAR: [_CB(handle_gv_seleccionar, pattern="^gv_sel:")],
-            GV_DETALLE: [_CB(handle_gv_detalle, pattern="^gv_(anular|cancelar)$")],
+            GV_DETALLE: [_CB(handle_gv_detalle, pattern="^gv_(anular|editar|cancelar)$")],
             GV_MOTIVO: [MessageHandler(_TEXT, handle_gv_motivo)],
             GV_CONFIRMAR: [_CB(handle_gv_confirmar, pattern="^gv_(confirmar|cancelar)$")],
+            GV_EDIT_FECHA: [MessageHandler(_TEXT, handle_gv_edit_fecha)],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
