@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     resend_api_key: str = Field(default="")
     resend_from: str = Field(default="")
 
+    # Feature flag: allow accumulating multiple tours in one reservation.
+    # Default False → one tour per reservation (reserva-por-tour, 2026-08-11).
+    # Set GARAY_MULTI_TOUR_HABILITADO=true to re-enable the multi-tour accumulator.
+    multi_tour_habilitado: bool = False
+
     # Conciliacion: propietario access and engine parameters.
     # GARAY_PROPIETARIO_TELEGRAM_IDS="123456789,987654321" (comma-separated, empty = deny all)
     propietario_telegram_ids: str = Field(default="")

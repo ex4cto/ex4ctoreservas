@@ -43,6 +43,16 @@ def fsm() -> FSMTiquetera:
 
 
 @pytest.fixture()
+def fsm_multi() -> FSMTiquetera:
+    """FSM with multi_tour_habilitado=True — preserves legacy accumulator behavior."""
+    return FSMTiquetera(
+        servicios=SERVICIOS_TEST,
+        puntos_venta=PUNTOS_TEST,
+        multi_tour_habilitado=True,
+    )
+
+
+@pytest.fixture()
 def fsm_con_roster() -> FSMTiquetera:
     return FSMTiquetera(
         servicios=SERVICIOS_TEST,
@@ -151,11 +161,21 @@ class TestPickerServicioEnFamilia:
         assert "srv:3" in datas
         assert "srv:1" not in datas  # service 1 is in a different family
 
-    def test_servicio_seleccionado_agrega_numero_y_va_a_destino(
+    def test_servicio_seleccionado_agrega_numero_y_va_a_cliente_nombre(
         self, fsm: FSMTiquetera
     ) -> None:
+        # Default (multi_tour_habilitado=False): one-tour mode → goes to CLIENTE_NOMBRE.
         ctx = self._familia_ctx(fsm, _indice_de(fsm, "BARÚ"))
         salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+        assert 1 in salida.contexto.destinos_numeros
+
+    def test_servicio_seleccionado_agrega_numero_y_va_a_destino_multi_tour(
+        self, fsm_multi: FSMTiquetera
+    ) -> None:
+        # Multi-tour mode (flag True): picking a tour still shows the accumulator.
+        ctx = self._familia_ctx(fsm_multi, _indice_de(fsm_multi, "BARÚ"))
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert salida.nuevo_estado == EstadoFSM.DESTINO
         assert 1 in salida.contexto.destinos_numeros
 
@@ -190,19 +210,19 @@ class TestAcumuladorDestino:
         # Neto recomputed from catalog: service 1 = 100000 * 2 = 200000
         assert salida.contexto.neto == Decimal("200000")
 
-    def test_acumulador_muestra_nombres_seleccionados(self, fsm: FSMTiquetera) -> None:
+    def test_acumulador_muestra_nombres_seleccionados(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(destinos_numeros=[1])
-        salida = fsm.procesar(EstadoFSM.DESTINO, "+ Otro tour", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.DESTINO, "+ Otro tour", ctx)
         _ = salida
         # After selecting a second tour, the accumulator lists both by name
         ctx2 = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
-        salida2 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx2)
+        salida2 = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx2)
         assert "Tour Playa Blanca" in salida2.mensaje
         assert "Tour Isla" in salida2.mensaje
 
-    def test_acumulador_ofrece_otro_tour_y_confirmar(self, fsm: FSMTiquetera) -> None:
+    def test_acumulador_ofrece_otro_tour_y_confirmar(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(familia_seleccionada="BARÚ")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         labels = _labels(salida)
         assert any("Otro tour" in lbl for lbl in labels)
         assert any("Confirmar" in lbl for lbl in labels)
@@ -243,9 +263,9 @@ class TestServicioEnFamiliaFallback:
 class TestAcumuladorDeseleccion:
     """FIX 3: each selected tour renders a removable 'del:{numero}' button."""
 
-    def test_acumulador_muestra_boton_borrar_por_tour(self, fsm: FSMTiquetera) -> None:
+    def test_acumulador_muestra_boton_borrar_por_tour(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
         assert salida.opciones_estructuradas is not None
         datas = [d for _, d in salida.opciones_estructuradas]
         assert "del:1" in datas
@@ -263,16 +283,16 @@ class TestAcumuladorDeseleccion:
         assert salida.contexto.destinos_numeros == []
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-    def test_del_boton_usa_label_con_nombre(self, fsm: FSMTiquetera) -> None:
+    def test_del_boton_usa_label_con_nombre(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(destinos_numeros=[1], familia_seleccionada="BARÚ")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert salida.opciones_estructuradas is not None
         labels = {d: label for label, d in salida.opciones_estructuradas}
         assert "Tour Playa Blanca" in labels["del:1"]
 
-    def test_del_callback_data_bajo_limite(self, fsm: FSMTiquetera) -> None:
+    def test_del_callback_data_bajo_limite(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(destinos_numeros=[1, 2], familia_seleccionada="ISLAS")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:2", ctx)
         assert salida.opciones_estructuradas is not None
         for _, data in salida.opciones_estructuradas:
             assert len(data.encode("utf-8")) <= 64
@@ -383,11 +403,11 @@ class TestFechaFormatos:
 
 
 class TestOpcionesAcumulador:
-    """The DESTINO accumulator always offers 'Otro tour' and 'Confirmar'."""
+    """The DESTINO accumulator always offers 'Otro tour' and 'Confirmar' (multi-tour mode)."""
 
-    def test_acumulador_tiene_confirmar_y_otro_tour(self, fsm: FSMTiquetera) -> None:
+    def test_acumulador_tiene_confirmar_y_otro_tour(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(destinos_numeros=[1], familia_seleccionada="BARÚ")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         labels = _labels(salida)
         assert any("Confirmar" in lbl for lbl in labels)
         assert any("Otro tour" in lbl for lbl in labels)
@@ -651,15 +671,10 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
         ctx = s.contexto
 
-        # SERVICIO_EN_FAMILIA → pick service 3 (no neto) → DESTINO accumulator
+        # SERVICIO_EN_FAMILIA → pick service 3 (no neto) → CLIENTE_NOMBRE (one-tour mode)
         s = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:3", ctx)
-        assert s.nuevo_estado == EstadoFSM.DESTINO
-        assert 3 in s.contexto.destinos_numeros
-        ctx = s.contexto
-
-        # DESTINO accumulator → confirm
-        s = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+        assert 3 in s.contexto.destinos_numeros
         ctx = s.contexto
 
         # CLIENTE_NOMBRE
@@ -800,11 +815,11 @@ class TestProcesarFoto:
 
 
 class TestDestinoMensaje:
-    """Accumulator message lists the selected tours by name."""
+    """Accumulator message lists the selected tours by name (multi-tour mode)."""
 
-    def test_acumulador_lista_nombres_seleccionados(self, fsm: FSMTiquetera) -> None:
+    def test_acumulador_lista_nombres_seleccionados(self, fsm_multi: FSMTiquetera) -> None:
         ctx = ContextoVenta(familia_seleccionada="BARÚ")
-        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert "Tour Playa Blanca" in salida.mensaje
 
 
@@ -1073,7 +1088,8 @@ class TestFotoModo:
     def test_handle_destino_recomputa_neto_en_modo_edicion(
         self, fsm: FSMTiquetera
     ) -> None:
-        """Confirming destinations recomputes neto when modo_edicion=True and abono is set."""
+        """One-tour edit mode: picking a service in SERVICIO_EN_FAMILIA recomputes neto
+        and returns to CONFIRMACION directly (skips DESTINO accumulator)."""
         ctx = ContextoVenta(
             modo_edicion=True,
             abono=Decimal("50000"),
@@ -1081,14 +1097,10 @@ class TestFotoModo:
             ninos=0,
             familia_seleccionada="BARÚ",
         )
-        # First: select service 1 in the current family
+        # In one-tour mode with modo_edicion=True, SERVICIO_EN_FAMILIA returns CONFIRMACION.
         salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
-        ctx2 = salida.contexto
-        # Now confirm with modo_edicion=True
-        ctx2.modo_edicion = True
-        salida2 = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx2)
-        assert salida2.nuevo_estado == EstadoFSM.CONFIRMACION
-        assert salida2.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
+        assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
+        assert salida.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
     def test_zero_stays_zero(self) -> None:
         assert _parsear_monto("0") == Decimal("0")
@@ -1732,20 +1744,22 @@ class TestEditarDestinosPicker:
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
         assert salida.contexto.destinos_numeros == []
 
-    def test_modo_edicion_persiste_por_el_picker_hasta_confirmar(self, fsm: FSMTiquetera) -> None:
-        # Enter edit for Destinos
+    def test_modo_edicion_persiste_por_el_picker_hasta_confirmar(
+        self, fsm_multi: FSMTiquetera
+    ) -> None:
+        # Multi-tour mode: edit Destinos → accumulator → confirm → CONFIRMACION.
         ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0)
-        s1 = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
+        s1 = fsm_multi.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
         assert s1.contexto.modo_edicion is True
         # Pick a family
-        indice = _indice_de(fsm, "BARÚ")
-        s2 = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice}", s1.contexto)
+        indice = _indice_de(fsm_multi, "BARÚ")
+        s2 = fsm_multi.procesar(EstadoFSM.FAMILIA, f"fam:{indice}", s1.contexto)
         assert s2.contexto.modo_edicion is True
-        # Pick a service → DESTINO accumulator
-        s3 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", s2.contexto)
+        # Pick a service → DESTINO accumulator (multi-tour mode)
+        s3 = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", s2.contexto)
         assert s3.contexto.modo_edicion is True
         # Confirm → back to CONFIRMACION
-        s4 = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", s3.contexto)
+        s4 = fsm_multi.procesar(EstadoFSM.DESTINO, "✅ Confirmar", s3.contexto)
         assert s4.nuevo_estado == EstadoFSM.CONFIRMACION
 
 
