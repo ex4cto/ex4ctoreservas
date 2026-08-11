@@ -210,6 +210,7 @@ class FSMTiquetera:
         servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
         puntos_venta: list[str],
         freelancers: list[tuple[uuid.UUID, str, bool]] | None = None,
+        multi_tour_habilitado: bool = False,
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
         self._servicios: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
@@ -228,6 +229,9 @@ class FSMTiquetera:
         self._puntos_venta = puntos_venta
         # Roster of (id, nombre, activo) for the counterpart picker.
         self._freelancers: list[tuple[uuid.UUID, str, bool]] = freelancers or []
+        # Feature flag: False = one tour per reservation (default).
+        # True = legacy multi-tour accumulator (DORMANT by default).
+        self._multi_tour_habilitado: bool = multi_tour_habilitado
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
@@ -351,6 +355,8 @@ class FSMTiquetera:
             seleccionados=", ".join(nombres) if nombres else "—"
         )
 
+    # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
+    # Reactivable con multi_tour_habilitado=True.
     def _opciones_acumulador(
         self, ctx: ContextoVenta
     ) -> list[tuple[str, str]]:
@@ -373,6 +379,8 @@ class FSMTiquetera:
         opciones.append((confirmar, confirmar))
         return opciones
 
+    # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
+    # Reactivable con multi_tour_habilitado=True.
     def _salida_acumulador(self, ctx: ContextoVenta) -> SalidaFSM:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.DESTINO,
@@ -707,13 +715,55 @@ class FSMTiquetera:
             )
         if numero not in ctx.destinos_numeros:
             ctx.destinos_numeros.append(numero)
-        return self._salida_acumulador(ctx)
+
+        # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
+        # Reactivable con multi_tour_habilitado=True.
+        if self._multi_tour_habilitado:
+            return self._salida_acumulador(ctx)
+
+        # One-tour mode (default): skip the accumulator entirely.
+        if ctx.modo_edicion:
+            # User is editing "Destinos" from CONFIRMACION — single-tour edit.
+            # Mirror the logic from _handle_destino's confirm-in-edit branch:
+            # prune stale per-tour dates, recompute neto, handle missing date.
+            had_per_tour_dates = bool(ctx.fechas_por_servicio)
+            ctx.fechas_por_servicio = {
+                n: f for n, f in ctx.fechas_por_servicio.items() if n in ctx.destinos_numeros
+            }
+            computed = self._calcular_neto(ctx)
+            if computed is not None:
+                ctx.neto = computed
+            if had_per_tour_dates and _siguiente_tour_sin_fecha(ctx) is not None:
+                # The new tour still needs a date — enter capture loop.
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                    mensaje=self._mensaje_entrada_fecha_salida(ctx),
+                    contexto=ctx,
+                )
+            ctx.modo_edicion = False
+            if ctx.fechas_por_servicio:
+                ctx.fecha_salida = min(ctx.fechas_por_servicio.values())
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+
+        # Normal registration: route straight to CLIENTE_NOMBRE (one tour confirmed).
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CLIENTE_NOMBRE,
+            mensaje=obtener_mensaje("pregunta_cliente_nombre"),
+            contexto=ctx,
+        )
 
     def _handle_destino(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         """DESTINO is the accumulator: add, remove, or confirm the selection."""
         ctx = _clonar(contexto)
         texto = entrada.strip()
 
+        # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
+        # Reactivable con multi_tour_habilitado=True.
         if texto == obtener_mensaje("opcion_otro_tour"):
             return self._salida_familia(ctx)
 

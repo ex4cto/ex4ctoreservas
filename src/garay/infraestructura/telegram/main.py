@@ -115,6 +115,7 @@ def main() -> None:
         servicios=servicios,
         puntos_venta=puntos_venta,
         freelancers=[(f.id, f.nombre, f.activo) for f in freelancer_repo.listar_todos()],
+        multi_tour_habilitado=settings.multi_tour_habilitado,
     )
 
     extractor_ia = ExtractorClaude(

@@ -38,6 +38,16 @@ def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_2TOURS, puntos_venta=PUNTOS_TEST)
 
 
+@pytest.fixture()
+def fsm_multi() -> FSMTiquetera:
+    """FSM with multi_tour_habilitado=True for multi-tour accumulator tests."""
+    return FSMTiquetera(
+        servicios=SERVICIOS_2TOURS,
+        puntos_venta=PUNTOS_TEST,
+        multi_tour_habilitado=True,
+    )
+
+
 def _ctx_single_tour(**overrides: object) -> ContextoVenta:
     """ContextoVenta ready to enter FECHA_SALIDA with one tour selected."""
     defaults: dict[str, object] = {
@@ -502,10 +512,13 @@ def _reach_familia_edit(fsm: FSMTiquetera, ctx: ContextoVenta) -> ContextoVenta:
 class TestEditarDestinosPruneAndRecapture:
     """Slice 4: confirm-in-edit on DESTINO prunes stale dates and routes to FECHA_SALIDA
     for any tour without a date, then returns to CONFIRMACION when all dates are filled.
+
+    These tests use fsm_multi (multi_tour_habilitado=True) because they exercise the
+    multi-tour accumulator edit flow (pick multiple tours via DESTINO, then confirm).
     """
 
     # ── T-ED1a: Partial replace [1,2]→[1,3]: key 2 pruned, route to FECHA_SALIDA for tour 3
-    def test_partial_replace_prunes_stale_date(self, fsm: FSMTiquetera) -> None:
+    def test_partial_replace_prunes_stale_date(self, fsm_multi: FSMTiquetera) -> None:
         """After re-picking [1,3] from [1,2], key 2 must be pruned from fechas_por_servicio."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -518,18 +531,18 @@ class TestEditarDestinosPruneAndRecapture:
             fecha_salida=date1,
         )
         # Edit Destinos → re-pick [1, 3] via proper FAMILIA → SERVICIO_EN_FAMILIA
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         # Key 2 must be pruned; key 1 must survive
         assert 2 not in result.contexto.fechas_por_servicio
         assert 1 in result.contexto.fechas_por_servicio
         assert result.contexto.fechas_por_servicio[1] == date1
 
     def test_partial_replace_routes_to_fecha_salida_for_missing_tour(
-        self, fsm: FSMTiquetera
+        self, fsm_multi: FSMTiquetera
     ) -> None:
         """After re-picking [1,3], FSM must route to FECHA_SALIDA (tour 3 has no date)."""
         date1 = datetime.datetime(2026, 12, 20)
@@ -542,14 +555,14 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-    def test_partial_replace_prompt_names_tour_3(self, fsm: FSMTiquetera) -> None:
+    def test_partial_replace_prompt_names_tour_3(self, fsm_multi: FSMTiquetera) -> None:
         """The FECHA_SALIDA prompt must name 'City Tour' (tour 3, the missing one).
 
         The state must be FECHA_SALIDA, not CONFIRMACION — otherwise the mensaje
@@ -565,18 +578,18 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         # Must be at FECHA_SALIDA (not CONFIRMACION, which also names tours in the resumen)
         assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
         # "City Tour" is the name for service 3 — the per-tour date prompt names it
         assert "City Tour" in result.mensaje
 
     def test_partial_replace_capture_tour3_then_back_to_confirmacion(
-        self, fsm: FSMTiquetera
+        self, fsm_multi: FSMTiquetera
     ) -> None:
         """Feed tour 3's date → FSM returns to CONFIRMACION; fecha_salida == min(date1, date3)."""
         date1 = datetime.datetime(2026, 12, 20)
@@ -590,20 +603,20 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        at_fecha = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        at_fecha = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         assert at_fecha.nuevo_estado == EstadoFSM.FECHA_SALIDA
         # Now feed tour 3's date
-        final = fsm.procesar(EstadoFSM.FECHA_SALIDA, "18/12/2026", at_fecha.contexto)
+        final = fsm_multi.procesar(EstadoFSM.FECHA_SALIDA, "18/12/2026", at_fecha.contexto)
         assert final.nuevo_estado == EstadoFSM.CONFIRMACION
         assert final.contexto.fecha_salida == min(date1, date3)
         assert final.contexto.fechas_por_servicio[3] == date3
 
     # ── T-ED1b: Same set re-picked [1,2]→[1,2]: no recapture, dates preserved
-    def test_same_set_repicked_goes_to_confirmacion(self, fsm: FSMTiquetera) -> None:
+    def test_same_set_repicked_goes_to_confirmacion(self, fsm_multi: FSMTiquetera) -> None:
         """Re-picking the same tours [1,2] that already have dates → CONFIRMACION, no recapture."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -615,14 +628,14 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 2)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 2)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         assert result.nuevo_estado == EstadoFSM.CONFIRMACION
 
-    def test_same_set_repicked_preserves_dates(self, fsm: FSMTiquetera) -> None:
+    def test_same_set_repicked_preserves_dates(self, fsm_multi: FSMTiquetera) -> None:
         """Re-picking [1,2] with existing dates → both dates preserved, state == CONFIRMACION."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -634,17 +647,17 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
-        acc2 = _add_tour_via_picker(fsm, acc1, 2)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
+        acc2 = _add_tour_via_picker(fsm_multi, acc1, 2)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc2)
         assert result.nuevo_estado == EstadoFSM.CONFIRMACION
         assert result.contexto.fechas_por_servicio == {1: date1, 2: date2}
         assert result.contexto.fecha_salida == date1
 
     # ── T-ED1c: Removal [1,2]→[1]: dict pruned to {1}, fecha_salida==date1
-    def test_removal_prunes_dict_to_kept_tour(self, fsm: FSMTiquetera) -> None:
+    def test_removal_prunes_dict_to_kept_tour(self, fsm_multi: FSMTiquetera) -> None:
         """Re-picking only [1] from [1,2] → fechas_por_servicio == {1: date1}."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -656,16 +669,18 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
         assert result.nuevo_estado == EstadoFSM.CONFIRMACION
         assert result.contexto.fechas_por_servicio == {1: date1}
         assert result.contexto.fecha_salida == date1
 
     # ── T-ED1d: Full replace [1,2]→[3]: dict empty after prune → FECHA_SALIDA
-    def test_full_replace_empty_dict_routes_to_fecha_salida(self, fsm: FSMTiquetera) -> None:
+    def test_full_replace_empty_dict_routes_to_fecha_salida(
+        self, fsm_multi: FSMTiquetera
+    ) -> None:
         """Re-picking [3] from [1,2] (none kept) → fechas pruned to {}, route to FECHA_SALIDA."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -677,14 +692,16 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
         assert result.nuevo_estado == EstadoFSM.FECHA_SALIDA
         assert result.contexto.fechas_por_servicio == {}
 
-    def test_full_replace_capture_date_then_confirmacion(self, fsm: FSMTiquetera) -> None:
+    def test_full_replace_capture_date_then_confirmacion(
+        self, fsm_multi: FSMTiquetera
+    ) -> None:
         """After full replace to [3], capture its date → CONFIRMACION, fecha_salida == date3."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -697,18 +714,18 @@ class TestEditarDestinosPruneAndRecapture:
             fechas_por_servicio={1: date1, 2: date2},
             fecha_salida=date1,
         )
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 3)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 3)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        at_fecha = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        at_fecha = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
         assert at_fecha.nuevo_estado == EstadoFSM.FECHA_SALIDA
-        final = fsm.procesar(EstadoFSM.FECHA_SALIDA, "15/12/2026", at_fecha.contexto)
+        final = fsm_multi.procesar(EstadoFSM.FECHA_SALIDA, "15/12/2026", at_fecha.contexto)
         assert final.nuevo_estado == EstadoFSM.CONFIRMACION
         assert final.contexto.fecha_salida == date3
         assert final.contexto.fechas_por_servicio == {3: date3}
 
     # ── T-ED1e: Neto recomputed after edit
-    def test_neto_recomputed_after_destinos_edit(self, fsm: FSMTiquetera) -> None:
+    def test_neto_recomputed_after_destinos_edit(self, fsm_multi: FSMTiquetera) -> None:
         """ctx.neto must reflect the NEW tour set after Destinos edit, not the stale value."""
         date1 = datetime.datetime(2026, 12, 20)
         date2 = datetime.datetime(2026, 12, 22)
@@ -724,10 +741,10 @@ class TestEditarDestinosPruneAndRecapture:
             fecha_salida=date1,
         )
         # Edit Destinos → keep only tour 1 (neto should become 100000)
-        fam_ctx = _reach_familia_edit(fsm, ctx)
-        acc1 = _add_tour_via_picker(fsm, fam_ctx, 1)
+        fam_ctx = _reach_familia_edit(fsm_multi, ctx)
+        acc1 = _add_tour_via_picker(fsm_multi, fam_ctx, 1)
         confirm_msg = obtener_mensaje("opcion_confirmar_destinos")
-        result = fsm.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
+        result = fsm_multi.procesar(EstadoFSM.DESTINO, confirm_msg, acc1)
         # Should be at CONFIRMACION (tour 1 already has a date) with updated neto
         assert result.nuevo_estado == EstadoFSM.CONFIRMACION
         assert result.contexto.neto == Decimal("100000")
