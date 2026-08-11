@@ -254,6 +254,32 @@ class TestHandleGvMotivo:
         assert result == GV_CONFIRMAR
         assert ctx.user_data["gv_motivo"] == "Cliente cambio de planes"
 
+    @pytest.mark.asyncio
+    async def test_motivo_editar_branch_retorna_gv_confirmar_con_confirmar_editar(self) -> None:
+        """FIX 2: editar branch must return GV_CONFIRMAR and reply with confirmar_editar text."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        nueva_fecha = datetime.datetime(2026, 9, 20, 10, 30)
+        update = _make_update(text="Pasajero cambio de disponibilidad")
+        ctx = _make_context()
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha.isoformat()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+
+        result = await handle_gv_motivo(update, ctx)
+
+        assert result == GV_CONFIRMAR
+        expected_text = obtener_mensaje("gestion_ventas.confirmar_editar").format(
+            fecha=f"{nueva_fecha:%d/%m/%Y %H:%M}",
+            motivo="Pasajero cambio de disponibilidad",
+        )
+        update.effective_message.reply_text.assert_called_once_with(
+            expected_text,
+            reply_markup=update.effective_message.reply_text.call_args[1]["reply_markup"],
+            parse_mode="HTML",
+        )
+
 
 # ---------------------------------------------------------------------------
 # handle_gv_confirmar
@@ -289,6 +315,7 @@ class TestHandleGvConfirmar:
         ctx = _make_context()
         ctx.user_data["gv_venta_id"] = str(venta_id)
         ctx.user_data["gv_motivo"] = "Motivo de prueba"
+        ctx.user_data["gv_accion"] = "anular"
 
         from garay.aplicacion.ventas.comandos import AnularVentaComando
 
@@ -309,6 +336,7 @@ class TestHandleGvConfirmar:
         ctx = _make_context()
         ctx.user_data["gv_venta_id"] = str(venta_id)
         ctx.user_data["gv_motivo"] = "Motivo de prueba"
+        ctx.user_data["gv_accion"] = "anular"
 
         await handle_gv_confirmar(update, ctx)
 
@@ -324,6 +352,7 @@ class TestHandleGvConfirmar:
         ctx = _make_context()
         ctx.user_data["gv_venta_id"] = str(venta_id)
         ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_accion"] = "anular"
         ctx.bot_data["anular_venta_service"].ejecutar.side_effect = VentaYaAnulada("ya anulada")
 
         result = await handle_gv_confirmar(update, ctx)
@@ -340,6 +369,7 @@ class TestHandleGvConfirmar:
         ctx = _make_context()
         ctx.user_data["gv_venta_id"] = str(venta_id)
         ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_accion"] = "anular"
         ctx.bot_data["anular_venta_service"].ejecutar.side_effect = VentaNoEncontrada("no")
 
         result = await handle_gv_confirmar(update, ctx)
@@ -355,6 +385,7 @@ class TestHandleGvConfirmar:
         ctx = _make_context()
         ctx.user_data["gv_venta_id"] = str(venta_id)
         ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_accion"] = "anular"
         ctx.bot_data["anular_venta_service"].ejecutar.side_effect = RuntimeError("DB exploded")
 
         result = await handle_gv_confirmar(update, ctx)
@@ -477,6 +508,22 @@ class TestHandleGvEditFecha:
         assert parsed.year == 2026
         assert parsed.month == 9
         assert parsed.day == 20
+
+    @pytest.mark.asyncio
+    async def test_fecha_valida_reply_usa_pedir_motivo_editar(self) -> None:
+        """FIX 1: valid fecha must reply with pedir_motivo_editar text, not pedir_motivo."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        update = _make_update(text="20/09/2026")
+        ctx = _make_context()
+
+        await handle_gv_edit_fecha(update, ctx)
+
+        expected_text = obtener_mensaje("gestion_ventas.pedir_motivo_editar")
+        update.effective_message.reply_text.assert_called_once_with(
+            expected_text,
+            parse_mode="HTML",
+        )
 
 
 # ---------------------------------------------------------------------------

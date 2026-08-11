@@ -492,6 +492,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.pedir_motivo": {
         Idioma.ES: "Escribe el motivo de la anulación (obligatorio):"
     },
+    "gestion_ventas.pedir_motivo_editar": {
+        Idioma.ES: "Escribe el motivo del cambio de fecha (obligatorio):"
+    },
     "gestion_ventas.motivo_vacio": {
         Idioma.ES: "El motivo no puede estar vacío. Escribe el motivo:"
     },

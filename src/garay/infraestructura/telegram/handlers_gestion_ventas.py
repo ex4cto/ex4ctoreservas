@@ -10,8 +10,7 @@ import uuid
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-# Reuse the canonical date parser from the FSM (avoids duplicating parsing logic).
-from garay.aplicacion.tiquetera.fsm import _parsear_fecha
+from garay.aplicacion.comun.fechas import parsear_fecha
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.comandos import AnularVentaComando, EditarFechaVentaComando
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
@@ -246,8 +245,7 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
 
     text = update.message.text if update.message else ""
 
-    # Reuse the canonical parser from FSM (imported at top — avoids duplicating logic).
-    parsed = _parsear_fecha(text or "")
+    parsed = parsear_fecha(text or "")
     if parsed is None:
         await update.effective_message.reply_text(
             obtener_mensaje("gestion_ventas.fecha_invalida"),
@@ -259,7 +257,7 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
         context.user_data["gv_nueva_fecha"] = parsed.isoformat()
 
     await update.effective_message.reply_text(
-        obtener_mensaje("gestion_ventas.pedir_motivo"),
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
         parse_mode="HTML",
     )
     return GV_MOTIVO
@@ -372,6 +370,9 @@ async def _handle_confirmar_editar(
     nueva_fecha_str: str | None = user_data.get("gv_nueva_fecha")
 
     if not venta_id_str or not motivo or not nueva_fecha_str:
+        logger.error(
+            "editar confirm: estado incompleto — gv_nueva_fecha/gv_venta_id/gv_motivo faltante"
+        )
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.error_generico"),
