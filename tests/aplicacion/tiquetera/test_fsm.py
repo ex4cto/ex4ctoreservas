@@ -882,7 +882,7 @@ class TestEditarSelector:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
         assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
         assert len(salida.opciones) > 0
-        assert "Cliente" in salida.opciones
+        assert "Nombre cliente" in salida.opciones
 
     def test_editar_selector_campo_invalido_repite(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -893,7 +893,7 @@ class TestEditarSelector:
     def test_editar_selector_cliente_va_a_cliente_nombre(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Nombre cliente", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
         assert salida.contexto.modo_edicion is True
 
@@ -1118,9 +1118,9 @@ class TestProcesarFotoModoEdicion:
             ninos=0,
             modo_edicion=True,
         )
-        # Simulate: user selected "Cliente" in EDITAR_SELECTOR → CLIENTE_NOMBRE with modo_edicion
+        # Simulate: user selected "Nombre cliente" in EDITAR_SELECTOR → CLIENTE_NOMBRE
         # Now user types the new name — procesar_foto is called with EDITAR_SELECTOR
-        salida = fsm.procesar_foto(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx)
+        salida = fsm.procesar_foto(EstadoFSM.EDITAR_SELECTOR, "Nombre cliente", ctx)
         # _handle_editar_selector sets modo_edicion=True and returns CLIENTE_NOMBRE.
         # Without the fix, procesar_foto would auto-advance through pre-filled states.
         # With the fix it must stop at CLIENTE_NOMBRE.
@@ -1315,9 +1315,9 @@ class TestEditarParticipantesPicker:
     def test_editar_vendedor_emite_picker_todos(
         self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """Selecting 'Participantes' in EDITAR_SELECTOR emits EDITAR_VENDEDOR with all roster."""
+        """Selecting 'Vendedor/Cerrador' in EDITAR_SELECTOR emits EDITAR_VENDEDOR."""
         ctx = ContextoVenta(rol_registrante="vendedor")
-        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Participantes", ctx)
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Vendedor/Cerrador", ctx)
         assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR
         assert s.opciones_estructuradas is not None
         # Includes inactive (3 total)
@@ -1355,10 +1355,9 @@ class TestEditarParticipantesPicker:
     def test_editar_cerrador_emite_picker_todos(
         self, fsm_con_roster: FSMTiquetera
     ) -> None:
-        """EDITAR_SELECTOR → 'Participantes' with rol=cerrador goes to EDITAR_VENDEDOR with picker.
-        """
+        """EDITAR_SELECTOR → 'Vendedor/Cerrador' with rol=cerrador goes to EDITAR_VENDEDOR."""
         ctx = ContextoVenta(rol_registrante="cerrador")
-        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Participantes", ctx)
+        s = fsm_con_roster.procesar(EstadoFSM.EDITAR_SELECTOR, "Vendedor/Cerrador", ctx)
         assert s.nuevo_estado == EstadoFSM.EDITAR_VENDEDOR
         assert s.opciones_estructuradas is not None
         assert len(s.opciones_estructuradas) == 3
@@ -1375,7 +1374,7 @@ class TestEditarParticipantes:
         from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
 
         campos_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
-        assert campos_map.get("Participantes") == EstadoFSM.EDITAR_VENDEDOR
+        assert campos_map.get("Vendedor/Cerrador") == EstadoFSM.EDITAR_VENDEDOR
 
     def test_editar_participantes_ambos_pide_vendedor_luego_cerrador(
         self, fsm_con_roster: FSMTiquetera
@@ -1434,7 +1433,7 @@ class TestEditarParticipantes:
         from garay.aplicacion.tiquetera.fsm import _CAMPOS_EDITABLES
 
         campos_map = {label: estado for label, estado in _CAMPOS_EDITABLES}
-        assert campos_map.get("Participantes") != EstadoFSM.PARTICIPANTE_ROL
+        assert campos_map.get("Vendedor/Cerrador") != EstadoFSM.PARTICIPANTE_ROL
 
     def test_editar_vendedor_estado_existe_en_enum(self) -> None:
         """EstadoFSM.EDITAR_VENDEDOR and EDITAR_CERRADOR must exist."""
@@ -1593,7 +1592,7 @@ class TestEditarMensajesConValorActual:
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
         ctx_completo.cliente_nombre = "Juan Pérez"
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Cliente", ctx_completo)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Nombre cliente", ctx_completo)
         assert "Juan Pérez" in salida.mensaje
 
     def test_editar_telefono_muestra_valor_actual(
@@ -1630,7 +1629,7 @@ class TestEditarMensajesConValorActual:
     ) -> None:
         import datetime
         ctx_completo.fecha_salida = datetime.datetime(2026, 7, 25, 9, 0)
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Fecha", ctx_completo)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Fecha de salida", ctx_completo)
         assert "25/07/2026" in salida.mensaje
 
     def test_editar_adultos_muestra_ambos_valores(
@@ -1647,7 +1646,7 @@ class TestEditarMensajesConValorActual:
     ) -> None:
         from decimal import Decimal
         ctx_completo.valor = Decimal("260000")
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Monto valor", ctx_completo)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Valor de venta", ctx_completo)
         assert "$260.000" in salida.mensaje
 
     def test_editar_abono_muestra_monto_formateado(

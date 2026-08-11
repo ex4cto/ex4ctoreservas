@@ -150,7 +150,7 @@ class RegistrarVentaService:
         vendedor = cmd.participantes.vendedor_nombre or "—"
         cerrador = cmd.participantes.cerrador_nombre or "—"
 
-        lineas: list[str] = ["🎉 <b>Nueva venta registrada</b>", ""]
+        lineas: list[str] = ["🎉 <b>Nueva venta registrada</b>", "Agencia Garay Tours", ""]
 
         if cmd.servicio_nombres:
             lineas.append(f"📍 Destino: {', '.join(cmd.servicio_nombres)}")

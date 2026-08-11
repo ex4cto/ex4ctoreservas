@@ -176,7 +176,7 @@ class TestEditorSelectorCanalOrigen:
     ) -> None:
         ctx = _ctx_completo_con_canal("TikTok")
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
-        assert "Canal" in salida.opciones
+        assert "Canal de origen" in salida.opciones
 
     def test_editar_selector_oculta_canal_para_interno(
         self, fsm: FSMTiquetera
@@ -184,16 +184,16 @@ class TestEditorSelectorCanalOrigen:
         ctx = _ctx_externo_completo()
         ctx.tipo_cliente = TipoCliente.INTERNO
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✏️ Editar", ctx)
-        assert "Canal" not in salida.opciones
+        assert "Canal de origen" not in salida.opciones
 
     def test_editar_selector_rechaza_canal_para_tipo_no_digital_via_texto(
         self, fsm: FSMTiquetera
     ) -> None:
-        """JD-W1: Guard fires BEFORE campo_map.get; Canal for INTERNO stays in EDITAR_SELECTOR."""
+        """JD-W1: Guard fires BEFORE campo_map.get; 'Canal de origen' for INTERNO bounces."""
         ctx = _ctx_externo_completo()
         ctx.tipo_cliente = TipoCliente.INTERNO
         ctx.modo_edicion = True
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Canal", ctx)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Canal de origen", ctx)
         assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
 
 

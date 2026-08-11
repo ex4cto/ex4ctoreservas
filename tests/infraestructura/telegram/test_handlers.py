@@ -397,6 +397,78 @@ class TestCmdFoto:
         update.effective_message.reply_text.assert_called_once()
 
 
+class TestTourPickerColumns:
+    """Tour picker must render 1 button per row; freelancer picker keeps 2 columns."""
+
+    def _opciones_tour(self) -> list[tuple[str, str]]:
+        return [
+            ("Tour Playa Blanca — Barú (larga descripción)", "srv:1"),
+            ("Tour Islas del Rosario — Cartagena", "srv:2"),
+            ("Tour Ciudad Amurallada y Castillo San Felipe", "srv:3"),
+        ]
+
+    def _opciones_freelancer(self) -> list[tuple[str, str]]:
+        return [("Ana", "fl:1"), ("Bob", "fl:2"), ("Carol", "fl:3"), ("Dan", "fl:4")]
+
+    def test_teclado_estructurado_una_columna_pone_un_boton_por_fila(self) -> None:
+        from garay.infraestructura.telegram.handlers import _teclado_estructurado
+
+        markup = _teclado_estructurado(self._opciones_tour(), columnas=1)
+        assert markup is not None
+        assert all(len(row) == 1 for row in markup.inline_keyboard)
+
+    def test_teclado_estructurado_dos_columnas_pone_dos_botones_por_fila(self) -> None:
+        from garay.infraestructura.telegram.handlers import _teclado_estructurado
+
+        markup = _teclado_estructurado(self._opciones_freelancer(), columnas=2)
+        assert markup is not None
+        # First 2 rows should each have 2 buttons
+        full_rows = [row for row in markup.inline_keyboard if len(row) == 2]
+        assert len(full_rows) == 2
+
+    def test_enviar_salida_tour_picker_usa_una_columna(self) -> None:
+        """SERVICIO_EN_FAMILIA and DESTINO states must produce 1-column keyboard."""
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM, SalidaFSM
+        from garay.dominio.ventas.contexto import ContextoVenta
+        from garay.infraestructura.telegram.handlers import _columnas_para_salida
+
+        salida_tour = SalidaFSM(
+            nuevo_estado=EstadoFSM.SERVICIO_EN_FAMILIA,
+            mensaje="Elige tour",
+            opciones_estructuradas=self._opciones_tour(),
+            contexto=ContextoVenta(),
+        )
+        assert _columnas_para_salida(salida_tour) == 1
+
+    def test_enviar_salida_destino_acumulador_usa_una_columna(self) -> None:
+        """DESTINO accumulator must also produce 1-column keyboard."""
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM, SalidaFSM
+        from garay.dominio.ventas.contexto import ContextoVenta
+        from garay.infraestructura.telegram.handlers import _columnas_para_salida
+
+        salida_destino = SalidaFSM(
+            nuevo_estado=EstadoFSM.DESTINO,
+            mensaje="Destinos",
+            opciones_estructuradas=self._opciones_tour(),
+            contexto=ContextoVenta(),
+        )
+        assert _columnas_para_salida(salida_destino) == 1
+
+    def test_enviar_salida_freelancer_picker_usa_dos_columnas(self) -> None:
+        """EDITAR_VENDEDOR must keep 2-column keyboard."""
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM, SalidaFSM
+        from garay.dominio.ventas.contexto import ContextoVenta
+        from garay.infraestructura.telegram.handlers import _columnas_para_salida
+
+        salida_fl = SalidaFSM(
+            nuevo_estado=EstadoFSM.EDITAR_VENDEDOR,
+            mensaje="Elige vendedor",
+            opciones_estructuradas=self._opciones_freelancer(),
+            contexto=ContextoVenta(),
+        )
+        assert _columnas_para_salida(salida_fl) == 2
+
+
 class TestCmdStart:
     """WU-6: /start shows menu and returns END (does not start FSM)."""
 

@@ -217,6 +217,27 @@ class TestMensajeNotificacion:
         assert "Cerrador" in mensaje
         assert "Valor:" in mensaje
 
+    def test_mensaje_contiene_agencia_garay_tours_despues_del_titulo(self) -> None:
+        """Group notification must show 'Agencia Garay Tours' on the second line."""
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd())
+        mensaje = notificador.notificar.call_args.args[0]
+        lineas = mensaje.splitlines()
+        assert any("Nueva venta registrada" in linea for linea in lineas), "title line missing"
+        titulo_idx = next(i for i, linea in enumerate(lineas) if "Nueva venta registrada" in linea)
+        assert titulo_idx + 1 < len(lineas), "no line after title"
+        assert lineas[titulo_idx + 1] == "Agencia Garay Tours"
+
+    def test_agencia_titulo_seguido_de_linea_en_blanco(self) -> None:
+        """After 'Agencia Garay Tours' there must be a blank separator line."""
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(servicio_nombres=["Isla Barú"]))
+        mensaje = notificador.notificar.call_args.args[0]
+        lineas = mensaje.splitlines()
+        agencia_idx = next(i for i, linea in enumerate(lineas) if linea == "Agencia Garay Tours")
+        assert agencia_idx + 1 < len(lineas), "no line after agency title"
+        assert lineas[agencia_idx + 1] == "", "expected blank separator after agency title"
+
     def test_mensaje_contiene_cliente_nombre(self) -> None:
         service, notificador = self._capturar_mensaje()
         service.ejecutar(_cmd(cliente_nombre="María García"))
