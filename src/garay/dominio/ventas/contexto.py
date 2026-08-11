@@ -36,6 +36,7 @@ class ContextoVenta:
     numero_fisico: str | None = None
     rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"
     modo_edicion: bool = False
+    tour_adicional: bool = False
     foto_modo: bool = False
     cliente_email: str | None = None
     cliente_identificacion: str | None = None

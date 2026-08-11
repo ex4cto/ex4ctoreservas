@@ -464,6 +464,13 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Registrá uno con /nuevo_freelancer y volvé a intentar."
         )
     },
+    # --- Slice 2: otro tour para el mismo cliente ---
+    "pregunta_otro_tour": {Idioma.ES: "¿Registrar otro tour para {cliente}?"},
+    "boton_otro_tour": {Idioma.ES: "➕ Otro tour"},  # noqa: RUF001
+    "boton_terminar": {Idioma.ES: "🏁 Terminar"},
+    "resumen_reservas": {
+        Idioma.ES: "Listo: {cantidad} reserva(s) registrada(s) para {cliente}."
+    },
 }
 
 

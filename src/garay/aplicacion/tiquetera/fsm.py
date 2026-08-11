@@ -49,6 +49,7 @@ class EstadoFSM(StrEnum):
     EDITAR_SELECTOR = "editar_selector"
     EDITAR_VENDEDOR = "editar_vendedor"
     EDITAR_CERRADOR = "editar_cerrador"
+    OTRO_TOUR = "otro_tour"
     TERMINADO = "terminado"
     CANCELADO = "cancelado"
 
@@ -240,6 +241,37 @@ class FSMTiquetera:
             opciones=["Manual", "Foto"],
             contexto=ContextoVenta(),
         )
+
+    def iniciar_otro_tour(self, contexto: ContextoVenta) -> SalidaFSM:
+        """Reset per-tour fields and route to FAMILIA for a subsequent tour.
+
+        Preserves: client identity, hotel, modalidad/punto/canal/tipo.
+        Clears: all per-tour fields including participants and numero_fisico.
+        Sets: tour_adicional=True, modo_edicion=False.
+        """
+        ctx = _clonar(contexto)
+        # Clear per-tour fields
+        ctx.destinos_numeros = []
+        ctx.destinos_nombres = []
+        ctx.familia_seleccionada = None
+        ctx.fechas_por_servicio = {}
+        ctx.fecha_salida = None
+        ctx.adultos = None
+        ctx.ninos = None
+        ctx.valor = None
+        ctx.abono = None
+        ctx.neto = None
+        ctx.numero_fisico = None
+        ctx.vendedor_nombre = None
+        ctx.vendedor_id = None
+        ctx.cerrador_nombre = None
+        ctx.cerrador_id = None
+        ctx.referido_nombre = None
+        ctx.rol_registrante = None
+        # Set discriminator and navigation flags
+        ctx.tour_adicional = True
+        ctx.modo_edicion = False
+        return self._salida_familia(ctx)
 
     def procesar(
         self,
@@ -750,6 +782,13 @@ class FSMTiquetera:
                 contexto=ctx,
             )
 
+        # Subsequent tour: client already captured — skip straight to date capture.
+        if ctx.tour_adicional:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.FECHA_SALIDA,
+                mensaje=self._mensaje_entrada_fecha_salida(ctx),
+                contexto=ctx,
+            )
         # Normal registration: route straight to CLIENTE_NOMBRE (one tour confirmed).
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_NOMBRE,

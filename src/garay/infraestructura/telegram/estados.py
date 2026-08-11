@@ -34,6 +34,7 @@ ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.CLIENTE_EMAIL: 25,
     EstadoFSM.CLIENTE_TIPO_ID: 26,
     EstadoFSM.CLIENTE_IDENTIFICACION: 27,
+    EstadoFSM.OTRO_TOUR: 30,
     EstadoFSM.TERMINADO: 18,
     EstadoFSM.CANCELADO: 19,
 }

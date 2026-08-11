@@ -55,6 +55,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_monto_abono,
     handle_monto_neto,
     handle_monto_valor,
+    handle_otro_tour,
     handle_participante_otro,
     handle_participante_rol,
     handle_pax_adultos,
@@ -345,6 +346,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             estados[EstadoFSM.CONFIRMACION]: [
                 _CB(handle_confirmacion),
                 MessageHandler(_TEXT, handle_confirmacion),
+            ],
+            estados[EstadoFSM.OTRO_TOUR]: [
+                _CB(handle_otro_tour),
+                MessageHandler(_TEXT, handle_otro_tour),
             ],
             estados[EstadoFSM.EDITAR_SELECTOR]: [
                 _CB(handle_editar_selector),
