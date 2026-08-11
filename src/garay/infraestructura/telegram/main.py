@@ -22,6 +22,7 @@ from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
+from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
@@ -29,6 +30,9 @@ from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
+    SQLAAuditoriaVentaRepository,
+)
 from garay.infraestructura.persistencia.repositorios.categorias_egreso import (
     SQLACategoriaEgresoRepository,
 )
@@ -88,6 +92,9 @@ def main() -> None:
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
     gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
     factura_repo = SQLAFacturaRepository(sf)
+
+    auditoria_venta_repo = SQLAAuditoriaVentaRepository(sf)
+    anular_venta_service = AnularVentaService(ventas=ventas_repo, auditoria=auditoria_venta_repo)
 
     egreso_service = RegistrarEgresoManualService(
         egreso_repo=egreso_repo,
@@ -212,6 +219,8 @@ def main() -> None:
             "reconciliacion_service": reconciliacion_service,
             "factura_service": factura_service,
             "factura_repo": factura_repo,
+            "auditoria_venta_repo": auditoria_venta_repo,
+            "anular_venta_service": anular_venta_service,
         }
     )
 
