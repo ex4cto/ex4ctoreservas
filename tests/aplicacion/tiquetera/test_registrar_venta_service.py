@@ -238,6 +238,22 @@ class TestMensajeNotificacion:
         assert agencia_idx + 1 < len(lineas), "no line after agency title"
         assert lineas[agencia_idx + 1] == "", "expected blank separator after agency title"
 
+    def test_mensaje_muestra_saldo_pendiente_no_neto(self) -> None:
+        """Group message shows saldo pendiente (valor - abono), never the internal neto."""
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(abono=Dinero(400_000)))
+        mensaje = notificador.notificar.call_args.args[0]
+        # valor 1.000.000 - abono 400.000 = 600.000
+        assert "Saldo pendiente: $600.000" in mensaje
+        assert "Neto" not in mensaje
+
+    def test_saldo_pendiente_sin_abono_es_el_valor_total(self) -> None:
+        """With no abono, saldo pendiente equals the full sale value."""
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd())
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Saldo pendiente: $1.000.000" in mensaje
+
     def test_mensaje_contiene_cliente_nombre(self) -> None:
         service, notificador = self._capturar_mensaje()
         service.ejecutar(_cmd(cliente_nombre="María García"))
