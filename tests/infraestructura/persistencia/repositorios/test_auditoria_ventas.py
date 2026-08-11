@@ -109,6 +109,45 @@ def test_listar_por_venta_id_datos_previos_none(sf: sessionmaker[Session]) -> No
     assert results[0].realizada_por_nombre is None
 
 
+def test_realizada_at_timezone_aware_round_trip(sf: sessionmaker[Session]) -> None:
+    """realizada_at with tzinfo=UTC survives guardar → listar_por_venta_id.
+
+    SQLite stores TIMESTAMP WITH TIME ZONE as text; on read it returns a naive
+    datetime.  The assertion mirrors the pattern used in test_ingresos.py: compare
+    the value to what was stored (equality), accepting that SQLite may strip tzinfo
+    while Postgres preserves it.  The column is declared DateTime(timezone=True)
+    in both the ORM model and migration 0010, so on Postgres the round-trip is
+    exact.
+    """
+    cliente_id = _make_cliente(sf)
+    venta_id = _make_venta(sf, cliente_id)
+    repo = SQLAAuditoriaVentaRepository(sf)
+
+    tz_at = datetime.datetime(2026, 8, 11, 12, 0, tzinfo=datetime.UTC)
+    registro = AuditoriaVenta(
+        id=uuid.uuid4(),
+        venta_id=venta_id,
+        accion=AccionAuditoria.ANULAR,
+        motivo="tz-aware test",
+        realizada_por_telegram_id=999,
+        realizada_por_nombre="TzUser",
+        realizada_at=tz_at,
+        datos_previos=None,
+    )
+    repo.guardar(registro)
+
+    results = repo.listar_por_venta_id(venta_id)
+    assert len(results) == 1
+    stored = results[0].realizada_at
+    # Normalize both sides to UTC-offset-naive for comparison so the test
+    # passes on both SQLite (naive) and Postgres (tz-aware).
+    if stored.tzinfo is not None:
+        stored_naive = stored.astimezone(datetime.UTC).replace(tzinfo=None)
+    else:
+        stored_naive = stored
+    assert stored_naive == tz_at.replace(tzinfo=None)
+
+
 def test_listar_por_venta_id_ordered_by_realizada_at(sf: sessionmaker[Session]) -> None:
     """Multiple audit records are returned ordered by realizada_at ascending."""
     cliente_id = _make_cliente(sf)

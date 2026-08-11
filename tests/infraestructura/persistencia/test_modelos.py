@@ -73,6 +73,7 @@ def test_venta_columns_present() -> None:
         "cerrador_nombre",
         "punto_de_venta_id",
         "referido_nombre",
+        "anulada",
     }.issubset(cols)
 
 

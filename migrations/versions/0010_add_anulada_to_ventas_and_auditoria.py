@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column("motivo", sa.Text(), nullable=False),
         sa.Column("realizada_por_telegram_id", sa.BigInteger(), nullable=False),
         sa.Column("realizada_por_nombre", sa.String(), nullable=True),
-        sa.Column("realizada_at", sa.DateTime(), nullable=False),
+        sa.Column("realizada_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("datos_previos", sa.JSON(), nullable=True),
     )
 

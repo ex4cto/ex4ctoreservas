@@ -323,5 +323,5 @@ class AuditoriaVentaModel(Base):
     motivo: Mapped[str] = mapped_column(Text, nullable=False)
     realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
-    realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+    realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     datos_previos: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
