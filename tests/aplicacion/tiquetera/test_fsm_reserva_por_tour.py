@@ -22,6 +22,7 @@ from decimal import Decimal
 import pytest
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
 # ---------------------------------------------------------------------------
@@ -445,6 +446,13 @@ class TestIniciarOtroTour:
         salida = fsm_one_tour.iniciar_otro_tour(ctx)
         assert salida.opciones_estructuradas is not None
         assert len(salida.opciones_estructuradas) > 0
+
+    def test_preserves_tipo_cliente_non_none(self, fsm_one_tour: FSMTiquetera) -> None:
+        """tipo_cliente must survive iniciar_otro_tour; regression guard for _contexto_a_comando."""
+        ctx = _ctx_completo()
+        ctx.tipo_cliente = TipoCliente.EXTERNO
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.tipo_cliente == TipoCliente.EXTERNO
 
 
 # ---------------------------------------------------------------------------

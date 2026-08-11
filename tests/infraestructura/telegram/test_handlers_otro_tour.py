@@ -270,6 +270,41 @@ class TestConfirmacionOtroTourHook:
 
         assert result == ConversationHandler.END
 
+    @pytest.mark.asyncio
+    async def test_otro_tour_prompt_sent_as_new_message_not_edit(self) -> None:
+        """OTRO_TOUR prompt must be a NEW send_message, not edit_message_text (Fix 2)."""
+        from garay.infraestructura.telegram.handlers import handle_confirmacion
+
+        ctx_venta = _make_ctx_listo()
+        fsm = _make_fsm()
+        svc = _make_registro_service()
+
+        update = _make_update_cb("✅ Confirmar")
+        context = _make_context(
+            fsm=fsm, ctx=ctx_venta, bot_data_extra={"registrar_venta_service": svc}
+        )
+
+        salida_listo = SalidaFSM(
+            nuevo_estado=EstadoFSM.TERMINADO,
+            mensaje="ok",
+            listo=True,
+            contexto=ctx_venta,
+        )
+        with patch.object(fsm, "procesar_foto", return_value=salida_listo):
+            await handle_confirmacion(update, context)
+
+        # The OTRO_TOUR prompt must arrive via send_message (new message below success msg)
+        send_calls = context.bot.send_message.call_args_list
+        pregunta = obtener_mensaje("pregunta_otro_tour").format(cliente="Juan Perez")
+        found = any(pregunta in str(call) for call in send_calls)
+        assert found, f"pregunta_otro_tour not found in send_message calls: {send_calls}"
+        # edit_message_text must NOT have been used for the OTRO_TOUR prompt
+        edit_calls = update.callback_query.edit_message_text.call_args_list
+        edit_with_prompt = any(pregunta in str(call) for call in edit_calls)
+        assert not edit_with_prompt, (
+            f"pregunta_otro_tour was incorrectly sent via edit_message_text: {edit_calls}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Task 6b: handle_otro_tour
@@ -379,3 +414,38 @@ class TestHandleOtroTour:
         result = await handle_otro_tour(update, context)
 
         assert result == ESTADO_PTB[EstadoFSM.OTRO_TOUR]
+
+
+# ---------------------------------------------------------------------------
+# Fix 1: handle_iniciar_venta resets reservas_registradas counter
+# ---------------------------------------------------------------------------
+
+
+class TestIniciarVentaResetsCounter:
+    """handle_iniciar_venta must reset reservas_registradas to 0 on every new sale."""
+
+    @pytest.mark.asyncio
+    async def test_resets_stale_counter_to_zero(self) -> None:
+        """Counter left over from a previous session must be zeroed at sale start."""
+        from unittest.mock import patch
+
+        from garay.infraestructura.telegram.handlers import handle_iniciar_venta
+
+        fsm = _make_fsm()
+        update = _make_update_text("/nueva_venta")
+        context = _make_context(fsm=fsm, user_data_extra={"reservas_registradas": 5})
+
+        # Patch FSM.iniciar to avoid real state transitions
+        salida_inicio = __import__(
+            "garay.aplicacion.tiquetera.fsm", fromlist=["SalidaFSM"]
+        ).SalidaFSM(
+            nuevo_estado=__import__(
+                "garay.aplicacion.tiquetera.fsm", fromlist=["EstadoFSM"]
+            ).EstadoFSM.METODO_INPUT,
+            mensaje="¿Cómo registrás?",
+            contexto=None,
+        )
+        with patch.object(fsm, "iniciar", return_value=salida_inicio):
+            await handle_iniciar_venta(update, context)
+
+        assert context.user_data.get("reservas_registradas") == 0

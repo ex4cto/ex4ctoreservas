@@ -316,6 +316,8 @@ async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYP
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
+    if context.user_data is not None:
+        context.user_data["reservas_registradas"] = 0
     salida = fsm.iniciar()
     return await _enviar_salida(update, context, salida)
 
@@ -562,18 +564,24 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
             context.user_data["reservas_registradas"] = (  # type: ignore[index]
                 context.user_data.get("reservas_registradas", 0) + 1  # type: ignore[union-attr]
             )
-            prompt = SalidaFSM(
-                nuevo_estado=EstadoFSM.OTRO_TOUR,
-                mensaje=obtener_mensaje("pregunta_otro_tour").format(
-                    cliente=salida.contexto.cliente_nombre or "el cliente"
-                ),
-                opciones=[
+            context.user_data["contexto"] = salida.contexto  # type: ignore[index]
+            mensaje_otro = obtener_mensaje("pregunta_otro_tour").format(
+                cliente=salida.contexto.cliente_nombre or "el cliente"
+            )
+            teclado_otro = _teclado(
+                [
                     obtener_mensaje("boton_otro_tour"),
                     obtener_mensaje("boton_terminar"),
-                ],
-                contexto=salida.contexto,
+                ]
             )
-            return await _enviar_salida(update, context, prompt)
+            if update.effective_chat:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=mensaje_otro,
+                    reply_markup=teclado_otro,
+                    parse_mode="Markdown",
+                )
+            return ESTADO_PTB[EstadoFSM.OTRO_TOUR]
         return await _enviar_salida(update, context, salida)
 
     handler.__name__ = f"handle_{estado.value}"
