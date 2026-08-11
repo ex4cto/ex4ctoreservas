@@ -316,6 +316,8 @@ async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYP
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
+    if context.user_data is not None:
+        context.user_data["reservas_registradas"] = 0
     salida = fsm.iniciar()
     return await _enviar_salida(update, context, salida)
 
@@ -495,6 +497,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
             salida.listo,
             salida.nuevo_estado,
         )
+        registro_exitoso: bool = False
         if salida.listo:
             cmd = _contexto_a_comando(update, context, salida.contexto)
             if cmd is not None:
@@ -546,6 +549,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                                 )
                             except Exception:
                                 logger.exception("Error al generar/guardar la factura")
+                        registro_exitoso = True
                     except Exception:
                         logger.exception("Error al registrar venta")
                         if update.effective_message:
@@ -556,6 +560,28 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                         return ConversationHandler.END
                 else:
                     logger.error("registrar_venta_service not found in bot_data")
+        if registro_exitoso:
+            context.user_data["reservas_registradas"] = (  # type: ignore[index]
+                context.user_data.get("reservas_registradas", 0) + 1  # type: ignore[union-attr]
+            )
+            context.user_data["contexto"] = salida.contexto  # type: ignore[index]
+            mensaje_otro = obtener_mensaje("pregunta_otro_tour").format(
+                cliente=salida.contexto.cliente_nombre or "el cliente"
+            )
+            teclado_otro = _teclado(
+                [
+                    obtener_mensaje("boton_otro_tour"),
+                    obtener_mensaje("boton_terminar"),
+                ]
+            )
+            if update.effective_chat:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=mensaje_otro,
+                    reply_markup=teclado_otro,
+                    parse_mode="Markdown",
+                )
+            return ESTADO_PTB[EstadoFSM.OTRO_TOUR]
         return await _enviar_salida(update, context, salida)
 
     handler.__name__ = f"handle_{estado.value}"
@@ -592,6 +618,59 @@ handle_confirmacion = _make_handler(EstadoFSM.CONFIRMACION)
 handle_editar_selector = _make_handler(EstadoFSM.EDITAR_SELECTOR)
 handle_editar_vendedor = _make_handler(EstadoFSM.EDITAR_VENDEDOR)
 handle_editar_cerrador = _make_handler(EstadoFSM.EDITAR_CERRADOR)
+
+
+async def handle_otro_tour(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle the OTRO_TOUR state: offer another tour for the same client or end."""
+    if update.callback_query:
+        try:
+            await update.callback_query.answer()
+        except Exception:
+            logger.warning("callback_query.answer() failed — query may be too old")
+    entrada: str = ""
+    if update.callback_query:
+        entrada = update.callback_query.data or ""
+    elif update.message and update.message.text:
+        entrada = update.message.text
+
+    boton_otro = obtener_mensaje("boton_otro_tour")
+    boton_terminar = obtener_mensaje("boton_terminar")
+
+    if entrada == boton_otro:
+        fsm = _get_fsm(context)
+        if fsm is None:
+            return ConversationHandler.END
+        ctx = _get_contexto(context)
+        salida = fsm.iniciar_otro_tour(ctx)
+        return await _enviar_salida(update, context, salida)
+
+    if entrada == boton_terminar:
+        ctx = _get_contexto(context)
+        n: int = context.user_data.get("reservas_registradas", 0)  # type: ignore[union-attr]
+        cliente = ctx.cliente_nombre or "el cliente"
+        resumen = obtener_mensaje("resumen_reservas").format(cantidad=n, cliente=cliente)
+        if update.callback_query:
+            try:
+                await update.callback_query.edit_message_text(resumen)
+            except Exception:
+                if update.effective_message:
+                    await update.effective_message.reply_text(resumen)
+        elif update.effective_message:
+            await update.effective_message.reply_text(resumen)
+        context.user_data["reservas_registradas"] = 0  # type: ignore[index]
+        return ConversationHandler.END
+
+    # Unknown input: re-send the prompt, stay in OTRO_TOUR
+    ctx = _get_contexto(context)
+    prompt = SalidaFSM(
+        nuevo_estado=EstadoFSM.OTRO_TOUR,
+        mensaje=obtener_mensaje("pregunta_otro_tour").format(
+            cliente=ctx.cliente_nombre or "el cliente"
+        ),
+        opciones=[boton_otro, boton_terminar],
+        contexto=ctx,
+    )
+    return await _enviar_salida(update, context, prompt)
 
 
 @requiere_rol

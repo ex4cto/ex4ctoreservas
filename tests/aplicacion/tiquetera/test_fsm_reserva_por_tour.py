@@ -22,6 +22,7 @@ from decimal import Decimal
 import pytest
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
 # ---------------------------------------------------------------------------
@@ -237,3 +238,265 @@ class TestMultiTourModePreserved:
         else:
             labels = list(salida.opciones)
         assert any("Confirmar" in lbl for lbl in labels)
+
+
+# ---------------------------------------------------------------------------
+# Slice 2: iniciar_otro_tour
+# ---------------------------------------------------------------------------
+
+
+def _ctx_completo() -> ContextoVenta:
+    """A fully-filled ContextoVenta representing a completed first-tour registration."""
+    import uuid
+    from decimal import Decimal
+
+    return ContextoVenta(
+        tipo_cliente=None,  # TipoCliente not imported here — None is fine for preservation tests
+        punto_de_venta_nombre="Marie Real",
+        canal_origen="WhatsApp",
+        cliente_nombre="Juan Perez",
+        cliente_telefono="3001234567",
+        cliente_email="juan@example.com",
+        cliente_identificacion="123456789",
+        cliente_tipo_identificacion="CC",
+        cliente_hotel="Hotel Caribe",
+        cliente_habitacion="101",
+        sin_hotel=False,
+        # Per-tour fields (must be cleared)
+        destinos_numeros=[1],
+        destinos_nombres=["Tour Playa Blanca"],
+        familia_seleccionada="BARÚ",
+        fecha_salida=datetime.datetime(2026, 9, 15, 8, 0),
+        fechas_por_servicio={1: datetime.datetime(2026, 9, 15, 8, 0)},
+        adultos=2,
+        ninos=1,
+        valor=Decimal("300000"),
+        abono=Decimal("100000"),
+        neto=Decimal("200000"),
+        numero_fisico="T-001",
+        vendedor_nombre="Maria Lopez",
+        vendedor_id=uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        cerrador_nombre="Pedro Gomez",
+        cerrador_id=uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+        referido_nombre="Carlos",
+        rol_registrante="ambos",
+        modo_edicion=False,
+        tour_adicional=False,
+    )
+
+
+class TestIniciarOtroTour:
+    """Slice 2 — FSMTiquetera.iniciar_otro_tour resets per-tour fields, keeps client."""
+
+    def test_preserves_cliente_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_nombre == "Juan Perez"
+
+    def test_preserves_cliente_telefono(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_telefono == "3001234567"
+
+    def test_preserves_cliente_email(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_email == "juan@example.com"
+
+    def test_preserves_cliente_identificacion(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_identificacion == "123456789"
+
+    def test_preserves_cliente_tipo_identificacion(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_tipo_identificacion == "CC"
+
+    def test_preserves_cliente_hotel(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_hotel == "Hotel Caribe"
+
+    def test_preserves_cliente_habitacion(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cliente_habitacion == "101"
+
+    def test_preserves_sin_hotel(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.sin_hotel is False
+
+    def test_preserves_punto_de_venta_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.punto_de_venta_nombre == "Marie Real"
+
+    def test_preserves_canal_origen(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.canal_origen == "WhatsApp"
+
+    def test_clears_destinos_numeros(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.destinos_numeros == []
+
+    def test_clears_destinos_nombres(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.destinos_nombres == []
+
+    def test_clears_familia_seleccionada(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.familia_seleccionada is None
+
+    def test_clears_fechas_por_servicio(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.fechas_por_servicio == {}
+
+    def test_clears_fecha_salida(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.fecha_salida is None
+
+    def test_clears_adultos(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.adultos is None
+
+    def test_clears_ninos(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.ninos is None
+
+    def test_clears_valor(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.valor is None
+
+    def test_clears_abono(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.abono is None
+
+    def test_clears_neto(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.neto is None
+
+    def test_clears_numero_fisico(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.numero_fisico is None
+
+    def test_clears_vendedor_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.vendedor_nombre is None
+
+    def test_clears_vendedor_id(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.vendedor_id is None
+
+    def test_clears_cerrador_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cerrador_nombre is None
+
+    def test_clears_cerrador_id(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.cerrador_id is None
+
+    def test_clears_referido_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.referido_nombre is None
+
+    def test_clears_rol_registrante(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.rol_registrante is None
+
+    def test_sets_tour_adicional_true(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.tour_adicional is True
+
+    def test_clears_modo_edicion(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        ctx.modo_edicion = True
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.modo_edicion is False
+
+    def test_routes_to_familia(self, fsm_one_tour: FSMTiquetera) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.nuevo_estado == EstadoFSM.FAMILIA
+
+    def test_family_picker_opciones_estructuradas_populated(
+        self, fsm_one_tour: FSMTiquetera
+    ) -> None:
+        ctx = _ctx_completo()
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.opciones_estructuradas is not None
+        assert len(salida.opciones_estructuradas) > 0
+
+    def test_preserves_tipo_cliente_non_none(self, fsm_one_tour: FSMTiquetera) -> None:
+        """tipo_cliente must survive iniciar_otro_tour; regression guard for _contexto_a_comando."""
+        ctx = _ctx_completo()
+        ctx.tipo_cliente = TipoCliente.EXTERNO
+        salida = fsm_one_tour.iniciar_otro_tour(ctx)
+        assert salida.contexto.tipo_cliente == TipoCliente.EXTERNO
+
+
+# ---------------------------------------------------------------------------
+# Slice 2: servicio_en_familia with tour_adicional=True
+# ---------------------------------------------------------------------------
+
+
+class TestServicioEnFamiliaTourAdicional:
+    """When tour_adicional=True, skip client capture and route to FECHA_SALIDA."""
+
+    def test_tour_adicional_routes_to_fecha_salida(
+        self, fsm_one_tour: FSMTiquetera
+    ) -> None:
+        """tour_adicional=True → FECHA_SALIDA (client already captured)."""
+        ctx = ContextoVenta(
+            familia_seleccionada="BARÚ",
+            cliente_nombre="Juan Perez",
+            tour_adicional=True,
+        )
+        salida = fsm_one_tour.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+
+    def test_tour_adicional_destino_appended(
+        self, fsm_one_tour: FSMTiquetera
+    ) -> None:
+        """Tour is still added to destinos_numeros before routing."""
+        ctx = ContextoVenta(
+            familia_seleccionada="BARÚ",
+            cliente_nombre="Juan Perez",
+            tour_adicional=True,
+        )
+        salida = fsm_one_tour.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert 1 in salida.contexto.destinos_numeros
+
+    def test_first_tour_still_routes_to_cliente_nombre(
+        self, fsm_one_tour: FSMTiquetera
+    ) -> None:
+        """Regression: tour_adicional=False still routes to CLIENTE_NOMBRE."""
+        ctx = ContextoVenta(familia_seleccionada="BARÚ", tour_adicional=False)
+        salida = fsm_one_tour.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_NOMBRE
+
+    def test_multi_tour_flag_unchanged(self, fsm_multi_tour: FSMTiquetera) -> None:
+        """Regression: multi_tour_habilitado=True still uses accumulator."""
+        ctx = ContextoVenta(familia_seleccionada="BARÚ", tour_adicional=True)
+        salida = fsm_multi_tour.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        assert salida.nuevo_estado == EstadoFSM.DESTINO
