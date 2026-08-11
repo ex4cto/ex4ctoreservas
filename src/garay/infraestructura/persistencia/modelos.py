@@ -139,6 +139,9 @@ class VentaModel(Base):
     cerrador_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("freelancers.id"), nullable=True
     )
+    anulada: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa.text("false"), default=False
+    )
 
 
 class TiqueteraModel(Base):
@@ -307,3 +310,18 @@ class ConciliacionModel(Base):
     notas: Mapped[str] = mapped_column(String, nullable=False, default="")
     score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
     confianza: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
+
+
+class AuditoriaVentaModel(Base):
+    __tablename__ = "auditoria_ventas"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    venta_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=False
+    )
+    accion: Mapped[str] = mapped_column(String, nullable=False)
+    motivo: Mapped[str] = mapped_column(Text, nullable=False)
+    realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    datos_previos: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

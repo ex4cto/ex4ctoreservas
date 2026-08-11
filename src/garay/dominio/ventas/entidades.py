@@ -15,6 +15,7 @@ from garay.dominio.ventas.errores import (
     GananciaNegativa,
     MonedaIncompatible,
     ValorVentaInvalido,
+    VentaYaAnulada,
 )
 from garay.dominio.ventas.valor_objetos import Participantes
 
@@ -39,6 +40,7 @@ class Venta:
     estado: EstadoVenta = field(default=EstadoVenta.PENDIENTE)
     canal_origen: str | None = None
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None
+    anulada: bool = False
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:
@@ -67,6 +69,12 @@ class Venta:
             raise DigitalConPuntoDeVenta(
                 "Una venta DIGITAL no puede tener un punto de venta asociado."
             )
+
+    def anular(self) -> None:
+        """Soft-delete: marks the venta as anulada. Raises VentaYaAnulada if already anulada."""
+        if self.anulada:
+            raise VentaYaAnulada("La venta ya fue anulada.")
+        self.anulada = True
 
     @property
     def ganancia(self) -> Dinero:

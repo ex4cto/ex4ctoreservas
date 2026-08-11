@@ -24,3 +24,7 @@ class AbonoSuperaValorVenta(ErrorDeDominio):
 
 class DigitalConPuntoDeVenta(ErrorDeDominio):
     """Una venta DIGITAL no puede tener un punto de venta asociado."""
+
+
+class VentaYaAnulada(ErrorDeDominio):
+    """No se puede anular una venta que ya fue anulada."""

@@ -480,6 +480,129 @@ def test_listar_por_periodo_still_filters_on_scalar_fecha(sf: sessionmaker[Sessi
     assert v_out.id not in ids
 
 
+# ---------------------------------------------------------------------------
+# Slice B1 — anulada soft-delete (RED → GREEN via domain+model+mapper+filter)
+# ---------------------------------------------------------------------------
+
+
+def test_anulada_round_trip(sf: sessionmaker[Session]) -> None:
+    """guardar a Venta with anulada=True and load it back preserves anulada."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 11),
+        participantes=Participantes(),
+        anulada=True,
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.anulada is True
+
+
+def test_anulada_defaults_false(sf: sessionmaker[Session]) -> None:
+    """A fresh Venta has anulada=False after round-trip."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("100000"),
+        neto=Dinero("90000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 11),
+        participantes=Participantes(),
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.anulada is False
+
+
+def _make_ventas_normal_and_anulada(
+    sf: sessionmaker[Session],
+) -> tuple[uuid.UUID, uuid.UUID]:
+    """Insert one normal and one anulada venta; return (normal_id, anulada_id)."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+
+    v_normal = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("200000"),
+        neto=Dinero("180000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 11),
+        participantes=Participantes(vendedor_nombre="Carlos"),
+    )
+    v_anulada = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("300000"),
+        neto=Dinero("270000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 11),
+        participantes=Participantes(vendedor_nombre="Carlos"),
+        anulada=True,
+    )
+    repo.guardar(v_normal)
+    repo.guardar(v_anulada)
+    return v_normal.id, v_anulada.id
+
+
+def test_listar_excludes_anuladas(sf: sessionmaker[Session]) -> None:
+    """listar() returns only non-anulada ventas."""
+    normal_id, _anulada_id = _make_ventas_normal_and_anulada(sf)
+    repo = SQLAVentaRepository(sf)
+    results = repo.listar()
+    ids = {v.id for v in results}
+    assert normal_id in ids
+    assert _anulada_id not in ids
+
+
+def test_listar_por_periodo_excludes_anuladas(sf: sessionmaker[Session]) -> None:
+    """listar_por_periodo() returns only non-anulada ventas."""
+    normal_id, _anulada_id = _make_ventas_normal_and_anulada(sf)
+    repo = SQLAVentaRepository(sf)
+    results = repo.listar_por_periodo(datetime.date(2026, 8, 1), datetime.date(2026, 8, 31))
+    ids = {v.id for v in results}
+    assert normal_id in ids
+    assert _anulada_id not in ids
+
+
+def test_listar_por_freelancer_y_periodo_excludes_anuladas(sf: sessionmaker[Session]) -> None:
+    """listar_por_freelancer_y_periodo() returns only non-anulada ventas."""
+    normal_id, _anulada_id = _make_ventas_normal_and_anulada(sf)
+    repo = SQLAVentaRepository(sf)
+    results = repo.listar_por_freelancer_y_periodo(
+        freelancer_id=uuid.uuid4(),
+        nombre="Carlos",
+        desde=datetime.date(2026, 8, 1),
+        hasta=datetime.date(2026, 8, 31),
+    )
+    ids = {v.id for v in results}
+    assert normal_id in ids
+    assert _anulada_id not in ids
+
+
+def test_buscar_por_id_still_returns_anulada(sf: sessionmaker[Session]) -> None:
+    """buscar_por_id() still returns an anulada venta (needed for future anular flow)."""
+    _normal_id, anulada_id = _make_ventas_normal_and_anulada(sf)
+    repo = SQLAVentaRepository(sf)
+    resultado = repo.buscar_por_id(anulada_id)
+    assert resultado is not None
+    assert resultado.anulada is True
+
+
 def test_listar_por_freelancer_y_periodo_still_filters_on_scalar_fecha(
     sf: sessionmaker[Session],
 ) -> None:

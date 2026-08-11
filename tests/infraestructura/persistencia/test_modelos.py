@@ -7,6 +7,7 @@ import sqlalchemy as sa
 
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (  # noqa: F401
+    AuditoriaVentaModel,
     CategoriaEgresoModel,
     ClienteModel,
     ComisionRegistradaModel,
@@ -40,6 +41,7 @@ _EXPECTED_TABLES = {
     "gastos_recurrentes",
     "facturas",
     "correos_no_parseados",
+    "auditoria_ventas",
 }
 
 
@@ -71,6 +73,7 @@ def test_venta_columns_present() -> None:
         "cerrador_nombre",
         "punto_de_venta_id",
         "referido_nombre",
+        "anulada",
     }.issubset(cols)
 
 
