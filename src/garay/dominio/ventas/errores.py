@@ -28,3 +28,11 @@ class DigitalConPuntoDeVenta(ErrorDeDominio):
 
 class VentaYaAnulada(ErrorDeDominio):
     """No se puede anular una venta que ya fue anulada."""
+
+
+class MotivoRequerido(ErrorDeDominio):
+    """Se requiere un motivo no vacío para anular una venta."""
+
+
+class VentaNoEncontrada(ErrorDeDominio):
+    """No se encontró la venta con el ID indicado."""
