@@ -1,4 +1,4 @@
-"""Tests for AnularVentaService — RED phase (TDD Slice B2)."""
+"""Tests for AnularVentaService — updated for audit-first ordering (B2 review)."""
 
 from __future__ import annotations
 
@@ -56,6 +56,51 @@ class TestAnularVentaService:
 
         venta.anular.assert_called_once()
         ventas_repo.guardar.assert_called_once_with(venta)
+        auditoria_repo.guardar.assert_called_once()
+
+    def test_success_audit_guardado_antes_que_venta(self) -> None:
+        """auditoria.guardar must be called BEFORE ventas.guardar (audit-first invariant)."""
+        venta = _make_venta()
+
+        parent = MagicMock()
+        parent.ventas = MagicMock()
+        parent.ventas.buscar_por_id.return_value = venta
+        parent.auditoria = MagicMock()
+
+        service = AnularVentaService(ventas=parent.ventas, auditoria=parent.auditoria)
+
+        cmd = AnularVentaComando(
+            venta_id=venta.id,
+            motivo="Orden de auditoria",
+            realizada_por_telegram_id=1,
+            realizada_por_nombre="Admin",
+        )
+        service.ejecutar(cmd)
+
+        # Extract the order of guardar calls via the parent mock call list.
+        guardar_calls = [c for c in parent.mock_calls if "guardar" in str(c)]
+        assert len(guardar_calls) == 2
+        # First guardar must be auditoria.guardar, not ventas.guardar.
+        assert "auditoria.guardar" in str(guardar_calls[0])
+        assert "ventas.guardar" in str(guardar_calls[1])
+
+    def test_auditoria_guardar_raises_venta_never_persisted(self) -> None:
+        """If auditoria.guardar raises, ventas.guardar must NOT be called."""
+        venta = _make_venta()
+        ventas_repo, auditoria_repo = _make_repos(venta)
+        auditoria_repo.guardar.side_effect = RuntimeError("DB constraint")
+        service = AnularVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
+
+        cmd = AnularVentaComando(
+            venta_id=venta.id,
+            motivo="Motivo valido",
+            realizada_por_telegram_id=1,
+            realizada_por_nombre=None,
+        )
+        with pytest.raises(RuntimeError, match="DB constraint"):
+            service.ejecutar(cmd)
+
+        ventas_repo.guardar.assert_not_called()
 
     def test_success_guarda_registro_auditoria_con_campos_correctos(self) -> None:
         venta = _make_venta()
@@ -145,6 +190,7 @@ class TestAnularVentaService:
         auditoria_repo.guardar.assert_not_called()
 
     def test_venta_ya_anulada_propaga_venta_ya_anulada(self) -> None:
+        """VentaYaAnulada is raised before either guardar is called."""
         venta = _make_venta(anulada=True)
         ventas_repo, auditoria_repo = _make_repos(venta)
         service = AnularVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
@@ -158,5 +204,6 @@ class TestAnularVentaService:
         with pytest.raises(VentaYaAnulada):
             service.ejecutar(cmd)
 
+        # Neither guardar must have been called — the guard fires before any persistence.
         ventas_repo.guardar.assert_not_called()
         auditoria_repo.guardar.assert_not_called()

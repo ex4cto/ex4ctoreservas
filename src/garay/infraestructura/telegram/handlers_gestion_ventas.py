@@ -24,6 +24,14 @@ from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
+
+def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Remove gv_* keys from user_data to prevent stale state across conversation runs."""
+    if context.user_data is not None:
+        context.user_data.pop("gv_venta_id", None)
+        context.user_data.pop("gv_motivo", None)
+
+
 # ---------------------------------------------------------------------------
 # State constants — range 220-223 (freelancers: 200-213)
 # ---------------------------------------------------------------------------
@@ -46,6 +54,9 @@ _MAX_VENTAS = 15
 async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.effective_message is None:
         return ConversationHandler.END
+
+    # Clear any stale gv_* keys from a previous conversation run.
+    _limpiar(context)
 
     hasta = datetime.date.today()
     desde = hasta - datetime.timedelta(days=_ROLLING_DAYS)
@@ -187,9 +198,11 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 obtener_mensaje("gestion_ventas.cancelado"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
 
     # Future: "gv_editar" can be added here for B3
+    _limpiar(context)
     return ConversationHandler.END
 
 
@@ -200,7 +213,8 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.effective_message is None:
-        return GV_MOTIVO
+        _limpiar(context)
+        return ConversationHandler.END
 
     text = update.message.text if update.message else ""
     motivo = (text or "").strip()
@@ -250,13 +264,16 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.cancelado"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
 
     if data != "gv_confirmar":
+        _limpiar(context)
         return ConversationHandler.END
 
     user = update.effective_user
     if user is None:
+        _limpiar(context)
         return ConversationHandler.END
 
     user_data = context.user_data or {}
@@ -269,6 +286,7 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.error_generico"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
 
     # Resolve realizada_por nombre
@@ -294,6 +312,7 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.error_generico"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
 
     try:
@@ -304,6 +323,7 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.ya_anulada"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
     except VentaNoEncontrada:
         if update.effective_message:
@@ -311,6 +331,7 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.no_encontrada"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
         return ConversationHandler.END
     except MotivoRequerido:
         if update.effective_message:
@@ -318,6 +339,16 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 obtener_mensaje("gestion_ventas.motivo_vacio"),
                 parse_mode="HTML",
             )
+        _limpiar(context)
+        return ConversationHandler.END
+    except Exception:
+        logger.exception("Unexpected error in handle_gv_confirmar")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
         return ConversationHandler.END
 
     if update.effective_message:
@@ -325,4 +356,5 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
             obtener_mensaje("gestion_ventas.anulada"),
             parse_mode="HTML",
         )
+    _limpiar(context)
     return ConversationHandler.END

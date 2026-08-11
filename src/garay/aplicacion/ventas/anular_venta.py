@@ -28,11 +28,11 @@ class AnularVentaService:
         if venta is None:
             raise VentaNoEncontrada(f"No se encontró la venta con id={cmd.venta_id}.")
 
-        # Propagates VentaYaAnulada if already anulada
+        # Propagates VentaYaAnulada if already anulada — mutates in memory only, no DB write yet.
         venta.anular()
 
-        self._ventas.guardar(venta)
-
+        # Build and persist the audit record BEFORE committing the anulada state so
+        # the venta row is never anulada in the DB without a corresponding audit row.
         registro = AuditoriaVenta(
             id=uuid.uuid4(),
             venta_id=cmd.venta_id,
@@ -44,3 +44,8 @@ class AnularVentaService:
             datos_previos=None,
         )
         self._auditoria.guardar(registro)
+
+        # Persist the anulada venta only after the audit row is safely committed.
+        # Residual risk: if this call fails, an orphan audit row exists but the venta
+        # stays active (retryable) — this does NOT violate the invariant.
+        self._ventas.guardar(venta)

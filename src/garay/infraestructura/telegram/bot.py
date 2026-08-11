@@ -464,10 +464,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     gestionar_ventas_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("gestionar_ventas", cmd_gestionar_ventas)],
         states={
-            GV_SELECCIONAR: [_CB(handle_gv_seleccionar)],
-            GV_DETALLE: [_CB(handle_gv_detalle)],
+            GV_SELECCIONAR: [_CB(handle_gv_seleccionar, pattern="^gv_sel:")],
+            GV_DETALLE: [_CB(handle_gv_detalle, pattern="^gv_(anular|cancelar)$")],
             GV_MOTIVO: [MessageHandler(_TEXT, handle_gv_motivo)],
-            GV_CONFIRMAR: [_CB(handle_gv_confirmar)],
+            GV_CONFIRMAR: [_CB(handle_gv_confirmar, pattern="^gv_(confirmar|cancelar)$")],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )

@@ -267,6 +267,18 @@ class TestHandleGvConfirmar:
         assert result == ConversationHandler.END
 
     @pytest.mark.asyncio
+    async def test_cancelar_limpia_user_data(self) -> None:
+        update = _make_update(callback_data="gv_cancelar")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = "some-id"
+        ctx.user_data["gv_motivo"] = "some-motivo"
+
+        await handle_gv_confirmar(update, ctx)
+
+        assert "gv_venta_id" not in ctx.user_data
+        assert "gv_motivo" not in ctx.user_data
+
+    @pytest.mark.asyncio
     async def test_confirmar_llama_servicio_y_retorna_end(self) -> None:
         venta_id = uuid.uuid4()
         update = _make_update(callback_data="gv_confirmar", user_id=123)
@@ -285,6 +297,19 @@ class TestHandleGvConfirmar:
         assert cmd.venta_id == venta_id
         assert cmd.motivo == "Motivo de prueba"
         assert cmd.realizada_por_telegram_id == 123
+
+    @pytest.mark.asyncio
+    async def test_confirmar_exitoso_limpia_user_data(self) -> None:
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo de prueba"
+
+        await handle_gv_confirmar(update, ctx)
+
+        assert "gv_venta_id" not in ctx.user_data
+        assert "gv_motivo" not in ctx.user_data
 
     @pytest.mark.asyncio
     async def test_confirmar_venta_ya_anulada_reply_error_y_end(self) -> None:
@@ -317,3 +342,40 @@ class TestHandleGvConfirmar:
 
         assert result == ConversationHandler.END
         update.effective_message.reply_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_confirmar_generic_exception_reply_error_generico_y_end(self) -> None:
+        """FIX 3: a generic RuntimeError must reply error_generico and return END."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.bot_data["anular_venta_service"].ejecutar.side_effect = RuntimeError("DB exploded")
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called()
+
+
+class TestCmdGestionarVentasClearsStaleKeys:
+    @pytest.mark.asyncio
+    async def test_entry_clears_stale_gv_keys(self) -> None:
+        """FIX 2: cmd_gestionar_ventas must pop stale gv_* keys before listing ventas."""
+        ventas = [_make_venta()]
+        update = _make_update()
+        ctx = _make_context(ventas=ventas)
+        # Pre-seed stale keys from a previous conversation run.
+        ctx.user_data["gv_venta_id"] = "old-id"
+        ctx.user_data["gv_motivo"] = "old-motivo"
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
+        ):
+            await cmd_gestionar_ventas(update, ctx)
+
+        # Keys must be absent regardless of conversation outcome.
+        assert "gv_venta_id" not in ctx.user_data
+        assert "gv_motivo" not in ctx.user_data
