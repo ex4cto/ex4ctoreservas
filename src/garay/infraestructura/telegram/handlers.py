@@ -46,6 +46,23 @@ def _teclado(opciones: list[str]) -> InlineKeyboardMarkup | None:
     return InlineKeyboardMarkup(botones)
 
 
+_ESTADOS_TOUR_PICKER: frozenset[EstadoFSM] = frozenset(
+    {EstadoFSM.SERVICIO_EN_FAMILIA, EstadoFSM.DESTINO}
+)
+
+
+def _columnas_para_salida(salida: SalidaFSM) -> int:
+    """Return the column count for a structured keyboard based on FSM state.
+
+    Tour/service option lists (SERVICIO_EN_FAMILIA, DESTINO) render 1 button per
+    row so that long tour names are fully visible. All other structured keyboards
+    (e.g. freelancer pickers) keep the default 2-column layout.
+    """
+    if salida.nuevo_estado in _ESTADOS_TOUR_PICKER:
+        return 1
+    return 2
+
+
 def _teclado_estructurado(
     opciones: list[tuple[str, str]],
     columnas: int = 2,
@@ -90,7 +107,10 @@ async def _enviar_salida(
 ) -> int:
     context.user_data["contexto"] = salida.contexto  # type: ignore[index]
     if salida.opciones_estructuradas is not None:
-        teclado = _teclado_estructurado(salida.opciones_estructuradas)
+        teclado = _teclado_estructurado(
+            salida.opciones_estructuradas,
+            columnas=_columnas_para_salida(salida),
+        )
     else:
         teclado = _teclado(salida.opciones)
     if update.message:

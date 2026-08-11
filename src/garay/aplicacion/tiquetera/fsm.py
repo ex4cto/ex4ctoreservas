@@ -121,20 +121,20 @@ def _es_sin_hotel(entrada: str) -> bool:
 _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Modalidad", EstadoFSM.MODALIDAD_VENTA),
     ("Tipo reserva", EstadoFSM.TIPO_RESERVA),
-    ("Canal", EstadoFSM.CANAL_ORIGEN),
+    ("Canal de origen", EstadoFSM.CANAL_ORIGEN),
     ("Punto de venta", EstadoFSM.PUNTO_DE_VENTA),
     ("Destinos", EstadoFSM.FAMILIA),
-    ("Cliente", EstadoFSM.CLIENTE_NOMBRE),
+    ("Nombre cliente", EstadoFSM.CLIENTE_NOMBRE),
     ("Teléfono", EstadoFSM.CLIENTE_TELEFONO),
     ("Correo", EstadoFSM.CLIENTE_EMAIL),
     ("Identificación", EstadoFSM.CLIENTE_IDENTIFICACION),
     ("Hotel", EstadoFSM.CLIENTE_HOTEL),
     ("Habitación", EstadoFSM.CLIENTE_HABITACION),
-    ("Fecha", EstadoFSM.FECHA_SALIDA),
+    ("Fecha de salida", EstadoFSM.FECHA_SALIDA),
     ("Adultos/Niños", EstadoFSM.PAX_ADULTOS),
-    ("Monto valor", EstadoFSM.MONTO_VALOR),
+    ("Valor de venta", EstadoFSM.MONTO_VALOR),
     ("Abono", EstadoFSM.MONTO_ABONO),
-    ("Participantes", EstadoFSM.EDITAR_VENDEDOR),
+    ("Vendedor/Cerrador", EstadoFSM.EDITAR_VENDEDOR),
 ]
 
 
@@ -1365,7 +1365,7 @@ class FSMTiquetera:
     def _handle_editar_selector(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         label_elegido = entrada.strip()
-        if label_elegido == "Canal" and ctx.tipo_cliente != TipoCliente.DIGITAL:
+        if label_elegido == "Canal de origen" and ctx.tipo_cliente != TipoCliente.DIGITAL:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
                 mensaje=obtener_mensaje("error_campo_editar_invalido"),

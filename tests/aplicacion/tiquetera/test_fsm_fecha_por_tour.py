@@ -293,7 +293,7 @@ class TestEditFechaPerTour:
                 2: datetime.datetime(2026, 12, 22),
             },
         )
-        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Fecha", ctx)
+        salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Fecha de salida", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
         assert salida.contexto.fechas_por_servicio == {}
         assert salida.contexto.modo_edicion is True
