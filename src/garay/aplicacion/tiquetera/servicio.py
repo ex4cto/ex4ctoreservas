@@ -180,7 +180,10 @@ class RegistrarVentaService:
             valor_line += f" | Abono: {_fmt_cop(cmd.abono)}"
         lineas.append(valor_line)
 
-        lineas.append(f"💼 Neto: {_fmt_cop(cmd.neto)}")
+        saldo_pendiente = (
+            cmd.valor_venta - cmd.abono if cmd.abono is not None else cmd.valor_venta
+        )
+        lineas.append(f"🧾 Saldo pendiente: {_fmt_cop(saldo_pendiente)}")
 
         if cmd.numero_fisico:
             lineas.append(f"🎫 Ticket: {cmd.numero_fisico}")
