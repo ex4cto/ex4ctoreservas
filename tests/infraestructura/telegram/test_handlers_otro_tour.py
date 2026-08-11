@@ -149,7 +149,7 @@ def _make_registro_service() -> MagicMock:
     desglose.vendedor.monto = Decimal("50000")
     desglose.cerrador = MagicMock()
     desglose.cerrador.monto = Decimal("50000")
-    desglose.vendedor.__add__ = lambda self, other: other  # type: ignore[assignment]
+    desglose.vendedor.__add__ = lambda self, other: other
     resultado.desglose = desglose
     svc.ejecutar.return_value = resultado
     return svc
