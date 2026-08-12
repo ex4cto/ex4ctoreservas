@@ -8,7 +8,12 @@ from telegram import Update
 from telegram.ext import ConversationHandler
 
 from garay.dominio.puertos.repositorios import FreelancerRepository
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv, requiere_rol
+from garay.infraestructura.telegram.auth import (
+    dev_telegram_ids,
+    requiere_admin,
+    requiere_admin_conv,
+    requiere_rol,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -247,3 +252,48 @@ class TestRequiereAdminConv:
         with patch("garay.infraestructura.telegram.auth._es_dev", return_value=False):
             result = await handler(update, context)
         assert result == 42
+
+
+# ---------------------------------------------------------------------------
+# Tests for dev_telegram_ids() helper
+# ---------------------------------------------------------------------------
+
+
+_PATCH_SETTINGS = "garay.infraestructura.telegram.auth.obtener_settings"
+
+
+class TestDevTelegramIds:
+    def test_parses_multiple_ids(self) -> None:
+        settings_mock = MagicMock()
+        settings_mock.dev_telegram_ids = "111, 222"
+        with patch(_PATCH_SETTINGS, return_value=settings_mock):
+            result = dev_telegram_ids()
+        assert result == {111, 222}
+
+    def test_single_id(self) -> None:
+        settings_mock = MagicMock()
+        settings_mock.dev_telegram_ids = "999"
+        with patch(_PATCH_SETTINGS, return_value=settings_mock):
+            result = dev_telegram_ids()
+        assert result == {999}
+
+    def test_empty_string_returns_empty_set(self) -> None:
+        settings_mock = MagicMock()
+        settings_mock.dev_telegram_ids = ""
+        with patch(_PATCH_SETTINGS, return_value=settings_mock):
+            result = dev_telegram_ids()
+        assert result == set()
+
+    def test_whitespace_only_returns_empty_set(self) -> None:
+        settings_mock = MagicMock()
+        settings_mock.dev_telegram_ids = "   "
+        with patch(_PATCH_SETTINGS, return_value=settings_mock):
+            result = dev_telegram_ids()
+        assert result == set()
+
+    def test_strips_whitespace_around_ids(self) -> None:
+        settings_mock = MagicMock()
+        settings_mock.dev_telegram_ids = "  100 , 200  , 300"
+        with patch(_PATCH_SETTINGS, return_value=settings_mock):
+            result = dev_telegram_ids()
+        assert result == {100, 200, 300}
