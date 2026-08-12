@@ -226,6 +226,8 @@ def main() -> None:
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,
             "editar_fecha_venta_service": editar_fecha_venta_service,
+            "notificador": notificador,
+            "grupo_id": settings.grupo_id,
         }
     )
 

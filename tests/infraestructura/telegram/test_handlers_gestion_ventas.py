@@ -99,6 +99,7 @@ def _make_context(
 
     anular_service = MagicMock()
     editar_fecha_service = MagicMock()
+    notificador = MagicMock()
 
     ctx.bot_data = {
         "venta_repo": venta_repo,
@@ -107,6 +108,8 @@ def _make_context(
         "servicio_repo": servicio_repo,
         "anular_venta_service": anular_service,
         "editar_fecha_venta_service": editar_fecha_service,
+        "notificador": notificador,
+        "grupo_id": "-1001234567",
     }
     return ctx
 
@@ -632,3 +635,291 @@ class TestLimpiarClearsB3Keys:
 
         assert "gv_accion" not in ctx.user_data
         assert "gv_nueva_fecha" not in ctx.user_data
+
+
+# ---------------------------------------------------------------------------
+# C2: handle_gv_seleccionar — stash cliente/tour names
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGvSeleccionarStashNames:
+    @pytest.mark.asyncio
+    async def test_seleccionar_stashes_cliente_nombre(self) -> None:
+        """handle_gv_seleccionar must store gv_cliente_nombre in user_data."""
+        venta = _make_venta()
+        update = _make_update(callback_data=f"gv_sel:{venta.id}")
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        await handle_gv_seleccionar(update, ctx)
+
+        assert ctx.user_data.get("gv_cliente_nombre") == "Juan Perez"
+
+    @pytest.mark.asyncio
+    async def test_seleccionar_stashes_tours_str(self) -> None:
+        """handle_gv_seleccionar must store gv_tours in user_data."""
+        venta = _make_venta()
+        update = _make_update(callback_data=f"gv_sel:{venta.id}")
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        await handle_gv_seleccionar(update, ctx)
+
+        assert ctx.user_data.get("gv_tours") == "Tour Isla"
+
+    @pytest.mark.asyncio
+    async def test_limpiar_clears_gv_cliente_nombre_and_gv_tours(self) -> None:
+        """_limpiar (via cancelar) must pop gv_cliente_nombre and gv_tours."""
+        update = _make_update(callback_data="gv_cancelar")
+        ctx = _make_context()
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+        ctx.user_data["gv_venta_id"] = "some-id"
+        ctx.user_data["gv_motivo"] = "some-motivo"
+
+        await handle_gv_confirmar(update, ctx)
+
+        assert "gv_cliente_nombre" not in ctx.user_data
+        assert "gv_tours" not in ctx.user_data
+
+
+# ---------------------------------------------------------------------------
+# C2: group notification on anular
+# ---------------------------------------------------------------------------
+
+
+class TestNotificarGrupoAnular:
+    @pytest.mark.asyncio
+    async def test_anular_success_calls_notificador_once(self) -> None:
+        """On successful anular, notificador.notificar must be called once."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Cliente cancelo"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        notificador = ctx.bot_data["notificador"]
+        notificador.notificar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_anular_notificador_message_contains_cliente_tour_motivo(self) -> None:
+        """Notification message must include cliente, tour, and motivo."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Cliente cancelo el viaje"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        await handle_gv_confirmar(update, ctx)
+
+        notificador = ctx.bot_data["notificador"]
+        call_args = notificador.notificar.call_args
+        mensaje_arg: str = call_args[0][0]
+        grupo_id_arg: str = call_args[0][1]
+
+        assert "Juan Perez" in mensaje_arg
+        assert "Tour Isla" in mensaje_arg
+        assert "Cliente cancelo el viaje" in mensaje_arg
+        assert grupo_id_arg == "-1001234567"
+
+    @pytest.mark.asyncio
+    async def test_anular_notificador_escapes_html_in_dynamic_values(self) -> None:
+        """Dynamic values must be HTML-escaped so Telegram HTML mode never breaks."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Se fue con Juan & Pedro <urgente>"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "O'Hara & Sons"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        await handle_gv_confirmar(update, ctx)
+
+        mensaje_arg: str = ctx.bot_data["notificador"].notificar.call_args[0][0]
+
+        assert "&amp;" in mensaje_arg
+        assert "&lt;urgente&gt;" in mensaje_arg
+        # Raw unescaped angle brackets from user input must not leak through.
+        assert "<urgente>" not in mensaje_arg
+
+    @pytest.mark.asyncio
+    async def test_anular_notificador_raises_flow_still_ends(self) -> None:
+        """Notification failure must NOT break the anular flow — still returns END + reply."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+        ctx.bot_data["notificador"].notificar.side_effect = RuntimeError("Telegram down")
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_anular_notificador_absent_from_bot_data_no_crash(self) -> None:
+        """If notificador is missing from bot_data, anular still succeeds."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+        del ctx.bot_data["notificador"]
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_anular_still_replies_anulada_message(self) -> None:
+        """Even with notification, user still receives the anulada reply."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo test"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        from garay.mensajes.catalogo import obtener_mensaje
+        await handle_gv_confirmar(update, ctx)
+
+        expected = obtener_mensaje("gestion_ventas.anulada")
+        update.effective_message.reply_text.assert_called_once_with(
+            expected, parse_mode="HTML"
+        )
+
+
+# ---------------------------------------------------------------------------
+# C2: group notification on editar fecha
+# ---------------------------------------------------------------------------
+
+
+class TestNotificarGrupoEditar:
+    @pytest.mark.asyncio
+    async def test_editar_success_calls_notificador_once(self) -> None:
+        """On successful editar, notificador.notificar must be called once."""
+        venta_id = uuid.uuid4()
+        nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Pasajero cambio disponibilidad"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha_str
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        notificador = ctx.bot_data["notificador"]
+        notificador.notificar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_editar_notificador_message_contains_cliente_tour_fecha_motivo(self) -> None:
+        """Notification message must include cliente, tour, new fecha, and motivo."""
+        venta_id = uuid.uuid4()
+        nueva_fecha = datetime.datetime(2026, 9, 20, 10, 30)
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Cambio de plan del pasajero"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha.isoformat()
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        await handle_gv_confirmar(update, ctx)
+
+        notificador = ctx.bot_data["notificador"]
+        call_args = notificador.notificar.call_args
+        mensaje_arg: str = call_args[0][0]
+        grupo_id_arg: str = call_args[0][1]
+
+        assert "Juan Perez" in mensaje_arg
+        assert "Tour Isla" in mensaje_arg
+        assert "20/09/2026" in mensaje_arg
+        assert "Cambio de plan del pasajero" in mensaje_arg
+        assert grupo_id_arg == "-1001234567"
+
+    @pytest.mark.asyncio
+    async def test_editar_notificador_raises_flow_still_ends(self) -> None:
+        """Notification failure must NOT break the editar flow."""
+        venta_id = uuid.uuid4()
+        nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha_str
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+        ctx.bot_data["notificador"].notificar.side_effect = RuntimeError("Network error")
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_editar_notificador_absent_from_bot_data_no_crash(self) -> None:
+        """If notificador is missing from bot_data, editar still succeeds."""
+        venta_id = uuid.uuid4()
+        nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha_str
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+        del ctx.bot_data["notificador"]
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        update.effective_message.reply_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_editar_still_replies_editada_message(self) -> None:
+        """Even with notification, user still receives the editada reply."""
+        venta_id = uuid.uuid4()
+        nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo test"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha_str
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        from garay.mensajes.catalogo import obtener_mensaje
+        await handle_gv_confirmar(update, ctx)
+
+        expected = obtener_mensaje("gestion_ventas.editada")
+        update.effective_message.reply_text.assert_called_once_with(
+            expected, parse_mode="HTML"
+        )

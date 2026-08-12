@@ -6,6 +6,7 @@ import asyncio
 import datetime
 import logging
 import uuid
+from html import escape
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -34,6 +35,25 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_motivo", None)
         context.user_data.pop("gv_accion", None)
         context.user_data.pop("gv_nueva_fecha", None)
+        context.user_data.pop("gv_cliente_nombre", None)
+        context.user_data.pop("gv_tours", None)
+
+
+async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
+    """Send a correction message to the Telegram group without crashing the caller.
+
+    The notificador uses a blocking urllib implementation, so it is called via
+    asyncio.to_thread.  Any exception is swallowed — a notification failure must
+    never roll back a committed domain operation.
+    """
+    notificador = context.bot_data.get("notificador")
+    grupo_id: str | None = context.bot_data.get("grupo_id")
+    if not notificador or not grupo_id:
+        return
+    try:
+        await asyncio.to_thread(notificador.notificar, mensaje, grupo_id)
+    except Exception:
+        logger.exception("Failed to send group correction message")
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +172,8 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
 
     if context.user_data is not None:
         context.user_data["gv_venta_id"] = str(venta.id)
+        context.user_data["gv_cliente_nombre"] = cliente_nombre
+        context.user_data["gv_tours"] = tours_str
 
     detail_text = obtener_mensaje("gestion_ventas.detalle").format(
         cliente=cliente_nombre,
@@ -447,6 +469,16 @@ async def _handle_confirmar_editar(
         _limpiar(context)
         return ConversationHandler.END
 
+    nueva_fecha_dt = datetime.datetime.fromisoformat(nueva_fecha_str)
+    mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_fecha").format(
+        cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+        tours=escape(user_data.get("gv_tours") or "—", quote=False),
+        fecha=f"{nueva_fecha_dt:%d/%m/%Y %H:%M}",
+        motivo=escape(motivo, quote=False),
+        actor=escape(nombre or "—", quote=False),
+    )
+    await _notificar_grupo(context, mensaje_grupo)
+
     if update.effective_message:
         await update.effective_message.reply_text(
             obtener_mensaje("gestion_ventas.editada"),
@@ -537,6 +569,14 @@ async def _handle_confirmar_anular(
             )
         _limpiar(context)
         return ConversationHandler.END
+
+    mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_anulacion").format(
+        cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+        tours=escape(user_data.get("gv_tours") or "—", quote=False),
+        motivo=escape(motivo, quote=False),
+        actor=escape(nombre or "—", quote=False),
+    )
+    await _notificar_grupo(context, mensaje_grupo)
 
     if update.effective_message:
         await update.effective_message.reply_text(

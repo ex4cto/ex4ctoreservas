@@ -541,6 +541,28 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.editada": {
         Idioma.ES: "La fecha de la venta fue actualizada correctamente."
     },
+    # --- Gestión de ventas C2: correction messages for the group ---
+    "gestion_ventas.correccion_anulacion": {
+        Idioma.ES: (
+            "⚠️ <b>Venta anulada</b>\n"
+            "Agencia Garay Tours\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tour: {tours}\n"
+            "📝 Motivo: {motivo}\n"
+            "🙍 Por: {actor}"
+        )
+    },
+    "gestion_ventas.correccion_edicion_fecha": {
+        Idioma.ES: (
+            "📅 <b>Fecha de venta modificada</b>\n"
+            "Agencia Garay Tours\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tour: {tours}\n"
+            "🗓 Nueva fecha: <b>{fecha}</b>\n"
+            "📝 Motivo: {motivo}\n"
+            "🙍 Por: {actor}"
+        )
+    },
 }
 
 
