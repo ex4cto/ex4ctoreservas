@@ -12,6 +12,10 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.factura.regenerar_factura import (
+    RegenerarFacturaService,
+    ResultadoRegenerarFactura,
+)
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.comandos import AnularVentaComando, EditarFechaVentaComando
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
@@ -479,11 +483,34 @@ async def _handle_confirmar_editar(
     )
     await _notificar_grupo(context, mensaje_grupo)
 
+    # C3: regenerate and resend the client invoice with the updated date.
+    regenerar_service: RegenerarFacturaService | None = context.bot_data.get(
+        "regenerar_factura_service"
+    )
+    resultado_factura: ResultadoRegenerarFactura | None = None
+    if regenerar_service is not None:
+        try:
+            resultado_factura = await asyncio.to_thread(
+                regenerar_service.ejecutar, uuid.UUID(venta_id_str)
+            )
+        except Exception:
+            logger.exception("Error al regenerar/reenviar la factura tras editar fecha")
+
     if update.effective_message:
         await update.effective_message.reply_text(
             obtener_mensaje("gestion_ventas.editada"),
             parse_mode="HTML",
         )
+        if resultado_factura is ResultadoRegenerarFactura.REENVIADA:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.factura_reenviada"),
+                parse_mode="HTML",
+            )
+        elif resultado_factura is ResultadoRegenerarFactura.ERROR_ENVIO:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.factura_error"),
+                parse_mode="HTML",
+            )
     _limpiar(context)
     return ConversationHandler.END
 

@@ -53,41 +53,47 @@ def _ctx_completo() -> ContextoVenta:
     return ctx
 
 
+def _venta_id(resultado: ResultadoRegistrarVenta | None = None) -> uuid.UUID:
+    if resultado is not None:
+        return resultado.venta_id
+    return uuid.UUID("a3f7b200-0000-0000-0000-000000000000")
+
+
 class TestGenerarFacturaHtml:
     def test_generar_devuelve_string_html(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert isinstance(html, str)
         assert len(html) > 100
 
     def test_html_contiene_nit_empresa(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "1128049588-6" in html
 
     def test_html_contiene_nombre_cliente(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "Juan Perez" in html
 
     def test_html_contiene_email_cliente(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "juan@example.com" in html
 
     def test_html_contiene_identificacion_cliente(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "1234567890" in html
 
     def test_html_tiene_page_break_para_segunda_pagina(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "page-break" in html
 
     def test_html_contiene_politicas_cancelacion(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert (
             "FORCE MAJEURE" in html
             or "fuerza mayor" in html.lower()
@@ -98,19 +104,19 @@ class TestGenerarFacturaHtml:
     def test_numero_factura_formato_correcto(self) -> None:
         venta_id = uuid.UUID("a3f7b200-cafe-0000-0000-000000000000")
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado(venta_id=venta_id))
+        html = servicio.generar(_ctx_completo(), venta_id)
         # Format: GT-YYYYMMDD-XXXXXX
         assert "GT-" in html
         assert "-A3F7B2" in html
 
     def test_html_sin_logo_muestra_texto_empresa(self) -> None:
         servicio = GenerarFacturaService(logo_url="")
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "GARAY TOURS" in html
 
     def test_html_con_logo_incluye_img_tag(self) -> None:
         servicio = GenerarFacturaService(logo_url="data:image/png;base64,ABC123")
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "<img" in html
         assert "ABC123" in html
 
@@ -127,18 +133,18 @@ class TestGenerarFacturaHtml:
         fecha_bogota = datetime.date(2026, 7, 29)
         with patch("garay.aplicacion.factura.servicio._hoy_bogota", return_value=fecha_bogota):
             servicio = GenerarFacturaService()
-            html = servicio.generar(_ctx_completo(), _resultado())
+            html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "29/07/2026" in html
 
     def test_html_contiene_llave_bre_b(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "BRE-B" in html.upper()
         assert "@garay58804" in html
 
     def test_html_no_menciona_nequi(self) -> None:
         servicio = GenerarFacturaService()
-        html = servicio.generar(_ctx_completo(), _resultado())
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "nequi" not in html.lower()
 
 
@@ -152,7 +158,7 @@ class TestFacturaFechasPorTour:
         ctx.destinos_nombres = ["Islas del Rosario"]
         ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
         ctx.fechas_por_servicio = {1: datetime.datetime(2026, 8, 15, 8, 0)}
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "15/08/2026" in html
         assert "Islas del Rosario 15/08 08:00" not in html
 
@@ -166,7 +172,7 @@ class TestFacturaFechasPorTour:
             1: datetime.datetime(2026, 8, 15, 8, 0),
             2: datetime.datetime(2026, 8, 15, 19, 0),
         }
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert (
             "Islas del Rosario 15/08 08:00, Bahía Rumbera 15/08 19:00" in html
         )
@@ -182,7 +188,7 @@ class TestFacturaFechasPorTour:
             2: datetime.datetime(2026, 8, 15, 19, 0),
             3: datetime.datetime(2026, 8, 10, 9, 0),
         }
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert (
             "Islas del Rosario 15/08 08:00, "
             "Bahía Rumbera 15/08 19:00, "
@@ -196,7 +202,7 @@ class TestFacturaFechasPorTour:
         ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
         ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
         ctx.fechas_por_servicio = {1: datetime.datetime(2026, 8, 15, 8, 0)}
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "Islas del Rosario 15/08 08:00" in html
         assert "Bahía Rumbera 15/08 08:00" in html
 
@@ -208,6 +214,6 @@ class TestFacturaFechasPorTour:
         ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
         ctx.fecha_salida = datetime.datetime(2026, 8, 15, 8, 0)
         ctx.fechas_por_servicio = {}
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "15/08/2026" in html
         assert "00:00" not in html
