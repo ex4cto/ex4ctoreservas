@@ -30,6 +30,7 @@ from garay.infraestructura.telegram.handlers import (
     cmd_cancelar,
     cmd_cancelar_sin_conv,
     cmd_foto,
+    cmd_help,
     cmd_mis_ventas,
     cmd_start,
     cmd_verificar_pago,
@@ -134,6 +135,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
+from garay.infraestructura.telegram.menu import TierComando, comandos_bot
 
 _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
@@ -143,34 +145,14 @@ logger = logging.getLogger(__name__)
 
 
 # Baseline menu every user sees (BotCommandScopeDefault).
-_COMANDOS_FREELANCER = [
-    BotCommand("nueva_venta", "Registrar una venta"),
-    BotCommand("mis_ventas", "Mis ventas del período"),
-    BotCommand("verificar_pago", "Pagos recibidos (últimos 5 min)"),
-    BotCommand("cancelar", "Cancelar operación actual"),
-]
+# Derived from CATALOGO_COMANDOS in menu.py — the single source of truth.
+_COMANDOS_FREELANCER = comandos_bot(TierComando.FREELANCER)
 
-# Admin menu = freelancer + admin-only commands.
-_COMANDOS_ADMIN = [
-    *_COMANDOS_FREELANCER,
-    BotCommand("dashboard_ventas", "Dashboard de ventas (solo admin)"),
-    BotCommand("listar_freelancers", "Ver freelancers registrados (solo admin)"),
-    BotCommand("nuevo_freelancer", "Registrar un nuevo freelancer (solo admin)"),
-    BotCommand("eliminar_freelancer", "Desactivar un freelancer (solo admin)"),
-    BotCommand("editar_freelancer", "Editar un freelancer (solo admin)"),
-    BotCommand("nuevo_egreso", "Registrar un egreso manual"),
-    BotCommand("gastos_fijos", "Ver y gestionar gastos fijos"),
-    BotCommand("generar_mes", "Generar gastos fijos del mes actual"),
-    BotCommand("gestionar_ventas", "Gestionar ventas (anular, etc.)"),
-]
+# Admin menu — all commands accessible to ADMIN tier.
+_COMANDOS_ADMIN = comandos_bot(TierComando.ADMIN)
 
-# Propietario menu = admin + owner-only commands.
-_COMANDOS_PROPIETARIO = [
-    *_COMANDOS_ADMIN,
-    BotCommand("flujo_caja", "Flujo de caja mensual (solo propietario)"),
-    BotCommand("movimientos", "Movimientos recientes (solo propietario)"),
-    BotCommand("tours", "Reporte de tours (solo propietario)"),
-]
+# Propietario menu — all 16 commands.
+_COMANDOS_PROPIETARIO = comandos_bot(TierComando.PROPIETARIO)
 
 _MENUS: dict[str, list[BotCommand]] = {
     "propietario": _COMANDOS_PROPIETARIO,
@@ -487,6 +469,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
     app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
+    app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
     return app

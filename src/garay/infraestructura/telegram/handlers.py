@@ -18,6 +18,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
+from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
@@ -28,8 +29,9 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
-from garay.infraestructura.telegram.auth import requiere_rol
+from garay.infraestructura.telegram.auth import dev_telegram_ids, requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
+from garay.infraestructura.telegram.menu import TierComando, render_menu, tier_de_usuario
 from garay.mensajes.catalogo import obtener_mensaje
 
 _UTC = datetime.UTC
@@ -291,21 +293,56 @@ async def _foto_en_conversacion(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 
+async def _render_menu_para_usuario(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> str:
+    """Resolve the caller's tier and return the rendered menu text."""
+    user = update.effective_user
+    uid: int | None = user.id if user is not None else None
+
+    # Resolve propietario ids from settings (comma-separated string).
+    settings = obtener_settings()
+    propietario_ids: set[int] = set()
+    ids_str = settings.propietario_telegram_ids.strip()
+    if ids_str:
+        propietario_ids = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+
+    # dev_ids come from auth helper (already tested and reused by guards).
+    _dev_ids = dev_telegram_ids()
+
+    # Determine es_admin by looking up the caller in the repo.
+    es_admin = False
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    if repo is not None and uid is not None:
+        freelancer = await asyncio.to_thread(repo.buscar_por_telegram_id, uid)
+        if freelancer is not None:
+            es_admin = freelancer.es_admin
+
+    tier: TierComando = tier_de_usuario(
+        uid=uid,
+        es_admin=es_admin,
+        propietario_ids=propietario_ids,
+        dev_ids=_dev_ids,
+    )
+    return render_menu(tier)
+
+
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /start — show main menu."""
+    """Handle /start — show the role-aware command menu."""
     if update.message is None:
         return ConversationHandler.END
-    texto = (
-        "👋 Bienvenido a *Garay Tours*\n\n"
-        "📋 /nueva\\_venta — Registrar una venta\n"
-        "💰 /verificar\\_pago — Pagos recibidos (últimos 5 min)\n"
-        "📊 /mis\\_ventas — Mis ventas del período\n"
-        "📈 /dashboard\\_ventas — Dashboard de ventas _(solo admin)_\n"
-        "💵 /flujo\\_caja — Flujo de caja mensual _(solo propietario)_\n"
-        "🧾 /nuevo\\_egreso — Registrar un egreso manual\n"
-        "❌ /cancelar — Cancelar operación actual"
-    )
-    await update.message.reply_text(texto, parse_mode="Markdown")
+    texto = await _render_menu_para_usuario(update, context)
+    await update.message.reply_text(texto, parse_mode="HTML")
+    return ConversationHandler.END
+
+
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /help — same role-aware menu as /start."""
+    if update.message is None:
+        return ConversationHandler.END
+    texto = await _render_menu_para_usuario(update, context)
+    await update.message.reply_text(texto, parse_mode="HTML")
     return ConversationHandler.END
 
 
