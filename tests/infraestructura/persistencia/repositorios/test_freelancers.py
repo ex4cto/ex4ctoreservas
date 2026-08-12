@@ -194,3 +194,27 @@ def test_buscar_por_telegram_id_cualquier_estado_no_encontrado(
     """buscar_por_telegram_id_cualquier_estado returns None when not found."""
     repo = SQLAFreelancerRepository(sf)
     assert repo.buscar_por_telegram_id_cualquier_estado(77700000) is None
+
+
+def test_editar_nombre_completo_persiste(sf: sessionmaker[Session]) -> None:
+    """Editing nombre_completo on an existing freelancer must persist on re-read.
+
+    Reproduces the owner-reported bug: editing 'nombre completo' does not save.
+    """
+    repo = SQLAFreelancerRepository(sf)
+    f = Freelancer(
+        id=uuid.uuid4(),
+        nombre="Ana",
+        activo=True,
+        nombre_completo="Ana Garcia",
+    )
+    repo.guardar(f)
+
+    editado = repo.buscar_por_id(f.id)
+    assert editado is not None
+    editado.nombre_completo = "Ana Maria Garcia Lopez"
+    repo.guardar(editado)
+
+    releido = repo.buscar_por_id(f.id)
+    assert releido is not None
+    assert releido.nombre_completo == "Ana Maria Garcia Lopez"

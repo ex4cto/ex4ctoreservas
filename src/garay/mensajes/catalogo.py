@@ -409,6 +409,15 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "¿Confirmás cambiar <b>{campo}</b>?\n\nAnterior: {anterior}\nNuevo: {nuevo}"
     },
     "freelancer.editado": {Idioma.ES: "✅ Cambio guardado correctamente."},
+    "freelancer.editar_ficha": {
+        Idioma.ES: (
+            "👤 <b>{display}</b>\n"
+            "• Nombre completo: {nombre_completo}\n"
+            "• Nombre corto: {nombre}\n"
+            "• Cédula: {cedula}\n"
+            "• Estado: {estado}"
+        )
+    },
     "freelancer.error_cedula_duplicada_otro": {
         Idioma.ES: "Esa cédula ya pertenece a otro freelancer. Ingresá una diferente:"
     },

@@ -23,6 +23,7 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
+    _render_ficha,
     cmd_editar_freelancer,
     cmd_eliminar_freelancer,
     cmd_listar_freelancers,
@@ -1077,3 +1078,76 @@ class TestHandleEdfConfirmar:
         await handle_edf_confirmar(update, ctx)
 
         assert ctx.user_data.get("edf_target_id") == target_id
+
+
+# ---------------------------------------------------------------------------
+# _render_ficha + freelancer detail card on select / after edit
+# ---------------------------------------------------------------------------
+
+
+def _reply_texts(update: MagicMock) -> list[str]:
+    """Collect the first positional arg of every reply_text call."""
+    return [
+        call.args[0]
+        for call in update.effective_message.reply_text.call_args_list
+        if call.args
+    ]
+
+
+class TestRenderFicha:
+    def test_incluye_todos_los_campos(self) -> None:
+        f = _make_freelancer(
+            nombre="Ana",
+            nombre_completo="Ana Maria Garcia",
+            cedula="1234567",
+            activo=True,
+        )
+
+        ficha = _render_ficha(f)
+
+        assert "Ana Maria Garcia" in ficha  # nombre completo
+        assert "Ana" in ficha  # nombre corto
+        assert "1234567" in ficha  # cedula
+        assert "Activo" in ficha  # estado
+
+    def test_campos_vacios_muestran_guion(self) -> None:
+        f = _make_freelancer(nombre="Solo", nombre_completo=None, cedula=None, activo=False)
+
+        ficha = _render_ficha(f)
+
+        assert "—" in ficha
+        assert "Inactivo" in ficha
+
+
+class TestFichaEnSeleccionar:
+    @pytest.mark.asyncio
+    async def test_muestra_ficha_al_seleccionar(self) -> None:
+        f = _make_freelancer(nombre="Ana", nombre_completo="Ana Maria Garcia")
+        update = _make_update(callback_data=f"edf_sel:{f.id}")
+        ctx = _make_context_edf(buscar_por_id_result=f)
+
+        result = await handle_edf_seleccionar(update, ctx)
+
+        assert result == EDITAR_CAMPO
+        textos = _reply_texts(update)
+        assert any("Ana Maria Garcia" in t for t in textos)
+
+
+class TestFichaEnConfirmar:
+    @pytest.mark.asyncio
+    async def test_ecoa_ficha_con_nombre_completo_nuevo(self) -> None:
+        f = _make_freelancer(nombre="Ana", nombre_completo="Ana Garcia")
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "nombre_completo",
+                "edf_valor": "Ana Maria Garcia Lopez",
+            },
+        )
+
+        await handle_edf_confirmar(update, ctx)
+
+        textos = _reply_texts(update)
+        assert any("Ana Maria Garcia Lopez" in t for t in textos)

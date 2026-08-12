@@ -417,6 +417,17 @@ def _limpiar_edf(context: ContextTypes.DEFAULT_TYPE) -> None:
             context.user_data.pop(key, None)
 
 
+def _render_ficha(f: Freelancer) -> str:
+    """Render a freelancer detail card, shown on select and after an edit."""
+    return obtener_mensaje("freelancer.editar_ficha").format(
+        display=f.display or f.nombre,
+        nombre_completo=f.nombre_completo or "—",
+        nombre=f.nombre,
+        cedula=f.cedula or "—",
+        estado="Activo" if f.activo else "Inactivo",
+    )
+
+
 @requiere_admin_conv
 async def cmd_editar_freelancer(
     update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -464,6 +475,12 @@ async def handle_edf_seleccionar(
     freelancer_id_str = query.data.removeprefix("edf_sel:")
     if context.user_data is not None:
         context.user_data["edf_target_id"] = freelancer_id_str
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    f: Freelancer | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        f = repo.buscar_por_id(uuid.UUID(freelancer_id_str)) if repo else None
+    if f is not None:
+        await update.effective_message.reply_text(_render_ficha(f), parse_mode="HTML")
     await update.effective_message.reply_text(
         obtener_mensaje("freelancer.editar_menu_campo"),
         reply_markup=_teclado_menu_campo(),
@@ -738,6 +755,7 @@ async def handle_edf_confirmar(
         repo.guardar(f)
 
     await update.effective_message.reply_text(obtener_mensaje("freelancer.editado"))
+    await update.effective_message.reply_text(_render_ficha(f), parse_mode="HTML")
 
     # Clear field/value keys but KEEP edf_target_id for the multi-edit loop
     if context.user_data is not None:
