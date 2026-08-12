@@ -13,7 +13,11 @@ from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.freelancers.errores import CedulaInvalida
 from garay.dominio.freelancers.validaciones import derivar_display, validar_cedula
 from garay.dominio.puertos.repositorios import FreelancerRepository
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
+from garay.infraestructura.telegram.auth import (
+    dev_telegram_ids,
+    requiere_admin,
+    requiere_admin_conv,
+)
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -49,7 +53,11 @@ async def cmd_listar_freelancers(update: Update, context: ContextTypes.DEFAULT_T
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     if repo is None or update.effective_message is None:
         return
-    freelancers = repo.listar_todos()
+    _dev_ids = dev_telegram_ids()
+    freelancers = [
+        f for f in repo.listar_todos()
+        if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
+    ]
     if not freelancers:
         await update.effective_message.reply_text(
             obtener_mensaje("freelancer.lista_vacia"), parse_mode="HTML"
@@ -287,7 +295,11 @@ async def cmd_eliminar_freelancer(update: Update, context: ContextTypes.DEFAULT_
     if update.effective_message is None:
         return ConversationHandler.END
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
-    activos = repo.listar_activos() if repo else []
+    _dev_ids = dev_telegram_ids()
+    activos = [
+        f for f in (repo.listar_activos() if repo else [])
+        if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
+    ]
     if not activos:
         await update.effective_message.reply_text(obtener_mensaje("freelancer.sin_activos"))
         return ConversationHandler.END
@@ -413,7 +425,11 @@ async def cmd_editar_freelancer(
     if update.effective_message is None:
         return ConversationHandler.END
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
-    todos = repo.listar_todos() if repo else []
+    _dev_ids = dev_telegram_ids()
+    todos = [
+        f for f in (repo.listar_todos() if repo else [])
+        if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
+    ]
     if not todos:
         await update.effective_message.reply_text(
             obtener_mensaje("freelancer.editar_sin_freelancers")

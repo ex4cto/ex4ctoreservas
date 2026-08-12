@@ -17,11 +17,20 @@ from garay.mensajes.catalogo import obtener_mensaje
 logger = logging.getLogger(__name__)
 
 
-def _es_dev(telegram_user_id: int) -> bool:
+def dev_telegram_ids() -> set[int]:
+    """Return the set of Telegram user IDs configured as developers.
+
+    Parses ``GARAY_DEV_TELEGRAM_IDS`` (comma-separated integers) from settings.
+    Returns an empty set when the setting is blank or unset.
+    """
     ids_str = obtener_settings().dev_telegram_ids.strip()
     if not ids_str:
-        return False
-    return telegram_user_id in {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+        return set()
+    return {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+
+
+def _es_dev(telegram_user_id: int) -> bool:
+    return telegram_user_id in dev_telegram_ids()
 
 
 def requiere_rol(
