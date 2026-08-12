@@ -6,6 +6,7 @@ import asyncio
 import datetime
 import logging
 import uuid
+from html import escape
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -470,11 +471,11 @@ async def _handle_confirmar_editar(
 
     nueva_fecha_dt = datetime.datetime.fromisoformat(nueva_fecha_str)
     mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_fecha").format(
-        cliente=user_data.get("gv_cliente_nombre") or "—",
-        tours=user_data.get("gv_tours") or "—",
+        cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+        tours=escape(user_data.get("gv_tours") or "—", quote=False),
         fecha=f"{nueva_fecha_dt:%d/%m/%Y %H:%M}",
-        motivo=motivo,
-        actor=nombre or "—",
+        motivo=escape(motivo, quote=False),
+        actor=escape(nombre or "—", quote=False),
     )
     await _notificar_grupo(context, mensaje_grupo)
 
@@ -570,10 +571,10 @@ async def _handle_confirmar_anular(
         return ConversationHandler.END
 
     mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_anulacion").format(
-        cliente=user_data.get("gv_cliente_nombre") or "—",
-        tours=user_data.get("gv_tours") or "—",
-        motivo=motivo,
-        actor=nombre or "—",
+        cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+        tours=escape(user_data.get("gv_tours") or "—", quote=False),
+        motivo=escape(motivo, quote=False),
+        actor=escape(nombre or "—", quote=False),
     )
     await _notificar_grupo(context, mensaje_grupo)
 

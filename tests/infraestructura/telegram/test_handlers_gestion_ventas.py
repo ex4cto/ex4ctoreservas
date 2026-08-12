@@ -732,6 +732,27 @@ class TestNotificarGrupoAnular:
         assert grupo_id_arg == "-1001234567"
 
     @pytest.mark.asyncio
+    async def test_anular_notificador_escapes_html_in_dynamic_values(self) -> None:
+        """Dynamic values must be HTML-escaped so Telegram HTML mode never breaks."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Se fue con Juan & Pedro <urgente>"
+        ctx.user_data["gv_accion"] = "anular"
+        ctx.user_data["gv_cliente_nombre"] = "O'Hara & Sons"
+        ctx.user_data["gv_tours"] = "Tour Isla"
+
+        await handle_gv_confirmar(update, ctx)
+
+        mensaje_arg: str = ctx.bot_data["notificador"].notificar.call_args[0][0]
+
+        assert "&amp;" in mensaje_arg
+        assert "&lt;urgente&gt;" in mensaje_arg
+        # Raw unescaped angle brackets from user input must not leak through.
+        assert "<urgente>" not in mensaje_arg
+
+    @pytest.mark.asyncio
     async def test_anular_notificador_raises_flow_still_ends(self) -> None:
         """Notification failure must NOT break the anular flow — still returns END + reply."""
         venta_id = uuid.uuid4()
