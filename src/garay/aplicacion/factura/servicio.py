@@ -123,6 +123,7 @@ class GenerarFacturaService:
             <div style="background:#f5f7fa;border:1px solid #e0e4ea;border-radius:4px;padding:12px;">
               <div style="font-size:11px;font-weight:bold;color:#1B3B6B;text-transform:uppercase;margin-bottom:8px;">Detalle del servicio</div>
               <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+                <tr><td style="color:#777;padding-bottom:3px;">Tour</td><td style="text-align:right;font-weight:bold;">{", ".join(ctx.destinos_nombres) if ctx.destinos_nombres else "—"}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">Fecha del tour</td><td style="text-align:right;font-weight:bold;">{fecha_tour}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">Adultos</td><td style="text-align:right;">{ctx.adultos or 0}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">Niños</td><td style="text-align:right;">{ctx.ninos or 0}</td></tr>

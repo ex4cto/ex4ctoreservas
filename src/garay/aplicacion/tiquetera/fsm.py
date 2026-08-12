@@ -734,6 +734,8 @@ class FSMTiquetera:
             )
         if numero not in ctx.destinos_numeros:
             ctx.destinos_numeros.append(numero)
+            nombre_tour = self._servicios[numero][0] if numero in self._servicios else str(numero)
+            ctx.destinos_nombres.append(nombre_tour)
 
         # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
         # Reactivable con multi_tour_habilitado=True.
@@ -801,7 +803,10 @@ class FSMTiquetera:
             except ValueError:
                 numero = None
             if numero is not None and numero in ctx.destinos_numeros:
+                idx = ctx.destinos_numeros.index(numero)
                 ctx.destinos_numeros.remove(numero)
+                if idx < len(ctx.destinos_nombres):
+                    ctx.destinos_nombres.pop(idx)
             if not ctx.destinos_numeros:
                 return self._salida_familia(ctx)
             return self._salida_acumulador(ctx)
