@@ -8,7 +8,6 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
-from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.ventas.contexto import ContextoVenta
 
 _BOGOTA = ZoneInfo("America/Bogota")
@@ -53,8 +52,8 @@ class GenerarFacturaService:
     def __init__(self, logo_url: str = "") -> None:
         self._logo_url = logo_url
 
-    def generar(self, ctx: ContextoVenta, resultado: ResultadoRegistrarVenta) -> str:
-        numero = _numero_factura(resultado.venta_id)
+    def generar(self, ctx: ContextoVenta, venta_id: uuid.UUID) -> str:
+        numero = _numero_factura(venta_id)
         fecha_emision = _hoy_bogota().strftime("%d/%m/%Y")
         fecha_tour = _render_fecha_tour(ctx)
         saldo = (ctx.valor or Decimal("0")) - (ctx.abono or Decimal("0"))

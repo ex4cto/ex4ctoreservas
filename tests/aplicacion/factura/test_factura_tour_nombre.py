@@ -69,21 +69,21 @@ class TestFacturaTourNombre:
         """destinos_nombres=['Tour Playa Blanca'] → 'Tour Playa Blanca' in HTML."""
         ctx = _ctx_base()
         ctx.destinos_nombres = ["Tour Playa Blanca"]
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _resultado().venta_id)
         assert "Tour Playa Blanca" in html
 
     def test_two_tours_names_joined_in_html(self) -> None:
         """Triangulation: two tours → joined string in HTML."""
         ctx = _ctx_base()
         ctx.destinos_nombres = ["Islas del Rosario", "Bahía Rumbera"]
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _resultado().venta_id)
         assert "Islas del Rosario, Bahía Rumbera" in html
 
     def test_empty_destinos_nombres_renders_dash(self) -> None:
         """destinos_nombres=[] → HTML contains '—' (dash), no crash, no blank cell."""
         ctx = _ctx_base()
         ctx.destinos_nombres = []
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _resultado().venta_id)
         # Must not raise; must render the dash
         assert "—" in html
 
@@ -91,14 +91,14 @@ class TestFacturaTourNombre:
         """The label 'Tour' must appear in the Detalle section."""
         ctx = _ctx_base()
         ctx.destinos_nombres = ["Tour Playa Blanca"]
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _resultado().venta_id)
         assert ">Tour<" in html or "Tour</td>" in html or ">Tour " in html
 
     def test_tour_row_before_fecha_row(self) -> None:
         """The Tour row must appear BEFORE the 'Fecha del tour' row in the HTML."""
         ctx = _ctx_base()
         ctx.destinos_nombres = ["Tour Playa Blanca"]
-        html = GenerarFacturaService().generar(ctx, _resultado())
+        html = GenerarFacturaService().generar(ctx, _resultado().venta_id)
         tour_pos = html.find("Tour Playa Blanca")
         fecha_pos = html.find("Fecha del tour")
         assert tour_pos != -1

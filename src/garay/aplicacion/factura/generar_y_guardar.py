@@ -68,7 +68,7 @@ class GenerarYGuardarFacturaService:
                 monto_total=Dinero(ctx.valor),
                 abono=Dinero(ctx.abono) if ctx.abono is not None else None,
                 fecha_emision=_hoy_bogota(),
-                html_contenido=self._generador.generar(ctx, resultado),
+                html_contenido=self._generador.generar(ctx, resultado.venta_id),
                 estado_envio=EstadoEnvioFactura.PENDIENTE,
             )
 
