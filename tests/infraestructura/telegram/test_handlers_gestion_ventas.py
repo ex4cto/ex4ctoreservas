@@ -923,3 +923,134 @@ class TestNotificarGrupoEditar:
         update.effective_message.reply_text.assert_called_once_with(
             expected, parse_mode="HTML"
         )
+
+
+# ---------------------------------------------------------------------------
+# C3: regenerar factura after editar fecha
+# ---------------------------------------------------------------------------
+
+
+def _editar_ctx(venta_id: uuid.UUID | None = None) -> MagicMock:
+    """Return a context pre-wired for a successful editar flow including C3 keys."""
+    from garay.aplicacion.factura.regenerar_factura import ResultadoRegenerarFactura
+
+    ctx = _make_context()
+    regenerar_mock = MagicMock()
+    regenerar_mock.ejecutar.return_value = ResultadoRegenerarFactura.REENVIADA
+    ctx.bot_data["regenerar_factura_service"] = regenerar_mock
+    _vid = venta_id or uuid.uuid4()
+    ctx.user_data["gv_venta_id"] = str(_vid)
+    ctx.user_data["gv_motivo"] = "Cambio de plan"
+    ctx.user_data["gv_nueva_fecha"] = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+    ctx.user_data["gv_accion"] = "editar"
+    ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
+    ctx.user_data["gv_tours"] = "Tour Isla"
+    return ctx
+
+
+class TestRegenerarFacturaTrasEditar:
+    @pytest.mark.asyncio
+    async def test_editar_calls_regenerar_service_with_venta_id(self) -> None:
+        """On successful editar, regenerar_factura_service.ejecutar must be called with venta_id."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        svc = ctx.bot_data["regenerar_factura_service"]
+        svc.ejecutar.assert_called_once_with(venta_id)
+
+    @pytest.mark.asyncio
+    async def test_reenviada_reply_includes_factura_reenviada(self) -> None:
+        """When resultado is REENVIADA, reply factura_reenviada in addition to editada."""
+        from garay.aplicacion.factura.regenerar_factura import ResultadoRegenerarFactura
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+        ctx.bot_data["regenerar_factura_service"].ejecutar.return_value = (
+            ResultadoRegenerarFactura.REENVIADA
+        )
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.editada") in calls
+        assert obtener_mensaje("gestion_ventas.factura_reenviada") in calls
+
+    @pytest.mark.asyncio
+    async def test_error_envio_reply_includes_factura_error(self) -> None:
+        """When resultado is ERROR_ENVIO, reply factura_error message."""
+        from garay.aplicacion.factura.regenerar_factura import ResultadoRegenerarFactura
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+        ctx.bot_data["regenerar_factura_service"].ejecutar.return_value = (
+            ResultadoRegenerarFactura.ERROR_ENVIO
+        )
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.editada") in calls
+        assert obtener_mensaje("gestion_ventas.factura_error") in calls
+
+    @pytest.mark.asyncio
+    async def test_sin_factura_no_extra_reply(self) -> None:
+        """SIN_FACTURA result must not add any extra reply beyond editada."""
+        from garay.aplicacion.factura.regenerar_factura import ResultadoRegenerarFactura
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+        ctx.bot_data["regenerar_factura_service"].ejecutar.return_value = (
+            ResultadoRegenerarFactura.SIN_FACTURA
+        )
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.editada") in calls
+        assert obtener_mensaje("gestion_ventas.factura_reenviada") not in calls
+        assert obtener_mensaje("gestion_ventas.factura_error") not in calls
+
+    @pytest.mark.asyncio
+    async def test_regenerar_raises_flow_continues_and_editada_sent(self) -> None:
+        """If regenerar_service.ejecutar raises, the exception must be swallowed and
+        the user still receives the editada confirmation."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+        ctx.bot_data["regenerar_factura_service"].ejecutar.side_effect = RuntimeError(
+            "DB error"
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.editada") in calls
+
+    @pytest.mark.asyncio
+    async def test_regenerar_absent_from_bot_data_no_crash(self) -> None:
+        """If regenerar_factura_service is not in bot_data, flow still completes."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _editar_ctx(venta_id=venta_id)
+        del ctx.bot_data["regenerar_factura_service"]
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.editada") in calls

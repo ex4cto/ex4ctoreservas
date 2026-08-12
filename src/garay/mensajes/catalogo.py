@@ -563,6 +563,13 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "🙍 Por: {actor}"
         )
     },
+    # --- Gestión de ventas C3: invoice regeneration status ---
+    "gestion_ventas.factura_reenviada": {
+        Idioma.ES: "📄 Factura actualizada reenviada al cliente."
+    },
+    "gestion_ventas.factura_error": {
+        Idioma.ES: "⚠️ La venta se editó pero no se pudo reenviar la factura."
+    },
 }
 
 

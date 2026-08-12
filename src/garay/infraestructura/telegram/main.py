@@ -11,6 +11,7 @@ from telegram import Update
 from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
+from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
@@ -167,6 +168,16 @@ def main() -> None:
         facturas=factura_repo,
         notificador=notificador_email,
     )
+    regenerar_factura_service: RegenerarFacturaService | None = None
+    if notificador_email is not None:
+        regenerar_factura_service = RegenerarFacturaService(
+            ventas=ventas_repo,
+            clientes=cliente_repo,
+            servicios=servicio_repo,
+            facturas=factura_repo,
+            generador=generar_factura_service,
+            email=notificador_email,
+        )
 
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
@@ -226,6 +237,7 @@ def main() -> None:
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,
             "editar_fecha_venta_service": editar_fecha_venta_service,
+            "regenerar_factura_service": regenerar_factura_service,
             "notificador": notificador,
             "grupo_id": settings.grupo_id,
         }
