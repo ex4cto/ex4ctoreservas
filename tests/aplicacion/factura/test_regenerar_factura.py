@@ -513,3 +513,176 @@ class TestRegenerarFacturaService:
         assert last_factura.id == original_id
         assert last_factura.numero == "GT-ORIGINAL"
         assert last_factura.fecha_emision == original_fecha
+
+
+# ---------------------------------------------------------------------------
+# FIX 1: reconstruir_contexto — empty fechas_por_servicio guard
+# ---------------------------------------------------------------------------
+
+
+class TestReconstruirContextoEmptyFechas:
+    def test_empty_fechas_por_servicio_no_crash(self) -> None:
+        """Empty dict must not raise ValueError from min()."""
+        cliente = _make_cliente()
+        servicio = _make_servicio()
+        fecha = datetime.date(2026, 9, 20)
+        venta = _make_venta(
+            fecha=fecha,
+            servicio_ids=[servicio.id],
+            fechas_por_servicio={},
+        )
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        assert ctx.fecha_salida == datetime.datetime.combine(fecha, datetime.time.min)
+        assert ctx.fechas_por_servicio == {}
+
+    def test_populated_fechas_por_servicio_uses_resolved_min(self) -> None:
+        """fecha_salida must be min of the RESOLVED int_key_fechas, not raw values."""
+        cliente = _make_cliente()
+        sid1 = uuid.uuid4()
+        sid2 = uuid.uuid4()
+        dt_early = datetime.datetime(2026, 9, 20, 8, 0)
+        dt_late = datetime.datetime(2026, 9, 22, 14, 0)
+        s1 = _make_servicio(numero=1, nombre="Tour A")
+        # sid2 has no matching servicio → skipped from resolved dict
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.side_effect = lambda sid: s1 if sid == sid1 else None
+        venta = _make_venta(
+            servicio_ids=[sid1, sid2],
+            fechas_por_servicio={sid1: dt_early, sid2: dt_late},
+        )
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        # Only sid1 resolved → int_key_fechas = {1: dt_early}
+        assert ctx.fechas_por_servicio == {1: dt_early}
+        assert ctx.fecha_salida == dt_early
+
+
+# ---------------------------------------------------------------------------
+# FIX 2: invoice number preserved on resend
+# ---------------------------------------------------------------------------
+
+
+class TestInvoiceNumberPreservedOnResend:
+    def test_regenerated_html_contains_original_numero(self) -> None:
+        """RegenerarFacturaService must pass factura.numero to generar so the HTML carries it."""
+        from garay.aplicacion.factura.servicio import GenerarFacturaService
+
+        original_numero = "GT-20250101-ABCDEF"
+        venta_id = uuid.uuid4()
+        sid = uuid.uuid4()
+        servicio = _make_servicio(numero=1, nombre="Tour Isla")
+        servicio.id = sid
+        venta = _make_venta(
+            servicio_ids=[sid],
+            fechas_por_servicio=None,
+        )
+        venta.id = venta_id
+        cliente = _make_cliente()
+        factura = Factura(
+            id=uuid.uuid4(),
+            numero=original_numero,
+            venta_id=venta_id,
+            cliente_email="ana@example.com",
+            monto_total=Dinero("300000"),
+            fecha_emision=datetime.date(2025, 1, 1),
+            html_contenido="<html>old</html>",
+            estado_envio=EstadoEnvioFactura.ENVIADO,
+        )
+
+        ventas_repo = MagicMock()
+        ventas_repo.buscar_por_id.return_value = venta
+        facturas_repo = MagicMock()
+        facturas_repo.buscar_por_venta_id.return_value = factura
+        clientes_repo = MagicMock()
+        clientes_repo.buscar_por_id.return_value = cliente
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        # Use real GenerarFacturaService so we can check the rendered HTML
+        generador = GenerarFacturaService()
+        email_mock = MagicMock()
+        svc = RegenerarFacturaService(
+            ventas=ventas_repo,
+            clientes=clientes_repo,
+            servicios=servicios_repo,
+            facturas=facturas_repo,
+            generador=generador,
+            email=email_mock,
+        )
+
+        svc.ejecutar(venta_id)
+
+        saved_factura: Factura = facturas_repo.guardar.call_args_list[-1].args[0]
+        assert original_numero in saved_factura.html_contenido
+
+    def test_registration_path_unaffected(self) -> None:
+        """generar(ctx, venta_id) with no numero arg still uses today-based number."""
+        from garay.aplicacion.factura.servicio import GenerarFacturaService, _hoy_bogota
+
+        ctx = MagicMock()
+        ctx.fecha_salida = None
+        ctx.destinos_numeros = []
+        ctx.destinos_nombres = []
+        ctx.fechas_por_servicio = {}
+        ctx.valor = Decimal("100000")
+        ctx.abono = None
+        ctx.sin_hotel = False
+        ctx.cliente_nombre = "Test"
+        ctx.cliente_email = "t@t.com"
+        ctx.cliente_telefono = None
+        ctx.cliente_hotel = None
+        ctx.cliente_habitacion = None
+        ctx.cliente_identificacion = None
+        ctx.cliente_tipo_identificacion = None
+
+        venta_id = uuid.uuid4()
+        generador = GenerarFacturaService()
+        html = generador.generar(ctx, venta_id)
+
+        today_str = _hoy_bogota().strftime("%Y%m%d")
+        assert today_str in html
+
+
+# ---------------------------------------------------------------------------
+# FIX 3: empty destinatario returns SIN_FACTURA without sending email
+# ---------------------------------------------------------------------------
+
+
+class TestEmptyDestinatario:
+    def test_no_email_on_either_source_returns_sin_factura(self) -> None:
+        """When factura.cliente_email is empty and cliente.email is None, return SIN_FACTURA."""
+        venta = _make_venta()
+        cliente = _make_cliente(email=None)
+        factura = Factura(
+            id=uuid.uuid4(),
+            numero="GT-X",
+            venta_id=venta.id,
+            cliente_email="",  # empty string
+            monto_total=Dinero("100000"),
+            fecha_emision=datetime.date(2026, 8, 1),
+            html_contenido="<html/>",
+            estado_envio=EstadoEnvioFactura.PENDIENTE,
+        )
+        servicio = _make_servicio()
+        ventas_repo, facturas_repo, clientes_repo, servicios_repo = _make_repos(
+            venta=venta,
+            factura=factura,
+            cliente=cliente,
+            servicio=servicio,
+        )
+        svc, _, email = _make_service(
+            ventas_repo=ventas_repo,
+            facturas_repo=facturas_repo,
+            clientes_repo=clientes_repo,
+            servicios_repo=servicios_repo,
+        )
+
+        resultado = svc.ejecutar(venta.id)
+
+        assert resultado is ResultadoRegenerarFactura.SIN_FACTURA
+        email.enviar.assert_not_called()

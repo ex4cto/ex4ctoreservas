@@ -52,8 +52,8 @@ class GenerarFacturaService:
     def __init__(self, logo_url: str = "") -> None:
         self._logo_url = logo_url
 
-    def generar(self, ctx: ContextoVenta, venta_id: uuid.UUID) -> str:
-        numero = _numero_factura(venta_id)
+    def generar(self, ctx: ContextoVenta, venta_id: uuid.UUID, numero: str | None = None) -> str:
+        numero_final = numero if numero is not None else _numero_factura(venta_id)
         fecha_emision = _hoy_bogota().strftime("%d/%m/%Y")
         fecha_tour = _render_fecha_tour(ctx)
         saldo = (ctx.valor or Decimal("0")) - (ctx.abono or Decimal("0"))
@@ -69,7 +69,7 @@ class GenerarFacturaService:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Factura {numero}</title>
+<title>Factura {numero_final}</title>
 </head>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#333;background:#fff;">
 
@@ -86,7 +86,7 @@ class GenerarFacturaService:
           </td>
           <td style="text-align:right;vertical-align:top;">
             <div style="font-size:22px;font-weight:bold;color:#1B3B6B;">FACTURA DE SERVICIO</div>
-            <div style="font-size:13px;color:#555;margin-top:4px;">N° {numero}</div>
+            <div style="font-size:13px;color:#555;margin-top:4px;">N° {numero_final}</div>
             <div style="font-size:12px;color:#777;margin-top:2px;">Fecha: {fecha_emision}</div>
           </td>
         </tr>
@@ -160,7 +160,7 @@ class GenerarFacturaService:
             <strong style="color:#1B3B6B;">Medios de pago:</strong><br>
             🏦 Bancolombia cta. ahorro: <strong>085-043956-43</strong><br>
             🔑 Bancolombia llave BRE-B: <strong>@garay58804</strong><br>
-            <span style="color:#555;font-size:11px;">Referencia: número de factura {numero}</span>
+            <span style="color:#555;font-size:11px;">Referencia: número de factura {numero_final}</span>
           </td>
         </tr>
       </table>
@@ -226,7 +226,7 @@ class GenerarFacturaService:
       </table>
 
       <div style="margin-top:16px;font-size:10px;color:#aaa;text-align:center;">
-        Documento correspondiente a la factura N° {numero} emitido el {fecha_emision} — GARAY TOURS
+        Documento correspondiente a la factura N° {numero_final} emitido el {fecha_emision} — GARAY TOURS
       </div>
     </td>
   </tr>

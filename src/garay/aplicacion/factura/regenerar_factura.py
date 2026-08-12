@@ -84,7 +84,7 @@ def reconstruir_contexto(
             ctx.destinos_nombres.append("?")
 
     # Map fechas_por_servicio from {uuid: dt} to {servicio.numero: dt}
-    if venta.fechas_por_servicio is not None:
+    if venta.fechas_por_servicio:
         int_key_fechas: dict[int, datetime.datetime] = {}
         for sid, dt in venta.fechas_por_servicio.items():
             s = servicio_objects.get(sid)
@@ -92,7 +92,11 @@ def reconstruir_contexto(
                 int_key_fechas[s.numero] = dt
             # If servicio is missing, skip (fallback handled by render)
         ctx.fechas_por_servicio = int_key_fechas
-        ctx.fecha_salida = min(venta.fechas_por_servicio.values())
+        ctx.fecha_salida = (
+            min(int_key_fechas.values())
+            if int_key_fechas
+            else datetime.datetime.combine(venta.fecha, datetime.time.min)
+        )
     else:
         ctx.fechas_por_servicio = {}
         ctx.fecha_salida = datetime.datetime.combine(venta.fecha, datetime.time.min)
@@ -156,7 +160,7 @@ class RegenerarFacturaService:
             return ResultadoRegenerarFactura.SIN_FACTURA
 
         ctx = reconstruir_contexto(venta, cliente, self._servicios)
-        html = self._generador.generar(ctx, venta_id)
+        html = self._generador.generar(ctx, venta_id, numero=factura.numero)
 
         # Update the existing factura — keep legal identity (id, numero, fecha_emision)
         factura.html_contenido = html
@@ -166,6 +170,8 @@ class RegenerarFacturaService:
         self._facturas.guardar(factura)
 
         destinatario = factura.cliente_email or (cliente.email or "")
+        if not destinatario:
+            return ResultadoRegenerarFactura.SIN_FACTURA
         asunto = obtener_mensaje("factura.asunto_email")
 
         try:
