@@ -1,10 +1,22 @@
-"""Tests for FSMTiquetera.refrescar_servicios() — RED phase written first (strict TDD)."""
+"""Tests for FSMTiquetera.refrescar_servicios() and related integration scenarios.
+
+All tests in this file follow strict TDD (RED first, then GREEN).
+"""
 
 from __future__ import annotations
 
+import uuid
 from decimal import Decimal
 
+import pytest
+import sqlalchemy as sa
+from sqlalchemy.orm import Session, sessionmaker
+
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
+from garay.dominio.servicios.entidades import Servicio
+from garay.infraestructura.persistencia import modelos  # noqa: F401
+from garay.infraestructura.persistencia.base import Base
+from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 
 SERVICIOS_INICIAL: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
     (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
@@ -78,3 +90,43 @@ def test_refresh_does_not_touch_user_data() -> None:
 
     # user_data is untouched — the FSM holds no reference to it.
     assert simulated_user_data["contexto"] == snapshot_before
+
+
+# ── Phase 8.2 — integration: deactivated tour hidden from listar_activos ──────
+
+
+@pytest.fixture()
+def sf_mem() -> sessionmaker[Session]:
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def test_desactivar_tour_oculto_en_listar_activos(sf_mem: sessionmaker[Session]) -> None:
+    """After setting activo=False and saving, listar_activos() must NOT return
+    the tour; listar() must still return it (soft-delete semantics)."""
+    repo = SQLAServicioRepository(sf_mem)
+    tour = Servicio(
+        id=uuid.uuid4(),
+        numero=42,
+        nombre="Tour a Desactivar",
+        activo=True,
+        precio_neto_adulto=Decimal("80000"),
+        precio_neto_nino=None,
+        categoria="PRUEBA",
+    )
+    repo.guardar(tour)
+
+    # Confirm it's visible before deactivation.
+    assert any(s.id == tour.id for s in repo.listar_activos())
+
+    # Soft-delete: set activo=False and save.
+    import dataclasses
+
+    inactivo = dataclasses.replace(tour, activo=False)
+    repo.guardar(inactivo)
+
+    # Must be absent from listar_activos().
+    assert all(s.id != tour.id for s in repo.listar_activos())
+    # Must still be present in listar() (data not destroyed).
+    assert any(s.id == tour.id for s in repo.listar())
