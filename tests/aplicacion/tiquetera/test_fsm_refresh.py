@@ -80,7 +80,9 @@ def test_refresh_does_not_touch_user_data() -> None:
     fsm = _make_fsm()
 
     # Simulate a PTB user_data dict as it would look mid-sale.
-    simulated_user_data: dict = {"contexto": {"numero_tour": 1, "familia": "BARÚ"}}
+    simulated_user_data: dict[str, dict[str, object]] = {
+        "contexto": {"numero_tour": 1, "familia": "BARÚ"}
+    }
     snapshot_before = dict(simulated_user_data["contexto"])
 
     nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [

@@ -8,8 +8,10 @@ from __future__ import annotations
 import ast
 import pathlib
 
-
-_MAIN_PY = pathlib.Path(__file__).parents[3] / "src" / "garay" / "infraestructura" / "telegram" / "main.py"
+_MAIN_PY = (
+    pathlib.Path(__file__).parents[3]
+    / "src" / "garay" / "infraestructura" / "telegram" / "main.py"
+)
 
 
 def _catalog_build_calls_listar_activos() -> bool:
