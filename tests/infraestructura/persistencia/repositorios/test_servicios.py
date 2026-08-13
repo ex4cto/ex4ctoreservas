@@ -105,3 +105,38 @@ def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(s.id)
     assert resultado is not None
     assert resultado.categoria == ""
+
+
+# ── listar_activos ────────────────────────────────────────────────────────────
+
+
+def test_listar_activos_solo_activos(sf: sessionmaker[Session]) -> None:
+    """listar_activos() returns only tours where activo=True."""
+    repo = SQLAServicioRepository(sf)
+    activo = Servicio(id=uuid.uuid4(), numero=10, nombre="Tour Activo", activo=True)
+    inactivo = Servicio(id=uuid.uuid4(), numero=11, nombre="Tour Inactivo", activo=False)
+    repo.guardar(activo)
+    repo.guardar(inactivo)
+    resultado = repo.listar_activos()
+    ids = {s.id for s in resultado}
+    assert activo.id in ids
+    assert inactivo.id not in ids
+
+
+def test_listar_activos_vacio(sf: sessionmaker[Session]) -> None:
+    """listar_activos() returns empty list when no active tours exist."""
+    repo = SQLAServicioRepository(sf)
+    inactivo = Servicio(id=uuid.uuid4(), numero=20, nombre="Solo Inactivo", activo=False)
+    repo.guardar(inactivo)
+    assert repo.listar_activos() == []
+
+
+def test_listar_sigue_devolviendo_todos(sf: sessionmaker[Session]) -> None:
+    """Regression: listar() still returns ALL tours regardless of activo state."""
+    repo = SQLAServicioRepository(sf)
+    s1 = Servicio(id=uuid.uuid4(), numero=30, nombre="Activo", activo=True)
+    s2 = Servicio(id=uuid.uuid4(), numero=31, nombre="Inactivo", activo=False)
+    repo.guardar(s1)
+    repo.guardar(s2)
+    todos = repo.listar()
+    assert len(todos) == 2

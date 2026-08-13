@@ -220,6 +220,9 @@ class ServicioRepository(ABC):
     @abstractmethod
     def listar(self) -> list[Servicio]: ...
 
+    @abstractmethod
+    def listar_activos(self) -> list[Servicio]: ...
+
 
 class PuntoDeVentaRepository(ABC):
     @abstractmethod
