@@ -135,6 +135,28 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
+from garay.infraestructura.telegram.handlers_tours import (
+    EDF_CAMPO,
+    EDF_CONFIRMA,
+    EDF_FAMILIA,
+    EDF_FICHA,
+    EDF_NUEVA_FAMILIA,
+    EDF_TOUR,
+    ELT_CONFIRMA,
+    ELT_FAMILIA,
+    ELT_TOUR,
+    cmd_editar_tour,
+    cmd_eliminar_tour,
+    handle_edt_confirma,
+    handle_edt_familia,
+    handle_edt_ficha,
+    handle_edt_nueva_familia_texto,
+    handle_edt_tour,
+    handle_edt_valor,
+    handle_elt_confirma,
+    handle_elt_familia,
+    handle_elt_tour,
+)
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
 
 _TEXT = filters.TEXT & ~filters.COMMAND
@@ -457,6 +479,42 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
 
+    editar_tour_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("editar_tour", cmd_editar_tour)],
+        states={
+            EDF_FAMILIA: [
+                _CB(handle_edt_familia, pattern="^edt_familia:"),
+                _CB(handle_edt_familia, pattern="^edt_familia_nueva:"),
+                _CB(handle_edt_familia, pattern="^edt_familia_nueva_libre$"),
+            ],
+            EDF_TOUR: [_CB(handle_edt_tour, pattern="^edt_tour:")],
+            EDF_FICHA: [
+                _CB(handle_edt_ficha, pattern="^edt_campo:"),
+                _CB(handle_edt_ficha, pattern="^edt_listo$"),
+            ],
+            EDF_CAMPO: [
+                MessageHandler(_TEXT, handle_edt_valor),
+            ],
+            EDF_NUEVA_FAMILIA: [
+                MessageHandler(_TEXT, handle_edt_nueva_familia_texto),
+            ],
+            EDF_CONFIRMA: [
+                _CB(handle_edt_confirma, pattern="^edt_(confirmar|cancelar)$"),
+            ],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
+    eliminar_tour_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("eliminar_tour", cmd_eliminar_tour)],
+        states={
+            ELT_FAMILIA: [_CB(handle_elt_familia, pattern="^elt_familia:")],
+            ELT_TOUR: [_CB(handle_elt_tour, pattern="^elt_tour:")],
+            ELT_CONFIRMA: [_CB(handle_elt_confirma, pattern="^elt_(confirmar|cancelar)$")],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
@@ -464,6 +522,8 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(eliminar_freelancer_conv_handler, group=5)
     app.add_handler(editar_freelancer_conv_handler, group=6)
     app.add_handler(gestionar_ventas_conv_handler, group=7)
+    app.add_handler(editar_tour_conv_handler, group=8)
+    app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

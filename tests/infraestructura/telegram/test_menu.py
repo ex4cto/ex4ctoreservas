@@ -19,7 +19,7 @@ class TestCatalogo:
     """Verify catalog structure and completeness."""
 
     def test_catalogo_tiene_16_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 16
+        assert len(CATALOGO_COMANDOS) == 18
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -28,7 +28,19 @@ class TestCatalogo:
             GrupoComando.PAGOS,
             GrupoComando.REPORTES,
             GrupoComando.ADMINISTRACION,
+            GrupoComando.TOURS,
         }
+
+    def test_catalogo_tiene_grupo_tours(self) -> None:
+        assert GrupoComando.TOURS in {c.grupo for c in CATALOGO_COMANDOS}
+
+    def test_catalogo_tiene_editar_tour(self) -> None:
+        comandos = [c.comando for c in CATALOGO_COMANDOS]
+        assert "editar_tour" in comandos
+
+    def test_catalogo_tiene_eliminar_tour(self) -> None:
+        comandos = [c.comando for c in CATALOGO_COMANDOS]
+        assert "eliminar_tour" in comandos
 
     def test_catalogo_tiene_nueva_venta(self) -> None:
         comandos = [c.comando for c in CATALOGO_COMANDOS]
@@ -93,7 +105,25 @@ class TestComandosParaTier:
 
     def test_propietario_ve_todos_16(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 16
+        assert len(result) == 18
+
+    def test_freelancer_no_ve_editar_tour(self) -> None:
+        """Regression: /editar_tour is admin-only and must never reach freelancers."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.FREELANCER)]
+        assert "editar_tour" not in comandos
+
+    def test_freelancer_no_ve_eliminar_tour(self) -> None:
+        """Regression: /eliminar_tour is admin-only and must never reach freelancers."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.FREELANCER)]
+        assert "eliminar_tour" not in comandos
+
+    def test_admin_ve_editar_tour(self) -> None:
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "editar_tour" in comandos
+
+    def test_admin_ve_eliminar_tour(self) -> None:
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "eliminar_tour" in comandos
 
     def test_propietario_ve_flujo_caja(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
@@ -123,7 +153,7 @@ class TestComandosBot:
 
     def test_propietario_retorna_16_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 16
+        assert len(result) == 18
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:

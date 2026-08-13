@@ -579,6 +579,37 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.factura_error": {
         Idioma.ES: "⚠️ La venta se editó pero no se pudo reenviar la factura."
     },
+    # --- Tours ---
+    "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
+    "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},
+    "tour_ficha": {
+        Idioma.ES: (
+            "🗺️ <b>{nombre}</b>\n"
+            "• Familia: {familia}\n"
+            "• Neto adulto: {neto_adulto}\n"
+            "• Neto niño: {neto_nino}\n"
+            "• Estado: {estado}"
+        )
+    },
+    "tour_editar_campo": {Idioma.ES: "¿Qué campo deseas editar?"},
+    "tour_confirmar_cambio": {
+        Idioma.ES: "¿Confirmas el cambio?\n\nAnterior: {anterior}\nNuevo: {nuevo}"
+    },
+    "tour_campo_sin_cambio": {
+        Idioma.ES: "El valor es idéntico al actual. No se guardaron cambios."
+    },
+    "tour_guardado_ok": {Idioma.ES: "✅ Tour actualizado correctamente."},
+    "tour_desactivado_ok": {Idioma.ES: "✅ Tour desactivado. Ya no aparece en ventas nuevas."},
+    "tour_eliminar_confirmar": {
+        Idioma.ES: "¿Desactivar el tour <b>{nombre}</b>? Esta acción lo ocultará en ventas nuevas."
+    },
+    "tour_eliminado_ok": {Idioma.ES: "✅ Tour desactivado correctamente."},
+    "tour_cancelado": {Idioma.ES: "Operación cancelada."},
+    "tour_neto_invalido": {
+        Idioma.ES: "Valor inválido. Ingresa un número positivo o deja vacío para limpiar el campo."
+    },
+    "tour_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresa un nombre válido:"},
+    "tour_nueva_familia_prompt": {Idioma.ES: "Escribe el nombre de la nueva familia:"},
 }
 
 

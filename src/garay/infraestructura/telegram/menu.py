@@ -20,6 +20,7 @@ class GrupoComando(StrEnum):
     PAGOS = "💵 Pagos y Egresos"
     REPORTES = "📊 Reportes"
     ADMINISTRACION = "👥 Administración"
+    TOURS = "🗺️ Tours"
 
 
 class TierComando(IntEnum):
@@ -53,6 +54,7 @@ _V = GrupoComando.VENTAS
 _P = GrupoComando.PAGOS
 _R = GrupoComando.REPORTES
 _A = GrupoComando.ADMINISTRACION
+_T = GrupoComando.TOURS
 _FL = TierComando.FREELANCER
 _AD = TierComando.ADMIN
 _PR = TierComando.PROPIETARIO
@@ -78,6 +80,9 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("nuevo_freelancer", "Registrar un nuevo freelancer", _A, _AD),
     ComandoMenu("editar_freelancer", "Editar un freelancer", _A, _AD),
     ComandoMenu("eliminar_freelancer", "Desactivar un freelancer", _A, _AD),
+    # ── Tours ────────────────────────────────────────────────────────────────
+    ComandoMenu("editar_tour", "Editar datos de un tour", _T, _AD),
+    ComandoMenu("eliminar_tour", "Desactivar un tour", _T, _AD),
 ]
 
 
