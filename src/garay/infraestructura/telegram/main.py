@@ -112,7 +112,7 @@ def main() -> None:
 
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria)
-        for s in servicio_repo.listar()
+        for s in servicio_repo.listar_activos()
     ]
     puntos_venta = [p.nombre for p in pdv_repo.listar()]
 
