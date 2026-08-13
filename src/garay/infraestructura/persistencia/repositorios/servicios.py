@@ -60,3 +60,14 @@ class SQLAServicioRepository(ServicioRepository):
         with self._sf.begin() as session:
             rows = session.execute(select(ServicioModel)).scalars().all()
             return [to_domain(r) for r in rows]
+
+    def listar_activos(self) -> list[Servicio]:
+        with self._sf.begin() as session:
+            rows = (
+                session.execute(
+                    select(ServicioModel).where(ServicioModel.activo.is_(True))
+                )
+                .scalars()
+                .all()
+            )
+            return [to_domain(r) for r in rows]

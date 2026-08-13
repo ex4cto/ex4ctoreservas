@@ -193,6 +193,31 @@ def _siguiente_tour_sin_fecha(ctx: ContextoVenta) -> int | None:
 class FSMTiquetera:
     """Pure finite state machine for the Telegram sale-registration conversation."""
 
+    @staticmethod
+    def _build_catalog(
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
+    ) -> tuple[
+        dict[int, tuple[str, Decimal | None, Decimal | None]],
+        dict[str, list[int]],
+    ]:
+        """Build the two catalog dicts from a flat list of service tuples.
+
+        Returns:
+            (_servicios, _familias) — same structure as the instance attributes.
+        """
+        servicios_dict: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
+            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n, _ in servicios
+        }
+        familias_raw: dict[str, list[int]] = {}
+        for numero, _nombre, _neto_a, _neto_n, categoria in servicios:
+            familias_raw.setdefault(categoria, []).append(numero)
+        familias_dict: dict[str, list[int]] = {
+            categoria: sorted(numeros)
+            for categoria, numeros in sorted(familias_raw.items())
+            if numeros
+        }
+        return servicios_dict, familias_dict
+
     def __init__(
         self,
         servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
@@ -201,25 +226,30 @@ class FSMTiquetera:
         multi_tour_habilitado: bool = False,
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
-        self._servicios: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
-            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n, _ in servicios
-        }
         # categoria → sorted list of service numeros (only non-empty families).
-        familias: dict[str, list[int]] = {}
-        for numero, _nombre, _neto_a, _neto_n, categoria in servicios:
-            familias.setdefault(categoria, []).append(numero)
-        # Deterministic order: families sorted by name, numeros sorted within each.
-        self._familias: dict[str, list[int]] = {
-            categoria: sorted(numeros)
-            for categoria, numeros in sorted(familias.items())
-            if numeros
-        }
+        self._servicios, self._familias = self._build_catalog(servicios)
         self._puntos_venta = puntos_venta
         # Roster of (id, nombre, activo) for the counterpart picker.
         self._freelancers: list[tuple[uuid.UUID, str, bool]] = freelancers or []
         # Feature flag: False = one tour per reservation (default).
         # True = legacy multi-tour accumulator (DORMANT by default).
         self._multi_tour_habilitado: bool = multi_tour_habilitado
+
+    def refrescar_servicios(
+        self,
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
+    ) -> None:
+        """Rebuild _servicios and _familias in place from a fresh repo snapshot.
+
+        Safe on the shared singleton instance: per-conversation state lives in
+        PTB user_data (ContextoVenta), not here. Any in-flight sale reads the
+        catalog fresh on its next FSM transition and will see the updated data.
+        """
+        nuevos_servicios, nuevas_familias = self._build_catalog(servicios)
+        self._servicios.clear()
+        self._servicios.update(nuevos_servicios)
+        self._familias.clear()
+        self._familias.update(nuevas_familias)
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
