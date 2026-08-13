@@ -224,7 +224,7 @@ class TestCmdGenerarMes:
     @pytest.mark.asyncio
     async def test_sin_gastos_activos_responde(self) -> None:
         update = _make_update()
-        ctx = _make_context()
+        ctx = _make_context(gastos=[])  # no active recurring expenses at all
         gen_service = MagicMock()
         gen_service.generar.return_value = []
         ctx.bot_data["generar_gastos_service"] = gen_service
@@ -233,7 +233,21 @@ class TestCmdGenerarMes:
 
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
-        assert msg  # non-empty
+        assert "No hay gastos fijos activos" in msg
+
+    @pytest.mark.asyncio
+    async def test_ya_generados_cuando_hay_activos_pero_nada_nuevo(self) -> None:
+        """Idempotent re-run: active expenses exist but all were already generated."""
+        update = _make_update()
+        ctx = _make_context(gastos=[_gasto_recurrente("Arriendo")])
+        gen_service = MagicMock()
+        gen_service.generar.return_value = []  # everything skipped by idempotency
+        ctx.bot_data["generar_gastos_service"] = gen_service
+
+        await cmd_generar_mes(update, ctx)
+
+        msg = update.effective_message.reply_text.call_args[0][0]
+        assert "ya fueron generados" in msg
 
     @pytest.mark.asyncio
     async def test_no_admin_es_denegado(self) -> None:

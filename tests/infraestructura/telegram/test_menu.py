@@ -63,6 +63,15 @@ class TestComandosParaTier:
         assert "nuevo_egreso" not in comandos
         assert "dashboard_ventas" not in comandos
 
+    def test_freelancer_no_ve_generar_mes(self) -> None:
+        """Regression: /generar_mes is admin-only and must never reach freelancers."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.FREELANCER)]
+        assert "generar_mes" not in comandos
+
+    def test_admin_ve_generar_mes(self) -> None:
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "generar_mes" in comandos
+
     def test_admin_ve_freelancer_y_admin(self) -> None:
         result = comandos_para_tier(TierComando.ADMIN)
         freelancer_cmds = [c for c in result if c.tier == TierComando.FREELANCER]
