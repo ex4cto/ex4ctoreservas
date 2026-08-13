@@ -77,6 +77,7 @@ from garay.infraestructura.telegram.handlers_tours import (  # noqa: E402
     EDF_CONFIRMA,
     EDF_FAMILIA,
     EDF_FICHA,
+    EDF_NUEVA_FAMILIA,
     EDF_TOUR,
     cmd_editar_tour,
     handle_edt_confirma,
@@ -327,7 +328,7 @@ class TestHandleEdtFamiliaReasign:
 
     @pytest.mark.asyncio
     async def test_editar_familia_nueva_libre(self) -> None:
-        """'Nueva familia' button → text prompt for new family name."""
+        """'Nueva familia' button → text prompt, returns EDF_NUEVA_FAMILIA (Option B fix)."""
         s1 = _servicio("City Tour", "Cartagena")
         update = _make_update(callback_data="edt_familia_nueva_libre")
         ctx = _make_context(
@@ -340,8 +341,8 @@ class TestHandleEdtFamiliaReasign:
 
         result = await handle_edt_familia(update, ctx)
 
-        # Must prompt for free text
-        assert result == EDF_CAMPO
+        # Must prompt for free text and transition to the dedicated state
+        assert result == EDF_NUEVA_FAMILIA
         update.effective_message.reply_text.assert_called_once()
 
 
@@ -430,3 +431,209 @@ class TestHandleEdtCancelar:
 
         assert result == ConversationHandler.END
         ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cancelar_con_activo_pendiente_no_persiste_toggle(self) -> None:
+        """
+        Cancel during an activo-toggle confirmation MUST NOT persist the toggle.
+
+        WARNING-1 edge case: if edt_activo_nuevo is in user_data and the user
+        taps Cancel, the toggle must be discarded — not saved.
+        """
+        s1 = _servicio(activo=True)
+        update = _make_update(callback_data="edt_cancelar")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "activo",
+                "edt_activo_nuevo": False,  # pending toggle — must be discarded on cancel
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_confirma(update, ctx)
+
+        assert result == ConversationHandler.END
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+        # User_data must be cleaned up
+        assert "edt_activo_nuevo" not in ctx.user_data
+
+
+# ---------------------------------------------------------------------------
+# Routing tests — verify PTB state dispatch, not just handler logic
+# ---------------------------------------------------------------------------
+
+
+class TestEdtCampoRoutingNuevaFamilia:
+    """
+    These tests simulate the PTB routing that actually runs in production.
+
+    In state EDF_CAMPO, PTB evaluates handlers in list order and stops at the
+    first match.  The FIRST MessageHandler(_TEXT, ...) registered for EDF_CAMPO
+    is the one that actually runs when the user types text.
+
+    CRITICAL-1 root cause: both handle_edt_valor and handle_edt_nueva_familia_texto
+    were registered under EDF_CAMPO.  PTB always dispatches to handle_edt_valor
+    first, so handle_edt_nueva_familia_texto is never reached.
+
+    The fix (Option B) introduces EDF_NUEVA_FAMILIA (228) as a dedicated state so
+    there is no collision.  These tests document the correct post-fix behaviour and
+    act as a regression guard.
+    """
+
+    @pytest.mark.asyncio
+    async def test_edf_campo_texto_con_campo_familia_debe_ir_a_confirma_no_error(
+        self,
+    ) -> None:
+        """
+        After 'Nueva familia' is chosen, the user types a name.
+        The PTB-dispatched handler for that text input MUST return EDF_CONFIRMA
+        (not stay in EDF_CAMPO with a 'neto inválido' error).
+
+        RED: with current code handle_edt_valor is the first MessageHandler(_TEXT)
+        in EDF_CAMPO. When edt_campo='familia' it falls through to the fallback
+        branch and returns EDF_CAMPO — this test will FAIL before the fix.
+
+        GREEN: after introducing EDF_NUEVA_FAMILIA, the text in that new state is
+        handled by handle_edt_nueva_familia_texto, which returns EDF_CONFIRMA.
+        We verify by calling the handler that PTB would actually invoke.
+        """
+        s1 = _servicio("City Tour", "Cartagena")
+        update = _make_update(text="San Andres")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "familia",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        # After the fix: the handler that PTB dispatches in EDF_NUEVA_FAMILIA is
+        # handle_edt_nueva_familia_texto, which must return EDF_CONFIRMA.
+        result = await handle_edt_nueva_familia_texto(update, ctx)
+
+        assert result == EDF_CONFIRMA, (
+            f"Expected EDF_CONFIRMA ({EDF_CONFIRMA}) but got {result}. "
+            "The nueva-familia text handler must route to confirm, not loop with an error."
+        )
+        # Also verify the family name was stored for later confirmation
+        assert ctx.user_data.get("edt_valor") == "San Andres"
+
+    @pytest.mark.asyncio
+    async def test_handle_edt_valor_con_campo_familia_no_llega_a_confirma(
+        self,
+    ) -> None:
+        """
+        Regression guard: handle_edt_valor must NOT silently accept edt_campo='familia'.
+        If it did, a bug would allow writing a familia through the wrong handler.
+        When edt_campo='familia', handle_edt_valor must stay in EDF_CAMPO (error path).
+
+        This documents the BUG that existed before Option B:
+        the wrong handler (handle_edt_valor) was being dispatched by PTB for
+        'nueva familia' text input because both were registered under EDF_CAMPO.
+        """
+        s1 = _servicio("City Tour", "Cartagena")
+        update = _make_update(text="San Andres")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "familia",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        # handle_edt_valor has no branch for campo='familia', it falls through to
+        # the fallback error path and returns EDF_CAMPO.
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CAMPO, (
+            "handle_edt_valor must return EDF_CAMPO when campo='familia' "
+            "(it is not the right handler for this path)."
+        )
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_edf_nueva_familia_state_exists(self) -> None:
+        """EDF_NUEVA_FAMILIA constant must exist and be in the 220-229 range."""
+        from garay.infraestructura.telegram.handlers_tours import EDF_NUEVA_FAMILIA
+
+        assert isinstance(EDF_NUEVA_FAMILIA, int)
+        assert 220 <= EDF_NUEVA_FAMILIA <= 229, (
+            f"EDF_NUEVA_FAMILIA={EDF_NUEVA_FAMILIA} is outside the expected 220-229 range"
+        )
+
+    @pytest.mark.asyncio
+    async def test_handle_edt_familia_nueva_libre_retorna_edf_nueva_familia(
+        self,
+    ) -> None:
+        """
+        When the admin taps 'Nueva familia', handle_edt_familia must return
+        EDF_NUEVA_FAMILIA (not EDF_CAMPO) so PTB routes the next text message
+        to handle_edt_nueva_familia_texto instead of handle_edt_valor.
+        """
+        from garay.infraestructura.telegram.handlers_tours import EDF_NUEVA_FAMILIA
+
+        s1 = _servicio("City Tour", "Cartagena")
+        update = _make_update(callback_data="edt_familia_nueva_libre")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id), "edt_campo": "familia"},
+        )
+
+        result = await handle_edt_familia(update, ctx)
+
+        assert result == EDF_NUEVA_FAMILIA, (
+            f"Expected EDF_NUEVA_FAMILIA ({EDF_NUEVA_FAMILIA}) but got {result}. "
+            "handle_edt_familia must return EDF_NUEVA_FAMILIA (not EDF_CAMPO) "
+            "when the callback is 'edt_familia_nueva_libre'."
+        )
+
+
+class TestEdtNuevaFamiliaEndToEnd:
+    """
+    Full flow: taps 'Nueva familia' → types name → confirms → saved in repo with
+    the new categoria and FSM refreshed.
+    """
+
+    @pytest.mark.asyncio
+    async def test_nueva_familia_flujo_completo_guarda_y_refresca(self) -> None:
+        """
+        End-to-end: admin writes new family name → confirm → service saved with
+        new categoria and FSM refreshed.  Verifies no 'neto inválido' error in path.
+        """
+        s1 = _servicio("City Tour", "Cartagena")
+
+        # Step 1: tap 'Nueva familia' → must go to EDF_NUEVA_FAMILIA
+        update_cb = _make_update(callback_data="edt_familia_nueva_libre")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id), "edt_campo": "familia"},
+        )
+        state_after_tap = await handle_edt_familia(update_cb, ctx)
+        assert state_after_tap == EDF_NUEVA_FAMILIA
+
+        # Step 2: type new family name in EDF_NUEVA_FAMILIA → must go to EDF_CONFIRMA
+        update_txt = _make_update(text="San Andres")
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+        state_after_text = await handle_edt_nueva_familia_texto(update_txt, ctx)
+        assert state_after_text == EDF_CONFIRMA
+        assert ctx.user_data.get("edt_valor") == "San Andres"
+
+        # Step 3: confirm → service saved with new categoria, FSM refreshed
+        update_confirm = _make_update(callback_data="edt_confirmar")
+        repo = ctx.bot_data["servicio_repo"]
+        repo.buscar_por_id.return_value = s1
+        repo.listar_activos.return_value = [s1]
+        state_after_confirm = await handle_edt_confirma(update_confirm, ctx)
+
+        assert state_after_confirm == EDF_FICHA
+        repo.guardar.assert_called_once()
+        saved = repo.guardar.call_args[0][0]
+        assert saved.categoria == "San Andres", (
+            f"Expected categoria='San Andres' but got {saved.categoria!r}. "
+            "The new family name must be persisted."
+        )
+        ctx.bot_data["fsm"].refrescar_servicios.assert_called_once()

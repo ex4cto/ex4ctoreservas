@@ -28,6 +28,8 @@ EDF_FICHA: int = 222
 EDF_CAMPO: int = 223
 EDF_CONFIRMA: int = 224
 
+EDF_NUEVA_FAMILIA: int = 228  # Dedicated state for free-text new family name input
+
 ELT_FAMILIA: int = 225
 ELT_TOUR: int = 226
 ELT_CONFIRMA: int = 227
@@ -211,7 +213,7 @@ async def handle_edt_familia(
         await update.effective_message.reply_text(
             obtener_mensaje("tour_nueva_familia_prompt")
         )
-        return EDF_CAMPO
+        return EDF_NUEVA_FAMILIA
 
     # Navigation: edt_familia:{family_name}
     familia = data.removeprefix("edt_familia:")
@@ -456,15 +458,15 @@ async def handle_edt_valor(
 async def handle_edt_nueva_familia_texto(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Handle free-text new family name input."""
+    """Handle free-text new family name input (active in state EDF_NUEVA_FAMILIA)."""
     if update.effective_message is None:
-        return EDF_CAMPO
+        return EDF_NUEVA_FAMILIA
     texto = (update.effective_message.text or "").strip()
     if not texto:
         await update.effective_message.reply_text(
             obtener_mensaje("tour_nueva_familia_prompt")
         )
-        return EDF_CAMPO
+        return EDF_NUEVA_FAMILIA
     ud = context.user_data if context.user_data is not None else {}
     target_id_str = str(ud.get("edt_target_id", ""))
     repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
@@ -503,13 +505,6 @@ async def handle_edt_confirma(
     accion = query.data if query else ""
     ud = context.user_data if context.user_data is not None else {}
 
-    if accion in ("edt_cancelar", "edt_toggle_activo") and "edt_activo_nuevo" not in ud:
-        # Pure cancel
-        _limpiar_edt(context)
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
-
-    # Determine if this is a toggle-activo shortcut (callback from ficha directly)
     if accion == "edt_cancelar":
         _limpiar_edt(context)
         await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))

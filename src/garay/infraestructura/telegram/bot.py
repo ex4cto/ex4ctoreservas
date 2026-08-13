@@ -140,6 +140,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     EDF_CONFIRMA,
     EDF_FAMILIA,
     EDF_FICHA,
+    EDF_NUEVA_FAMILIA,
     EDF_TOUR,
     ELT_CONFIRMA,
     ELT_FAMILIA,
@@ -493,6 +494,8 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             EDF_CAMPO: [
                 MessageHandler(_TEXT, handle_edt_valor),
+            ],
+            EDF_NUEVA_FAMILIA: [
                 MessageHandler(_TEXT, handle_edt_nueva_familia_texto),
             ],
             EDF_CONFIRMA: [
