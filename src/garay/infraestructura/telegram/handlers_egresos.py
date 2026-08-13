@@ -357,11 +357,20 @@ async def cmd_generar_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     hoy = datetime.date.today()
     generados = service.generar(mes=hoy.month, año=hoy.year)
-    if not generados:
-        texto = obtener_mensaje("generar_mes.sin_activos")
-    else:
+    if generados:
         texto = obtener_mensaje("generar_mes.resultado").format(
             cantidad=len(generados), mes=hoy.month, año=hoy.year
         )
+    else:
+        # Nothing generated: distinguish "no active expenses" from
+        # "all already generated this month" (idempotent re-run).
+        recurrente_service = context.bot_data.get("recurrente_service")
+        activos = recurrente_service.listar_activos() if recurrente_service else []
+        if activos:
+            texto = obtener_mensaje("generar_mes.ya_generados").format(
+                mes=hoy.month, año=hoy.year
+            )
+        else:
+            texto = obtener_mensaje("generar_mes.sin_activos")
     if update.effective_message:
         await update.effective_message.reply_text(texto, parse_mode="Markdown")
