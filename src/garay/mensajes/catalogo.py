@@ -605,6 +605,36 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "tour_eliminado_ok": {Idioma.ES: "✅ Tour desactivado correctamente."},
     "tour_cancelado": {Idioma.ES: "Operación cancelada."},
+    # /nuevo_tour — Fase 2 PR 1
+    "tour_pide_nombre": {Idioma.ES: "¿Cuál es el nombre del tour?"},
+    "tour_pide_neto_adulto": {
+        Idioma.ES: (
+            "¿Cuál es el precio neto por adulto?\n"
+            "Deja vacío o presiona [Saltar] para omitir."
+        )
+    },
+    "tour_pide_neto_nino": {
+        Idioma.ES: (
+            "¿Cuál es el precio neto por niño?\n"
+            "Deja vacío o presiona [Saltar] para omitir."
+        )
+    },
+    "tour_creado_ok": {Idioma.ES: "✅ Tour creado: <b>{nombre}</b>"},
+    "tour_nombre_duplicado": {
+        Idioma.ES: (
+            "Ya existe un tour llamado <b>{nombre}</b>.\n"
+            "¿Deseas usarlo de todas formas o cambiar el nombre?"
+        )
+    },
+    "tour_nuevo_ficha": {
+        Idioma.ES: (
+            "📋 <b>Nuevo tour</b>\n"
+            "• Familia: {familia}\n"
+            "• Nombre: {nombre}\n"
+            "• Neto adulto: {neto_adulto}\n"
+            "• Neto niño: {neto_nino}"
+        )
+    },
     "tour_neto_invalido": {
         Idioma.ES: "Valor inválido. Ingresa un número positivo o deja vacío para limpiar el campo."
     },
