@@ -1521,7 +1521,7 @@ class TestNvtCrearIncludesHorarios:
 class TestNvtHorStatesBotWiring:
     """Structural: NVT_HOR_LISTA and NVT_HOR_AGREGAR must be in nuevo_tour_conv_handler."""
 
-    def _get_nvt_conv(self) -> object:
+    def _get_nvt_conv(self) -> ConversationHandler | None:  # type: ignore[type-arg]
         from unittest.mock import MagicMock, patch
 
         from telegram.ext import ConversationHandler
@@ -1547,7 +1547,7 @@ class TestNvtHorStatesBotWiring:
 
         nvt_conv = self._get_nvt_conv()
         assert nvt_conv is not None, "nuevo_tour_conv_handler not found"
-        assert NVT_HOR_LISTA in nvt_conv.states, (  # type: ignore[union-attr]
+        assert NVT_HOR_LISTA in nvt_conv.states, (
             f"NVT_HOR_LISTA ({NVT_HOR_LISTA}) not in nuevo_tour_conv_handler states"
         )
 
@@ -1557,7 +1557,7 @@ class TestNvtHorStatesBotWiring:
 
         nvt_conv = self._get_nvt_conv()
         assert nvt_conv is not None, "nuevo_tour_conv_handler not found"
-        assert NVT_HOR_AGREGAR in nvt_conv.states, (  # type: ignore[union-attr]
+        assert NVT_HOR_AGREGAR in nvt_conv.states, (
             f"NVT_HOR_AGREGAR ({NVT_HOR_AGREGAR}) not in nuevo_tour_conv_handler states"
         )
 
@@ -1569,7 +1569,7 @@ class TestNvtHorStatesBotWiring:
 
         nvt_conv = self._get_nvt_conv()
         assert nvt_conv is not None
-        handlers_list = nvt_conv.states.get(NVT_HOR_AGREGAR, [])  # type: ignore[union-attr]
+        handlers_list = nvt_conv.states.get(NVT_HOR_AGREGAR, [])
         text_handlers = [h for h in handlers_list if isinstance(h, MessageHandler)]
         assert len(text_handlers) == 1, (
             f"NVT_HOR_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"

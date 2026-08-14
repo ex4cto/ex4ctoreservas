@@ -931,7 +931,7 @@ class TestHandleEdhAgregarTexto:
 class TestEdhStatesBotWiring:
     """Structural: EDH_LISTA and EDH_AGREGAR must be in editar_tour_conv_handler."""
 
-    def _get_editar_conv(self) -> object:
+    def _get_editar_conv(self) -> ConversationHandler | None:  # type: ignore[type-arg]
         from unittest.mock import MagicMock, patch
 
         from telegram.ext import ConversationHandler
@@ -959,7 +959,7 @@ class TestEdhStatesBotWiring:
 
         editar_conv = self._get_editar_conv()
         assert editar_conv is not None, "editar_tour_conv_handler not found"
-        assert EDH_LISTA in editar_conv.states, (  # type: ignore[union-attr]
+        assert EDH_LISTA in editar_conv.states, (
             f"EDH_LISTA ({EDH_LISTA}) not registered in editar_tour_conv_handler states"
         )
 
@@ -969,7 +969,7 @@ class TestEdhStatesBotWiring:
 
         editar_conv = self._get_editar_conv()
         assert editar_conv is not None, "editar_tour_conv_handler not found"
-        assert EDH_AGREGAR in editar_conv.states, (  # type: ignore[union-attr]
+        assert EDH_AGREGAR in editar_conv.states, (
             f"EDH_AGREGAR ({EDH_AGREGAR}) not registered in editar_tour_conv_handler states"
         )
 
@@ -981,7 +981,7 @@ class TestEdhStatesBotWiring:
 
         editar_conv = self._get_editar_conv()
         assert editar_conv is not None
-        handlers_list = editar_conv.states.get(EDH_AGREGAR, [])  # type: ignore[union-attr]
+        handlers_list = editar_conv.states.get(EDH_AGREGAR, [])
         text_handlers = [h for h in handlers_list if isinstance(h, MessageHandler)]
         assert len(text_handlers) == 1, (
             f"EDH_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
