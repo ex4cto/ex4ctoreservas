@@ -25,10 +25,10 @@ from garay.dominio.ventas.contexto import ContextoVenta
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
-    (2, "Tour Isla Bonita", Decimal("150000"), None, "ISLAS"),
-    (3, "Tour City Walk", Decimal("80000"), Decimal("40000"), "CIUDAD"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
+    (2, "Tour Isla Bonita", Decimal("150000"), None, "ISLAS", []),
+    (3, "Tour City Walk", Decimal("80000"), Decimal("40000"), "CIUDAD", []),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 

@@ -195,39 +195,49 @@ class FSMTiquetera:
 
     @staticmethod
     def _build_catalog(
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
     ) -> tuple[
         dict[int, tuple[str, Decimal | None, Decimal | None]],
         dict[str, list[int]],
+        dict[int, list[str]],
     ]:
-        """Build the two catalog dicts from a flat list of service tuples.
+        """Build catalog dicts from a flat list of 6-element service tuples.
+
+        The 6th element (horarios) is stored in a separate dict so that the
+        internal 3-tuple layout of _servicios is preserved unchanged and all
+        existing unpack-sites remain valid.
 
         Returns:
-            (_servicios, _familias) — same structure as the instance attributes.
+            (_servicios, _familias, _horarios) — same structure as instance attrs.
         """
         servicios_dict: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
-            n: (nombre, neto_a, neto_n) for n, nombre, neto_a, neto_n, _ in servicios
+            n: (nombre, neto_a, neto_n)
+            for n, nombre, neto_a, neto_n, _cat, _hor in servicios
+        }
+        horarios_dict: dict[int, list[str]] = {
+            n: list(hor) for n, _nombre, _a, _n, _cat, hor in servicios
         }
         familias_raw: dict[str, list[int]] = {}
-        for numero, _nombre, _neto_a, _neto_n, categoria in servicios:
+        for numero, _nombre, _neto_a, _neto_n, categoria, _hor in servicios:
             familias_raw.setdefault(categoria, []).append(numero)
         familias_dict: dict[str, list[int]] = {
             categoria: sorted(numeros)
             for categoria, numeros in sorted(familias_raw.items())
             if numeros
         }
-        return servicios_dict, familias_dict
+        return servicios_dict, familias_dict, horarios_dict
 
     def __init__(
         self,
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
         puntos_venta: list[str],
         freelancers: list[tuple[uuid.UUID, str, bool]] | None = None,
         multi_tour_habilitado: bool = False,
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
         # categoria → sorted list of service numeros (only non-empty families).
-        self._servicios, self._familias = self._build_catalog(servicios)
+        # numero → list of configured departure times (empty = no time prompt).
+        self._servicios, self._familias, self._horarios = self._build_catalog(servicios)
         self._puntos_venta = puntos_venta
         # Roster of (id, nombre, activo) for the counterpart picker.
         self._freelancers: list[tuple[uuid.UUID, str, bool]] = freelancers or []
@@ -237,19 +247,21 @@ class FSMTiquetera:
 
     def refrescar_servicios(
         self,
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]],
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
     ) -> None:
-        """Rebuild _servicios and _familias in place from a fresh repo snapshot.
+        """Rebuild _servicios, _familias, and _horarios in place from a fresh repo snapshot.
 
         Safe on the shared singleton instance: per-conversation state lives in
         PTB user_data (ContextoVenta), not here. Any in-flight sale reads the
         catalog fresh on its next FSM transition and will see the updated data.
         """
-        nuevos_servicios, nuevas_familias = self._build_catalog(servicios)
+        nuevos_servicios, nuevas_familias, nuevos_horarios = self._build_catalog(servicios)
         self._servicios.clear()
         self._servicios.update(nuevos_servicios)
         self._familias.clear()
         self._familias.update(nuevas_familias)
+        self._horarios.clear()
+        self._horarios.update(nuevos_horarios)
 
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(

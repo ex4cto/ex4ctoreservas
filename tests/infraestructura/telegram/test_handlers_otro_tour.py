@@ -18,8 +18,8 @@ from garay.mensajes.catalogo import obtener_mensaje
 # Helpers — mirrors pattern from test_handlers_ventas.py / test_handlers_fecha_por_tour.py
 # ---------------------------------------------------------------------------
 
-_SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARU"),
+_SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARU", []),
 ]
 _PUNTOS: list[str] = ["Marie Real"]
 _SRV_UUID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")

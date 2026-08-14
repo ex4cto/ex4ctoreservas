@@ -20,10 +20,10 @@ from garay.aplicacion.tiquetera.fsm import (
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARU"),
-    (2, "Tour Isla", Decimal("150000"), None, "ISLAS"),
-    (3, "City Tour", None, None, "ISLAS"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARU", []),
+    (2, "Tour Isla", Decimal("150000"), None, "ISLAS", []),
+    (3, "City Tour", None, None, "ISLAS", []),
 ]
 
 # Puntos including Crespo

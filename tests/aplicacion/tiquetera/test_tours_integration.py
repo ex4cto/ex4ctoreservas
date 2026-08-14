@@ -11,7 +11,7 @@ from garay.dominio.servicios.entidades import Servicio
 
 def _make_fsm(servicios: list[Servicio]) -> FSMTiquetera:
     tuples = [
-        (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria)
+        (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
         for s in servicios
     ]
     return FSMTiquetera(servicios=tuples, puntos_venta=["Marie Real"])
@@ -38,7 +38,10 @@ class TestEditSaveRefreshVisibleToNewSale:
 
         # Refresh FSM with updated data
         tuples = [
-            (s1.numero, s1.nombre, s1.precio_neto_adulto, s1.precio_neto_nino, s1.categoria)
+            (
+                s1.numero, s1.nombre, s1.precio_neto_adulto,
+                s1.precio_neto_nino, s1.categoria, s1.horarios,
+            )
         ]
         fsm.refrescar_servicios(tuples)
 
@@ -75,7 +78,7 @@ class TestDesactivarTourOcultoEnVentas:
         # Refresh with only active tours (listar_activos() result)
         activos = [s for s in [s1, s2] if s.activo]
         tuples = [
-            (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria)
+            (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
             for s in activos
         ]
         fsm.refrescar_servicios(tuples)

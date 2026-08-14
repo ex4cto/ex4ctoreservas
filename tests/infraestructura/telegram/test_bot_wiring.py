@@ -19,8 +19,8 @@ from garay.infraestructura.telegram.estados import ESTADO_PTB
 
 
 def _fsm() -> FSMTiquetera:
-    servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
+    servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
     ]
     return FSMTiquetera(servicios=servicios, puntos_venta=["Marie Real"])
 
