@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.persistencia import modelos  # noqa: F401 — ensures all models registered

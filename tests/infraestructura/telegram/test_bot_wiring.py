@@ -125,7 +125,7 @@ class TestBotWiringHorarioSalida:
         state_int = ESTADO_PTB[EstadoFSM.HORARIO_SALIDA]
         assert state_int in conv.states, (
             f"HORARIO_SALIDA (state {state_int}) is not registered in ConversationHandler. "
-            f"Registered states: {sorted(conv.states.keys())}"
+            f"Registered states: {list(conv.states.keys())}"
         )
 
     def test_horario_salida_has_hor_callback(self) -> None:
