@@ -17,11 +17,11 @@ from garay.dominio.ventas.contexto import ContextoVenta
 # Tour 20: priceless (Cocotera stand-in) → triggers MONTO_NETO
 # Tour 30: priceless second tour → both names appear
 # Tour 40: Playa Linda-like, with price 55000 per adult → auto-calculates
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (10, "Tour Con Precio", Decimal("100000"), Decimal("50000"), "BARÚ"),
-    (20, "COCOTERA (CLASSIC)", None, None, "ISLAS"),
-    (30, "CENA SIBARITA", None, None, "ISLAS"),
-    (40, "PLAYA LINDA", Decimal("55000"), None, "TIERRA BOMBA"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (10, "Tour Con Precio", Decimal("100000"), Decimal("50000"), "BARÚ", []),
+    (20, "COCOTERA (CLASSIC)", None, None, "ISLAS", []),
+    (30, "CENA SIBARITA", None, None, "ISLAS", []),
+    (40, "PLAYA LINDA", Decimal("55000"), None, "TIERRA BOMBA", []),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 

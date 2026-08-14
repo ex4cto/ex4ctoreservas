@@ -18,10 +18,10 @@ from garay.infraestructura.persistencia import modelos  # noqa: F401
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 
-SERVICIOS_INICIAL: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
-    (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS"),
-    (3, "City Tour", None, None, "ISLAS"),
+SERVICIOS_INICIAL: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
+    (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS", []),
+    (3, "City Tour", None, None, "ISLAS", []),
 ]
 
 PUNTOS_TEST = ["Marie Real"]
@@ -34,9 +34,9 @@ def _make_fsm() -> FSMTiquetera:
 def test_refrescar_servicios_rebuilds_servicios() -> None:
     """refrescar_servicios() replaces _servicios with new tuples."""
     fsm = _make_fsm()
-    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-        (1, "Tour Playa Blanca NUEVO", Decimal("120000"), Decimal("60000"), "BARÚ"),
-        (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS"),
+    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+        (1, "Tour Playa Blanca NUEVO", Decimal("120000"), Decimal("60000"), "BARÚ", []),
+        (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS", []),
     ]
     fsm.refrescar_servicios(nuevos)
     # Tour 1 has updated name and neto.
@@ -49,8 +49,8 @@ def test_refresh_rebuild_familias() -> None:
     """After refresh, _familias is rebuilt: empty families disappear."""
     fsm = _make_fsm()
     # Remove both ISLAS tours (2 and 3) — ISLAS family should vanish.
-    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
+    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
     ]
     fsm.refrescar_servicios(nuevos)
     assert "ISLAS" not in fsm._familias
@@ -62,10 +62,10 @@ def test_refresh_moved_tour_relocates() -> None:
     """A tour changing categoria moves from old bucket to new one."""
     fsm = _make_fsm()
     # Tour 1 moves from BARÚ to ISLAS.
-    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "ISLAS"),
-        (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS"),
-        (3, "City Tour", None, None, "ISLAS"),
+    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+        (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "ISLAS", []),
+        (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS", []),
+        (3, "City Tour", None, None, "ISLAS", []),
     ]
     fsm.refrescar_servicios(nuevos)
     # BARÚ should be gone (tour 1 moved out, no others were there).
@@ -85,8 +85,8 @@ def test_refresh_does_not_touch_user_data() -> None:
     }
     snapshot_before = dict(simulated_user_data["contexto"])
 
-    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-        (99, "Nuevo Tour", Decimal("200000"), None, "NUEVA FAMILIA"),
+    nuevos: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+        (99, "Nuevo Tour", Decimal("200000"), None, "NUEVA FAMILIA", []),
     ]
     fsm.refrescar_servicios(nuevos)
 

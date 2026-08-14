@@ -14,10 +14,10 @@ import pytest
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Islas del Rosario", Decimal("100000"), Decimal("50000"), "ISLAS"),
-    (2, "Bahía Rumbera", Decimal("150000"), None, "ISLAS"),
-    (3, "City Tour", None, None, "CITY"),
+SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Islas del Rosario", Decimal("100000"), Decimal("50000"), "ISLAS", []),
+    (2, "Bahía Rumbera", Decimal("150000"), None, "ISLAS", []),
+    (3, "City Tour", None, None, "CITY", []),
 ]
 PUNTOS: list[str] = ["Marie Real"]
 

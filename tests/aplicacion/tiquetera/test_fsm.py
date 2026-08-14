@@ -18,10 +18,10 @@ from garay.aplicacion.tiquetera.fsm import (
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
-    (2, "Tour Isla", Decimal("150000"), None, "ISLAS"),
-    (3, "City Tour", None, None, "ISLAS"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
+    (2, "Tour Isla", Decimal("150000"), None, "ISLAS", []),
+    (3, "City Tour", None, None, "ISLAS", []),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi"]
 
@@ -1804,8 +1804,8 @@ class TestCallbackDataLimite:
 
         seed_path = Path(__file__).parents[3] / "servicios_seed.json"
         raw = json.loads(seed_path.read_text(encoding="utf-8"))
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-            (s["numero"], s["nombre"], None, None, s["categoria"]) for s in raw
+        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+            (s["numero"], s["nombre"], None, None, s["categoria"], []) for s in raw
         ]
         puntos = ["Marie Real"]
         fsm_real = FSMTiquetera(servicios=servicios, puntos_venta=puntos)

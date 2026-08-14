@@ -9,8 +9,8 @@ import pytest
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
 from garay.dominio.ventas.contexto import ContextoVenta
 
-SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str]] = [
-    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ"),
+SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]] = [
+    (1, "Tour Playa Blanca", Decimal("100000"), Decimal("50000"), "BARÚ", []),
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
