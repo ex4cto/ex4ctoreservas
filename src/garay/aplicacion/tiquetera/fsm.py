@@ -20,7 +20,7 @@ from garay.aplicacion.comun.fechas import (
     parsear_fecha as _parsear_fecha,
 )
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
-from garay.dominio.servicios.horarios import formato_display
+from garay.dominio.servicios.horarios import formato_display, render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -1878,6 +1878,20 @@ class FSMTiquetera:
             saldo_pendiente = ctx.valor
         else:
             saldo_pendiente = ctx.valor - ctx.abono
+
+        # Build horario line — conditional assembly (no blank line when absent)
+        horario_pares = [
+            (
+                self._servicios[n][0] if n in self._servicios else str(n),
+                ctx.horarios_por_servicio.get(n, ""),
+            )
+            for n in ctx.destinos_numeros
+        ]
+        horario_val = render_horarios(horario_pares)
+        # Pattern B: value carries its own newline when present; "" when absent.
+        # The template has no bare newline after {horario_salida}, so no \n\n on empty path.
+        horario_salida = f"Horario: {horario_val}\n" if horario_val else ""
+
         return obtener_mensaje("confirmacion_resumen").format(
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
@@ -1890,6 +1904,7 @@ class FSMTiquetera:
             cliente_hotel=hotel_str,
             cliente_habitacion=hab_str,
             fecha_salida=fecha_str,
+            horario_salida=horario_salida,
             adultos=ctx.adultos or 0,
             ninos=ctx.ninos or 0,
             valor=_formatear_monto(ctx.valor),

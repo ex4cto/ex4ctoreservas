@@ -361,6 +361,7 @@ class TestConfirmacionResumenEspecialE:
             cliente_hotel="Hotel Mar",
             cliente_habitacion="302",
             fecha_salida="15/08/2025",
+            horario_salida="",
             adultos=2,
             ninos=0,
             valor="$200.000",

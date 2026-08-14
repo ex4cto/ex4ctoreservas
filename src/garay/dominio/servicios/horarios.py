@@ -152,3 +152,22 @@ def quitar_horario(actual: list[str], canonico: str) -> list[str]:
     The input list is never mutated.
     """
     return [h for h in actual if h != canonico]
+
+
+def render_horarios(pares: list[tuple[str, str]]) -> str | None:
+    """Render ordered (tour_name, canonical_hhmm) pairs for user-facing display.
+
+    Rules:
+    - Pairs whose horario is empty or None are filtered out.
+    - If no pairs survive filtering → None (caller omits the row/line).
+    - Single survivor → formato_display(horario) only — no tour name.
+    - Multiple survivors → "Name HH:MM AP, Name HH:MM AP" (compact per-tour).
+
+    Never emits a raw canonical 24h string in output.
+    """
+    survivors = [(name, h) for name, h in pares if h]
+    if not survivors:
+        return None
+    if len(survivors) == 1:
+        return formato_display(survivors[0][1])
+    return ", ".join(f"{name} {formato_display(h)}" for name, h in survivors)

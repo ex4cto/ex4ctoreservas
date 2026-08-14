@@ -19,6 +19,7 @@ from garay.dominio.puertos.repositorios import (
     VentaRepository,
 )
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
+from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -157,6 +158,17 @@ class RegistrarVentaService:
             lineas.append(f"📍 Destino: {', '.join(cmd.servicio_nombres)}")
 
         lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
+
+        horario_pares = list(
+            zip(
+                cmd.servicio_nombres,
+                [(cmd.horarios_por_servicio or {}).get(sid, "") for sid in cmd.servicio_ids],
+                strict=False,
+            )
+        )
+        horario_grupo = render_horarios(horario_pares)
+        if horario_grupo:
+            lineas.append(f"⏰ Horario: {horario_grupo}")
 
         if cmd.cliente_nombre:
             lineas.append(f"👤 Cliente: {cmd.cliente_nombre}")
