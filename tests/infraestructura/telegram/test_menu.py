@@ -19,7 +19,7 @@ class TestCatalogo:
     """Verify catalog structure and completeness."""
 
     def test_catalogo_tiene_16_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 18
+        assert len(CATALOGO_COMANDOS) == 19
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -105,7 +105,7 @@ class TestComandosParaTier:
 
     def test_propietario_ve_todos_16(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 18
+        assert len(result) == 19
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -153,7 +153,7 @@ class TestComandosBot:
 
     def test_propietario_retorna_16_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 18
+        assert len(result) == 19
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:
