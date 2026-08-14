@@ -145,8 +145,16 @@ from garay.infraestructura.telegram.handlers_tours import (
     ELT_CONFIRMA,
     ELT_FAMILIA,
     ELT_TOUR,
+    NVT_CONFIRMA,
+    NVT_DUP_CONFIRMA,
+    NVT_FAMILIA,
+    NVT_NETO_ADULTO,
+    NVT_NETO_NINO,
+    NVT_NOMBRE,
+    NVT_NUEVA_FAMILIA,
     cmd_editar_tour,
     cmd_eliminar_tour,
+    cmd_nuevo_tour,
     handle_edt_confirma,
     handle_edt_familia,
     handle_edt_ficha,
@@ -156,6 +164,15 @@ from garay.infraestructura.telegram.handlers_tours import (
     handle_elt_confirma,
     handle_elt_familia,
     handle_elt_tour,
+    handle_nvt_cancelar,
+    handle_nvt_crear,
+    handle_nvt_dup,
+    handle_nvt_edit,
+    handle_nvt_familia,
+    handle_nvt_neto_adulto,
+    handle_nvt_neto_nino,
+    handle_nvt_nombre,
+    handle_nvt_nueva_familia,
 )
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
 
@@ -515,6 +532,40 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
 
+    nuevo_tour_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("nuevo_tour", cmd_nuevo_tour)],
+        states={
+            NVT_FAMILIA: [
+                _CB(handle_nvt_familia, pattern="^nvt_familia:"),
+                _CB(handle_nvt_familia, pattern="^nvt_familia_nueva_libre$"),
+                _CB(handle_nvt_edit, pattern="^nvt_edit:familia$"),
+            ],
+            NVT_NUEVA_FAMILIA: [
+                MessageHandler(_TEXT, handle_nvt_nueva_familia),
+            ],
+            NVT_NOMBRE: [
+                MessageHandler(_TEXT, handle_nvt_nombre),
+            ],
+            NVT_NETO_ADULTO: [
+                MessageHandler(_TEXT, handle_nvt_neto_adulto),
+                _CB(handle_nvt_neto_adulto, pattern="^nvt_saltar_neto_adulto$"),
+            ],
+            NVT_NETO_NINO: [
+                MessageHandler(_TEXT, handle_nvt_neto_nino),
+                _CB(handle_nvt_neto_nino, pattern="^nvt_saltar_neto_nino$"),
+            ],
+            NVT_CONFIRMA: [
+                _CB(handle_nvt_edit, pattern="^nvt_edit:"),
+                _CB(handle_nvt_crear, pattern="^nvt_crear$"),
+                _CB(handle_nvt_cancelar, pattern="^nvt_cancelar$"),
+            ],
+            NVT_DUP_CONFIRMA: [
+                _CB(handle_nvt_dup, pattern="^nvt_dup:(usar|cambiar)$"),
+            ],
+        },
+        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
@@ -524,6 +575,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(gestionar_ventas_conv_handler, group=7)
     app.add_handler(editar_tour_conv_handler, group=8)
     app.add_handler(eliminar_tour_conv_handler, group=8)
+    app.add_handler(nuevo_tour_conv_handler, group=8)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

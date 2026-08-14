@@ -81,6 +81,7 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("editar_freelancer", "Editar un freelancer", _A, _AD),
     ComandoMenu("eliminar_freelancer", "Desactivar un freelancer", _A, _AD),
     # ── Tours ────────────────────────────────────────────────────────────────
+    ComandoMenu("nuevo_tour", "Crear un nuevo tour", _T, _AD),
     ComandoMenu("editar_tour", "Editar datos de un tour", _T, _AD),
     ComandoMenu("eliminar_tour", "Desactivar un tour", _T, _AD),
 ]
