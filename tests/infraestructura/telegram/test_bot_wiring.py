@@ -11,7 +11,7 @@ from decimal import Decimal
 from re import Pattern
 from unittest.mock import MagicMock, patch
 
-from telegram.ext import CallbackQueryHandler, ConversationHandler
+from telegram.ext import CallbackQueryHandler, ConversationHandler, MessageHandler
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
 from garay.infraestructura.telegram.bot import crear_aplicacion
@@ -142,4 +142,15 @@ class TestBotWiringHorarioSalida:
         assert len(hor_handlers) >= 1, (
             f"HORARIO_SALIDA (state {state_int}) has no CallbackQueryHandler"
             f" with 'hor:' pattern. Handlers found: {handlers}"
+        )
+
+    def test_horario_salida_has_message_handler(self) -> None:
+        """HORARIO_SALIDA must also have a MessageHandler for defensive text re-render."""
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.HORARIO_SALIDA]
+        handlers = conv.states.get(state_int, [])
+        msg_handlers = [h for h in handlers if isinstance(h, MessageHandler)]
+        assert len(msg_handlers) >= 1, (
+            f"HORARIO_SALIDA (state {state_int}) has no MessageHandler."
+            f" Handlers found: {handlers}"
         )

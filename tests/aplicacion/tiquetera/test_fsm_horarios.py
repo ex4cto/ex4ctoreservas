@@ -271,3 +271,125 @@ class TestSiguienteTourSinHorarioHelper:
         ctx.horarios_por_servicio = {1: "07:00"}
         resultado = fsm._siguiente_tour_sin_horario(ctx)
         assert resultado is None
+
+
+# ---------------------------------------------------------------------------
+# WARNING-1 — Multi-tour horarios: drain loop with multi_tour_habilitado=True
+# ---------------------------------------------------------------------------
+
+
+def _ctx_dos_destinos() -> ContextoVenta:
+    """Return a ContextoVenta with two destinos and no dates yet."""
+    ctx = ContextoVenta()
+    ctx.destinos_numeros = [1, 2]
+    ctx.destinos_nombres = ["Tour A", "Tour B"]
+    return ctx
+
+
+class TestMultiTourHorarios:
+    """Multi-tour horario drain: both pending horarios collected in sequence.
+
+    Spec: Domain 1 — multi-tour scenarios with multi_tour_habilitado=True.
+    The FSM is exercised through real procesar() calls, not internal helpers.
+    """
+
+    def test_dos_tours_con_horarios_drenan_ambos(self) -> None:
+        """When two tours both have horarios, FECHA_SALIDA drains them one by one.
+
+        Flow:
+          FECHA_SALIDA → tour 1 date set, tour 2 still pending → FECHA_SALIDA
+          FECHA_SALIDA → tour 2 date set, all dated → HORARIO_SALIDA (tour 1)
+          HORARIO_SALIDA hor:07:00 → horario[1] stored, tour 2 pending → HORARIO_SALIDA
+          HORARIO_SALIDA hor:08:00 → horario[2] stored, none pending → PAX_ADULTOS
+        Result: horarios_por_servicio == {1: "07:00", 2: "08:00"}
+        """
+        servicios = catalogo_fsm(
+            {"numero": 1, "horarios": ["07:00", "09:00"]},
+            {"numero": 2, "nombre": "Tour B", "horarios": ["08:00"]},
+        )
+        fsm = FSMTiquetera(
+            servicios=servicios,
+            puntos_venta=["PDV"],
+            multi_tour_habilitado=True,
+        )
+        ctx0 = _ctx_dos_destinos()
+
+        # Step 1: date for tour 1
+        s1 = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", ctx0)
+        assert s1.nuevo_estado == EstadoFSM.FECHA_SALIDA  # tour 2 still needs date
+
+        # Step 2: date for tour 2 — now all dated; drain starts with tour 1
+        s2 = fsm.procesar(EstadoFSM.FECHA_SALIDA, "26/12/2026", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.HORARIO_SALIDA
+
+        # Step 3: select horario for tour 1
+        s3 = fsm.procesar(EstadoFSM.HORARIO_SALIDA, "hor:07:00", s2.contexto)
+        assert s3.nuevo_estado == EstadoFSM.HORARIO_SALIDA  # tour 2 still needs horario
+
+        # Step 4: select horario for tour 2
+        s4 = fsm.procesar(EstadoFSM.HORARIO_SALIDA, "hor:08:00", s3.contexto)
+        assert s4.nuevo_estado == EstadoFSM.PAX_ADULTOS
+
+        # Both horarios collected — one entry per tour
+        assert s4.contexto.horarios_por_servicio[1] == "07:00"
+        assert s4.contexto.horarios_por_servicio[2] == "08:00"
+
+    def test_tour_con_horarios_y_tour_sin_horarios_solo_uno_pide(self) -> None:
+        """When one tour has horarios and the other does not, only the first prompts.
+
+        Flow:
+          FECHA_SALIDA → tour 1 date set, tour 2 still pending → FECHA_SALIDA
+          FECHA_SALIDA → tour 2 date set, all dated → HORARIO_SALIDA (only tour 1)
+          HORARIO_SALIDA hor:07:00 → horario[1] stored, tour 2 skipped (no horarios) → PAX_ADULTOS
+        Result: horarios_por_servicio == {1: "07:00"} (tour 2 absent)
+        """
+        servicios = catalogo_fsm(
+            {"numero": 1, "horarios": ["07:00", "09:00"]},
+            {"numero": 2, "nombre": "Tour B", "horarios": []},
+        )
+        fsm = FSMTiquetera(
+            servicios=servicios,
+            puntos_venta=["PDV"],
+            multi_tour_habilitado=True,
+        )
+        ctx0 = _ctx_dos_destinos()
+
+        # Step 1: date for tour 1
+        s1 = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", ctx0)
+        assert s1.nuevo_estado == EstadoFSM.FECHA_SALIDA  # tour 2 still needs date
+
+        # Step 2: date for tour 2 — tour 1 has horarios, tour 2 does not → HORARIO_SALIDA for tour 1
+        s2 = fsm.procesar(EstadoFSM.FECHA_SALIDA, "26/12/2026", s1.contexto)
+        assert s2.nuevo_estado == EstadoFSM.HORARIO_SALIDA
+
+        # Step 3: select horario for tour 1; tour 2 has no horarios so it is skipped
+        s3 = fsm.procesar(EstadoFSM.HORARIO_SALIDA, "hor:07:00", s2.contexto)
+        assert s3.nuevo_estado == EstadoFSM.PAX_ADULTOS
+
+        # Only tour 1 has an entry; tour 2 is absent
+        assert s3.contexto.horarios_por_servicio == {1: "07:00"}
+        assert 2 not in s3.contexto.horarios_por_servicio
+
+
+# ---------------------------------------------------------------------------
+# WARNING-2 — iniciar_otro_tour clears horarios_por_servicio
+# ---------------------------------------------------------------------------
+
+
+class TestIniciarOtroTourLimpiaHorarios:
+    """iniciar_otro_tour must clear horarios_por_servicio regardless of prior content.
+
+    Spec: Domain 2 — scenario 'iniciar_otro_tour resets per-tour fields'.
+    """
+
+    def test_iniciar_otro_tour_limpia_horarios_por_servicio(self) -> None:
+        """After iniciar_otro_tour, horarios_por_servicio must be empty ({})."""
+        servicios = catalogo_fsm({"numero": 1, "horarios": ["07:00"]})
+        fsm = FSMTiquetera(servicios=servicios, puntos_venta=["PDV"])
+
+        ctx = ContextoVenta()
+        ctx.horarios_por_servicio = {1: "07:00"}
+
+        salida = fsm.iniciar_otro_tour(ctx)
+
+        assert salida.contexto.horarios_por_servicio == {}
