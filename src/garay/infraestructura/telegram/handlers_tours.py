@@ -891,9 +891,14 @@ async def handle_nvt_nombre(
         return NVT_NOMBRE
 
     repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
-    dup = repo.buscar_por_nombre(texto) if repo else None
+    # Case-insensitive duplicate detection: compare normalised (trim+lower) input
+    # against all existing tour names.  buscar_por_nombre() is exact-match only;
+    # using listar() + client-side fold satisfies the owner's requirement.
+    nombre_lower = texto.lower()
+    todos = repo.listar() if repo else []
+    dup_ci = any(s.nombre.strip().lower() == nombre_lower for s in todos)
 
-    if dup is not None:
+    if dup_ci:
         # Store the pending name; let NVT_DUP_CONFIRMA decide
         if context.user_data is not None:
             context.user_data["nvt_nombre_pendiente"] = texto

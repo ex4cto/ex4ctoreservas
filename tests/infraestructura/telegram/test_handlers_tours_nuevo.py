@@ -546,9 +546,9 @@ class TestHandleNvtNombre:
 
         s_existing = _servicio("City Tour")
         update = _make_update(text="City Tour")
-        ctx = _make_context()
+        # Pass servicios so listar() returns the existing tour (case-insensitive check)
+        ctx = _make_context(servicios=[s_existing])
         ctx.user_data["nvt_servicios"] = []
-        ctx.bot_data["servicio_repo"].buscar_por_nombre.return_value = s_existing
 
         result = await handle_nvt_nombre(update, ctx)
 
@@ -1032,6 +1032,187 @@ class TestHandleNvtCrear:
         # At least one reply must contain the tour name
         texts = [str(c[0][0]) for c in update.effective_message.reply_text.call_args_list]
         assert any("Tour Playa" in t for t in texts)
+
+
+# ---------------------------------------------------------------------------
+# Fix W-1 RED — Case-insensitive duplicate name detection
+# ---------------------------------------------------------------------------
+
+
+class TestHandleNvtNombreCaseInsensitive:
+    """handle_nvt_nombre must detect duplicates case-insensitively (owner decision)."""
+
+    @pytest.mark.asyncio
+    async def test_nombre_duplicado_case_insensitive_avisa(self) -> None:
+        """'islas del rosario' with existing 'Islas del Rosario' → NVT_DUP_CONFIRMA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_DUP_CONFIRMA,
+            handle_nvt_nombre,
+        )
+
+        existing = _servicio(nombre="Islas del Rosario")
+        update = _make_update(text="islas del rosario")
+        ctx = _make_context(servicios=[existing])
+        ctx.user_data["nvt_servicios"] = []
+
+        result = await handle_nvt_nombre(update, ctx)
+
+        assert result == NVT_DUP_CONFIRMA
+
+    @pytest.mark.asyncio
+    async def test_nombre_duplicado_exacto_sigue_avisando(self) -> None:
+        """Exact match 'Islas del Rosario' still → NVT_DUP_CONFIRMA (regression guard)."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_DUP_CONFIRMA,
+            handle_nvt_nombre,
+        )
+
+        existing = _servicio(nombre="Islas del Rosario")
+        update = _make_update(text="Islas del Rosario")
+        ctx = _make_context(servicios=[existing])
+        ctx.user_data["nvt_servicios"] = []
+
+        result = await handle_nvt_nombre(update, ctx)
+
+        assert result == NVT_DUP_CONFIRMA
+
+    @pytest.mark.asyncio
+    async def test_nombre_nuevo_no_avisa(self) -> None:
+        """A genuinely new name → NVT_NETO_ADULTO, no dup warning."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_NETO_ADULTO,
+            handle_nvt_nombre,
+        )
+
+        existing = _servicio(nombre="Islas del Rosario")
+        update = _make_update(text="Tour Nocturno")
+        ctx = _make_context(servicios=[existing])
+        ctx.user_data["nvt_servicios"] = []
+
+        result = await handle_nvt_nombre(update, ctx)
+
+        assert result == NVT_NETO_ADULTO
+
+    @pytest.mark.asyncio
+    async def test_re_edit_nombre_case_insensitive_duplicado_avisa(self) -> None:
+        """During re-edit, case-insensitive dup → NVT_DUP_CONFIRMA, nvt_editando preserved."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_DUP_CONFIRMA,
+            handle_nvt_nombre,
+        )
+
+        existing = _servicio(nombre="City Tour")
+        update = _make_update(text="CITY TOUR")
+        ctx = _make_context(servicios=[existing])
+        ctx.user_data["nvt_servicios"] = []
+        ctx.user_data["nvt_editando"] = True
+        ctx.user_data["nvt_familia"] = "PLAYERO"
+        ctx.user_data["nvt_neto_adulto"] = None
+        ctx.user_data["nvt_neto_nino"] = None
+
+        result = await handle_nvt_nombre(update, ctx)
+
+        assert result == NVT_DUP_CONFIRMA
+        # nvt_editando must still be set so the dup handler can return to NVT_CONFIRMA
+        assert ctx.user_data.get("nvt_editando") is True
+
+
+# ---------------------------------------------------------------------------
+# Fix W-2 RED — Dead handler registration in NVT_FAMILIA must be removed
+# ---------------------------------------------------------------------------
+
+
+class TestNvtFamiliaDeadHandlerRemoved:
+    """NVT_FAMILIA must not contain handle_nvt_edit; [Editar familia] fires from NVT_CONFIRMA."""
+
+    def test_nvt_familia_sin_nvt_edit_handler(self) -> None:
+        """NVT_FAMILIA state must not include handle_nvt_edit as a CallbackQueryHandler."""
+        from telegram.ext import CallbackQueryHandler, ConversationHandler
+
+        from garay.infraestructura.telegram import handlers_tours
+        from garay.infraestructura.telegram.bot import crear_aplicacion
+
+        app = crear_aplicacion("fake-token-for-test")
+        group8 = app.handlers.get(8, [])
+        nvt_conv: ConversationHandler | None = None  # type: ignore[type-arg]
+        for h in group8:
+            if isinstance(h, ConversationHandler) and handlers_tours.NVT_FAMILIA in h.states:
+                nvt_conv = h
+                break
+        assert nvt_conv is not None, "nuevo_tour ConversationHandler not found in group=8"
+
+        familia_handlers = nvt_conv.states.get(handlers_tours.NVT_FAMILIA, [])
+        edit_cbs = [
+            h for h in familia_handlers
+            if isinstance(h, CallbackQueryHandler)
+            and h.callback is handlers_tours.handle_nvt_edit
+        ]
+        assert len(edit_cbs) == 0, (
+            f"NVT_FAMILIA must not register handle_nvt_edit; found {len(edit_cbs)} callback(s)"
+        )
+
+    def test_nvt_confirma_tiene_editar_familia(self) -> None:
+        """NVT_CONFIRMA still fires handle_nvt_edit for 'nvt_edit:familia' (regression guard)."""
+        from telegram.ext import CallbackQueryHandler, ConversationHandler
+
+        from garay.infraestructura.telegram import handlers_tours
+        from garay.infraestructura.telegram.bot import crear_aplicacion
+
+        app = crear_aplicacion("fake-token-for-test")
+        group8 = app.handlers.get(8, [])
+        nvt_conv: ConversationHandler | None = None  # type: ignore[type-arg]
+        for h in group8:
+            if isinstance(h, ConversationHandler) and handlers_tours.NVT_FAMILIA in h.states:
+                nvt_conv = h
+                break
+        assert nvt_conv is not None
+
+        confirma_handlers = nvt_conv.states.get(handlers_tours.NVT_CONFIRMA, [])
+        edit_cbs = [
+            h for h in confirma_handlers
+            if isinstance(h, CallbackQueryHandler)
+            and h.callback is handlers_tours.handle_nvt_edit
+        ]
+        assert len(edit_cbs) == 1, (
+            f"NVT_CONFIRMA must have exactly 1 handle_nvt_edit callback; found {len(edit_cbs)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fix S-1 RED — Re-edit "Cambiar nombre" path with a second duplicate name
+# ---------------------------------------------------------------------------
+
+
+class TestReEditNombreSegundoDuplicado:
+    """S-1: re-edit 'Cambiar nombre' with another dup → re-warn, nvt_editando preserved."""
+
+    @pytest.mark.asyncio
+    async def test_re_edit_cambiar_nombre_duplicado_vuelve_a_avisar(self) -> None:
+        """nvt_editando=True, 'cambiar', types another dup → NVT_DUP_CONFIRMA, editando intact."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_DUP_CONFIRMA,
+            handle_nvt_nombre,
+        )
+
+        existing_a = _servicio(nombre="City Tour")
+        existing_b = _servicio(nombre="Tour Nocturno", numero=2)
+        # Scenario: user was re-editing nombre, changed to "tour nocturno" (another dup)
+        update = _make_update(text="tour nocturno")
+        ctx = _make_context(servicios=[existing_a, existing_b])
+        ctx.user_data["nvt_servicios"] = []
+        ctx.user_data["nvt_editando"] = True
+        ctx.user_data["nvt_familia"] = "PLAYERO"
+        ctx.user_data["nvt_nombre"] = "City Tour"  # current name being replaced
+        ctx.user_data["nvt_neto_adulto"] = Decimal("100000")
+        ctx.user_data["nvt_neto_nino"] = None
+
+        result = await handle_nvt_nombre(update, ctx)
+
+        assert result == NVT_DUP_CONFIRMA
+        # nvt_editando must remain so handle_nvt_dup "usar" can route back to NVT_CONFIRMA
+        assert ctx.user_data.get("nvt_editando") is True
+        # pending name stored correctly
+        assert ctx.user_data.get("nvt_nombre_pendiente") == "tour nocturno"
 
 
 # ---------------------------------------------------------------------------

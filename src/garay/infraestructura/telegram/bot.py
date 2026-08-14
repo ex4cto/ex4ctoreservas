@@ -538,7 +538,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             NVT_FAMILIA: [
                 _CB(handle_nvt_familia, pattern="^nvt_familia:"),
                 _CB(handle_nvt_familia, pattern="^nvt_familia_nueva_libre$"),
-                _CB(handle_nvt_edit, pattern="^nvt_edit:familia$"),
             ],
             NVT_NUEVA_FAMILIA: [
                 MessageHandler(_TEXT, handle_nvt_nueva_familia),
