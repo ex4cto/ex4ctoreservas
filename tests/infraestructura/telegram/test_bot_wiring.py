@@ -103,3 +103,43 @@ class TestBotWiringFlCallbacks:
             f"EDITAR_CERRADOR (state {state_int}) has no CallbackQueryHandler"
             f" with 'fl:' pattern. Handlers found: {handlers}"
         )
+
+
+class TestBotWiringHorarioSalida:
+    """Phase 10 — HORARIO_SALIDA state is registered in the ConversationHandler.
+
+    Spec: Domain 1 / Scenario 'bot.py states dict contains HORARIO_SALIDA'.
+    Rules:
+      - ESTADO_PTB[EstadoFSM.HORARIO_SALIDA] == 31
+      - A CallbackQueryHandler with pattern '^hor:' is registered for that state
+      - A MessageHandler is also registered (defensive re-render)
+    """
+
+    def test_horario_salida_ptb_value_is_31(self) -> None:
+        """ESTADO_PTB[EstadoFSM.HORARIO_SALIDA] must equal 31."""
+        assert ESTADO_PTB[EstadoFSM.HORARIO_SALIDA] == 31
+
+    def test_horario_salida_state_registered_in_conv_handler(self) -> None:
+        """HORARIO_SALIDA state (31) must appear in ConversationHandler states."""
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.HORARIO_SALIDA]
+        assert state_int in conv.states, (
+            f"HORARIO_SALIDA (state {state_int}) is not registered in ConversationHandler. "
+            f"Registered states: {sorted(conv.states.keys())}"
+        )
+
+    def test_horario_salida_has_hor_callback(self) -> None:
+        """HORARIO_SALIDA must have a CallbackQueryHandler matching '^hor:'."""
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.HORARIO_SALIDA]
+        handlers = conv.states.get(state_int, [])
+        hor_handlers = [
+            h for h in handlers
+            if isinstance(h, CallbackQueryHandler)
+            and isinstance(h.pattern, Pattern)
+            and "hor:" in h.pattern.pattern
+        ]
+        assert len(hor_handlers) >= 1, (
+            f"HORARIO_SALIDA (state {state_int}) has no CallbackQueryHandler"
+            f" with 'hor:' pattern. Handlers found: {handlers}"
+        )

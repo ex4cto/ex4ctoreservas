@@ -664,6 +664,7 @@ handle_confirmacion = _make_handler(EstadoFSM.CONFIRMACION)
 handle_editar_selector = _make_handler(EstadoFSM.EDITAR_SELECTOR)
 handle_editar_vendedor = _make_handler(EstadoFSM.EDITAR_VENDEDOR)
 handle_editar_cerrador = _make_handler(EstadoFSM.EDITAR_CERRADOR)
+handle_horario_salida = _make_handler(EstadoFSM.HORARIO_SALIDA)
 
 
 async def handle_otro_tour(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
