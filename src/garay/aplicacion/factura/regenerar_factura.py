@@ -101,6 +101,18 @@ def reconstruir_contexto(
         ctx.fechas_por_servicio = {}
         ctx.fecha_salida = datetime.datetime.combine(venta.fecha, datetime.time.min)
 
+    # Map horarios_por_servicio from {uuid: str} to {servicio.numero: str}
+    # Reads the snapshot — never queries the live catalogue.
+    if venta.horarios_por_servicio:
+        int_key_horarios: dict[int, str] = {}
+        for sid, h in venta.horarios_por_servicio.items():
+            s = servicio_objects.get(sid)
+            if s is not None:
+                int_key_horarios[s.numero] = h
+        ctx.horarios_por_servicio = int_key_horarios
+    else:
+        ctx.horarios_por_servicio = {}
+
     return ctx
 
 

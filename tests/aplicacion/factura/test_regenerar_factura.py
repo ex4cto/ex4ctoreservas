@@ -63,6 +63,7 @@ def _make_venta(
     fecha: datetime.date | None = None,
     servicio_ids: list[uuid.UUID] | None = None,
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None,
+    horarios_por_servicio: dict[uuid.UUID, str] | None = None,
 ) -> MagicMock:
     v = MagicMock()
     v.id = uuid.uuid4()
@@ -75,6 +76,7 @@ def _make_venta(
     _sid = uuid.uuid4()
     v.servicio_ids = servicio_ids if servicio_ids is not None else [_sid]
     v.fechas_por_servicio = fechas_por_servicio
+    v.horarios_por_servicio = horarios_por_servicio
     return v
 
 
@@ -686,3 +688,91 @@ class TestEmptyDestinatario:
 
         assert resultado is ResultadoRegenerarFactura.SIN_FACTURA
         email.enviar.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Task 1.4/1.5: reconstruir_contexto — horarios_por_servicio mapping
+# ---------------------------------------------------------------------------
+
+
+class TestReconstruirContextoHorarios:
+    def test_horarios_uuid_to_int_mapping(self) -> None:
+        """venta.horarios_por_servicio {uuid: str} must remap to {servicio.numero: str}."""
+        uuid_a = uuid.uuid4()
+        servicio = _make_servicio(numero=2, nombre="Islas")
+        servicio.id = uuid_a
+        cliente = _make_cliente()
+        venta = _make_venta(
+            servicio_ids=[uuid_a],
+            horarios_por_servicio={uuid_a: "19:00"},
+        )
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        assert ctx.horarios_por_servicio == {2: "19:00"}
+
+    def test_horarios_none_gives_empty_dict(self) -> None:
+        """When venta.horarios_por_servicio is None, ctx.horarios_por_servicio == {}."""
+        servicio = _make_servicio()
+        cliente = _make_cliente()
+        venta = _make_venta(
+            servicio_ids=[servicio.id],
+            horarios_por_servicio=None,
+        )
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        assert ctx.horarios_por_servicio == {}
+
+    def test_missing_servicio_skips_gracefully(self) -> None:
+        """UUID not in repo → entry skipped, no exception, result is {}."""
+        uuid_ghost = uuid.uuid4()
+        uuid_real = uuid.uuid4()
+        real_servicio = _make_servicio(numero=3, nombre="City Tour")
+        real_servicio.id = uuid_real
+        cliente = _make_cliente()
+        venta = _make_venta(
+            servicio_ids=[uuid_real],
+            horarios_por_servicio={uuid_ghost: "08:00"},
+        )
+        servicios_repo = MagicMock()
+        # uuid_real is in servicio_ids (used for destinos), but uuid_ghost is not
+        servicios_repo.buscar_por_id.return_value = real_servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        # uuid_ghost was not in servicio_objects → skipped
+        assert ctx.horarios_por_servicio == {}
+
+
+# ---------------------------------------------------------------------------
+# Task 2.7: Integration — regeneration preserves schedule end-to-end
+# ---------------------------------------------------------------------------
+
+
+class TestReconstruirContextoHorariosIntegracion:
+    def test_regenerated_html_contains_am_pm_not_24h(self) -> None:
+        """venta with horarios_por_servicio={uuid: '19:00'} → regenerated HTML has '7:00 PM'."""
+        from garay.aplicacion.factura.servicio import GenerarFacturaService
+
+        uuid_a = uuid.uuid4()
+        servicio = _make_servicio(numero=3, nombre="Islas")
+        servicio.id = uuid_a
+        cliente = _make_cliente()
+        venta = _make_venta(
+            servicio_ids=[uuid_a],
+            horarios_por_servicio={uuid_a: "19:00"},
+            fechas_por_servicio=None,
+        )
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+        html = GenerarFacturaService().generar(ctx, venta.id)
+
+        assert "7:00 PM" in html
+        assert "19:00" not in html

@@ -8,6 +8,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
+from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
 
 _BOGOTA = ZoneInfo("America/Bogota")
@@ -57,6 +58,22 @@ class GenerarFacturaService:
         fecha_emision = _hoy_bogota().strftime("%d/%m/%Y")
         fecha_tour = _render_fecha_tour(ctx)
         saldo = (ctx.valor or Decimal("0")) - (ctx.abono or Decimal("0"))
+
+        # Build horario row — conditional on whether any schedule is set
+        horario_pares = list(
+            zip(
+                ctx.destinos_nombres,
+                [ctx.horarios_por_servicio.get(n, "") for n in ctx.destinos_numeros],
+                strict=False,
+            )
+        )
+        horario_tour = render_horarios(horario_pares)
+        fila_horario = (
+            f'<tr><td style="color:#777;padding-bottom:3px;">Horario</td>'
+            f'<td style="text-align:right;font-weight:bold;">{horario_tour}</td></tr>'
+            if horario_tour
+            else ""
+        )
 
         logo_html = (
             f'<img src="{self._logo_url}" alt="Garay Tours" style="height:70px;max-width:200px;">'
@@ -124,6 +141,7 @@ class GenerarFacturaService:
               <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
                 <tr><td style="color:#777;padding-bottom:3px;">Tour</td><td style="text-align:right;font-weight:bold;">{", ".join(ctx.destinos_nombres) if ctx.destinos_nombres else "—"}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">Fecha del tour</td><td style="text-align:right;font-weight:bold;">{fecha_tour}</td></tr>
+                {fila_horario}
                 <tr><td style="color:#777;padding-bottom:3px;">Adultos</td><td style="text-align:right;">{ctx.adultos or 0}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">Niños</td><td style="text-align:right;">{ctx.ninos or 0}</td></tr>
                 <tr><td style="color:#777;">Hotel</td><td style="text-align:right;">{"Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")}</td></tr>

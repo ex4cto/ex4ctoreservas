@@ -85,6 +85,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Hotel: {cliente_hotel}\n"
             "Habitación: {cliente_habitacion}\n"
             "Fecha salida: {fecha_salida}\n"
+            "{horario_salida}"
             "Adultos: {adultos} | Niños: {ninos}\n"
             "Valor: {valor}\n"
             "Abono: {abono}\n"
