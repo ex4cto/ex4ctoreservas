@@ -136,6 +136,7 @@ class VentaModel(Base):
     referido_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     canal_origen: Mapped[str | None] = mapped_column(String(20), nullable=True)
     fechas_por_servicio: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    horarios_por_servicio: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     vendedor_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("freelancers.id"), nullable=True
     )
