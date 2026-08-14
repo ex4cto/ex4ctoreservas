@@ -35,6 +35,8 @@ def _make_context(
     repo.buscar_por_telegram_id.return_value = fl_repo_result
     context.bot_data = {"freelancer_repo": repo}
     context.user_data = {}
+    context.bot = MagicMock()
+    context.bot.set_my_commands = AsyncMock()
     return context
 
 
@@ -171,6 +173,80 @@ class TestCmdStartDinamico:
         assert "flujo_caja" in text
 
     @pytest.mark.asyncio
+    async def test_refresca_desplegable_del_dev_con_scope_de_chat(self) -> None:
+        """cmd_start must push the caller's tier commands to their own chat scope."""
+        from telegram import BotCommandScopeChat
+
+        dev_uid = 111
+        update = _make_update(uid=dev_uid)
+        context = _make_context(fl_repo_result=None)
+        with (
+            patch(
+                "garay.infraestructura.telegram.handlers.obtener_settings",
+                return_value=MagicMock(propietario_telegram_ids="", dev_telegram_ids=""),
+            ),
+            patch(
+                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
+                return_value={dev_uid},
+            ),
+        ):
+            await cmd_start(update, context)
+
+        context.bot.set_my_commands.assert_called_once()
+        args, kwargs = context.bot.set_my_commands.call_args
+        nombres = {c.command for c in args[0]}
+        assert "flujo_caja" in nombres  # dev sees the full propietario set
+        scope = kwargs["scope"]
+        assert isinstance(scope, BotCommandScopeChat)
+        assert scope.chat_id == dev_uid
+
+    @pytest.mark.asyncio
+    async def test_refresca_desplegable_del_freelancer_sin_comandos_admin(self) -> None:
+        """A freelancer's refreshed dropdown must not include higher-tier commands."""
+        update = _make_update(uid=999)
+        context = _make_context(fl_repo_result=_freelancer(es_admin=False))
+        with (
+            patch(
+                "garay.infraestructura.telegram.handlers.obtener_settings",
+                return_value=MagicMock(propietario_telegram_ids="", dev_telegram_ids=""),
+            ),
+            patch(
+                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
+                return_value=set(),
+            ),
+        ):
+            await cmd_start(update, context)
+
+        context.bot.set_my_commands.assert_called_once()
+        nombres = {c.command for c in context.bot.set_my_commands.call_args[0][0]}
+        assert "nueva_venta" in nombres
+        assert "flujo_caja" not in nombres
+        assert "editar_freelancer" not in nombres
+
+    @pytest.mark.asyncio
+    async def test_no_falla_si_refresco_del_desplegable_lanza(self) -> None:
+        """A TelegramError while refreshing the dropdown must not break /start."""
+        from telegram.error import TelegramError
+
+        update = _make_update(uid=999)
+        context = _make_context(fl_repo_result=_freelancer(es_admin=False))
+        context.bot.set_my_commands.side_effect = TelegramError("chat not found")
+        with (
+            patch(
+                "garay.infraestructura.telegram.handlers.obtener_settings",
+                return_value=MagicMock(propietario_telegram_ids="", dev_telegram_ids=""),
+            ),
+            patch(
+                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
+                return_value=set(),
+            ),
+        ):
+            result = await cmd_start(update, context)
+
+        assert result == ConversationHandler.END
+        update.message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_retorna_conversation_end(self) -> None:
         update = _make_update(uid=999)
         context = _make_context(fl_repo_result=_freelancer(es_admin=False))
@@ -214,6 +290,8 @@ class TestCmdStartDinamico:
         context = MagicMock()
         context.bot_data = {}  # no freelancer_repo
         context.user_data = {}
+        context.bot = MagicMock()
+        context.bot.set_my_commands = AsyncMock()
         with (
             patch(
                 "garay.infraestructura.telegram.handlers.obtener_settings",

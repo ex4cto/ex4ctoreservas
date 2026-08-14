@@ -485,6 +485,8 @@ class TestCmdStart:
         context = MagicMock()
         context.bot_data = {}
         context.user_data = {}
+        context.bot = MagicMock()
+        context.bot.set_my_commands = AsyncMock()
 
         result = await cmd_start(update, context)
         assert result == ConversationHandler.END
