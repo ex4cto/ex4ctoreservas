@@ -5,8 +5,6 @@ RED phase: all tests must FAIL before the implementation exists in horarios.py.
 
 from __future__ import annotations
 
-import pytest
-
 from garay.dominio.servicios.horarios import render_horarios
 
 

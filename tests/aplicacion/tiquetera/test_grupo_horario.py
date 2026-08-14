@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
+from typing import cast
 from unittest.mock import MagicMock
 
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
@@ -69,9 +70,9 @@ def _cmd(
 
 
 def _capture_message(svc: RegistrarVentaService, cmd: RegistrarVentaComando) -> str:
-    notificador: MagicMock = svc._notificador  # type: ignore[attr-defined]
+    notificador = cast(MagicMock, svc._notificador)
     svc.ejecutar(cmd)
-    return notificador.notificar.call_args.args[0]
+    return str(notificador.notificar.call_args.args[0])
 
 
 class TestGrupoHorarioLine:
@@ -94,8 +95,8 @@ class TestGrupoHorarioLine:
         msg = _capture_message(svc, cmd)
 
         lines = msg.splitlines()
-        fecha_idx = next(i for i, l in enumerate(lines) if "📅 Fecha:" in l)
-        horario_idx = next(i for i, l in enumerate(lines) if "⏰ Horario:" in l)
+        fecha_idx = next(i for i, line in enumerate(lines) if "📅 Fecha:" in line)
+        horario_idx = next(i for i, line in enumerate(lines) if "⏰ Horario:" in line)
         assert horario_idx == fecha_idx + 1
 
     def test_no_schedule_no_horario_line(self) -> None:

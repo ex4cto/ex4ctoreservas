@@ -84,7 +84,7 @@ class TestResumenHorarioLine:
         # Find position of Fecha salida, check that directly after the newline
         # there is no additional newline (i.e. no \n\n at the horario injection point)
         lines = result.splitlines()
-        fecha_idx = next((i for i, l in enumerate(lines) if "Fecha salida:" in l), None)
+        fecha_idx = next((i for i, line in enumerate(lines) if "Fecha salida:" in line), None)
         assert fecha_idx is not None
 
         # After "Fecha salida: ..." line, the next line must NOT be blank
