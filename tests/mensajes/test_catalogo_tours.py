@@ -28,6 +28,11 @@ _TOUR_KEYS = [
     "tour_pide_neto_adulto",
     "tour_pide_neto_nino",
     "tour_nuevo_ficha",
+    # schedule editor keys (Fase 3 PR-B)
+    "tour_horarios_lista",
+    "tour_horarios_pide",
+    "tour_horarios_invalido",
+    "tour_horarios_duplicado",
 ]
 
 
@@ -58,6 +63,22 @@ class TestClavesNuevoTourFormato:
             nombre="City Tour",
             neto_adulto="100.000",
             neto_nino="—",
+            horarios="7:00 AM, 7:00 PM",
         )
         assert "PLAYERO" in msg
         assert "City Tour" in msg
+
+    def test_tour_ficha_acepta_horarios(self) -> None:
+        msg = obtener_mensaje("tour_ficha").format(
+            nombre="City Tour",
+            familia="PLAYERO",
+            neto_adulto="100.000",
+            neto_nino="—",
+            estado="Activo",
+            horarios="7:00 AM",
+        )
+        assert "City Tour" in msg
+
+    def test_tour_horarios_lista_acepta_horarios(self) -> None:
+        msg = obtener_mensaje("tour_horarios_lista").format(horarios="7:00 AM, 7:00 PM")
+        assert "7:00 AM" in msg
