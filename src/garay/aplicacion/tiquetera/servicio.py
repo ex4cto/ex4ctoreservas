@@ -95,6 +95,7 @@ class RegistrarVentaService:
             abono=cmd.abono,
             canal_origen=cmd.canal_origen,
             fechas_por_servicio=cmd.fechas_por_servicio,
+            horarios_por_servicio=cmd.horarios_por_servicio,
         )
 
         # 2. Resolve punto de venta FIRST — needed to determine if Crespo (design S1).

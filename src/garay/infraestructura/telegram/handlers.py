@@ -221,6 +221,14 @@ def _contexto_a_comando(
             for n, dt in ctx.fechas_por_servicio.items()
             if n in servicio_map
         }
+    # Translate per-tour horarios from numero keys to servicio-id keys (mirrors fechas_id).
+    horarios_id: dict[uuid.UUID, str] = {}
+    if ctx.horarios_por_servicio:
+        horarios_id = {
+            servicio_map[n]: h
+            for n, h in ctx.horarios_por_servicio.items()
+            if n in servicio_map
+        }
     # Derive primary date: min across per-tour datetimes, or fall back to ctx.fecha_salida.
     if fechas_id:
         fecha_principal = min(dt.date() for dt in fechas_id.values())
@@ -282,6 +290,7 @@ def _contexto_a_comando(
         habitacion=ctx.cliente_habitacion,
         canal_origen=ctx.canal_origen,
         fechas_por_servicio=fechas_id if fechas_id else None,
+        horarios_por_servicio=horarios_id if horarios_id else None,
     )
 
 
