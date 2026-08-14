@@ -1082,7 +1082,7 @@ class TestNvtStateRouting:
         app = crear_aplicacion("fake-token-for-test")
         # Find nuevo_tour_conv_handler in group=8 handlers
         group8 = app.handlers.get(8, [])
-        nvt_conv: ConversationHandler | None = None
+        nvt_conv: ConversationHandler | None = None  # type: ignore[type-arg]
         for h in group8:
             # Identify nuevo_tour by checking NVT_FAMILIA (230) is in its states
             if isinstance(h, ConversationHandler) and 230 in h.states:
