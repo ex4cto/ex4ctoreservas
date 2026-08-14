@@ -155,6 +155,45 @@ class TestFreelancerRepository:
             _Incompleto()  # type: ignore[abstract]
 
 
+class TestServicioRepository:
+    """Verify that ServicioRepository ABC exposes the siguiente_numero contract."""
+
+    def test_siguiente_numero_es_abstractmethod(self) -> None:
+        """siguiente_numero() must exist and be abstract in ServicioRepository."""
+        from garay.dominio.puertos.repositorios import ServicioRepository
+
+        assert hasattr(ServicioRepository, "siguiente_numero")
+        assert getattr(
+            ServicioRepository.__dict__["siguiente_numero"], "__isabstractmethod__", False
+        )
+
+    def test_implementacion_sin_siguiente_numero_no_instanciable(self) -> None:
+        """A subclass missing siguiente_numero cannot be instantiated."""
+        from garay.dominio.puertos.repositorios import ServicioRepository
+        from garay.dominio.servicios.entidades import Servicio
+
+        class _Incompleto(ServicioRepository):
+            def guardar(self, servicio: Servicio) -> None:
+                pass
+
+            def buscar_por_id(self, id: uuid.UUID) -> Servicio | None:
+                return None
+
+            def buscar_por_nombre(self, nombre: str) -> Servicio | None:
+                return None
+
+            def listar(self) -> list[Servicio]:
+                return []
+
+            def listar_activos(self) -> list[Servicio]:
+                return []
+
+            # siguiente_numero intentionally NOT implemented
+
+        with pytest.raises(TypeError):
+            _Incompleto()  # type: ignore[abstract]
+
+
 class TestExtractorIA:
     def test_implementacion_cumple_interfaz(self) -> None:
         from decimal import Decimal

@@ -21,6 +21,13 @@ _TOUR_KEYS = [
     "tour_neto_invalido",
     "tour_nombre_vacio",
     "tour_nueva_familia_prompt",
+    # /nuevo_tour keys (Fase 2 PR 1)
+    "tour_creado_ok",
+    "tour_nombre_duplicado",
+    "tour_pide_nombre",
+    "tour_pide_neto_adulto",
+    "tour_pide_neto_nino",
+    "tour_nuevo_ficha",
 ]
 
 
@@ -32,3 +39,25 @@ class TestClavesTours:
         msg = obtener_mensaje(clave)
         assert isinstance(msg, str)
         assert len(msg) > 0
+
+
+class TestClavesNuevoTourFormato:
+    """Keys for /nuevo_tour must accept their documented format arguments."""
+
+    def test_tour_creado_ok_acepta_nombre(self) -> None:
+        msg = obtener_mensaje("tour_creado_ok").format(nombre="City Tour")
+        assert "City Tour" in msg
+
+    def test_tour_nombre_duplicado_acepta_nombre(self) -> None:
+        msg = obtener_mensaje("tour_nombre_duplicado").format(nombre="City Tour")
+        assert "City Tour" in msg
+
+    def test_tour_nuevo_ficha_acepta_todos_los_campos(self) -> None:
+        msg = obtener_mensaje("tour_nuevo_ficha").format(
+            familia="PLAYERO",
+            nombre="City Tour",
+            neto_adulto="100.000",
+            neto_nino="—",
+        )
+        assert "PLAYERO" in msg
+        assert "City Tour" in msg

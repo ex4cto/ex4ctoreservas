@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.puertos.repositorios import ServicioRepository
@@ -71,3 +71,10 @@ class SQLAServicioRepository(ServicioRepository):
                 .all()
             )
             return [to_domain(r) for r in rows]
+
+    def siguiente_numero(self) -> int:
+        with self._sf.begin() as session:
+            maximo = session.execute(
+                select(func.max(ServicioModel.numero))
+            ).scalar_one()
+            return int(maximo) + 1 if maximo is not None else 1

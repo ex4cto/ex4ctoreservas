@@ -107,6 +107,32 @@ def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
     assert resultado.categoria == ""
 
 
+# ── siguiente_numero ──────────────────────────────────────────────────────────
+
+
+def test_siguiente_numero_tabla_vacia(sf: sessionmaker[Session]) -> None:
+    """siguiente_numero() returns 1 when no tours exist (satisfies numero >= 1)."""
+    repo = SQLAServicioRepository(sf)
+    assert repo.siguiente_numero() == 1
+
+
+def test_siguiente_numero_con_tours_existentes(sf: sessionmaker[Session]) -> None:
+    """siguiente_numero() returns max(numero) + 1 when tours exist."""
+    repo = SQLAServicioRepository(sf)
+    for num, nombre in [(1, "Tour A"), (3, "Tour B"), (5, "Tour C")]:
+        repo.guardar(Servicio(id=uuid.uuid4(), numero=num, nombre=nombre))
+    assert repo.siguiente_numero() == 6
+
+
+def test_siguiente_numero_incluye_inactivos(sf: sessionmaker[Session]) -> None:
+    """siguiente_numero() uses MAX over ALL rows, including inactive tours."""
+    repo = SQLAServicioRepository(sf)
+    repo.guardar(Servicio(id=uuid.uuid4(), numero=10, nombre="Inactivo", activo=False))
+    repo.guardar(Servicio(id=uuid.uuid4(), numero=3, nombre="Activo", activo=True))
+    # MAX is 10 (inactive), so next is 11 — inactive tours are not excluded
+    assert repo.siguiente_numero() == 11
+
+
 # ── listar_activos ────────────────────────────────────────────────────────────
 
 
