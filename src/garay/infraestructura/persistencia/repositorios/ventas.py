@@ -37,6 +37,11 @@ def to_orm(v: Venta) -> VentaModel:
             if v.fechas_por_servicio is not None
             else None
         ),
+        horarios_por_servicio=(
+            {str(k): val for k, val in v.horarios_por_servicio.items()}
+            if v.horarios_por_servicio is not None
+            else None
+        ),
         vendedor_id=v.participantes.vendedor_id,
         cerrador_id=v.participantes.cerrador_id,
         anulada=v.anulada,
@@ -63,6 +68,11 @@ def to_domain(m: VentaModel) -> Venta:
                 for k, v in m.fechas_por_servicio.items()
             }
             if m.fechas_por_servicio is not None
+            else None
+        ),
+        horarios_por_servicio=(
+            {uuid.UUID(k): val for k, val in m.horarios_por_servicio.items()}
+            if m.horarios_por_servicio is not None
             else None
         ),
         participantes=Participantes(

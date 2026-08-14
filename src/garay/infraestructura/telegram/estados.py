@@ -20,6 +20,7 @@ ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.CLIENTE_HOTEL: 5,
     EstadoFSM.CLIENTE_HABITACION: 6,
     EstadoFSM.FECHA_SALIDA: 7,
+    EstadoFSM.HORARIO_SALIDA: 31,
     EstadoFSM.PAX_ADULTOS: 8,
     EstadoFSM.PAX_NINOS: 9,
     EstadoFSM.MONTO_VALOR: 11,

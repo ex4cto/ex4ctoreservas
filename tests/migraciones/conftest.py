@@ -73,3 +73,41 @@ def build_servicios_at_0010(engine: Engine) -> None:
             )
             """)
         )
+
+
+def build_ventas_at_0011(engine: Engine) -> None:
+    """Create the ventas table as it exists at revision 0011 (no horarios_por_servicio column).
+
+    Replicates the schema state before migration 0012 is applied. Column set
+    matches VentaModel columns added up through migration 0011:
+    id, valor_venta, neto, abono, servicio_ids, cliente_id, tipo_cliente, fecha,
+    adultos, ninos, estado, vendedor_nombre, cerrador_nombre, punto_de_venta_id,
+    referido_nombre, canal_origen, fechas_por_servicio, vendedor_id, cerrador_id, anulada.
+    """
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+            CREATE TABLE IF NOT EXISTS ventas (
+                id TEXT PRIMARY KEY,
+                valor_venta NUMERIC(14,2) NOT NULL,
+                neto NUMERIC(14,2) NOT NULL,
+                abono NUMERIC(14,2),
+                servicio_ids JSON NOT NULL,
+                cliente_id TEXT NOT NULL,
+                tipo_cliente TEXT NOT NULL,
+                fecha DATE NOT NULL,
+                adultos INTEGER NOT NULL,
+                ninos INTEGER NOT NULL,
+                estado TEXT NOT NULL DEFAULT 'PENDIENTE',
+                vendedor_nombre TEXT,
+                cerrador_nombre TEXT,
+                punto_de_venta_id TEXT,
+                referido_nombre TEXT,
+                canal_origen TEXT,
+                fechas_por_servicio JSON,
+                vendedor_id TEXT,
+                cerrador_id TEXT,
+                anulada INTEGER NOT NULL DEFAULT 0
+            )
+            """)
+        )

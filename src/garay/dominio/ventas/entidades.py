@@ -40,6 +40,7 @@ class Venta:
     estado: EstadoVenta = field(default=EstadoVenta.PENDIENTE)
     canal_origen: str | None = None
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None
+    horarios_por_servicio: dict[uuid.UUID, str] | None = None
     anulada: bool = False
 
     def __post_init__(self) -> None:

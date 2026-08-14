@@ -38,6 +38,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_fecha_salida_tour": {
         Idioma.ES: "¿Fecha del tour {tour}? (DD/MM, DD/MM/YY o DD/MM/YYYY HH:MM)"
     },
+    "pregunta_horario_salida": {
+        Idioma.ES: "⏰ ¿A qué hora sale el tour *{tour}*?"
+    },
     "pregunta_adultos": {Idioma.ES: "¿Cuántos adultos? (mínimo 1)"},
     "pregunta_ninos": {Idioma.ES: "¿Cuántos niños? (puede ser 0)"},
     "pregunta_numero_ticket": {Idioma.ES: "¿Cuál es el número de ticket?"},

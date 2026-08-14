@@ -50,6 +50,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_esperando_foto,
     handle_familia,
     handle_fecha_salida,
+    handle_horario_salida,
     handle_iniciar_venta,
     handle_metodo_input,
     handle_modalidad_venta,
@@ -362,6 +363,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             estados[EstadoFSM.FECHA_SALIDA]: [
                 MessageHandler(_TEXT, handle_fecha_salida),
+            ],
+            estados[EstadoFSM.HORARIO_SALIDA]: [
+                CallbackQueryHandler(handle_horario_salida, pattern="^hor:"),
+                MessageHandler(_TEXT, handle_horario_salida),
             ],
             estados[EstadoFSM.PAX_ADULTOS]: [
                 MessageHandler(_TEXT, handle_pax_adultos),

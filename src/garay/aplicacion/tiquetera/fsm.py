@@ -20,6 +20,7 @@ from garay.aplicacion.comun.fechas import (
     parsear_fecha as _parsear_fecha,
 )
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
+from garay.dominio.servicios.horarios import formato_display
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -42,6 +43,7 @@ class EstadoFSM(StrEnum):
     CLIENTE_HOTEL = "cliente_hotel"
     CLIENTE_HABITACION = "cliente_habitacion"
     FECHA_SALIDA = "fecha_salida"
+    HORARIO_SALIDA = "horario_salida"
     PAX_ADULTOS = "pax_adultos"
     PAX_NINOS = "pax_ninos"
     MONTO_VALOR = "monto_valor"
@@ -284,6 +286,7 @@ class FSMTiquetera:
         ctx.destinos_nombres = []
         ctx.familia_seleccionada = None
         ctx.fechas_por_servicio = {}
+        ctx.horarios_por_servicio = {}
         ctx.fecha_salida = None
         ctx.adultos = None
         ctx.ninos = None
@@ -326,6 +329,7 @@ class FSMTiquetera:
             EstadoFSM.CLIENTE_HOTEL: self._handle_cliente_hotel,
             EstadoFSM.CLIENTE_HABITACION: self._handle_cliente_habitacion,
             EstadoFSM.FECHA_SALIDA: self._handle_fecha_salida,
+            EstadoFSM.HORARIO_SALIDA: self._handle_horario_salida,
             EstadoFSM.PAX_ADULTOS: self._handle_pax_adultos,
             EstadoFSM.PAX_NINOS: self._handle_pax_ninos,
             EstadoFSM.MONTO_VALOR: self._handle_monto_valor,
@@ -372,6 +376,64 @@ class FSMTiquetera:
         )
 
     # ── private helpers ─────────────────────────────────────────────────────
+
+    def _siguiente_tour_sin_horario(self, ctx: ContextoVenta) -> int | None:
+        """Return the numero of the first tour that needs a horario selection.
+
+        A tour needs selection when all three conditions hold:
+          1. It has a date in ctx.fechas_por_servicio (already dated).
+          2. It has no entry in ctx.horarios_por_servicio (not yet chosen).
+          3. The catalog has at least one configured horario for this tour.
+
+        Returns None when every applicable tour already has a selection, or
+        when no dated tour has horarios configured.
+        """
+        for numero in ctx.destinos_numeros:
+            if (
+                numero in ctx.fechas_por_servicio
+                and numero not in ctx.horarios_por_servicio
+                and self._horarios.get(numero)
+            ):
+                return numero
+        return None
+
+    def _opciones_horario(self, numero: int) -> list[tuple[str, str]]:
+        """Structured options for HORARIO_SALIDA: (formato_display(h), 'hor:{h}')."""
+        return [
+            (formato_display(h), f"hor:{h}")
+            for h in self._horarios.get(numero, [])
+        ]
+
+    def _salida_horario(self, ctx: ContextoVenta, numero: int) -> SalidaFSM:
+        """Build the SalidaFSM that prompts for a horario for the given tour numero."""
+        nombre = self._servicios[numero][0] if numero in self._servicios else str(numero)
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.HORARIO_SALIDA,
+            mensaje=obtener_mensaje("pregunta_horario_salida").format(tour=nombre),
+            opciones_estructuradas=self._opciones_horario(numero),
+            contexto=ctx,
+        )
+
+    def _avanzar_tras_fecha(self, ctx: ContextoVenta) -> SalidaFSM:
+        """Advance after all dates (and horarios) are collected.
+
+        Mirrors the tail of _handle_fecha_salida (L1100-1116) extracted as a
+        pure helper so _handle_horario_salida can reuse it without duplication.
+        Respects modo_edicion: returns to CONFIRMACION when True.
+        """
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.PAX_ADULTOS,
+            mensaje=obtener_mensaje("pregunta_adultos"),
+            contexto=ctx,
+        )
 
     def _familias_ordenadas(self) -> list[str]:
         """Return family (categoria) names in the picker's deterministic order."""
@@ -793,6 +855,10 @@ class FSMTiquetera:
             ctx.fechas_por_servicio = {
                 n: f for n, f in ctx.fechas_por_servicio.items() if n in ctx.destinos_numeros
             }
+            # Symmetrical prune: remove horarios for deselected tours.
+            ctx.horarios_por_servicio = {
+                n: h for n, h in ctx.horarios_por_servicio.items() if n in ctx.destinos_numeros
+            }
             computed = self._calcular_neto(ctx)
             if computed is not None:
                 ctx.neto = computed
@@ -869,6 +935,12 @@ class FSMTiquetera:
                 ctx.fechas_por_servicio = {
                     n: f
                     for n, f in ctx.fechas_por_servicio.items()
+                    if n in ctx.destinos_numeros
+                }
+                # Symmetrical prune: remove horarios for deselected tours.
+                ctx.horarios_por_servicio = {
+                    n: h
+                    for n, h in ctx.horarios_por_servicio.items()
                     if n in ctx.destinos_numeros
                 }
                 # 2. Recompute neto with the new tour set (must happen before routing
@@ -1097,23 +1169,51 @@ class FSMTiquetera:
                 contexto=ctx,
             )
 
-        # All tours have dates — compute primary date and advance.
+        # All tours have dates — compute primary date.
         if ctx.fechas_por_servicio:
             ctx.fecha_salida = min(ctx.fechas_por_servicio.values())
 
-        if ctx.modo_edicion:
-            ctx.modo_edicion = False
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.CONFIRMACION,
-                mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
-                contexto=ctx,
-            )
-        return SalidaFSM(
-            nuevo_estado=EstadoFSM.PAX_ADULTOS,
-            mensaje=obtener_mensaje("pregunta_adultos"),
-            contexto=ctx,
-        )
+        # Check if any dated tour still needs a horario selection.
+        pendiente_horario = self._siguiente_tour_sin_horario(ctx)
+        if pendiente_horario is not None:
+            return self._salida_horario(ctx, pendiente_horario)
+
+        # No horarios pending — advance normally (respecting modo_edicion).
+        return self._avanzar_tras_fecha(ctx)
+
+    def _handle_horario_salida(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        """Handle time selection in HORARIO_SALIDA state.
+
+        Validates 'hor:{HH:MM}' callbacks. Selection is MANDATORY — no skip
+        option. Invalid or non-hor: input re-renders the same tour's picker.
+        After all tours are resolved, delegates to _avanzar_tras_fecha.
+        """
+        ctx = _clonar(contexto)
+        val = entrada.strip()
+
+        # Determine which tour is currently awaiting a horario.
+        tour_actual = self._siguiente_tour_sin_horario(ctx)
+        if tour_actual is None:
+            # All horarios already resolved (stale state) — advance.
+            return self._avanzar_tras_fecha(ctx)
+
+        if not val.startswith("hor:"):
+            # Free text or any non-hor: input — re-render same tour.
+            return self._salida_horario(ctx, tour_actual)
+
+        horario = val.removeprefix("hor:")
+        if horario not in self._horarios.get(tour_actual, []):
+            # Callback with 'hor:' but value not in catalog — re-render.
+            return self._salida_horario(ctx, tour_actual)
+
+        # Valid selection: store and check for next pending tour.
+        ctx.horarios_por_servicio[tour_actual] = horario
+        siguiente = self._siguiente_tour_sin_horario(ctx)
+        if siguiente is not None:
+            return self._salida_horario(ctx, siguiente)
+
+        # All horarios collected — advance to PAX_ADULTOS / CONFIRMACION.
+        return self._avanzar_tras_fecha(ctx)
 
     def _handle_pax_adultos(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
@@ -1526,8 +1626,9 @@ class FSMTiquetera:
             ctx.familia_seleccionada = None
             return self._salida_familia(ctx)
         if estado_destino == EstadoFSM.FECHA_SALIDA:
-            # Editing date: clear per-tour dates so the loop re-runs from scratch.
+            # Editing date: clear per-tour dates and horarios so both loops re-run.
             ctx.fechas_por_servicio = {}
+            ctx.horarios_por_servicio = {}
             # For single-tour, show the edit prompt with the current date so the user
             # can see what they are replacing.  For multi-tour, use the per-tour prompt.
             if len(ctx.destinos_numeros) <= 1:
