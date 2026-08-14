@@ -588,6 +588,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Familia: {familia}\n"
             "• Neto adulto: {neto_adulto}\n"
             "• Neto niño: {neto_nino}\n"
+            "• Horarios: {horarios}\n"
             "• Estado: {estado}"
         )
     },
@@ -632,7 +633,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Familia: {familia}\n"
             "• Nombre: {nombre}\n"
             "• Neto adulto: {neto_adulto}\n"
-            "• Neto niño: {neto_nino}"
+            "• Neto niño: {neto_nino}\n"
+            "• Horarios: {horarios}"
         )
     },
     "tour_neto_invalido": {
@@ -640,6 +642,25 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "tour_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresa un nombre válido:"},
     "tour_nueva_familia_prompt": {Idioma.ES: "Escribe el nombre de la nueva familia:"},
+    # --- Horarios editor (Fase 3 PR-B) ---
+    "tour_horarios_lista": {
+        Idioma.ES: "🕐 <b>Horarios del tour</b>\nActuales: {horarios}"
+    },
+    "tour_horarios_pide": {
+        Idioma.ES: (
+            "Escribe el horario que quieres agregar (ej. 7pm, 19:00, 7:30am):"
+        )
+    },
+    "tour_horarios_invalido": {
+        Idioma.ES: (
+            "Hora no válida. Ingresa un formato reconocible (ej. 7pm, 19:00, 7:30am):"
+        )
+    },
+    "tour_horarios_duplicado": {
+        Idioma.ES: (
+            "Ese horario ya existe en la lista. Ingresa uno diferente:"
+        )
+    },
 }
 
 

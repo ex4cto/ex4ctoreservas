@@ -12,6 +12,8 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
+from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
+from garay.dominio.servicios.horarios import agregar_horario, formato_display, quitar_horario
 from garay.infraestructura.telegram.auth import requiere_admin_conv
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -48,6 +50,22 @@ NVT_CONFIRMA: int = 235        # callback: create / cancel / edit-field
 NVT_DUP_CONFIRMA: int = 236    # callback: duplicate name detected → use anyway / change
 
 # ---------------------------------------------------------------------------
+# State constants — schedule editor (EDH) range 237-239
+# (EDF: 220-224+228, ELT: 225-227, 229 buffer, NVT: 230-236)
+# ---------------------------------------------------------------------------
+
+EDH_LISTA: int = 237    # schedule list: X-buttons per horario + agregar + listo
+EDH_AGREGAR: int = 238  # dedicated text state for free-text horario input
+# 239 = buffer
+
+# ---------------------------------------------------------------------------
+# State constants — /nuevo_tour schedule editor range 240-241
+# ---------------------------------------------------------------------------
+
+NVT_HOR_LISTA: int = 240    # NVT schedule list editor (operates on user_data)
+NVT_HOR_AGREGAR: int = 241  # NVT dedicated text state for horario input
+
+# ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
@@ -56,6 +74,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("neto_adulto", "Neto adulto"),
     ("neto_nino", "Neto niño"),
     ("familia", "Familia"),
+    ("horarios", "Horarios"),
     ("activo", "Activar / Desactivar"),
 ]
 
@@ -65,12 +84,16 @@ def _render_ficha(s: Servicio) -> str:
     neto_adulto = str(s.precio_neto_adulto) if s.precio_neto_adulto is not None else "—"
     neto_nino = str(s.precio_neto_nino) if s.precio_neto_nino is not None else "—"
     estado = "Activo" if s.activo else "Inactivo"
+    horarios_str = (
+        ", ".join(formato_display(h) for h in s.horarios) if s.horarios else "—"
+    )
     return obtener_mensaje("tour_ficha").format(
         nombre=s.nombre,
         familia=s.categoria or "—",
         neto_adulto=neto_adulto,
         neto_nino=neto_nino,
         estado=estado,
+        horarios=horarios_str,
     )
 
 
@@ -97,6 +120,26 @@ def _teclado_familias(servicios: list[Servicio], prefix: str) -> InlineKeyboardM
         [InlineKeyboardButton(fam, callback_data=f"{prefix}{fam}")]
         for fam in familias
     ]
+    return InlineKeyboardMarkup(botones)
+
+
+def _teclado_horarios(horarios: list[str], prefix: str) -> InlineKeyboardMarkup:
+    """Build a schedule editor keyboard.
+
+    Each horario → one row with a X button (callback: {prefix}quitar:{canonical}).
+    Then a row for agregar ({prefix}agregar) and a row for listo ({prefix}listo).
+    Works for both EDH (editar_tour) and NVT-HOR (nuevo_tour) by parameterising prefix.
+    """
+    botones: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(f"✕ {formato_display(h)}", callback_data=f"{prefix}quitar:{h}")]
+        for h in horarios
+    ]
+    botones.append(
+        [InlineKeyboardButton("➕ Agregar horario", callback_data=f"{prefix}agregar")]  # noqa: RUF001
+    )
+    botones.append(
+        [InlineKeyboardButton("✅ Listo", callback_data=f"{prefix}listo")]
+    )
     return InlineKeyboardMarkup(botones)
 
 
@@ -315,6 +358,25 @@ async def handle_edt_ficha(
             parse_mode="HTML",
         )
         return EDF_CONFIRMA
+
+    if campo == "horarios":
+        # Open the schedule list editor
+        ud_hor = context.user_data if context.user_data is not None else {}
+        target_id_hor = str(ud_hor.get("edt_target_id", ""))
+        repo_hor: ServicioRepository | None = context.bot_data.get("servicio_repo")
+        s_hor: Servicio | None = None
+        with contextlib.suppress(ValueError, AttributeError):
+            s_hor = repo_hor.buscar_por_id(uuid.UUID(target_id_hor)) if repo_hor else None
+        horarios_hor = s_hor.horarios if s_hor is not None else []
+        teclado_h = _teclado_horarios(horarios_hor, prefix="edh_")
+        horarios_texto_hor = (
+            ", ".join(formato_display(h) for h in horarios_hor) if horarios_hor else "—"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto_hor),
+            reply_markup=teclado_h,
+        )
+        return EDH_LISTA
 
     if campo == "familia":
         # Show existing families + "Nueva familia" button
@@ -573,6 +635,119 @@ async def handle_edt_confirma(
 
 
 # ---------------------------------------------------------------------------
+# /editar_tour — schedule editor (EDH states 237-238)
+# ---------------------------------------------------------------------------
+
+
+async def handle_edh_lista(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Route EDH_LISTA callbacks: edh_agregar / edh_quitar:{canonical} / edh_listo."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None or query is None or query.data is None:
+        return EDH_LISTA
+
+    data: str = query.data
+    ud = context.user_data if context.user_data is not None else {}
+    target_id_str = str(ud.get("edt_target_id", ""))
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if data == "edh_agregar":
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_pide")
+        )
+        return EDH_AGREGAR
+
+    if data.startswith("edh_quitar:"):
+        canonico = data.removeprefix("edh_quitar:")
+        if s is not None:
+            s.horarios = quitar_horario(s.horarios, canonico)
+            if repo:
+                repo.guardar(s)
+            _refrescar_fsm(context)
+        # Re-render schedule list
+        horarios = s.horarios if s is not None else []
+        teclado = _teclado_horarios(horarios, prefix="edh_")
+        horarios_texto = (
+            ", ".join(formato_display(h) for h in horarios) if horarios else "—"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
+            reply_markup=teclado,
+        )
+        return EDH_LISTA
+
+    if data == "edh_listo":
+        # Return to field selection screen
+        if s is not None:
+            await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_editar_campo"), reply_markup=_teclado_campos()
+        )
+        return EDF_FICHA
+
+    return EDH_LISTA
+
+
+async def handle_edh_agregar_texto(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle free-text horario input in EDH_AGREGAR state.
+
+    Validates, deduplicates, persists, refreshes FSM, re-renders list.
+    One MessageHandler(_TEXT) only — Fase 1 lesson.
+    """
+    if update.effective_message is None:
+        return EDH_AGREGAR
+
+    texto = (update.effective_message.text or "").strip()
+    ud = context.user_data if context.user_data is not None else {}
+    target_id_str = str(ud.get("edt_target_id", ""))
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if s is None:
+        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
+        return ConversationHandler.END
+
+    try:
+        nueva_lista = agregar_horario(s.horarios, texto)
+    except HorarioInvalido:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_invalido")
+        )
+        return EDH_AGREGAR
+    except HorarioDuplicado:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_duplicado")
+        )
+        return EDH_AGREGAR
+
+    s.horarios = nueva_lista
+    if repo:
+        repo.guardar(s)
+    _refrescar_fsm(context)
+
+    # Re-render schedule list
+    teclado = _teclado_horarios(s.horarios, prefix="edh_")
+    horarios_texto = (
+        ", ".join(formato_display(h) for h in s.horarios) if s.horarios else "—"
+    )
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
+        reply_markup=teclado,
+    )
+    return EDH_LISTA
+
+
+# ---------------------------------------------------------------------------
 # /eliminar_tour
 # ---------------------------------------------------------------------------
 
@@ -730,6 +905,7 @@ def _limpiar_nvt(context: ContextTypes.DEFAULT_TYPE) -> None:
             "nvt_neto_adulto",
             "nvt_neto_nino",
             "nvt_editando",
+            "nvt_horarios",
         ):
             context.user_data.pop(key, None)
 
@@ -742,11 +918,17 @@ def _render_ficha_nuevo(ud: dict[str, object]) -> str:
     neto_nino_raw = ud.get("nvt_neto_nino")
     neto_adulto = str(neto_adulto_raw) if neto_adulto_raw is not None else "—"
     neto_nino = str(neto_nino_raw) if neto_nino_raw is not None else "—"
+    _raw_h = ud.get("nvt_horarios")
+    nvt_horarios: list[str] = list(_raw_h) if isinstance(_raw_h, list) else []
+    horarios_str = (
+        ", ".join(formato_display(h) for h in nvt_horarios) if nvt_horarios else "—"
+    )
     return obtener_mensaje("tour_nuevo_ficha").format(
         familia=familia,
         nombre=nombre,
         neto_adulto=neto_adulto,
         neto_nino=neto_nino,
+        horarios=horarios_str,
     )
 
 
@@ -760,6 +942,9 @@ def _teclado_ficha_nuevo() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton("✏️ Neto adulto", callback_data="nvt_edit:neto_adulto"),
             InlineKeyboardButton("✏️ Neto niño", callback_data="nvt_edit:neto_nino"),
+        ],
+        [
+            InlineKeyboardButton("🕐 Horarios", callback_data="nvt_edit:horarios"),
         ],
         [
             InlineKeyboardButton("✅ Crear", callback_data="nvt_crear"),
@@ -1152,6 +1337,23 @@ async def handle_nvt_edit(
         )
         return NVT_NETO_NINO
 
+    if campo == "horarios":
+        # Open NVT schedule editor; ensure nvt_horarios exists in user_data
+        ud2 = context.user_data if context.user_data is not None else {}
+        if "nvt_horarios" not in ud2 and context.user_data is not None:
+            context.user_data["nvt_horarios"] = []
+        _raw_h2 = ud2.get("nvt_horarios")
+        nvt_horarios: list[str] = list(_raw_h2) if isinstance(_raw_h2, list) else []
+        teclado_h = _teclado_horarios(nvt_horarios, prefix="nvt_hor_")
+        horarios_texto = (
+            ", ".join(formato_display(h) for h in nvt_horarios) if nvt_horarios else "—"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
+            reply_markup=teclado_h,
+        )
+        return NVT_HOR_LISTA
+
     # Unknown campo — stay in confirma
     return NVT_CONFIRMA
 
@@ -1192,6 +1394,7 @@ async def handle_nvt_crear(
         precio_neto_adulto=ud.get("nvt_neto_adulto"),  # Decimal | None stored by handlers
         precio_neto_nino=ud.get("nvt_neto_nino"),       # Decimal | None stored by handlers
         categoria=str(ud.get("nvt_familia", "")),
+        horarios=[h for h in ud.get("nvt_horarios") or [] if isinstance(h, str)],
     )
 
     if repo:
@@ -1204,3 +1407,103 @@ async def handle_nvt_crear(
         obtener_mensaje("tour_creado_ok").format(nombre=nuevo.nombre)
     )
     return ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# /nuevo_tour -- schedule editor (NVT-HOR states 240-241)
+# ---------------------------------------------------------------------------
+
+
+async def handle_nvt_hor_lista(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Route NVT_HOR_LISTA callbacks: nvt_hor_agregar / nvt_hor_quitar:{canonical} / nvt_hor_listo.
+
+    Operates on ud[nvt_horarios] (draft list, no repo -� tour not yet created).
+    """
+    query = update.callback_query
+    if query:
+        await query.answer()
+    if update.effective_message is None or query is None or query.data is None:
+        return NVT_HOR_LISTA
+
+    data: str = query.data
+    ud = context.user_data if context.user_data is not None else {}
+    _raw_nvt = ud.get("nvt_horarios")
+    nvt_horarios: list[str] = list(_raw_nvt) if isinstance(_raw_nvt, list) else []
+
+    if data == "nvt_hor_agregar":
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_pide")
+        )
+        return NVT_HOR_AGREGAR
+
+    if data.startswith("nvt_hor_quitar:"):
+        canonico = data.removeprefix("nvt_hor_quitar:")
+        nvt_horarios = quitar_horario(nvt_horarios, canonico)
+        if context.user_data is not None:
+            context.user_data["nvt_horarios"] = nvt_horarios
+        # Re-render
+        teclado = _teclado_horarios(nvt_horarios, prefix="nvt_hor_")
+        horarios_texto = (
+            ", ".join(formato_display(h) for h in nvt_horarios) if nvt_horarios else "�"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
+            reply_markup=teclado,
+        )
+        return NVT_HOR_LISTA
+
+    if data == "nvt_hor_listo":
+        # Return to NVT confirmation screen
+        ficha = _render_ficha_nuevo(ud)
+        await update.effective_message.reply_text(
+            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+        )
+        return NVT_CONFIRMA
+
+    return NVT_HOR_LISTA
+
+
+async def handle_nvt_hor_agregar_texto(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle free-text horario input in NVT_HOR_AGREGAR state.
+
+    Validates, deduplicates, stores in ud[nvt_horarios], re-renders list.
+    One MessageHandler(_TEXT) only -- Fase 1 lesson.
+    """
+    if update.effective_message is None:
+        return NVT_HOR_AGREGAR
+
+    texto = (update.effective_message.text or "").strip()
+    ud = context.user_data if context.user_data is not None else {}
+    _raw_nvt2 = ud.get("nvt_horarios")
+    nvt_horarios: list[str] = list(_raw_nvt2) if isinstance(_raw_nvt2, list) else []
+
+    try:
+        nueva_lista = agregar_horario(nvt_horarios, texto)
+    except HorarioInvalido:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_invalido")
+        )
+        return NVT_HOR_AGREGAR
+    except HorarioDuplicado:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_horarios_duplicado")
+        )
+        return NVT_HOR_AGREGAR
+
+    if context.user_data is not None:
+        context.user_data["nvt_horarios"] = nueva_lista
+
+    # Re-render schedule list
+    teclado = _teclado_horarios(nueva_lista, prefix="nvt_hor_")
+    horarios_texto = (
+        ", ".join(formato_display(h) for h in nueva_lista) if nueva_lista else "�"
+    )
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
+        reply_markup=teclado,
+    )
+    return NVT_HOR_LISTA

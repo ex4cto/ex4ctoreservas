@@ -637,3 +637,352 @@ class TestEdtNuevaFamiliaEndToEnd:
             "The new family name must be persisted."
         )
         ctx.bot_data["fsm"].refrescar_servicios.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Task 4.1 RED -- _teclado_horarios helper
+# ---------------------------------------------------------------------------
+
+
+class TestTecladoHorarios:
+    """_teclado_horarios(horarios, prefix) must return a properly structured keyboard."""
+
+    def test_teclado_horarios_filas_quit_mas_agregar_listo(self) -> None:
+        """Two horarios: two X rows + agregar row + listo row (4 total)."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["07:00", "19:00"], prefix="edh_")
+        assert isinstance(markup, InlineKeyboardMarkup)
+        rows = markup.inline_keyboard
+        assert len(rows) == 4, f"Expected 4 rows but got {len(rows)}"
+
+    def test_teclado_horarios_callbacks_quitar(self) -> None:
+        """Each horario row callback_data must be prefix+quitar:HH:MM."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["07:00", "19:00"], prefix="edh_")
+        rows = markup.inline_keyboard
+        assert rows[0][0].callback_data == "edh_quitar:07:00"
+        assert rows[1][0].callback_data == "edh_quitar:19:00"
+
+    def test_teclado_horarios_callback_agregar(self) -> None:
+        """The agregar row callback must be prefix+agregar."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["07:00"], prefix="edh_")
+        rows = markup.inline_keyboard
+        assert rows[-2][0].callback_data == "edh_agregar"
+
+    def test_teclado_horarios_callback_listo(self) -> None:
+        """The Listo row callback must be prefix+listo."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["07:00"], prefix="edh_")
+        rows = markup.inline_keyboard
+        assert rows[-1][0].callback_data == "edh_listo"
+
+    def test_teclado_horarios_lista_vacia(self) -> None:
+        """Empty list: 0 X rows + agregar row + listo row (2 total)."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios([], prefix="edh_")
+        rows = markup.inline_keyboard
+        assert len(rows) == 2
+
+    def test_teclado_horarios_label_display_ampm(self) -> None:
+        """Each X row must show AM/PM formatted time in the button text."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["07:00", "19:00"], prefix="edh_")
+        rows = markup.inline_keyboard
+        assert "7:00 AM" in rows[0][0].text
+        assert "7:00 PM" in rows[1][0].text
+
+    def test_teclado_horarios_nvt_prefix(self) -> None:
+        """Same helper works with nvt_hor_ prefix."""
+        from garay.infraestructura.telegram.handlers_tours import _teclado_horarios
+
+        markup = _teclado_horarios(["08:00"], prefix="nvt_hor_")
+        rows = markup.inline_keyboard
+        assert rows[0][0].callback_data == "nvt_hor_quitar:08:00"
+        assert rows[-2][0].callback_data == "nvt_hor_agregar"
+        assert rows[-1][0].callback_data == "nvt_hor_listo"
+
+
+# ---------------------------------------------------------------------------
+# Task 5.1 RED -- EDH state constants + editor handlers
+# ---------------------------------------------------------------------------
+
+
+class TestEdhStateConstants:
+    """EDH_* constants must be defined, unique, in range 237-239."""
+
+    def test_edh_lista_equals_237(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import EDH_LISTA
+
+        assert EDH_LISTA == 237
+
+    def test_edh_agregar_equals_238(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import EDH_AGREGAR
+
+        assert EDH_AGREGAR == 238
+
+    def test_edh_constants_unique(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import EDH_AGREGAR, EDH_LISTA
+
+        assert EDH_LISTA != EDH_AGREGAR
+
+
+class TestHandleEdtFichaHorarios:
+    """handle_edt_ficha with campo=horarios must open the EDH editor."""
+
+    @pytest.mark.asyncio
+    async def test_edt_campo_horarios_opens_edh(self) -> None:
+        """Selecting horarios from the ficha must return EDH_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_LISTA,
+            handle_edt_ficha,
+        )
+
+        s1 = _servicio()
+        update = _make_update(callback_data="edt_campo:horarios")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_ficha(update, ctx)
+
+        assert result == EDH_LISTA
+
+    @pytest.mark.asyncio
+    async def test_edt_campo_horarios_sends_keyboard(self) -> None:
+        """Opening the horarios editor must send an InlineKeyboardMarkup."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers_tours import handle_edt_ficha
+
+        s1 = _servicio()
+        update = _make_update(callback_data="edt_campo:horarios")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        await handle_edt_ficha(update, ctx)
+
+        call_args = update.effective_message.reply_text.call_args_list
+        keyboards = [
+            c.kwargs.get("reply_markup") or (c.args[1] if len(c.args) > 1 else None)
+            for c in call_args
+        ]
+        assert any(isinstance(k, InlineKeyboardMarkup) for k in keyboards)
+
+
+class TestHandleEdhLista:
+    """handle_edh_lista routes edh_agregar / edh_quitar / edh_listo correctly."""
+
+    @pytest.mark.asyncio
+    async def test_edh_agregar_goes_to_edh_agregar_state(self) -> None:
+        """Tapping agregar returns EDH_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_AGREGAR,
+            handle_edh_lista,
+        )
+
+        s1 = _servicio()
+        update = _make_update(callback_data="edh_agregar")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_lista(update, ctx)
+
+        assert result == EDH_AGREGAR
+
+    @pytest.mark.asyncio
+    async def test_edh_quitar_removes_and_rerenders(self) -> None:
+        """Tapping X removes the horario, saves, and returns EDH_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_LISTA,
+            handle_edh_lista,
+        )
+
+        s1 = _servicio()
+        s1.horarios = ["07:00", "19:00"]
+        update = _make_update(callback_data="edh_quitar:07:00")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_lista(update, ctx)
+
+        assert result == EDH_LISTA
+        ctx.bot_data["servicio_repo"].guardar.assert_called_once()
+        saved = ctx.bot_data["servicio_repo"].guardar.call_args[0][0]
+        assert "07:00" not in saved.horarios
+        assert "19:00" in saved.horarios
+
+    @pytest.mark.asyncio
+    async def test_edh_listo_returns_edf_ficha(self) -> None:
+        """Tapping Listo returns EDF_FICHA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDF_FICHA,
+            handle_edh_lista,
+        )
+
+        s1 = _servicio()
+        update = _make_update(callback_data="edh_listo")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_lista(update, ctx)
+
+        assert result == EDF_FICHA
+
+
+class TestHandleEdhAgregarTexto:
+    """handle_edh_agregar_texto validates and persists new horario."""
+
+    @pytest.mark.asyncio
+    async def test_horario_valido_agrega_y_vuelve_a_lista(self) -> None:
+        """Valid horario text -> agregar, save, return EDH_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_LISTA,
+            handle_edh_agregar_texto,
+        )
+
+        s1 = _servicio()
+        s1.horarios = ["07:00"]
+        update = _make_update(text="9pm")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_agregar_texto(update, ctx)
+
+        assert result == EDH_LISTA
+        ctx.bot_data["servicio_repo"].guardar.assert_called_once()
+        saved = ctx.bot_data["servicio_repo"].guardar.call_args[0][0]
+        assert "21:00" in saved.horarios
+
+    @pytest.mark.asyncio
+    async def test_horario_invalido_queda_en_edh_agregar(self) -> None:
+        """Invalid text -> error reply, stay in EDH_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_AGREGAR,
+            handle_edh_agregar_texto,
+        )
+
+        s1 = _servicio()
+        update = _make_update(text="nope")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_agregar_texto(update, ctx)
+
+        assert result == EDH_AGREGAR
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_horario_duplicado_queda_en_edh_agregar(self) -> None:
+        """Duplicate horario -> error reply, stay in EDH_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            EDH_AGREGAR,
+            handle_edh_agregar_texto,
+        )
+
+        s1 = _servicio()
+        s1.horarios = ["19:00"]
+        update = _make_update(text="7pm")  # canonical 19:00 = duplicate
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edh_agregar_texto(update, ctx)
+
+        assert result == EDH_AGREGAR
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Task 6.1 RED -- EDH states wired in bot.py
+# ---------------------------------------------------------------------------
+
+
+class TestEdhStatesBotWiring:
+    """Structural: EDH_LISTA and EDH_AGREGAR must be in editar_tour_conv_handler."""
+
+    def _get_editar_conv(self) -> object:
+        from unittest.mock import MagicMock, patch
+
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.bot import crear_aplicacion
+
+        with patch("garay.infraestructura.telegram.bot.obtener_settings") as ms:
+            settings = MagicMock()
+            settings.propietario_telegram_ids = ""
+            settings.dev_telegram_ids = ""
+            ms.return_value = settings
+            app = crear_aplicacion("fake:token")
+
+        for _group, handlers in app.handlers.items():
+            for h in handlers:
+                if isinstance(h, ConversationHandler):
+                    for ep in h.entry_points:
+                        if hasattr(ep, "commands") and "editar_tour" in ep.commands:
+                            return h
+        return None
+
+    def test_edh_lista_registered_in_editar_tour(self) -> None:
+        """EDH_LISTA must appear in editar_tour_conv_handler states."""
+        from garay.infraestructura.telegram.handlers_tours import EDH_LISTA
+
+        editar_conv = self._get_editar_conv()
+        assert editar_conv is not None, "editar_tour_conv_handler not found"
+        assert EDH_LISTA in editar_conv.states, (  # type: ignore[union-attr]
+            f"EDH_LISTA ({EDH_LISTA}) not registered in editar_tour_conv_handler states"
+        )
+
+    def test_edh_agregar_registered_in_editar_tour(self) -> None:
+        """EDH_AGREGAR must appear in editar_tour_conv_handler states."""
+        from garay.infraestructura.telegram.handlers_tours import EDH_AGREGAR
+
+        editar_conv = self._get_editar_conv()
+        assert editar_conv is not None, "editar_tour_conv_handler not found"
+        assert EDH_AGREGAR in editar_conv.states, (  # type: ignore[union-attr]
+            f"EDH_AGREGAR ({EDH_AGREGAR}) not registered in editar_tour_conv_handler states"
+        )
+
+    def test_edh_agregar_state_has_single_message_handler(self) -> None:
+        """EDH_AGREGAR must contain exactly ONE MessageHandler (Fase 1 lesson)."""
+        from telegram.ext import MessageHandler
+
+        from garay.infraestructura.telegram.handlers_tours import EDH_AGREGAR
+
+        editar_conv = self._get_editar_conv()
+        assert editar_conv is not None
+        handlers_list = editar_conv.states.get(EDH_AGREGAR, [])  # type: ignore[union-attr]
+        text_handlers = [h for h in handlers_list if isinstance(h, MessageHandler)]
+        assert len(text_handlers) == 1, (
+            f"EDH_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
+        )

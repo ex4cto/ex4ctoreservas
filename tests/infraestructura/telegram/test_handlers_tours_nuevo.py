@@ -1288,3 +1288,289 @@ class TestNvtStateRouting:
             assert len(text_handlers) == 1, (
                 f"State {state_id} has {len(text_handlers)} MessageHandlers, expected exactly 1"
             )
+
+
+# ---------------------------------------------------------------------------
+# Task 7.1 RED -- NVT-HOR state constants + editor handlers
+# ---------------------------------------------------------------------------
+
+
+class TestNvtHorStateConstants:
+    """NVT_HOR_* constants must be defined, unique, in range 240-241."""
+
+    def test_nvt_hor_lista_equals_240(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import NVT_HOR_LISTA
+
+        assert NVT_HOR_LISTA == 240
+
+    def test_nvt_hor_agregar_equals_241(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import NVT_HOR_AGREGAR
+
+        assert NVT_HOR_AGREGAR == 241
+
+    def test_nvt_hor_constants_unique(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_AGREGAR,
+            NVT_HOR_LISTA,
+        )
+
+        assert NVT_HOR_LISTA != NVT_HOR_AGREGAR
+
+
+class TestHandleNvtEditHorarios:
+    """handle_nvt_edit with campo=horarios must open the NVT-HOR editor."""
+
+    @pytest.mark.asyncio
+    async def test_nvt_edit_horarios_opens_hor_lista(self) -> None:
+        """Tapping horarios from the NVT ficha must return NVT_HOR_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_LISTA,
+            handle_nvt_edit,
+        )
+
+        s1 = _servicio()
+        update = _make_update(callback_data="nvt_edit:horarios")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"nvt_horarios": []},
+        )
+
+        result = await handle_nvt_edit(update, ctx)
+
+        assert result == NVT_HOR_LISTA
+
+    @pytest.mark.asyncio
+    async def test_nvt_edit_horarios_sends_keyboard(self) -> None:
+        """Opening the NVT horarios editor must send an InlineKeyboardMarkup."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers_tours import handle_nvt_edit
+
+        update = _make_update(callback_data="nvt_edit:horarios")
+        ctx = _make_context(user_data={"nvt_horarios": ["07:00"]})
+
+        await handle_nvt_edit(update, ctx)
+
+        call_args = update.effective_message.reply_text.call_args_list
+        keyboards = [
+            c.kwargs.get("reply_markup") or (c.args[1] if len(c.args) > 1 else None)
+            for c in call_args
+        ]
+        assert any(isinstance(k, InlineKeyboardMarkup) for k in keyboards)
+
+
+class TestHandleNvtHorLista:
+    """handle_nvt_hor_lista routes nvt_hor_agregar / nvt_hor_quitar / nvt_hor_listo."""
+
+    @pytest.mark.asyncio
+    async def test_nvt_hor_agregar_goes_to_agregar_state(self) -> None:
+        """Tapping agregar returns NVT_HOR_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_AGREGAR,
+            handle_nvt_hor_lista,
+        )
+
+        update = _make_update(callback_data="nvt_hor_agregar")
+        ctx = _make_context(user_data={"nvt_horarios": []})
+
+        result = await handle_nvt_hor_lista(update, ctx)
+
+        assert result == NVT_HOR_AGREGAR
+
+    @pytest.mark.asyncio
+    async def test_nvt_hor_quitar_removes_from_user_data(self) -> None:
+        """Tapping X removes horario from ud[nvt_horarios] and returns NVT_HOR_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_LISTA,
+            handle_nvt_hor_lista,
+        )
+
+        update = _make_update(callback_data="nvt_hor_quitar:07:00")
+        ctx = _make_context(user_data={"nvt_horarios": ["07:00", "19:00"]})
+
+        result = await handle_nvt_hor_lista(update, ctx)
+
+        assert result == NVT_HOR_LISTA
+        assert "07:00" not in ctx.user_data["nvt_horarios"]
+        assert "19:00" in ctx.user_data["nvt_horarios"]
+
+    @pytest.mark.asyncio
+    async def test_nvt_hor_listo_returns_nvt_confirma(self) -> None:
+        """Tapping Listo returns NVT_CONFIRMA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_CONFIRMA,
+            handle_nvt_hor_lista,
+        )
+
+        update = _make_update(callback_data="nvt_hor_listo")
+        ctx = _make_context(user_data={"nvt_horarios": ["07:00"]})
+
+        result = await handle_nvt_hor_lista(update, ctx)
+
+        assert result == NVT_CONFIRMA
+
+
+class TestHandleNvtHorAgregarTexto:
+    """handle_nvt_hor_agregar_texto validates and adds horario to user_data."""
+
+    @pytest.mark.asyncio
+    async def test_horario_valido_agrega_a_ud(self) -> None:
+        """Valid horario text -> add to nvt_horarios, return NVT_HOR_LISTA."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_LISTA,
+            handle_nvt_hor_agregar_texto,
+        )
+
+        update = _make_update(text="8am")
+        ctx = _make_context(user_data={"nvt_horarios": []})
+
+        result = await handle_nvt_hor_agregar_texto(update, ctx)
+
+        assert result == NVT_HOR_LISTA
+        assert "08:00" in ctx.user_data["nvt_horarios"]
+
+    @pytest.mark.asyncio
+    async def test_horario_invalido_queda_en_nvt_hor_agregar(self) -> None:
+        """Invalid text -> error reply, stay in NVT_HOR_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_AGREGAR,
+            handle_nvt_hor_agregar_texto,
+        )
+
+        update = _make_update(text="xyz")
+        ctx = _make_context(user_data={"nvt_horarios": []})
+
+        result = await handle_nvt_hor_agregar_texto(update, ctx)
+
+        assert result == NVT_HOR_AGREGAR
+
+    @pytest.mark.asyncio
+    async def test_horario_duplicado_queda_en_nvt_hor_agregar(self) -> None:
+        """Duplicate horario -> error reply, stay in NVT_HOR_AGREGAR."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_AGREGAR,
+            handle_nvt_hor_agregar_texto,
+        )
+
+        update = _make_update(text="7pm")  # canonical 19:00
+        ctx = _make_context(user_data={"nvt_horarios": ["19:00"]})
+
+        result = await handle_nvt_hor_agregar_texto(update, ctx)
+
+        assert result == NVT_HOR_AGREGAR
+
+
+class TestNvtCrearIncludesHorarios:
+    """handle_nvt_crear must pass nvt_horarios to Servicio constructor."""
+
+    @pytest.mark.asyncio
+    async def test_nvt_crear_con_horarios_persiste(self) -> None:
+        """Tour created with nvt_horarios=[08:00, 14:00] must have those horarios."""
+        from garay.infraestructura.telegram.handlers_tours import handle_nvt_crear
+
+        update = _make_update(callback_data="nvt_crear")
+        ctx = _make_context(
+            user_data={
+                "nvt_familia": "PLAYERO",
+                "nvt_nombre": "City Tour",
+                "nvt_neto_adulto": None,
+                "nvt_neto_nino": None,
+                "nvt_horarios": ["08:00", "14:00"],
+            },
+            siguiente_numero=5,
+        )
+
+        await handle_nvt_crear(update, ctx)
+
+        repo = ctx.bot_data["servicio_repo"]
+        repo.guardar.assert_called_once()
+        saved = repo.guardar.call_args[0][0]
+        assert saved.horarios == ["08:00", "14:00"], (
+            f"Expected horarios=[08:00, 14:00] but got {saved.horarios!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_nvt_crear_sin_horarios_usa_lista_vacia(self) -> None:
+        """Tour created without nvt_horarios must have empty horarios."""
+        from garay.infraestructura.telegram.handlers_tours import handle_nvt_crear
+
+        update = _make_update(callback_data="nvt_crear")
+        ctx = _make_context(
+            user_data={
+                "nvt_familia": "MONTANAS",
+                "nvt_nombre": "Treking",
+                "nvt_neto_adulto": None,
+                "nvt_neto_nino": None,
+                # nvt_horarios absent
+            },
+            siguiente_numero=1,
+        )
+
+        await handle_nvt_crear(update, ctx)
+
+        repo = ctx.bot_data["servicio_repo"]
+        saved = repo.guardar.call_args[0][0]
+        assert saved.horarios == []
+
+
+# ---------------------------------------------------------------------------
+# Task 7.3 RED -- NVT-HOR states wired in bot.py
+# ---------------------------------------------------------------------------
+
+
+class TestNvtHorStatesBotWiring:
+    """Structural: NVT_HOR_LISTA and NVT_HOR_AGREGAR must be in nuevo_tour_conv_handler."""
+
+    def _get_nvt_conv(self) -> object:
+        from unittest.mock import MagicMock, patch
+
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.bot import crear_aplicacion
+
+        with patch("garay.infraestructura.telegram.bot.obtener_settings") as ms:
+            settings = MagicMock()
+            settings.propietario_telegram_ids = ""
+            settings.dev_telegram_ids = ""
+            ms.return_value = settings
+            app = crear_aplicacion("fake:token")
+
+        for _group, handlers in app.handlers.items():
+            for h in handlers:
+                if isinstance(h, ConversationHandler) and 230 in h.states:
+                    return h
+        return None
+
+    def test_nvt_hor_lista_registered(self) -> None:
+        """NVT_HOR_LISTA (240) must appear in nuevo_tour_conv_handler states."""
+        from garay.infraestructura.telegram.handlers_tours import NVT_HOR_LISTA
+
+        nvt_conv = self._get_nvt_conv()
+        assert nvt_conv is not None, "nuevo_tour_conv_handler not found"
+        assert NVT_HOR_LISTA in nvt_conv.states, (  # type: ignore[union-attr]
+            f"NVT_HOR_LISTA ({NVT_HOR_LISTA}) not in nuevo_tour_conv_handler states"
+        )
+
+    def test_nvt_hor_agregar_registered(self) -> None:
+        """NVT_HOR_AGREGAR (241) must appear in nuevo_tour_conv_handler states."""
+        from garay.infraestructura.telegram.handlers_tours import NVT_HOR_AGREGAR
+
+        nvt_conv = self._get_nvt_conv()
+        assert nvt_conv is not None, "nuevo_tour_conv_handler not found"
+        assert NVT_HOR_AGREGAR in nvt_conv.states, (  # type: ignore[union-attr]
+            f"NVT_HOR_AGREGAR ({NVT_HOR_AGREGAR}) not in nuevo_tour_conv_handler states"
+        )
+
+    def test_nvt_hor_agregar_has_single_message_handler(self) -> None:
+        """NVT_HOR_AGREGAR must have exactly ONE MessageHandler (Fase 1 lesson)."""
+        from telegram.ext import MessageHandler
+
+        from garay.infraestructura.telegram.handlers_tours import NVT_HOR_AGREGAR
+
+        nvt_conv = self._get_nvt_conv()
+        assert nvt_conv is not None
+        handlers_list = nvt_conv.states.get(NVT_HOR_AGREGAR, [])  # type: ignore[union-attr]
+        text_handlers = [h for h in handlers_list if isinstance(h, MessageHandler)]
+        assert len(text_handlers) == 1, (
+            f"NVT_HOR_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
+        )
