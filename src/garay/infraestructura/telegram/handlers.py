@@ -12,7 +12,13 @@ from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    BotCommandScopeChat,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
+)
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
@@ -31,7 +37,12 @@ from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import dev_telegram_ids, requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
-from garay.infraestructura.telegram.menu import TierComando, render_menu, tier_de_usuario
+from garay.infraestructura.telegram.menu import (
+    TierComando,
+    comandos_bot,
+    render_menu,
+    tier_de_usuario,
+)
 from garay.mensajes.catalogo import obtener_mensaje
 
 _UTC = datetime.UTC
@@ -302,11 +313,11 @@ async def _foto_en_conversacion(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 
-async def _render_menu_para_usuario(
+async def _resolver_tier(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
-) -> str:
-    """Resolve the caller's tier and return the rendered menu text."""
+) -> TierComando:
+    """Resolve the caller's permission tier from settings, dev ids, and the repo."""
     user = update.effective_user
     uid: int | None = user.id if user is not None else None
 
@@ -328,21 +339,56 @@ async def _render_menu_para_usuario(
         if freelancer is not None:
             es_admin = freelancer.es_admin
 
-    tier: TierComando = tier_de_usuario(
+    return tier_de_usuario(
         uid=uid,
         es_admin=es_admin,
         propietario_ids=propietario_ids,
         dev_ids=_dev_ids,
     )
+
+
+async def _render_menu_para_usuario(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> str:
+    """Resolve the caller's tier and return the rendered menu text."""
+    tier = await _resolver_tier(update, context)
     return render_menu(tier)
 
 
+async def _sincronizar_menu_desplegable(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    tier: TierComando,
+) -> None:
+    """Refresh THIS chat's Telegram command dropdown to match the caller's tier.
+
+    The per-chat dropdown is otherwise only set at startup (bot._post_init), which
+    silently fails for any user whose chat did not yet exist then. Re-setting it on
+    every /start guarantees a user (dev, admin, freelancer) always sees an up-to-date
+    command list without waiting for a bot restart.
+    """
+    user = update.effective_user
+    uid: int | None = user.id if user is not None else None
+    if uid is None:
+        return
+    try:
+        await context.bot.set_my_commands(
+            comandos_bot(tier),
+            scope=BotCommandScopeChat(chat_id=uid),
+        )
+    except TelegramError as exc:
+        # Never let a menu refresh failure break /start — log and continue.
+        logger.warning("No se pudo refrescar el menú del chat %s: %s", uid, exc)
+
+
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /start — show the role-aware command menu."""
+    """Handle /start — refresh the caller's command dropdown and show the menu."""
     if update.message is None:
         return ConversationHandler.END
-    texto = await _render_menu_para_usuario(update, context)
-    await update.message.reply_text(texto, parse_mode="HTML")
+    tier = await _resolver_tier(update, context)
+    await _sincronizar_menu_desplegable(update, context, tier)
+    await update.message.reply_text(render_menu(tier), parse_mode="HTML")
     return ConversationHandler.END
 
 
