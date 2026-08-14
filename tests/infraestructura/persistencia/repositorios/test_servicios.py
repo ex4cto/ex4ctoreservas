@@ -166,3 +166,47 @@ def test_listar_sigue_devolviendo_todos(sf: sessionmaker[Session]) -> None:
     repo.guardar(s2)
     todos = repo.listar()
     assert len(todos) == 2
+
+
+# ── horarios round-trip (task 2.1) ────────────────────────────────────────────
+
+
+def test_horarios_persiste_y_mantiene_orden(sf: sessionmaker[Session]) -> None:
+    """Saving a Servicio with horarios and reloading returns the same list in order."""
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(
+        id=uuid.uuid4(),
+        numero=50,
+        nombre="Tour Con Horarios",
+        horarios=["07:00", "19:00"],
+    )
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.horarios == ["07:00", "19:00"]
+
+
+def test_horarios_vacio_persiste_como_lista_vacia(sf: sessionmaker[Session]) -> None:
+    """Saving a Servicio without horarios returns an empty list on reload."""
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=51, nombre="Sin Horarios")
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.horarios == []
+
+
+def test_horarios_listar_preserva_datos(sf: sessionmaker[Session]) -> None:
+    """listar() also returns correct horarios for each entity."""
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(
+        id=uuid.uuid4(),
+        numero=52,
+        nombre="Tour Horarios Listar",
+        horarios=["08:00", "14:00", "20:00"],
+    )
+    repo.guardar(s)
+    lista = repo.listar()
+    match = next((x for x in lista if x.id == s.id), None)
+    assert match is not None
+    assert match.horarios == ["08:00", "14:00", "20:00"]

@@ -21,8 +21,10 @@ class Servicio:
     precio_neto_adulto: Decimal | None = field(default=None)
     precio_neto_nino: Decimal | None = field(default=None)
     categoria: str = field(default="")
+    horarios: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        self.horarios = sorted(self.horarios)
         if self.numero < 1:
             raise NumeroServicioInvalido("El numero del servicio debe ser mayor a cero.")
         if not self.nombre.strip():

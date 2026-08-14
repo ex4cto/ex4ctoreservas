@@ -11,3 +11,11 @@ class NombreServicioVacio(ErrorDeDominio):
 
 class NumeroServicioInvalido(ErrorDeDominio):
     """El numero del servicio debe ser mayor a cero."""
+
+
+class HorarioInvalido(ErrorDeDominio):
+    """The time value is not a valid time or has an unrecognized format."""
+
+
+class HorarioDuplicado(ErrorDeDominio):
+    """The canonical time already exists in the schedule list for this tour."""

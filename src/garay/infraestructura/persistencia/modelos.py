@@ -50,6 +50,9 @@ class ServicioModel(Base):
     precio_neto_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     precio_neto_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     categoria: Mapped[str] = mapped_column(String, nullable=False, default="", server_default="")
+    horarios: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=sa.text("'[]'")
+    )
 
 
 class ClienteModel(Base):
