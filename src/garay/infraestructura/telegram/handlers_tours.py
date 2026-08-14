@@ -1419,7 +1419,7 @@ async def handle_nvt_hor_lista(
 ) -> int:
     """Route NVT_HOR_LISTA callbacks: nvt_hor_agregar / nvt_hor_quitar:{canonical} / nvt_hor_listo.
 
-    Operates on ud[nvt_horarios] (draft list, no repo -� tour not yet created).
+    Operates on ud[nvt_horarios] (draft list, no repo — tour not yet created).
     """
     query = update.callback_query
     if query:
@@ -1446,7 +1446,7 @@ async def handle_nvt_hor_lista(
         # Re-render
         teclado = _teclado_horarios(nvt_horarios, prefix="nvt_hor_")
         horarios_texto = (
-            ", ".join(formato_display(h) for h in nvt_horarios) if nvt_horarios else "�"
+            ", ".join(formato_display(h) for h in nvt_horarios) if nvt_horarios else "—"
         )
         await update.effective_message.reply_text(
             obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),
@@ -1455,6 +1455,9 @@ async def handle_nvt_hor_lista(
         return NVT_HOR_LISTA
 
     if data == "nvt_hor_listo":
+        # Clear edit flag for consistency with other edit paths (nombre, neto_adulto, neto_nino)
+        if context.user_data is not None:
+            context.user_data.pop("nvt_editando", None)
         # Return to NVT confirmation screen
         ficha = _render_ficha_nuevo(ud)
         await update.effective_message.reply_text(
@@ -1500,7 +1503,7 @@ async def handle_nvt_hor_agregar_texto(
     # Re-render schedule list
     teclado = _teclado_horarios(nueva_lista, prefix="nvt_hor_")
     horarios_texto = (
-        ", ".join(formato_display(h) for h in nueva_lista) if nueva_lista else "�"
+        ", ".join(formato_display(h) for h in nueva_lista) if nueva_lista else "—"
     )
     await update.effective_message.reply_text(
         obtener_mensaje("tour_horarios_lista").format(horarios=horarios_texto),

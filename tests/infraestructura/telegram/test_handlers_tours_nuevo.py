@@ -1395,6 +1395,27 @@ class TestHandleNvtHorLista:
         assert "19:00" in ctx.user_data["nvt_horarios"]
 
     @pytest.mark.asyncio
+    async def test_nvt_hor_quitar_ultimo_muestra_emdash(self) -> None:
+        """Removing the last horario shows em-dash (—), NOT the U+FFFD replacement char."""
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_HOR_LISTA,
+            handle_nvt_hor_lista,
+        )
+
+        update = _make_update(callback_data="nvt_hor_quitar:07:00")
+        ctx = _make_context(user_data={"nvt_horarios": ["07:00"]})
+
+        result = await handle_nvt_hor_lista(update, ctx)
+
+        assert result == NVT_HOR_LISTA
+        # The reply_text call must use "—" (em-dash), not U+FFFD or any other character.
+        calls = update.effective_message.reply_text.call_args_list
+        assert calls, "reply_text was not called"
+        call_text: str = calls[0][0][0]  # first positional arg of first call
+        assert "�" not in call_text, "U+FFFD replacement char found in message"
+        assert "—" in call_text, "Em-dash '—' not found in empty-horarios message"
+
+    @pytest.mark.asyncio
     async def test_nvt_hor_listo_returns_nvt_confirma(self) -> None:
         """Tapping Listo returns NVT_CONFIRMA."""
         from garay.infraestructura.telegram.handlers_tours import (
