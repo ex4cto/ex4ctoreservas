@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from garay.dominio.conciliacion.categorias import (
     CATEGORIA_OTRO,
     CATEGORIA_TRANSPORTE,

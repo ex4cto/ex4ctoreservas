@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from garay.infraestructura.webhook.parser.base import (
     _KEYWORDS_EGRESO,
     _SENALES_TRANSACCION,

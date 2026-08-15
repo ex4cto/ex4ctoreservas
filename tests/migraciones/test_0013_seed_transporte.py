@@ -18,7 +18,6 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
-import sqlalchemy as sa
 from sqlalchemy import Engine, text
 
 from tests.migraciones.conftest import run_migration_fn
@@ -103,7 +102,10 @@ class TestMigration0013Upgrade:
 
         with sqlite_engine.connect() as conn:
             row = conn.execute(
-                text("SELECT descripcion, activo, orden FROM categorias_egreso WHERE nombre = 'transporte'")
+                text(
+                    "SELECT descripcion, activo, orden"
+                    " FROM categorias_egreso WHERE nombre = 'transporte'"
+                )
             ).fetchone()
 
         assert row is not None
