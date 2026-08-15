@@ -12,6 +12,8 @@ from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 BANCO_BANCOLOMBIA = "Bancolombia"
 BANCO_NEQUI = "Nequi"
 BANCO_PSE = "PSE"
+BANCO_UBER: Final[str] = "Uber"
+BANCO_DIDI: Final[str] = "DiDi"
 
 DIRECCION_INGRESO: Final = "ingreso"
 DIRECCION_EGRESO: Final = "egreso"
@@ -24,6 +26,8 @@ _DOMINIOS_BANCOLOMBIA: frozenset[str] = frozenset(
     ]
 )
 _DOMINIOS_NEQUI: frozenset[str] = frozenset(["nequi.com.co"])
+_DOMINIOS_UBER: frozenset[str] = frozenset(["uber.com"])
+_DOMINIOS_DIDI: frozenset[str] = frozenset(["co.didiglobal.com"])
 
 _MESES_ES_FULL: dict[str, int] = {
     "enero": 1,
@@ -124,6 +128,13 @@ def _es_pse(cuerpo_lower: str) -> bool:
     return "cus:" in cuerpo_lower
 
 
+def _dominio_coincide(dominio: str, dominios: frozenset[str]) -> bool:
+    """Return True if dominio equals or is a subdomain of any entry in dominios."""
+    return any(
+        dominio == d or dominio.endswith("." + d) for d in dominios
+    )
+
+
 def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
     """Return the bank name for a sender email, or None if unknown.
 
@@ -135,6 +146,10 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
         return BANCO_BANCOLOMBIA
     if dominio in _DOMINIOS_NEQUI:
         return BANCO_NEQUI
+    if _dominio_coincide(dominio, _DOMINIOS_UBER):
+        return BANCO_UBER
+    if _dominio_coincide(dominio, _DOMINIOS_DIDI):
+        return BANCO_DIDI
 
     cuerpo_lower = cuerpo.lower()
     if _es_pse(cuerpo_lower):
@@ -145,6 +160,11 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
         return BANCO_NEQUI
 
     return None
+
+
+def es_banco_transporte(banco: str) -> bool:
+    """Return True if banco is a transport-service bank (Uber or DiDi)."""
+    return banco in {BANCO_UBER, BANCO_DIDI}
 
 
 def detectar_direccion(cuerpo_texto: str) -> str:
