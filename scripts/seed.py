@@ -169,6 +169,7 @@ CATEGORIAS_EGRESO: list[tuple[str, str, int]] = [
     ("proveedor", "Pagos a proveedores de tours", 5),
     ("ocasional", "Gastos ocasionales no recurrentes", 6),
     ("otro", "Otros gastos", 7),
+    ("transporte", "Transporte (Uber/DiDi)", 8),
 ]
 
 FREELANCERS_ADMIN: list[tuple[str, int | None]] = [
