@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from datetime import UTC
 from typing import Final
 
+from garay.dominio.conciliacion.categorias import CATEGORIA_TRANSPORTE, banco_a_categoria
 from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
 BANCO_BANCOLOMBIA = "Bancolombia"
@@ -162,9 +163,14 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
     return None
 
 
-def es_banco_transporte(banco: str) -> bool:
-    """Return True if banco is a transport-service bank (Uber or DiDi)."""
-    return banco in {BANCO_UBER, BANCO_DIDI}
+def es_banco_transporte(banco: str | None) -> bool:
+    """Return True if banco is a transport-service bank (Uber or DiDi).
+
+    Accepts None safely — returns False without raising.
+    Delegates to the domain's banco_a_categoria so categorias.py
+    is the single source of truth for which banks are transport.
+    """
+    return banco is not None and banco_a_categoria(banco) == CATEGORIA_TRANSPORTE
 
 
 def detectar_direccion(cuerpo_texto: str) -> str:

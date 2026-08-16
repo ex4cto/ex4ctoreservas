@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from garay.infraestructura.webhook.parser.base import (
-    BANCO_DIDI,
-    BANCO_UBER,
     _KEYWORDS_EGRESO,
     _SENALES_TRANSACCION,
+    BANCO_DIDI,
+    BANCO_UBER,
     detectar_banco,
     es_banco_transporte,
 )
@@ -50,7 +50,7 @@ class TestEsBancoTransporte:
 
     def test_none_no_es_transporte(self) -> None:
         """es_banco_transporte(None) must return False, not raise TypeError."""
-        assert es_banco_transporte(None) is False  # type: ignore[arg-type]
+        assert es_banco_transporte(None) is False
 
 
 class TestSenalesNoContaminadas:

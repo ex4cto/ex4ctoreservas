@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from garay.config import obtener_settings
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.conciliacion.categorias import CATEGORIA_TRANSPORTE
 from garay.infraestructura.persistencia.modelos import (
     CategoriaEgresoModel,
     FreelancerModel,
@@ -169,7 +170,7 @@ CATEGORIAS_EGRESO: list[tuple[str, str, int]] = [
     ("proveedor", "Pagos a proveedores de tours", 5),
     ("ocasional", "Gastos ocasionales no recurrentes", 6),
     ("otro", "Otros gastos", 7),
-    ("transporte", "Transporte (Uber/DiDi)", 8),
+    (CATEGORIA_TRANSPORTE, "Transporte (Uber/DiDi)", 8),
 ]
 
 FREELANCERS_ADMIN: list[tuple[str, int | None]] = [

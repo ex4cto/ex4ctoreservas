@@ -30,6 +30,7 @@ from garay.infraestructura.webhook.parser.base import (
     ErrorParseoBanco,
     detectar_banco,
     detectar_direccion,
+    es_banco_transporte,
     es_transaccion,
 )
 from garay.infraestructura.webhook.parser.fabrica import obtener_parser, obtener_parser_egreso
@@ -161,6 +162,15 @@ def recibir_email(
     banco = detectar_banco(payload.remitente_email, cuerpo)
     if banco is None:
         logger.warning("Unknown bank sender: %s — skipping", payload.remitente_email)
+        return {"estado": "ok"}
+
+    # PR-A: transport banks (Uber/DiDi) are detected but parsing is deferred to PR-B.
+    # Drop silently so no quarantine fires and Forward Email does not retry.
+    if es_banco_transporte(banco):
+        logger.warning(
+            "DIAG skip: transport bank=%r detected — parsing deferred to PR-B, dropping silently",
+            banco,
+        )
         return {"estado": "ok"}
 
     if not es_transaccion(cuerpo):
