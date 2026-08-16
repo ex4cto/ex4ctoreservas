@@ -59,7 +59,7 @@ def _make_ctx(
     quota_service: Any = None,
     quota_service_key: bool = True,
     notificador: Any = "default",
-    propietario_ids: str = "111,222",
+    destinatario_ids: str = "111,222",
 ) -> tuple[MagicMock, Any]:
     """Build a fake PTB context with bot_data; domain monitor is absent (quota-only path)."""
     ctx = MagicMock()
@@ -68,7 +68,7 @@ def _make_ctx(
     # No domain monitor service — tests domain-monitor path is unaffected
     bot_data: dict[str, Any] = {
         "notificador": fake_notif,
-        "propietario_telegram_ids": propietario_ids,
+        "monitor_infra_telegram_ids": destinatario_ids,
     }
 
     # Domain monitor: inject an always-no-aviso stub so the existing job path doesn't crash
@@ -97,7 +97,7 @@ async def test_cuota_mensual_entrega_a_cada_propietario(monkeypatch: Any) -> Non
 
     aviso = AvisoCuota(tipo="mensual", umbral=2700, conteo=2700, cap=3000)
     svc = _FakeMonitorCuotaService([aviso])
-    ctx, fake_notif = _make_ctx(quota_service=svc, propietario_ids="111,222")
+    ctx, fake_notif = _make_ctx(quota_service=svc, destinatario_ids="111,222")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -124,7 +124,7 @@ async def test_cuota_diaria_entrega_a_cada_propietario(monkeypatch: Any) -> None
 
     aviso = AvisoCuota(tipo="diario", umbral=80, conteo=85, cap=100)
     svc = _FakeMonitorCuotaService([aviso])
-    ctx, fake_notif = _make_ctx(quota_service=svc, propietario_ids="333")
+    ctx, fake_notif = _make_ctx(quota_service=svc, destinatario_ids="333")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -149,7 +149,7 @@ async def test_sin_avisos_cuota_no_notifica(monkeypatch: Any) -> None:
     import garay.infraestructura.telegram.bot as bot_module
 
     svc = _FakeMonitorCuotaService([])
-    ctx, fake_notif = _make_ctx(quota_service=svc, propietario_ids="111")
+    ctx, fake_notif = _make_ctx(quota_service=svc, destinatario_ids="111")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -169,7 +169,7 @@ async def test_quota_service_ausente_no_falla(monkeypatch: Any) -> None:
     """Missing monitor_cuota_resend_service key in bot_data → job runs without crashing."""
     import garay.infraestructura.telegram.bot as bot_module
 
-    ctx, fake_notif = _make_ctx(quota_service_key=False, propietario_ids="111")
+    ctx, fake_notif = _make_ctx(quota_service_key=False, destinatario_ids="111")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -195,7 +195,7 @@ async def test_cuota_excepcion_por_destinatario_continua(
     aviso = AvisoCuota(tipo="mensual", umbral=2700, conteo=2700, cap=3000)
     svc = _FakeMonitorCuotaService([aviso])
     raising_notif = _FakeNotificador(raise_for={"111"})
-    ctx, _ = _make_ctx(quota_service=svc, notificador=raising_notif, propietario_ids="111,222")
+    ctx, _ = _make_ctx(quota_service=svc, notificador=raising_notif, destinatario_ids="111,222")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -222,7 +222,7 @@ async def test_cuota_error_de_db_no_rompe_ni_notifica(
         def avisos_para(self, hoy: datetime.date) -> list[Any]:
             raise RuntimeError("DB down")
 
-    ctx, fake_notif = _make_ctx(quota_service=_RaisingCuotaService(), propietario_ids="111")
+    ctx, fake_notif = _make_ctx(quota_service=_RaisingCuotaService(), destinatario_ids="111")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 

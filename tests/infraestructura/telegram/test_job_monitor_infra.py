@@ -51,7 +51,7 @@ def _make_context(
     *,
     servicio: Any | None = "default",
     notificador: Any = "default",
-    propietario_ids: str = "111,222",
+    destinatario_ids: str = "111,222",
 ) -> tuple[MagicMock, Any]:
     """Build a fake PTB CallbackContext with bot_data pre-populated."""
     from garay.aplicacion.infraestructura_monitor.servicio import (
@@ -73,7 +73,7 @@ def _make_context(
     if fake_notificador is not None:
         bot_data["notificador"] = fake_notificador
 
-    bot_data["propietario_telegram_ids"] = propietario_ids
+    bot_data["monitor_infra_telegram_ids"] = destinatario_ids
     ctx.bot_data = bot_data
 
     return ctx, fake_notificador
@@ -85,10 +85,10 @@ def _make_context(
 
 
 async def test_callback_entrega_a_cada_propietario(monkeypatch: Any) -> None:
-    """AC-10: callback calls notificador once per owner id with the alert message."""
+    """AC-10: callback calls notificador once per dev id with the alert message."""
     import garay.infraestructura.telegram.bot as bot_module
 
-    ctx, fake_notif = _make_context(propietario_ids="111,222")
+    ctx, fake_notif = _make_context(destinatario_ids="111,222")
 
     # Freeze "today" to _HOY_BAND_30 so the service returns band 30
     monkeypatch.setattr(
@@ -113,10 +113,10 @@ async def test_callback_entrega_a_cada_propietario(monkeypatch: Any) -> None:
 
 
 async def test_callback_sin_destinatarios_no_envia_ni_crashea(monkeypatch: Any) -> None:
-    """AC-11: empty propietario_telegram_ids means nothing is sent."""
+    """AC-11: empty monitor_infra_telegram_ids means nothing is sent."""
     import garay.infraestructura.telegram.bot as bot_module
 
-    ctx, fake_notif = _make_context(propietario_ids="")
+    ctx, fake_notif = _make_context(destinatario_ids="")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY_BAND_30)
 
@@ -138,7 +138,7 @@ async def test_callback_excepcion_por_destinatario_continua(
 
     # Notifier raises when called with "111"
     raising_notif = _FakeNotificador(raise_for={"111"})
-    ctx, _ = _make_context(notificador=raising_notif, propietario_ids="111,222")
+    ctx, _ = _make_context(notificador=raising_notif, destinatario_ids="111,222")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY_BAND_30)
 
