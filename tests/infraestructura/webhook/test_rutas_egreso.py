@@ -181,6 +181,7 @@ class TestTransporteBypass:
             f"/webhook/email?secret={_SECRET}",
             json=_PAYLOAD_UBER_RECIBO,
         )
+        mock_egreso_repo.guardar.assert_called_once()
         egreso_guardado = mock_egreso_repo.guardar.call_args[0][0]
         assert egreso_guardado.categoria == "transporte"
 
@@ -209,6 +210,7 @@ class TestTransporteBypass:
             f"/webhook/email?secret={_SECRET}",
             json=_PAYLOAD_DIDI_RECIBO,
         )
+        mock_egreso_repo.guardar.assert_called_once()
         egreso_guardado = mock_egreso_repo.guardar.call_args[0][0]
         assert egreso_guardado.categoria == "transporte"
 
@@ -253,3 +255,126 @@ class TestTransporteBypass:
         )
         # guardar must not have been called a second time
         assert mock_egreso_repo.guardar.call_count == 1
+
+    # FIX 4 — DiDi idempotency (mirrors the Uber one above)
+    def test_didi_idempotencia_message_id_duplicado(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+    ) -> None:
+        """Same DiDi message_id delivered twice must persist the egreso only once."""
+        mock_egreso_repo.existe_referencia.return_value = False
+        client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_RECIBO,
+        )
+        assert mock_egreso_repo.guardar.call_count == 1
+
+        mock_egreso_repo.existe_referencia.return_value = True
+        client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_RECIBO,
+        )
+        assert mock_egreso_repo.guardar.call_count == 1
+
+    # FIX 5 — assert guardar called before reading call_args (Uber)
+    def test_uber_recibo_monto_guardado(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+    ) -> None:
+        """guardar must be called and the persisted Egreso carries the parsed monto."""
+        client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_UBER_RECIBO,
+        )
+        mock_egreso_repo.guardar.assert_called_once()
+        egreso_guardado = mock_egreso_repo.guardar.call_args[0][0]
+        # monto is stored as Dinero; compare via its .monto Decimal attribute
+        from decimal import Decimal
+
+        assert egreso_guardado.monto.monto == Decimal("10700.00")
+
+    # FIX 5 — assert guardar called before reading call_args (DiDi)
+    def test_didi_recibo_monto_guardado(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+    ) -> None:
+        """guardar must be called and the persisted Egreso carries the parsed monto."""
+        client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_RECIBO,
+        )
+        mock_egreso_repo.guardar.assert_called_once()
+        egreso_guardado = mock_egreso_repo.guardar.call_args[0][0]
+        from decimal import Decimal
+
+        assert egreso_guardado.monto.monto == Decimal("12800.00")
+
+
+# ---------------------------------------------------------------------------
+# FIX 3 — Quarantine integration: malformed transport body -> correo_repo fires
+# ---------------------------------------------------------------------------
+
+# Uber payload with a body that is detected as transport bank but unparseable
+# (no Total line, no date — guaranteed to raise ErrorParseoBanco in the parser)
+_PAYLOAD_UBER_MALFORMADO = {
+    "message_id": "egr-uber-mal-001",
+    "remitente_email": "noreply@uber.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Tu viaje con Uber",
+    "cuerpo_html": "",
+    "cuerpo_texto": "Hola, gracias por usar Uber. Sin datos de monto.",
+}
+
+# DiDi payload with a body that is detected as transport bank but unparseable
+_PAYLOAD_DIDI_MALFORMADO = {
+    "message_id": "egr-didi-mal-001",
+    "remitente_email": "didi@co.didiglobal.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Tu viaje DiDi",
+    "cuerpo_html": "",
+    "cuerpo_texto": "Hola, gracias por usar DiDi. Sin datos de monto.",
+}
+
+
+class TestCuarentenaTransporte:
+    """FIX 3: A transport bank email with an unparseable body must be quarantined."""
+
+    def test_uber_malformado_cuarentena(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        """Uber detected but unparseable → quarantine fires, no egreso/ingreso persisted."""
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_UBER_MALFORMADO,
+        )
+        assert response.status_code == 200
+        mock_correo_repo.guardar.assert_called_once()
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
+
+    def test_didi_malformado_cuarentena(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        """DiDi detected but unparseable → quarantine fires, no egreso/ingreso persisted."""
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_MALFORMADO,
+        )
+        assert response.status_code == 200
+        mock_correo_repo.guardar.assert_called_once()
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
