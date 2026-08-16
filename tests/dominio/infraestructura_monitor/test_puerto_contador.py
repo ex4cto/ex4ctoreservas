@@ -9,7 +9,6 @@ Verifies that:
 from __future__ import annotations
 
 import datetime
-import inspect
 
 import pytest
 

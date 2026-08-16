@@ -8,8 +8,6 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-
 from garay.dominio.infraestructura_monitor.cuota import (
     banda_mensual_cruzada,
     bandas_absolutas,
