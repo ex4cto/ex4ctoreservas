@@ -15,18 +15,25 @@ from garay.infraestructura.webhook.parser.base import (
 from garay.infraestructura.webhook.schemas import EgresoExtraido
 
 # Pattern: "Total  $12.800" — dot as thousands separator, no decimals.
-# Anchored on the word "Total" to skip sub-total adjustment lines above it.
+# The bounded gap [^0-9]{0,10} prevents spanning from "Total $12.800" across
+# footer text like "Total ahorrado este mes $50.000" (30+ chars apart after
+# whitespace collapse).  "\bTotal\b" blocks "Subtotal".
+# Uses re.search (first match) — the real Total always appears before any footer.
 _PATRON_TOTAL = re.compile(
-    r"\bTotal\b[^0-9]*\$([\d.]+)",
+    r"\bTotal\b[^0-9]{0,10}\$([\d.]+)",
     re.IGNORECASE,
 )
 
 # Pattern: "vie, 31 jul, 2026" — Spanish weekday prefix, day, 3-letter month, year.
+# Uses re.search (first match) — the trip date always appears before footer dates.
 _PATRON_FECHA = re.compile(
     r"\b\w+,\s+(\d{1,2})\s+(\w{3}),\s+(\d{4})\b",
     re.IGNORECASE,
 )
 
+# Spanish 3-letter month map — covers all 12 abbreviations used in DiDi receipts.
+# NOTE: nequi_egreso.py has an identical map; dedup into base.py is deferred to a
+# separate cleanup PR to avoid touching unrelated working code.
 _MESES_ES: dict[str, int] = {
     "ene": 1,
     "feb": 2,
@@ -44,11 +51,15 @@ _MESES_ES: dict[str, int] = {
 
 
 def _parsear_monto_didi(texto: str) -> Decimal:
-    """Extract amount from 'Total  $12.800' — last match wins (net total)."""
-    coincidencias = _PATRON_TOTAL.findall(texto)
-    if not coincidencias:
+    """Extract amount from 'Total  $12.800' — first match wins (net total).
+
+    Using search (not findall[-1]) so a footer line that is farther from the
+    'Total' label is never picked over the real total that appears first.
+    """
+    coincidencia = _PATRON_TOTAL.search(texto)
+    if coincidencia is None:
         raise ErrorParseoBanco("No se encontro linea 'Total $' en email DiDi")
-    monto_str = coincidencias[-1].replace(".", "")
+    monto_str = coincidencia.group(1).replace(".", "")
     return Decimal(monto_str)
 
 

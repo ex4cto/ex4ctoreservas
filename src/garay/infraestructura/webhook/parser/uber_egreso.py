@@ -15,22 +15,30 @@ from garay.infraestructura.webhook.parser.base import (
 from garay.infraestructura.webhook.schemas import EgresoExtraido
 
 # Pattern: "Total  COP 10,700" — comma as thousands separator, no decimals.
-# Anchored on the word "Total" to skip sub-total adjustment lines above it.
+# The bounded gap [^0-9]{0,15} prevents spanning from "Total COP 12,800" across
+# footer text like "Total ahorrado este mes COP 50,000" (30+ chars apart after
+# whitespace collapse).  "\bTotal\b" blocks "Subtotal".
+# Uses re.search (first match) — the real Total always appears before any footer.
 _PATRON_TOTAL = re.compile(
-    r"\bTotal\b[^0-9]*COP\s+([\d,]+)",
+    r"\bTotal\b[^0-9]{0,15}COP\s+([\d,]+)",
     re.IGNORECASE,
 )
 
-# Pattern: "07/08/2026" — DD/MM/YYYY
+# Pattern: "07/08/2026" — DD/MM/YYYY.
+# Uses re.search (first match) — the trip date always appears before footer dates.
 _PATRON_FECHA = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 
 
 def _parsear_monto_uber(texto: str) -> Decimal:
-    """Extract amount from 'Total  COP 10,700' — last match wins (net total)."""
-    coincidencias = _PATRON_TOTAL.findall(texto)
-    if not coincidencias:
+    """Extract amount from 'Total  COP 10,700' — first match wins (net total).
+
+    Using search (not findall[-1]) so a footer line that is farther from the
+    'Total' label is never picked over the real total that appears first.
+    """
+    coincidencia = _PATRON_TOTAL.search(texto)
+    if coincidencia is None:
         raise ErrorParseoBanco("No se encontro linea 'Total COP' en email Uber")
-    monto_str = coincidencias[-1].replace(",", "")
+    monto_str = coincidencia.group(1).replace(",", "")
     return Decimal(monto_str)
 
 
