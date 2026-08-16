@@ -125,3 +125,17 @@ class TestMigration0013Downgrade:
 
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert _count_transporte(sqlite_engine) == 0
+
+
+class TestMigration0013Chain:
+    """FIX 5: verify the migration chain links are correct so a broken chain is caught."""
+
+    def test_revision_identifica_la_migracion(self) -> None:
+        """revision must be the expected string identifier."""
+        migration = _load_migration()
+        assert migration.revision == "0013_seed_categoria_transporte"
+
+    def test_down_revision_apunta_a_0012(self) -> None:
+        """down_revision must point to 0012 to maintain the correct chain."""
+        migration = _load_migration()
+        assert migration.down_revision == "0012"

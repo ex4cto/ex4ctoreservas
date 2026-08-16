@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from garay.infraestructura.webhook.parser.base import (
+    BANCO_DIDI,
+    BANCO_UBER,
     _KEYWORDS_EGRESO,
     _SENALES_TRANSACCION,
     detectar_banco,
@@ -23,6 +25,10 @@ class TestDetectarBancoDiDi:
         assert detectar_banco("didi@co.didiglobal.com") == "DiDi"
 
     def test_subdominio_didi(self) -> None:
+        # A real subdomain: notify.co.didiglobal.com ends with ".co.didiglobal.com"
+        assert detectar_banco("noreply@notify.co.didiglobal.com") == "DiDi"
+
+    def test_dominio_didi_exacto_sigue_funcionando(self) -> None:
         assert detectar_banco("noreply@co.didiglobal.com") == "DiDi"
 
 
@@ -42,6 +48,10 @@ class TestEsBancoTransporte:
     def test_pse_no_es_transporte(self) -> None:
         assert es_banco_transporte("PSE") is False
 
+    def test_none_no_es_transporte(self) -> None:
+        """es_banco_transporte(None) must return False, not raise TypeError."""
+        assert es_banco_transporte(None) is False  # type: ignore[arg-type]
+
 
 class TestSenalesNoContaminadas:
     def test_senales_transaccion_sin_uber(self) -> None:
@@ -55,3 +65,16 @@ class TestSenalesNoContaminadas:
 
     def test_keywords_egreso_sin_didi(self) -> None:
         assert "didi" not in _KEYWORDS_EGRESO
+
+    # FIX 5: assert the actual title-case constants are absent, not just lowercase
+    def test_senales_transaccion_sin_constante_banco_uber(self) -> None:
+        assert BANCO_UBER not in _SENALES_TRANSACCION
+
+    def test_senales_transaccion_sin_constante_banco_didi(self) -> None:
+        assert BANCO_DIDI not in _SENALES_TRANSACCION
+
+    def test_keywords_egreso_sin_constante_banco_uber(self) -> None:
+        assert BANCO_UBER not in _KEYWORDS_EGRESO
+
+    def test_keywords_egreso_sin_constante_banco_didi(self) -> None:
+        assert BANCO_DIDI not in _KEYWORDS_EGRESO

@@ -8,6 +8,30 @@ from fastapi.testclient import TestClient
 
 from tests.infraestructura.webhook.conftest import _SECRET
 
+# FIX 1 RED: Transport payloads whose body DOES contain a transaction signal.
+# These must be SILENTLY DROPPED (not quarantined) so correo_repo.guardar is
+# never called.  The response must still be 200.
+_PAYLOAD_UBER_CON_SENAL_TRANSACCION = {
+    "message_id": "egr-uber-100",
+    "remitente_email": "noreply@uber.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Resumen de tu viaje con Uber",
+    # "recibiste" is in _SENALES_TRANSACCION — forces the old route through
+    # es_transaccion=True then obtener_parser_egreso("Uber") → no parser → quarantine
+    "cuerpo_html": "",
+    "cuerpo_texto": "recibiste un cobro por tu viaje",
+}
+
+_PAYLOAD_DIDI_CON_SENAL_TRANSACCION = {
+    "message_id": "egr-didi-100",
+    "remitente_email": "noreply@co.didiglobal.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Tu viaje DiDi",
+    # "compraste" is in _SENALES_TRANSACCION
+    "cuerpo_html": "",
+    "cuerpo_texto": "compraste un viaje DiDi",
+}
+
 _PAYLOAD_BANCOLOMBIA_EGRESO = {
     "message_id": "egr-001",
     "remitente_email": "alertas@notificacionesbancolombia.com",
@@ -77,3 +101,46 @@ def test_banco_desconocido_no_guarda_nada(
     assert response.status_code == 200
     mock_egreso_repo.guardar.assert_not_called()
     mock_ingreso_repo.guardar.assert_not_called()
+
+
+class TestUberDiDiSilentDrop:
+    """FIX 1: Uber/DiDi emails are ALWAYS silently dropped in PR-A.
+
+    Even when the body contains a transaction signal, transport emails must NOT
+    reach obtener_parser_egreso (which has no Uber/DiDi parser yet) and must NOT
+    be quarantined.  They must return 200 without any repo write.
+    """
+
+    def test_uber_con_senal_transaccion_silently_dropped(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_UBER_CON_SENAL_TRANSACCION,
+        )
+        assert response.status_code == 200
+        assert response.json() == {"estado": "ok"}
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
+        mock_correo_repo.guardar.assert_not_called()
+
+    def test_didi_con_senal_transaccion_silently_dropped(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_CON_SENAL_TRANSACCION,
+        )
+        assert response.status_code == 200
+        assert response.json() == {"estado": "ok"}
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
+        mock_correo_repo.guardar.assert_not_called()
