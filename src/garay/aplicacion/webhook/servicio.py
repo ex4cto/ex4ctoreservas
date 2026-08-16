@@ -6,6 +6,7 @@ import datetime
 import uuid
 
 from garay.dominio.comun.dinero import Dinero
+from garay.dominio.conciliacion.categorias import CATEGORIA_OTRO
 from garay.dominio.conciliacion.entidades import Egreso, Ingreso
 from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.dominio.puertos.repositorios import EgresoRepository, IngresoRepository
@@ -46,14 +47,19 @@ def guardar_egreso(
     moneda: str,
     correo_origen: str | None = None,
     reenviado: bool = False,
+    categoria: str = CATEGORIA_OTRO,
 ) -> Egreso:
-    """Convert an EgresoExtraido into an Egreso entity and persist it."""
+    """Convert an EgresoExtraido into an Egreso entity and persist it.
+
+    ``categoria`` defaults to CATEGORIA_OTRO so existing callers are unaffected.
+    Pass ``categoria=banco_a_categoria(banco)`` from the route for transport banks.
+    """
     egreso = Egreso(
         id=uuid.uuid4(),
         descripcion=pago.descripcion,
         monto=Dinero(pago.monto, moneda),
         fecha=pago.fecha_egreso.date(),
-        categoria="otro",
+        categoria=categoria,
         tipo=TipoEgreso.AUTOMATICO,
         referencia=referencia,
         fecha_recibido=datetime.datetime.now(datetime.UTC),
