@@ -6,6 +6,8 @@ from decimal import Decimal
 
 import sqlalchemy as sa
 from scripts.seed import (
+    CATEGORIAS_EGRESO,
+    seed_categorias_egreso,
     seed_freelancers,
     seed_id,
     seed_puntos_de_venta,
@@ -15,9 +17,11 @@ from scripts.seed import (
 from sqlalchemy.orm import sessionmaker
 
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.conciliacion.categorias import CATEGORIA_TRANSPORTE
 from garay.infraestructura.persistencia import modelos  # noqa: F401 — registers all ORM models
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (
+    CategoriaEgresoModel,
     FreelancerModel,
     PuntoDeVentaModel,
     ReglasComisionModel,
@@ -175,6 +179,48 @@ def test_seed_freelancers_activos() -> None:
 
     assert all(r.activo for r in rows)
     assert all(r.telegram_user_id is None for r in rows)
+
+
+class TestCategoriasEgresoSeed:
+    """FIX 3: seed.py must use CATEGORIA_TRANSPORTE constant (not raw literal)
+    and must contain an entry for the transporte category.
+    """
+
+    def test_categorias_egreso_contiene_transporte(self) -> None:
+        """CATEGORIAS_EGRESO must include a row whose name equals CATEGORIA_TRANSPORTE."""
+        nombres = [nombre for nombre, _desc, _orden in CATEGORIAS_EGRESO]
+        assert CATEGORIA_TRANSPORTE in nombres, (
+            f"Expected '{CATEGORIA_TRANSPORTE}' in CATEGORIAS_EGRESO names, got {nombres}"
+        )
+
+    def test_categorias_egreso_transporte_orden_8(self) -> None:
+        """The transporte entry must have orden=8."""
+        transporte_rows = [
+            (nombre, desc, orden)
+            for nombre, desc, orden in CATEGORIAS_EGRESO
+            if nombre == CATEGORIA_TRANSPORTE
+        ]
+        assert len(transporte_rows) == 1
+        assert transporte_rows[0][2] == 8
+
+    def test_seed_categorias_egreso_incluye_transporte_en_db(self) -> None:
+        """seed_categorias_egreso() must persist a transporte row to the database."""
+        engine = sa.create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(engine)
+        sf = sessionmaker(bind=engine, expire_on_commit=False)
+
+        with sf.begin() as session:
+            seed_categorias_egreso(session)
+
+        with sf.begin() as session:
+            row = session.execute(
+                sa.select(CategoriaEgresoModel).where(
+                    CategoriaEgresoModel.nombre == CATEGORIA_TRANSPORTE
+                )
+            ).scalar_one_or_none()
+
+        assert row is not None, f"No row with nombre='{CATEGORIA_TRANSPORTE}' found after seed"
+        assert row.orden == 8
 
 
 def test_seed_playa_linda_tiene_precio_neto() -> None:
