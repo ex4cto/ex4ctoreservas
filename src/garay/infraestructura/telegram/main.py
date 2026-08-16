@@ -13,6 +13,7 @@ from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManu
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
+from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaResendService
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
@@ -35,6 +36,7 @@ from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
+from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
     SQLAAuditoriaVentaRepository,
@@ -195,6 +197,16 @@ def main() -> None:
         )
     monitor_infra_service = MonitorServiciosInfraestructuraService(servicios=servicios_infra)
 
+    # Build the Resend quota monitor (uses the same session factory as other repos).
+    contador_facturas = ContadorFacturasSQLAlchemy(sf)
+    monitor_cuota_resend_service = MonitorCuotaResendService(
+        contador=contador_facturas,
+        cap_mensual=settings.resend_cap_mensual,
+        cap_diario=settings.resend_cap_diario,
+        bandas_mensual=settings.resend_bandas_mensual,
+        umbral_diario=settings.resend_umbral_diario,
+    )
+
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
@@ -228,6 +240,7 @@ def main() -> None:
     app.bot_data.update(
         {
             "monitor_infra_service": monitor_infra_service,
+            "monitor_cuota_resend_service": monitor_cuota_resend_service,
             "fsm": fsm,
             "freelancer_repo": freelancer_repo,
             "servicio_repo": servicio_repo,
