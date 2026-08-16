@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from garay.aplicacion.webhook.servicio import guardar_egreso, guardar_ingreso
 from garay.config.settings import obtener_settings
+from garay.dominio.conciliacion.categorias import banco_a_categoria
 from garay.dominio.conciliacion.entidades import CorreoNoParseado
 from garay.dominio.conciliacion.reenvio import detectar_reenvio
 from garay.dominio.puertos.repositorios import (
@@ -164,25 +165,26 @@ def recibir_email(
         logger.warning("Unknown bank sender: %s — skipping", payload.remitente_email)
         return {"estado": "ok"}
 
-    # PR-A: transport banks (Uber/DiDi) are detected but parsing is deferred to PR-B.
-    # Drop silently so no quarantine fires and Forward Email does not retry.
+    # Transport banks (Uber/DiDi): skip es_transaccion gate, force EGRESO.
+    # Their receipts carry no transaction-signal keywords so the normal gate
+    # would drop them.  Detection is domain-only (no body-keyword pollution).
     if es_banco_transporte(banco):
         logger.warning(
-            "DIAG skip: transport bank=%r detected — parsing deferred to PR-B, dropping silently",
+            "DIAG route: transport banco=%r — bypassing es_transaccion, forcing EGRESO",
             banco,
         )
-        return {"estado": "ok"}
+        direccion = DIRECCION_EGRESO
+    else:
+        if not es_transaccion(cuerpo):
+            logger.warning(
+                "DIAG skip: non-transaction email from=%r asunto=%r — ignoring",
+                payload.remitente_email[:100],
+                payload.asunto[:80],
+            )
+            return {"estado": "ok"}
 
-    if not es_transaccion(cuerpo):
-        logger.warning(
-            "DIAG skip: non-transaction email from=%r asunto=%r — ignoring",
-            payload.remitente_email[:100],
-            payload.asunto[:80],
-        )
-        return {"estado": "ok"}
-
-    direccion = detectar_direccion(cuerpo)
-    logger.warning("DIAG route: banco=%s direccion=%s", banco, direccion)
+        direccion = detectar_direccion(cuerpo)
+        logger.warning("DIAG route: banco=%s direccion=%s", banco, direccion)
 
     if direccion == DIRECCION_EGRESO:
         if egreso_repo.existe_referencia(payload.message_id):
@@ -209,6 +211,7 @@ def recibir_email(
             moneda=moneda,
             correo_origen=payload.remitente_email,
             reenviado=detectar_reenvio(payload.asunto, cuerpo),
+            categoria=banco_a_categoria(banco),
         )
     else:
         if ingreso_repo.existe_referencia(payload.message_id):

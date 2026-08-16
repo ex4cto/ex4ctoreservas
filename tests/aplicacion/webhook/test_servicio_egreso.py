@@ -93,3 +93,34 @@ def test_guardar_egreso_nequi() -> None:
 
     assert resultado.monto == Dinero("5000", "COP")
     assert resultado.tipo == TipoEgreso.AUTOMATICO
+
+
+def test_guardar_egreso_categoria_transporte() -> None:
+    """Explicit categoria='transporte' must be persisted on the Egreso."""
+    repo = MagicMock()
+    pago = _make_egreso_extraido(banco_origen="Uber")
+
+    resultado = guardar_egreso(pago, "MSG-UBER-001", repo, moneda="COP", categoria="transporte")
+
+    assert resultado.categoria == "transporte"
+    repo.guardar.assert_called_once_with(resultado)
+
+
+def test_guardar_egreso_categoria_default_es_otro() -> None:
+    """Existing callers that omit categoria must still get 'otro' (backward compat)."""
+    repo = MagicMock()
+    pago = _make_egreso_extraido()
+
+    resultado = guardar_egreso(pago, "MSG-BANCOLOMBIA-001", repo, moneda="COP")
+
+    assert resultado.categoria == "otro"
+
+
+def test_guardar_egreso_categoria_didi() -> None:
+    """categoria='transporte' works for DiDi as well."""
+    repo = MagicMock()
+    pago = _make_egreso_extraido(banco_origen="DiDi")
+
+    resultado = guardar_egreso(pago, "MSG-DIDI-001", repo, moneda="COP", categoria="transporte")
+
+    assert resultado.categoria == "transporte"
