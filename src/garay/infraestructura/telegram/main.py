@@ -13,6 +13,9 @@ from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManu
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
+from garay.aplicacion.infraestructura_monitor.servicio import (
+    MonitorServiciosInfraestructuraService,
+)
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.ranking_tour import RankingTourService
@@ -27,6 +30,7 @@ from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.infraestructura_monitor.entidades import ServicioInfraestructura
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
@@ -179,6 +183,18 @@ def main() -> None:
             email=notificador_email,
         )
 
+    # Build the infrastructure services monitor (stateless, config-only).
+    servicios_infra: list[ServicioInfraestructura] = []
+    if settings.dominio_renovacion is not None:
+        servicios_infra.append(
+            ServicioInfraestructura(
+                nombre="Dominio",
+                fecha_renovacion=settings.dominio_renovacion,
+                bandas_aviso=settings.dominio_bandas_aviso,
+            )
+        )
+    monitor_infra_service = MonitorServiciosInfraestructuraService(servicios=servicios_infra)
+
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
@@ -211,6 +227,7 @@ def main() -> None:
 
     app.bot_data.update(
         {
+            "monitor_infra_service": monitor_infra_service,
             "fsm": fsm,
             "freelancer_repo": freelancer_repo,
             "servicio_repo": servicio_repo,
@@ -240,6 +257,7 @@ def main() -> None:
             "regenerar_factura_service": regenerar_factura_service,
             "notificador": notificador,
             "grupo_id": settings.grupo_id,
+            "propietario_telegram_ids": settings.propietario_telegram_ids,
         }
     )
 
