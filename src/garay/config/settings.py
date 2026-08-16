@@ -83,6 +83,16 @@ class Settings(BaseSettings):
     # Bandas de aviso en dias-antes de la renovacion. Default 60/30/7/1.
     dominio_bandas_aviso: tuple[int, ...] = Field(default=(60, 30, 7, 1))
 
+    # --- Monitor de cuota Resend (Slice 2: email quota) ---
+    # Monthly email cap for the Resend free tier.
+    resend_cap_mensual: int = Field(default=3000)
+    # Daily email cap for the Resend free tier.
+    resend_cap_diario: int = Field(default=100)
+    # Monthly alert bands as fractions of resend_cap_mensual (e.g. 0.80 = 80%).
+    resend_bandas_mensual: tuple[float, ...] = Field(default=(0.80, 0.95, 1.0))
+    # Daily threshold (absolute count) to trigger a daily-overage alert.
+    resend_umbral_diario: int = Field(default=80)
+
 
 @lru_cache(maxsize=1)
 def obtener_settings() -> Settings:

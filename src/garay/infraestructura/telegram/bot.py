@@ -23,6 +23,10 @@ from telegram.ext import (
     filters,
 )
 
+from garay.aplicacion.infraestructura_monitor.cuota_resend import (
+    AvisoCuota,
+    MonitorCuotaResendService,
+)
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
@@ -30,7 +34,10 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import handlers_reportes
-from garay.infraestructura.telegram.alertas_monitor import construir_alerta_renovacion
+from garay.infraestructura.telegram.alertas_monitor import (
+    construir_alerta_cuota,
+    construir_alerta_renovacion,
+)
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
@@ -266,10 +273,15 @@ def asignar_menus(
 
 
 async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Daily job: check due domain-renewal alerts and notify each owner via DM.
+    """Daily job: check due alerts and notify each owner via DM.
 
-    Reads ``monitor_infra_service`` and ``notificador`` from ``bot_data``.
-    Missing keys → log error and return (no crash).
+    Handles two independent monitors:
+    1. Domain-renewal monitor (``monitor_infra_service``) — existing behaviour.
+    2. Resend quota monitor (``monitor_cuota_resend_service``) — optional; skipped
+       silently when the key is absent from ``bot_data``.
+
+    Reads ``notificador`` from ``bot_data``.
+    Missing ``monitor_infra_service`` or ``notificador`` → log error and return.
     Per-recipient delivery errors are caught, logged, and do not abort remaining sends.
     """
     servicio: MonitorServiciosInfraestructuraService | None = context.bot_data.get(
@@ -284,11 +296,12 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     hoy = _obtener_hoy_bogota()
-    avisos = servicio.avisos_para(hoy)
 
     propietario_ids_str: str = context.bot_data.get("propietario_telegram_ids", "")
     propietario_ids = _parsear_ids(propietario_ids_str)
 
+    # --- Domain-renewal alerts ---
+    avisos = servicio.avisos_para(hoy)
     for aviso in avisos:
         mensaje = construir_alerta_renovacion(
             nombre=aviso.servicio.nombre,
@@ -304,6 +317,35 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
                     aviso.servicio.nombre,
                     uid,
                 )
+
+    # --- Resend quota alerts (optional) ---
+    cuota_service: MonitorCuotaResendService | None = context.bot_data.get(
+        "monitor_cuota_resend_service"
+    )
+    if cuota_service is not None:
+        avisos_cuota: list[AvisoCuota] = []
+        try:
+            avisos_cuota = await asyncio.to_thread(cuota_service.avisos_para, hoy)
+        except Exception:
+            logger.exception(
+                "monitor: failed to compute Resend quota alerts — skipping this run"
+            )
+        for aviso_cuota in avisos_cuota:
+            mensaje_cuota = construir_alerta_cuota(
+                tipo=aviso_cuota.tipo,
+                conteo=aviso_cuota.conteo,
+                cap=aviso_cuota.cap,
+                umbral=aviso_cuota.umbral,
+            )
+            for uid in propietario_ids:
+                try:
+                    await asyncio.to_thread(notificador.notificar, mensaje_cuota, str(uid))
+                except Exception:
+                    logger.exception(
+                        "monitor: failed to send quota alert (tipo=%r) to chat %s",
+                        aviso_cuota.tipo,
+                        uid,
+                    )
 
 
 async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
@@ -350,15 +392,18 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
                 exc,
             )
 
-    # Register the domain-renewal monitor job only when services are configured.
+    # Register the daily monitor job when at least one monitor is active:
+    # - domain-renewal monitor has services configured, OR
+    # - Resend quota monitor is present (quota-only owners still need the job).
     monitor_service: MonitorServiciosInfraestructuraService | None = app.bot_data.get(
         "monitor_infra_service"
     )
-    if (
-        monitor_service is not None
-        and monitor_service.has_services
-        and app.job_queue is not None
-    ):
+    cuota_monitor: MonitorCuotaResendService | None = app.bot_data.get(
+        "monitor_cuota_resend_service"
+    )
+    domain_active = monitor_service is not None and monitor_service.has_services
+    quota_active = cuota_monitor is not None
+    if (domain_active or quota_active) and app.job_queue is not None:
         app.job_queue.run_daily(
             _job_monitor_infraestructura,
             time=datetime.time(hour=8, minute=0, tzinfo=ZONA_HORARIA_OWNER),
@@ -366,7 +411,7 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
         )
     else:
         logger.info(
-            "monitor: no infrastructure services configured — daily job not registered"
+            "monitor: no monitors configured — daily job not registered"
         )
 
 
