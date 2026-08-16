@@ -13,6 +13,7 @@ from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManu
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
+from garay.aplicacion.infraestructura_monitor.costo_railway import MonitorCostoRailwayService
 from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaResendService
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
@@ -31,11 +32,13 @@ from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.infraestructura_monitor.costo_railway import PreciosRailway
 from garay.dominio.infraestructura_monitor.entidades import ServicioInfraestructura
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
+from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
@@ -207,6 +210,26 @@ def main() -> None:
         umbral_diario=settings.resend_umbral_diario,
     )
 
+    # Build the Railway cost monitor (optional — only when token and project id are set).
+    monitor_costo_railway_service: MonitorCostoRailwayService | None = None
+    if settings.railway_api_token and settings.railway_project_id:
+        precios_railway = PreciosRailway(
+            precio_memoria_gb_min=settings.railway_precio_memoria_gb_min,
+            precio_cpu_vcpu_min=settings.railway_precio_cpu_vcpu_min,
+            precio_egress_gb=settings.railway_precio_egress_gb,
+            precio_volumen_gb_min=settings.railway_precio_volumen_gb_min,
+        )
+        proveedor_railway = ProveedorUsoRailwayHTTP(
+            api_token=settings.railway_api_token,
+            project_id=settings.railway_project_id,
+        )
+        monitor_costo_railway_service = MonitorCostoRailwayService(
+            proveedor=proveedor_railway,
+            precios=precios_railway,
+            umbral=settings.railway_umbral_costo,
+            plan_fee=settings.railway_plan_fee,
+        )
+
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
@@ -241,6 +264,7 @@ def main() -> None:
         {
             "monitor_infra_service": monitor_infra_service,
             "monitor_cuota_resend_service": monitor_cuota_resend_service,
+            "monitor_costo_railway_service": monitor_costo_railway_service,
             "fsm": fsm,
             "freelancer_repo": freelancer_repo,
             "servicio_repo": servicio_repo,

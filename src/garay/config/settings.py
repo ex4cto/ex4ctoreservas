@@ -10,7 +10,7 @@ from decimal import Decimal
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -82,6 +82,25 @@ class Settings(BaseSettings):
     dominio_renovacion: datetime.date | None = Field(default=None)
     # Bandas de aviso en dias-antes de la renovacion. Default 60/30/7/1.
     dominio_bandas_aviso: tuple[int, ...] = Field(default=(60, 30, 7, 1))
+
+    # --- Monitor de costo Railway (Batch 1) ---
+    # API token for the Railway GraphQL API.
+    railway_api_token: str = Field(default="")
+    # Project ID injected by Railway at deploy time as RAILWAY_PROJECT_ID (no GARAY_ prefix).
+    # AliasChoices lets pydantic-settings check the un-prefixed env var first.
+    railway_project_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("RAILWAY_PROJECT_ID"),
+    )
+    # Alert threshold in USD for actual month-to-date Railway spend.
+    railway_umbral_costo: float = Field(default=20.0)
+    # Unit prices sourced from the Railway Hobby plan dashboard (USD).
+    railway_precio_memoria_gb_min: float = Field(default=0.000231)
+    railway_precio_cpu_vcpu_min: float = Field(default=0.000463)
+    railway_precio_egress_gb: float = Field(default=0.05)
+    railway_precio_volumen_gb_min: float = Field(default=0.000003)
+    # Monthly base fee for the Railway Hobby plan (the bill is max(plan_fee, usage)).
+    railway_plan_fee: float = Field(default=5.0)
 
     # --- Monitor de cuota Resend (Slice 2: email quota) ---
     # Monthly email cap for the Resend free tier.
