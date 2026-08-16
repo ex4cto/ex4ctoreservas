@@ -37,6 +37,30 @@ def construir_alerta_renovacion(
     )
 
 
+def construir_alerta_costo_railway(
+    *,
+    costo_actual: float,
+    umbral: float,
+    estimado_factura: float,
+) -> str:
+    """Mensaje HTML en español para alertar al propietario sobre el costo de Railway.
+
+    Args:
+        costo_actual: Costo real acumulado en el mes hasta hoy (USD).
+        umbral: Umbral configurado en USD que se cruzó.
+        estimado_factura: Estimado de la factura a fin de mes (USD).
+
+    Returns:
+        String HTML listo para enviar con parse_mode=HTML.
+    """
+    return (
+        f"<b>⚠️ Railway: límite de costo cruzado</b>\n"
+        f"Ya llevas <b>${costo_actual:.2f}</b> este mes "
+        f"(cruzaste el límite de ${umbral:.0f}).\n"
+        f"Estimado a fin de mes: ~<b>${estimado_factura:.2f}</b>."
+    )
+
+
 def construir_alerta_cuota(
     *,
     tipo: str,
