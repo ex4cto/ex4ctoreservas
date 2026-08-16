@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
+import zoneinfo
 
 from telegram import (
     BotCommand,
@@ -15,15 +17,20 @@ from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
+    ContextTypes,
     ConversationHandler,
     MessageHandler,
     filters,
 )
 
+from garay.aplicacion.infraestructura_monitor.servicio import (
+    MonitorServiciosInfraestructuraService,
+)
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import handlers_reportes
+from garay.infraestructura.telegram.alertas_monitor import construir_alerta_renovacion
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
@@ -191,6 +198,18 @@ _CB = CallbackQueryHandler
 
 logger = logging.getLogger(__name__)
 
+# Colombia is UTC-5, no DST — stable year-round.
+ZONA_HORARIA_OWNER = zoneinfo.ZoneInfo("America/Bogota")
+
+
+def _obtener_hoy_bogota() -> datetime.date:
+    """Return the current calendar date in the owner's local timezone (Bogota).
+
+    Extracted as a named function so tests can monkeypatch it without touching
+    the real time or zoneinfo machinery.
+    """
+    return datetime.datetime.now(ZONA_HORARIA_OWNER).date()
+
 
 # Baseline menu every user sees (BotCommandScopeDefault).
 # Derived from CATALOGO_COMANDOS in menu.py — the single source of truth.
@@ -246,6 +265,47 @@ def asignar_menus(
     return resultado
 
 
+async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Daily job: check due domain-renewal alerts and notify each owner via DM.
+
+    Reads ``monitor_infra_service`` and ``notificador`` from ``bot_data``.
+    Missing keys → log error and return (no crash).
+    Per-recipient delivery errors are caught, logged, and do not abort remaining sends.
+    """
+    servicio: MonitorServiciosInfraestructuraService | None = context.bot_data.get(
+        "monitor_infra_service"
+    )
+    notificador = context.bot_data.get("notificador")
+
+    if servicio is None or notificador is None:
+        logger.error(
+            "monitor: monitor_infra_service or notificador missing from bot_data — skipping"
+        )
+        return
+
+    hoy = _obtener_hoy_bogota()
+    avisos = servicio.avisos_para(hoy)
+
+    propietario_ids_str: str = context.bot_data.get("propietario_telegram_ids", "")
+    propietario_ids = _parsear_ids(propietario_ids_str)
+
+    for aviso in avisos:
+        mensaje = construir_alerta_renovacion(
+            nombre=aviso.servicio.nombre,
+            dias=aviso.banda,
+            fecha=aviso.servicio.fecha_renovacion,
+        )
+        for uid in propietario_ids:
+            try:
+                await asyncio.to_thread(notificador.notificar, mensaje, str(uid))
+            except Exception:
+                logger.exception(
+                    "monitor: failed to send renewal alert for service %r to chat %s",
+                    aviso.servicio.nombre,
+                    uid,
+                )
+
+
 async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
     settings = obtener_settings()
     propietario_ids = _parsear_ids(settings.propietario_telegram_ids)
@@ -289,6 +349,25 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
                 uid,
                 exc,
             )
+
+    # Register the domain-renewal monitor job only when services are configured.
+    monitor_service: MonitorServiciosInfraestructuraService | None = app.bot_data.get(
+        "monitor_infra_service"
+    )
+    if (
+        monitor_service is not None
+        and monitor_service.has_services
+        and app.job_queue is not None
+    ):
+        app.job_queue.run_daily(
+            _job_monitor_infraestructura,
+            time=datetime.time(hour=8, minute=0, tzinfo=ZONA_HORARIA_OWNER),
+            name="monitor_servicios_infra",
+        )
+    else:
+        logger.info(
+            "monitor: no infrastructure services configured — daily job not registered"
+        )
 
 
 def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]

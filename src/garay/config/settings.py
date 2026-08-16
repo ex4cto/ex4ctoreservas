@@ -5,6 +5,7 @@ Ningun valor de negocio ni secreto se hardcodea: todo se resuelve aca.
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 from enum import StrEnum
 from functools import lru_cache
@@ -75,6 +76,12 @@ class Settings(BaseSettings):
     conciliacion_confianza_auto: Decimal = Field(default=Decimal("0.90"))
     conciliacion_peso_monto: Decimal = Field(default=Decimal("0.6"))
     conciliacion_peso_fecha: Decimal = Field(default=Decimal("0.4"))
+
+    # --- Monitor de servicios de infraestructura (Slice 1: dominio por fecha) ---
+    # Fecha de renovacion del dominio (formato ISO YYYY-MM-DD). Vacio/None = monitor no-op.
+    dominio_renovacion: datetime.date | None = Field(default=None)
+    # Bandas de aviso en dias-antes de la renovacion. Default 60/30/7/1.
+    dominio_bandas_aviso: tuple[int, ...] = Field(default=(60, 30, 7, 1))
 
 
 @lru_cache(maxsize=1)
