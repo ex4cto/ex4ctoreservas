@@ -23,6 +23,10 @@ from telegram.ext import (
     filters,
 )
 
+from garay.aplicacion.infraestructura_monitor.costo_railway import (
+    AvisoCostoRailway,
+    MonitorCostoRailwayService,
+)
 from garay.aplicacion.infraestructura_monitor.cuota_resend import (
     AvisoCuota,
     MonitorCuotaResendService,
@@ -35,6 +39,7 @@ from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import handlers_reportes
 from garay.infraestructura.telegram.alertas_monitor import (
+    construir_alerta_costo_railway,
     construir_alerta_cuota,
     construir_alerta_renovacion,
 )
@@ -347,6 +352,33 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
                         uid,
                     )
 
+    # --- Railway cost alerts (optional) ---
+    railway_service: MonitorCostoRailwayService | None = context.bot_data.get(
+        "monitor_costo_railway_service"
+    )
+    if railway_service is not None:
+        avisos_railway: list[AvisoCostoRailway] = []
+        try:
+            avisos_railway = await asyncio.to_thread(railway_service.avisos_para, hoy)
+        except Exception:
+            logger.exception(
+                "monitor: failed to compute Railway cost alerts — skipping this run"
+            )
+        for aviso_railway in avisos_railway:
+            mensaje_railway = construir_alerta_costo_railway(
+                costo_actual=aviso_railway.costo_actual,
+                umbral=aviso_railway.umbral,
+                estimado_factura=aviso_railway.estimado_factura,
+            )
+            for uid in propietario_ids:
+                try:
+                    await asyncio.to_thread(notificador.notificar, mensaje_railway, str(uid))
+                except Exception:
+                    logger.exception(
+                        "monitor: failed to send railway cost alert to chat %s",
+                        uid,
+                    )
+
 
 async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
     settings = obtener_settings()
@@ -401,9 +433,13 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
     cuota_monitor: MonitorCuotaResendService | None = app.bot_data.get(
         "monitor_cuota_resend_service"
     )
+    railway_monitor: MonitorCostoRailwayService | None = app.bot_data.get(
+        "monitor_costo_railway_service"
+    )
     domain_active = monitor_service is not None and monitor_service.has_services
     quota_active = cuota_monitor is not None
-    if (domain_active or quota_active) and app.job_queue is not None:
+    railway_active = railway_monitor is not None
+    if (domain_active or quota_active or railway_active) and app.job_queue is not None:
         app.job_queue.run_daily(
             _job_monitor_infraestructura,
             time=datetime.time(hour=8, minute=0, tzinfo=ZONA_HORARIA_OWNER),
