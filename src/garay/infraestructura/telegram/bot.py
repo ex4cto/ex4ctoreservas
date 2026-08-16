@@ -323,9 +323,13 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
         "monitor_cuota_resend_service"
     )
     if cuota_service is not None:
-        avisos_cuota: list[AvisoCuota] = await asyncio.to_thread(
-            cuota_service.avisos_para, hoy
-        )
+        avisos_cuota: list[AvisoCuota] = []
+        try:
+            avisos_cuota = await asyncio.to_thread(cuota_service.avisos_para, hoy)
+        except Exception:
+            logger.exception(
+                "monitor: failed to compute Resend quota alerts — skipping this run"
+            )
         for aviso_cuota in avisos_cuota:
             mensaje_cuota = construir_alerta_cuota(
                 tipo=aviso_cuota.tipo,

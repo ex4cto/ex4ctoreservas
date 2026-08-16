@@ -173,6 +173,21 @@ class TestMesBoundaryReset:
         mensual = [a for a in avisos if a.tipo == "mensual"]
         assert mensual == []
 
+    def test_conteo_previo_cero_en_borde_diciembre_enero(self) -> None:
+        """Year boundary (S-1): hoy=2027-01-02, ayer=2027-01-01, anteayer=2026-12-31
+        is in the previous month AND previous year.  previo must be forced to 0 so a
+        fresh January re-alerts (previo=0 < 2400 <= 2500)."""
+        hoy = datetime.date(2027, 1, 2)
+        ayer = datetime.date(2027, 1, 1)
+
+        contador = FakeContador(conteos_mes={ayer: 2500})
+        service = _make_service(contador)
+        avisos = service.avisos_para(hoy)
+
+        mensual = [a for a in avisos if a.tipo == "mensual"]
+        assert len(mensual) == 1
+        assert mensual[0].umbral == 2400
+
 
 # ---------------------------------------------------------------------------
 # Daily threshold tests

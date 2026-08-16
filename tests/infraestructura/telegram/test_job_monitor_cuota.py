@@ -207,6 +207,33 @@ async def test_cuota_excepcion_por_destinatario_continua(
 
 
 # ---------------------------------------------------------------------------
+# Quota DB failure is caught: no crash, no quota send, logged (W-1)
+# ---------------------------------------------------------------------------
+
+
+async def test_cuota_error_de_db_no_rompe_ni_notifica(
+    monkeypatch: Any, caplog: Any
+) -> None:
+    """W-1: if computing quota alerts (DB) raises, it is logged and no quota alert is
+    sent; the callback does not crash and the domain-renewal path is unaffected."""
+    import garay.infraestructura.telegram.bot as bot_module
+
+    class _RaisingCuotaService:
+        def avisos_para(self, hoy: datetime.date) -> list[Any]:
+            raise RuntimeError("DB down")
+
+    ctx, fake_notif = _make_ctx(quota_service=_RaisingCuotaService(), propietario_ids="111")
+
+    monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
+
+    with caplog.at_level(logging.ERROR, logger="garay.infraestructura.telegram.bot"):
+        await _job_monitor_infraestructura(ctx)  # must not raise
+
+    assert fake_notif.calls == []  # no quota sends when the DB call fails
+    assert any("quota" in r.getMessage().lower() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
 # _post_init: quota-only config → job IS registered
 # ---------------------------------------------------------------------------
 
