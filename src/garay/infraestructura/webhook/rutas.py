@@ -169,7 +169,10 @@ def recibir_email(
     # Their receipts carry no transaction-signal keywords so the normal gate
     # would drop them.  Detection is domain-only (no body-keyword pollution).
     if es_banco_transporte(banco):
-        logger.warning("DIAG route: transport banco=%r — bypassing es_transaccion, forcing EGRESO", banco)
+        logger.warning(
+            "DIAG route: transport banco=%r — bypassing es_transaccion, forcing EGRESO",
+            banco,
+        )
         direccion = DIRECCION_EGRESO
     else:
         if not es_transaccion(cuerpo):
