@@ -130,8 +130,10 @@ async def test_callback_sin_destinatarios_no_envia_ni_crashea(monkeypatch: Any) 
 # ---------------------------------------------------------------------------
 
 
-async def test_callback_excepcion_por_destinatario_continua(monkeypatch: Any) -> None:
-    """AC-12: a notifier exception for one recipient is caught; others proceed."""
+async def test_callback_excepcion_por_destinatario_continua(
+    monkeypatch: Any, caplog: Any
+) -> None:
+    """AC-12: a notifier exception for one recipient is caught, logged; others proceed."""
     import garay.infraestructura.telegram.bot as bot_module
 
     # Notifier raises when called with "111"
@@ -141,11 +143,18 @@ async def test_callback_excepcion_por_destinatario_continua(monkeypatch: Any) ->
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY_BAND_30)
 
     # Must not raise even though "111" fails
-    await _job_monitor_infraestructura(ctx)
+    with caplog.at_level(logging.ERROR, logger="garay.infraestructura.telegram.bot"):
+        await _job_monitor_infraestructura(ctx)
 
     # "222" must still have been attempted
     attempted_ids = {grupo_id for _, grupo_id in raising_notif.calls}
     assert "222" in attempted_ids
+
+    # The failure for "111" must have been logged (spec: "caught and logged")
+    assert any(
+        r.levelno == logging.ERROR and "111" in r.getMessage()
+        for r in caplog.records
+    )
 
 
 # ---------------------------------------------------------------------------

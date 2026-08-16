@@ -354,7 +354,11 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
     monitor_service: MonitorServiciosInfraestructuraService | None = app.bot_data.get(
         "monitor_infra_service"
     )
-    if monitor_service is not None and monitor_service._servicios and app.job_queue is not None:
+    if (
+        monitor_service is not None
+        and monitor_service.has_services
+        and app.job_queue is not None
+    ):
         app.job_queue.run_daily(
             _job_monitor_infraestructura,
             time=datetime.time(hour=8, minute=0, tzinfo=ZONA_HORARIA_OWNER),

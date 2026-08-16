@@ -31,6 +31,11 @@ class MonitorServiciosInfraestructuraService:
     def __init__(self, servicios: list[ServicioInfraestructura]) -> None:
         self._servicios = servicios
 
+    @property
+    def has_services(self) -> bool:
+        """True cuando hay al menos un servicio monitoreado."""
+        return bool(self._servicios)
+
     def avisos_para(self, hoy: datetime.date) -> list[AvisoRenovacion]:
         """Retorna los avisos cuya banda de alerta cae exactamente en 'hoy'.
 
