@@ -295,6 +295,7 @@ def main() -> None:
             "notificador": notificador,
             "grupo_id": settings.grupo_id,
             "propietario_telegram_ids": settings.propietario_telegram_ids,
+            "monitor_infra_telegram_ids": settings.dev_telegram_ids,
         }
     )
 

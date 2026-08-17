@@ -302,8 +302,8 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
 
     hoy = _obtener_hoy_bogota()
 
-    propietario_ids_str: str = context.bot_data.get("propietario_telegram_ids", "")
-    propietario_ids = _parsear_ids(propietario_ids_str)
+    destinatario_ids_str: str = context.bot_data.get("monitor_infra_telegram_ids", "")
+    destinatario_ids = _parsear_ids(destinatario_ids_str)
 
     # --- Domain-renewal alerts ---
     avisos = servicio.avisos_para(hoy)
@@ -313,7 +313,7 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
             dias=aviso.banda,
             fecha=aviso.servicio.fecha_renovacion,
         )
-        for uid in propietario_ids:
+        for uid in destinatario_ids:
             try:
                 await asyncio.to_thread(notificador.notificar, mensaje, str(uid))
             except Exception:
@@ -342,7 +342,7 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
                 cap=aviso_cuota.cap,
                 umbral=aviso_cuota.umbral,
             )
-            for uid in propietario_ids:
+            for uid in destinatario_ids:
                 try:
                     await asyncio.to_thread(notificador.notificar, mensaje_cuota, str(uid))
                 except Exception:
@@ -370,7 +370,7 @@ async def _job_monitor_infraestructura(context: ContextTypes.DEFAULT_TYPE) -> No
                 umbral=aviso_railway.umbral,
                 estimado_factura=aviso_railway.estimado_factura,
             )
-            for uid in propietario_ids:
+            for uid in destinatario_ids:
                 try:
                     await asyncio.to_thread(notificador.notificar, mensaje_railway, str(uid))
                 except Exception:

@@ -65,7 +65,7 @@ def _make_ctx(
     railway_service: Any = None,
     railway_service_key: bool = True,
     notificador: Any = "default",
-    propietario_ids: str = "111,222",
+    destinatario_ids: str = "111,222",
 ) -> tuple[MagicMock, Any]:
     """Build a fake PTB context with bot_data; domain and quota monitors are minimal stubs."""
     ctx = MagicMock()
@@ -77,7 +77,7 @@ def _make_ctx(
 
     bot_data: dict[str, Any] = {
         "notificador": fake_notif,
-        "propietario_telegram_ids": propietario_ids,
+        "monitor_infra_telegram_ids": destinatario_ids,
         "monitor_infra_service": MonitorServiciosInfraestructuraService(servicios=[]),
     }
 
@@ -100,7 +100,7 @@ async def test_railway_alerta_entrega_a_cada_propietario(monkeypatch: Any) -> No
 
     aviso = AvisoCostoRailway(costo_actual=15.75, umbral=10.0, estimado_factura=22.50)
     svc = _FakeMonitorRailwayService([aviso])
-    ctx, fake_notif = _make_ctx(railway_service=svc, propietario_ids="111,222")
+    ctx, fake_notif = _make_ctx(railway_service=svc, destinatario_ids="111,222")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -125,7 +125,7 @@ async def test_sin_avisos_railway_no_notifica(monkeypatch: Any) -> None:
     import garay.infraestructura.telegram.bot as bot_module
 
     svc = _FakeMonitorRailwayService([])
-    ctx, fake_notif = _make_ctx(railway_service=svc, propietario_ids="111")
+    ctx, fake_notif = _make_ctx(railway_service=svc, destinatario_ids="111")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -143,7 +143,7 @@ async def test_railway_service_ausente_no_falla(monkeypatch: Any) -> None:
     """Missing monitor_costo_railway_service key in bot_data → job runs without crashing."""
     import garay.infraestructura.telegram.bot as bot_module
 
-    ctx, fake_notif = _make_ctx(railway_service_key=False, propietario_ids="111")
+    ctx, fake_notif = _make_ctx(railway_service_key=False, destinatario_ids="111")
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
 
@@ -164,7 +164,7 @@ async def test_railway_error_de_api_no_rompe_ni_notifica(
     import garay.infraestructura.telegram.bot as bot_module
 
     ctx, fake_notif = _make_ctx(
-        railway_service=_RaisingRailwayService(), propietario_ids="111"
+        railway_service=_RaisingRailwayService(), destinatario_ids="111"
     )
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
@@ -195,7 +195,7 @@ async def test_railway_error_no_afecta_otras_alertas(monkeypatch: Any) -> None:
             return [AvisoCuota(tipo="mensual", umbral=2700, conteo=2700, cap=3000)]
 
     ctx, fake_notif = _make_ctx(
-        railway_service=_RaisingRailwayService(), propietario_ids="111"
+        railway_service=_RaisingRailwayService(), destinatario_ids="111"
     )
     ctx.bot_data["monitor_cuota_resend_service"] = _FakeQuotaService()
 
@@ -226,7 +226,7 @@ async def test_railway_excepcion_por_destinatario_continua(
     svc = _FakeMonitorRailwayService([aviso])
     raising_notif = _FakeNotificador(raise_for={"111"})
     ctx, _ = _make_ctx(
-        railway_service=svc, notificador=raising_notif, propietario_ids="111,222"
+        railway_service=svc, notificador=raising_notif, destinatario_ids="111,222"
     )
 
     monkeypatch.setattr(bot_module, "_obtener_hoy_bogota", lambda: _HOY)
