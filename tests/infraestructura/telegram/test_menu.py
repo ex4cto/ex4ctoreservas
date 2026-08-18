@@ -18,8 +18,8 @@ from garay.infraestructura.telegram.menu import (
 class TestCatalogo:
     """Verify catalog structure and completeness."""
 
-    def test_catalogo_tiene_16_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 21
+    def test_catalogo_tiene_20_comandos(self) -> None:
+        assert len(CATALOGO_COMANDOS) == 20
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -75,15 +75,6 @@ class TestComandosParaTier:
         assert "nuevo_egreso" not in comandos
         assert "dashboard_ventas" not in comandos
 
-    def test_freelancer_no_ve_generar_mes(self) -> None:
-        """Regression: /generar_mes is admin-only and must never reach freelancers."""
-        comandos = [c.comando for c in comandos_para_tier(TierComando.FREELANCER)]
-        assert "generar_mes" not in comandos
-
-    def test_admin_ve_generar_mes(self) -> None:
-        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
-        assert "generar_mes" in comandos
-
     def test_admin_ve_freelancer_y_admin(self) -> None:
         result = comandos_para_tier(TierComando.ADMIN)
         freelancer_cmds = [c for c in result if c.tier == TierComando.FREELANCER]
@@ -107,9 +98,9 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "movimientos" in comandos
 
-    def test_propietario_ve_todos_21(self) -> None:
+    def test_propietario_ve_todos_20(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 21
+        assert len(result) == 20
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -166,9 +157,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_21_botcommands(self) -> None:
+    def test_propietario_retorna_20_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 21
+        assert len(result) == 20
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:

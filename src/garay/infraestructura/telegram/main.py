@@ -9,7 +9,6 @@ from pathlib import Path
 from telegram import Update
 
 from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
-from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
@@ -115,10 +114,6 @@ def main() -> None:
     egreso_service = RegistrarEgresoManualService(
         egreso_repo=egreso_repo,
         categoria_repo=categoria_egreso_repo,
-    )
-    generar_gastos_service = GenerarGastosRecurrentesService(
-        recurrentes_repo=gasto_recurrente_repo,
-        egreso_repo=egreso_repo,
     )
 
     servicios = [
@@ -294,7 +289,6 @@ def main() -> None:
             "egreso_repo": egreso_repo,
             "egreso_service": egreso_service,
             "recurrente_service": gasto_recurrente_repo,
-            "generar_gastos_service": generar_gastos_service,
             "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,
             "flujo_caja_service": flujo_caja_service,

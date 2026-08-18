@@ -39,11 +39,11 @@ class TestBotMenusDesdesCatalogo:
     def test_freelancer_count_es_4(self) -> None:
         assert len(_COMANDOS_FREELANCER) == 4
 
-    def test_admin_count_es_17(self) -> None:
-        assert len(_COMANDOS_ADMIN) == 17
+    def test_admin_count_es_16(self) -> None:
+        assert len(_COMANDOS_ADMIN) == 16
 
-    def test_propietario_count_es_21(self) -> None:
-        assert len(_COMANDOS_PROPIETARIO) == 21
+    def test_propietario_count_es_20(self) -> None:
+        assert len(_COMANDOS_PROPIETARIO) == 20
 
     def test_menus_dict_tiene_propietario_y_admin(self) -> None:
         assert "propietario" in _MENUS
