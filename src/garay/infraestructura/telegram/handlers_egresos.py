@@ -1,4 +1,4 @@
-"""PTB handlers for /nuevo_egreso, /gastos_fijos, and /generar_mes."""
+"""PTB handlers for /nuevo_egreso and /gastos_fijos."""
 
 from __future__ import annotations
 
@@ -340,37 +340,3 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
     )
     return ConversationHandler.END
 
-
-# ---------------------------------------------------------------------------
-# /generar_mes
-# ---------------------------------------------------------------------------
-
-
-@requiere_admin
-async def cmd_generar_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /generar_mes — generate recurring expenses for current month."""
-    service = context.bot_data.get("generar_gastos_service")
-    if service is None:
-        logger.error("generar_gastos_service not found in bot_data")
-        if update.effective_message:
-            await update.effective_message.reply_text(obtener_mensaje("error_generico"))
-        return
-    hoy = datetime.date.today()
-    generados = service.generar(mes=hoy.month, año=hoy.year)
-    if generados:
-        texto = obtener_mensaje("generar_mes.resultado").format(
-            cantidad=len(generados), mes=hoy.month, año=hoy.year
-        )
-    else:
-        # Nothing generated: distinguish "no active expenses" from
-        # "all already generated this month" (idempotent re-run).
-        recurrente_service = context.bot_data.get("recurrente_service")
-        activos = recurrente_service.listar_activos() if recurrente_service else []
-        if activos:
-            texto = obtener_mensaje("generar_mes.ya_generados").format(
-                mes=hoy.month, año=hoy.year
-            )
-        else:
-            texto = obtener_mensaje("generar_mes.sin_activos")
-    if update.effective_message:
-        await update.effective_message.reply_text(texto, parse_mode="Markdown")

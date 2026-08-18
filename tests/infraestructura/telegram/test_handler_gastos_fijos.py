@@ -1,4 +1,4 @@
-"""Tests for /gastos_fijos and /generar_mes handlers — RED phase."""
+"""Tests for /gastos_fijos handler."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from garay.infraestructura.telegram.handlers_egresos import (
     GF_DIA,
     GF_MONTO,
     cmd_gastos_fijos,
-    cmd_generar_mes,
     handle_gf_categoria,
     handle_gf_confirmacion,
     handle_gf_dia,
@@ -207,59 +206,3 @@ class TestCrearGastoFijo:
         service.guardar.assert_not_called()
 
 
-class TestCmdGenerarMes:
-    @pytest.mark.asyncio
-    async def test_genera_egresos_del_mes(self) -> None:
-        update = _make_update()
-        ctx = _make_context()
-        gen_service = MagicMock()
-        gen_service.generar.return_value = [MagicMock(), MagicMock()]
-        ctx.bot_data["generar_gastos_service"] = gen_service
-
-        await cmd_generar_mes(update, ctx)
-
-        gen_service.generar.assert_called_once()
-        update.effective_message.reply_text.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_sin_gastos_activos_responde(self) -> None:
-        update = _make_update()
-        ctx = _make_context(gastos=[])  # no active recurring expenses at all
-        gen_service = MagicMock()
-        gen_service.generar.return_value = []
-        ctx.bot_data["generar_gastos_service"] = gen_service
-
-        await cmd_generar_mes(update, ctx)
-
-        update.effective_message.reply_text.assert_called_once()
-        msg = update.effective_message.reply_text.call_args[0][0]
-        assert "No hay gastos fijos activos" in msg
-
-    @pytest.mark.asyncio
-    async def test_ya_generados_cuando_hay_activos_pero_nada_nuevo(self) -> None:
-        """Idempotent re-run: active expenses exist but all were already generated."""
-        update = _make_update()
-        ctx = _make_context(gastos=[_gasto_recurrente("Arriendo")])
-        gen_service = MagicMock()
-        gen_service.generar.return_value = []  # everything skipped by idempotency
-        ctx.bot_data["generar_gastos_service"] = gen_service
-
-        await cmd_generar_mes(update, ctx)
-
-        msg = update.effective_message.reply_text.call_args[0][0]
-        assert "ya fueron generados" in msg
-
-    @pytest.mark.asyncio
-    async def test_no_admin_es_denegado(self) -> None:
-        """Non-admin user → requiere_admin returns None, generar service not called."""
-        update = _make_update()
-        ctx = _make_context()
-        gen_service = MagicMock()
-        gen_service.generar.return_value = [MagicMock()]
-        ctx.bot_data["generar_gastos_service"] = gen_service
-        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
-
-        result = await cmd_generar_mes(update, ctx)
-
-        assert result is None
-        gen_service.generar.assert_not_called()

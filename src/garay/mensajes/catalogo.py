@@ -450,16 +450,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     # --- Facturas ---
     "factura.asunto_email": {Idioma.ES: "Factura de servicio - Garay Tours"},
-    # --- Generar mes ---
-    "generar_mes.sin_activos": {
-        Idioma.ES: "No hay gastos fijos activos para generar."
-    },
-    "generar_mes.resultado": {
-        Idioma.ES: "✅ Generados {cantidad} egreso(s) para {mes}/{año}."
-    },
-    "generar_mes.ya_generados": {
-        Idioma.ES: "Los gastos de {mes}/{año} ya fueron generados anteriormente."
-    },
     "error_seleccion_freelancer_invalida": {
         Idioma.ES: (
             "Selección inválida. Usá los botones para elegir un freelancer registrado."
