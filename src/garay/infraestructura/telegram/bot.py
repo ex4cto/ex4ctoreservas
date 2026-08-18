@@ -86,24 +86,42 @@ from garay.infraestructura.telegram.handlers import (
     handle_tipo_reserva,
 )
 from garay.infraestructura.telegram.handlers_egresos import (
+    CB_EDIT_CATEGORIA,
+    CB_EDIT_DESCRIPCION,
+    CB_EDIT_FECHA,
+    CB_EDIT_MONTO,
+    CB_EDIT_VOLVER,
+    CB_HOY,
+    CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
+    EGRESO_EDIT_MENU,
     EGRESO_FECHA,
     EGRESO_MONTO,
+    EGRESO_REC_CONFIRM,
+    EGRESO_REC_EDIT_MENU,
+    EGRESO_REC_FECHA,
+    EGRESO_REC_MONTO,
+    EGRESO_SELECCION,
     GF_CATEGORIA,
     GF_CONFIRMACION,
     GF_DIA,
     GF_MONTO,
     GF_NOMBRE,
     cmd_gastos_fijos,
-    cmd_generar_mes,
     cmd_nuevo_egreso,
     handle_egreso_categoria,
     handle_egreso_confirmacion,
     handle_egreso_descripcion,
+    handle_egreso_edit_menu,
     handle_egreso_fecha,
     handle_egreso_monto,
+    handle_egreso_rec_confirmacion,
+    handle_egreso_rec_edit_menu,
+    handle_egreso_rec_fecha,
+    handle_egreso_rec_monto,
+    handle_egreso_seleccion,
     handle_gf_categoria,
     handle_gf_confirmacion,
     handle_gf_dia,
@@ -582,14 +600,39 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     egreso_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("nuevo_egreso", cmd_nuevo_egreso)],
         states={
+            EGRESO_SELECCION: [_CB(handle_egreso_seleccion)],
             EGRESO_MONTO: [MessageHandler(_TEXT, handle_egreso_monto)],
             EGRESO_DESCRIPCION: [MessageHandler(_TEXT, handle_egreso_descripcion)],
             EGRESO_CATEGORIA: [
                 _CB(handle_egreso_categoria),
                 MessageHandler(_TEXT, handle_egreso_categoria),
             ],
-            EGRESO_FECHA: [MessageHandler(_TEXT, handle_egreso_fecha)],
+            EGRESO_FECHA: [
+                _CB(handle_egreso_fecha, pattern=f"^{CB_HOY}$"),
+                MessageHandler(_TEXT, handle_egreso_fecha),
+            ],
             EGRESO_CONFIRMACION: [_CB(handle_egreso_confirmacion)],
+            EGRESO_EDIT_MENU: [
+                _CB(
+                    handle_egreso_edit_menu,
+                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_DESCRIPCION}|{CB_EDIT_CATEGORIA}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
+                ),
+            ],
+            EGRESO_REC_MONTO: [
+                _CB(handle_egreso_rec_monto, pattern=f"^{CB_USAR_SUGERIDO}$"),
+                MessageHandler(_TEXT, handle_egreso_rec_monto),
+            ],
+            EGRESO_REC_FECHA: [
+                _CB(handle_egreso_rec_fecha, pattern=f"^{CB_HOY}$"),
+                MessageHandler(_TEXT, handle_egreso_rec_fecha),
+            ],
+            EGRESO_REC_CONFIRM: [_CB(handle_egreso_rec_confirmacion)],
+            EGRESO_REC_EDIT_MENU: [
+                _CB(
+                    handle_egreso_rec_edit_menu,
+                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
+                ),
+            ],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )
@@ -768,7 +811,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
-    app.add_handler(CommandHandler("generar_mes", cmd_generar_mes), group=1)
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)

@@ -29,10 +29,12 @@ class RegistrarEgresoManualService:
         fecha: datetime.date,
         *,
         moneda: str,
+        gasto_recurrente_id: uuid.UUID | None = None,
     ) -> Egreso:
-        activas = self._categorias.listar_activas()
-        if categoria not in activas:
-            raise ValueError(f"Categoria no valida: {categoria!r}")
+        if gasto_recurrente_id is None:
+            activas = self._categorias.listar_activas()
+            if categoria not in activas:
+                raise ValueError(f"Categoria no valida: {categoria!r}")
         egreso = Egreso(
             id=uuid.uuid4(),
             descripcion=descripcion,
@@ -41,6 +43,7 @@ class RegistrarEgresoManualService:
             categoria=categoria,
             tipo=TipoEgreso.MANUAL,
             fecha_recibido=datetime.datetime.now(datetime.UTC),
+            gasto_recurrente_id=gasto_recurrente_id,
         )
         self._egresos.guardar(egreso)
         return egreso

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import calendar
 import datetime
 import uuid
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso
 from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.dominio.puertos.repositorios import EgresoRepository
@@ -28,6 +30,7 @@ def _to_orm(egreso: Egreso) -> EgresoModel:
         fecha_recibido=egreso.fecha_recibido,
         correo_origen=egreso.correo_origen,
         reenviado=egreso.reenviado,
+        gasto_recurrente_id=egreso.gasto_recurrente_id,
     )
 
 
@@ -43,6 +46,7 @@ def _to_domain(m: EgresoModel) -> Egreso:
         fecha_recibido=m.fecha_recibido,
         correo_origen=m.correo_origen,
         reenviado=m.reenviado,
+        gasto_recurrente_id=m.gasto_recurrente_id,
     )
 
 
@@ -90,3 +94,23 @@ class SQLAEgresoRepository(EgresoRepository):
                 .order_by(EgresoModel.fecha)
             )
             return [_to_domain(m) for m in session.scalars(stmt).all()]
+
+    def sumar_por_recurrente_en_mes(
+        self,
+        gasto_recurrente_id: uuid.UUID,
+        año: int,
+        mes: int,
+    ) -> Dinero:
+        inicio = datetime.date(año, mes, 1)
+        fin = datetime.date(año, mes, calendar.monthrange(año, mes)[1])
+        with self._sf.begin() as session:
+            stmt = (
+                select(EgresoModel)
+                .where(
+                    EgresoModel.gasto_recurrente_id == gasto_recurrente_id,
+                    EgresoModel.fecha >= inicio,
+                    EgresoModel.fecha <= fin,
+                )
+            )
+            rows = session.scalars(stmt).all()
+            return sum((r.monto for r in rows), start=Dinero(0))

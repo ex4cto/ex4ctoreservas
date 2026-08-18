@@ -96,3 +96,46 @@ class TestRegistrarEgresoManual:
             moneda="COP",
         )
         assert egreso.fecha_recibido is not None
+
+    def test_registrar_con_gasto_recurrente_id_salta_validacion_categoria(self) -> None:
+        """When gasto_recurrente_id is provided, skip active-category validation."""
+        import uuid
+        service = _make_service(categorias=["arriendo"])  # "nomina" not in list
+        rec_id = uuid.uuid4()
+        # Must NOT raise even though "nomina" is not an active category
+        egreso = service.registrar(
+            monto=Decimal("200000"),
+            descripcion="Arriendo recurrente",
+            categoria="nomina",
+            fecha=datetime.date(2026, 7, 1),
+            moneda="COP",
+            gasto_recurrente_id=rec_id,
+        )
+        assert egreso.gasto_recurrente_id == rec_id
+
+    def test_registrar_con_gasto_recurrente_id_asigna_campo(self) -> None:
+        """gasto_recurrente_id is persisted in the returned Egreso."""
+        import uuid
+        service = _make_service()
+        rec_id = uuid.uuid4()
+        egreso = service.registrar(
+            monto=Decimal("100000"),
+            descripcion="Servicios",
+            categoria="otro",
+            fecha=datetime.date(2026, 7, 1),
+            moneda="COP",
+            gasto_recurrente_id=rec_id,
+        )
+        assert egreso.gasto_recurrente_id == rec_id
+
+    def test_registrar_sin_gasto_recurrente_id_valida_categoria(self) -> None:
+        """Without gasto_recurrente_id, invalid category still raises."""
+        service = _make_service(categorias=["arriendo"])
+        with pytest.raises(ValueError, match="Categoria no valida"):
+            service.registrar(
+                monto=Decimal("100000"),
+                descripcion="Test",
+                categoria="inexistente",
+                fecha=datetime.date(2026, 7, 1),
+                moneda="COP",
+            )

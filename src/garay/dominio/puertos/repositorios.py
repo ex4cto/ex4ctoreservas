@@ -7,6 +7,7 @@ from datetime import date
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.conciliacion.entidades import (
     CategoriaEgreso,
@@ -93,6 +94,16 @@ class EgresoRepository(ABC):
 
     @abstractmethod
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Egreso]: ...
+
+    @abstractmethod
+    def sumar_por_recurrente_en_mes(
+        self,
+        gasto_recurrente_id: uuid.UUID,
+        año: int,
+        mes: int,
+    ) -> Dinero:
+        """Sum all egreso amounts linked to *gasto_recurrente_id* in the given calendar month."""
+        ...
 
 
 class CategoriaEgresoRepository(ABC):
