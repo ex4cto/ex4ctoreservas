@@ -18,8 +18,8 @@ from garay.infraestructura.telegram.menu import (
 class TestCatalogo:
     """Verify catalog structure and completeness."""
 
-    def test_catalogo_tiene_18_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 18
+    def test_catalogo_tiene_20_comandos(self) -> None:
+        assert len(CATALOGO_COMANDOS) == 20
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -91,12 +91,16 @@ class TestComandosParaTier:
         result = comandos_para_tier(TierComando.ADMIN)
         comandos = [c.comando for c in result]
         assert "flujo_caja" not in comandos
-        assert "movimientos" not in comandos
         assert "tours" not in comandos
 
-    def test_propietario_ve_todos_18(self) -> None:
+    def test_admin_ve_movimientos(self) -> None:
+        """movimientos is admin-visible: owner + admins see recent transactions."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "movimientos" in comandos
+
+    def test_propietario_ve_todos_20(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 18
+        assert len(result) == 20
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -121,6 +125,17 @@ class TestComandosParaTier:
         comandos = [c.comando for c in result]
         assert "flujo_caja" in comandos
 
+    def test_propietario_ve_conciliar_y_pendientes(self) -> None:
+        comandos = [c.comando for c in comandos_para_tier(TierComando.PROPIETARIO)]
+        assert "conciliar" in comandos
+        assert "pendientes" in comandos
+
+    def test_admin_no_ve_conciliar_ni_pendientes(self) -> None:
+        """conciliar/pendientes are owner-only reconciliation commands."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "conciliar" not in comandos
+        assert "pendientes" not in comandos
+
     def test_orden_preservado_del_catalogo(self) -> None:
         """Filtered result must preserve catalog order (not reorder)."""
         result_full = comandos_para_tier(TierComando.PROPIETARIO)
@@ -142,9 +157,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_18_botcommands(self) -> None:
+    def test_propietario_retorna_20_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 18
+        assert len(result) == 20
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:

@@ -10,7 +10,11 @@ from zoneinfo import ZoneInfo
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_propietario
+from garay.infraestructura.telegram.auth import (
+    requiere_admin,
+    requiere_admin_o_propietario,
+    requiere_propietario,
+)
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -362,7 +366,7 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
     return "\n".join(lineas)
 
 
-@requiere_propietario
+@requiere_admin_o_propietario
 async def cmd_movimientos(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
