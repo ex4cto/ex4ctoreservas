@@ -73,6 +73,8 @@ class Egreso:
     correo_origen: str | None = field(default=None)
     # True if the email was a forward (Fwd:/Fw:/Rv: prefix or forwarded-message body).
     reenviado: bool = field(default=False)
+    # FK to GastoRecurrente; None for one-off egresos.
+    gasto_recurrente_id: uuid.UUID | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.descripcion.strip():

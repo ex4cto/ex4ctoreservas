@@ -229,6 +229,12 @@ class EgresoModel(Base):
     reenviado: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=sa.text("false")
     )
+    # FK to gastos_recurrentes; nullable — one-off egresos have no recurrent link.
+    gasto_recurrente_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("gastos_recurrentes.id"),
+        nullable=True,
+    )
 
 
 class CategoriaEgresoModel(Base):

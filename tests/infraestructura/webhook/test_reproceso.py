@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import CorreoNoParseado, Egreso, Ingreso
 from garay.dominio.puertos.repositorios import (
     CorreoNoParseadoRepository,
@@ -162,6 +163,20 @@ class FakeEgresoRepo(EgresoRepository):
 
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Egreso]:
         return []
+
+    def sumar_por_recurrente_en_mes(
+        self, gasto_recurrente_id: uuid.UUID, año: int, mes: int
+    ) -> Dinero:
+        return sum(
+            (
+                e.monto
+                for e in self.guardados
+                if e.gasto_recurrente_id == gasto_recurrente_id
+                and e.fecha.year == año
+                and e.fecha.month == mes
+            ),
+            start=Dinero(0),
+        )
 
 
 # ---------------------------------------------------------------------------
