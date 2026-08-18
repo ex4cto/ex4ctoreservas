@@ -67,6 +67,8 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("cancelar", "Cancelar operación actual", _V, _FL),
     # ── Pagos y Egresos ─────────────────────────────────────────────────────
     ComandoMenu("verificar_pago", "Pagos recibidos (últimos 5 min)", _P, _FL),
+    ComandoMenu("conciliar", "Conciliar pagos con ventas", _P, _PR),
+    ComandoMenu("pendientes", "Revisar conciliaciones pendientes", _P, _PR),
     ComandoMenu("nuevo_egreso", "Registrar un egreso manual", _P, _AD),
     ComandoMenu("gastos_fijos", "Ver y gestionar gastos fijos", _P, _AD),
     ComandoMenu("generar_mes", "Generar gastos fijos del mes actual", _P, _AD),

@@ -11,7 +11,13 @@ from decimal import Decimal
 from re import Pattern
 from unittest.mock import MagicMock, patch
 
-from telegram.ext import CallbackQueryHandler, ConversationHandler, MessageHandler
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ConversationHandler,
+    MessageHandler,
+)
 
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
 from garay.infraestructura.telegram.bot import crear_aplicacion
@@ -154,3 +160,37 @@ class TestBotWiringHorarioSalida:
             f"HORARIO_SALIDA (state {state_int}) has no MessageHandler."
             f" Handlers found: {handlers}"
         )
+
+
+def _build_app() -> Application:  # type: ignore[type-arg]
+    """Build the full Application from crear_aplicacion with mocked settings."""
+    with patch("garay.infraestructura.telegram.bot.obtener_settings") as mock_settings:
+        settings = MagicMock()
+        settings.propietario_telegram_ids = ""
+        settings.dev_telegram_ids = ""
+        mock_settings.return_value = settings
+        return crear_aplicacion("fake:token")
+
+
+def _command_names(app: object) -> set[str]:
+    """Collect every CommandHandler command registered across all handler groups."""
+    nombres: set[str] = set()
+    for grupo in app.handlers.values():  # type: ignore[attr-defined]
+        for h in grupo:
+            if isinstance(h, CommandHandler):
+                nombres |= set(h.commands)
+    return nombres
+
+
+class TestBotWiringConciliacion:
+    """Regression: /conciliar and /pendientes must be registered.
+
+    They were dead code — handlers_conciliacion.registrar_handlers was never
+    called, so the commands never reached the running bot.
+    """
+
+    def test_conciliar_command_registered(self) -> None:
+        assert "conciliar" in _command_names(_build_app())
+
+    def test_pendientes_command_registered(self) -> None:
+        assert "pendientes" in _command_names(_build_app())

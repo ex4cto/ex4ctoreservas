@@ -19,7 +19,7 @@ class TestCatalogo:
     """Verify catalog structure and completeness."""
 
     def test_catalogo_tiene_16_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 19
+        assert len(CATALOGO_COMANDOS) == 21
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -107,9 +107,9 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "movimientos" in comandos
 
-    def test_propietario_ve_todos_16(self) -> None:
+    def test_propietario_ve_todos_21(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 19
+        assert len(result) == 21
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -134,6 +134,17 @@ class TestComandosParaTier:
         comandos = [c.comando for c in result]
         assert "flujo_caja" in comandos
 
+    def test_propietario_ve_conciliar_y_pendientes(self) -> None:
+        comandos = [c.comando for c in comandos_para_tier(TierComando.PROPIETARIO)]
+        assert "conciliar" in comandos
+        assert "pendientes" in comandos
+
+    def test_admin_no_ve_conciliar_ni_pendientes(self) -> None:
+        """conciliar/pendientes are owner-only reconciliation commands."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "conciliar" not in comandos
+        assert "pendientes" not in comandos
+
     def test_orden_preservado_del_catalogo(self) -> None:
         """Filtered result must preserve catalog order (not reorder)."""
         result_full = comandos_para_tier(TierComando.PROPIETARIO)
@@ -155,9 +166,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_16_botcommands(self) -> None:
+    def test_propietario_retorna_21_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 19
+        assert len(result) == 21
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:

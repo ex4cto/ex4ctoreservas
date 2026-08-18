@@ -8,6 +8,7 @@ from pathlib import Path
 
 from telegram import Update
 
+from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
 from garay.aplicacion.egresos.generar_gastos_recurrentes import GenerarGastosRecurrentesService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
@@ -32,6 +33,7 @@ from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.conciliacion.motor import MotorConciliacion
 from garay.dominio.infraestructura_monitor.costo_railway import PreciosRailway
 from garay.dominio.infraestructura_monitor.entidades import ServicioInfraestructura
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
@@ -259,6 +261,20 @@ def main() -> None:
         comisiones=comisiones_repo,
         ingresos=ingreso_repo,
     )
+    motor_conciliacion = MotorConciliacion(
+        tolerancia_pct=settings.conciliacion_tolerancia_pct,
+        ventana_dias=settings.conciliacion_ventana_dias,
+        confianza_auto=settings.conciliacion_confianza_auto,
+        peso_monto=settings.conciliacion_peso_monto,
+        peso_fecha=settings.conciliacion_peso_fecha,
+    )
+    conciliar_service = ConciliarIngresosService(
+        ingresos=ingreso_repo,
+        ventas=ventas_repo,
+        conciliaciones=conciliacion_repo,
+        motor=motor_conciliacion,
+        ventana_dias=settings.conciliacion_ventana_dias,
+    )
 
     app.bot_data.update(
         {
@@ -286,6 +302,7 @@ def main() -> None:
             "waterfall_service": waterfall_service,
             "ranking_tour_service": ranking_tour_service,
             "reconciliacion_service": reconciliacion_service,
+            "conciliar_service": conciliar_service,
             "factura_service": factura_service,
             "factura_repo": factura_repo,
             "auditoria_venta_repo": auditoria_venta_repo,
