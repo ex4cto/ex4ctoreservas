@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid
+import zoneinfo
 from decimal import Decimal, InvalidOperation
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -27,12 +28,14 @@ EGRESO_DESCRIPCION: int = 101
 EGRESO_CATEGORIA: int = 102
 EGRESO_FECHA: int = 103
 EGRESO_CONFIRMACION: int = 104
+EGRESO_EDIT_MENU: int = 105  # "Otro" edit field menu
 
 # New states for recurring egreso branch
 EGRESO_SELECCION: int = 120
 EGRESO_REC_MONTO: int = 121
 EGRESO_REC_FECHA: int = 122
 EGRESO_REC_CONFIRM: int = 123
+EGRESO_REC_EDIT_MENU: int = 124  # Recurring edit field menu
 
 # Callback data constants
 PREFIJO_REC: str = "egr_rec:"
@@ -42,12 +45,32 @@ CB_USAR_SUGERIDO: str = "egr_sugerido"
 CB_HOY: str = "egr_hoy"
 CB_CONFIRMAR: str = "confirmar"
 CB_CANCELAR: str = "cancelar"
+CB_EDITAR: str = "egr_editar"
+# Edit menu field selectors — "Otro" branch
+CB_EDIT_MONTO: str = "egr_edit_monto"
+CB_EDIT_DESCRIPCION: str = "egr_edit_desc"
+CB_EDIT_CATEGORIA: str = "egr_edit_cat"
+CB_EDIT_FECHA: str = "egr_edit_fecha"
+CB_EDIT_VOLVER: str = "egr_edit_volver"
+# (CB_EDIT_MONTO, CB_EDIT_FECHA, CB_EDIT_VOLVER are shared with recurring branch)
 
 GF_NOMBRE: int = 110
 GF_MONTO: int = 111
 GF_CATEGORIA: int = 112
 GF_DIA: int = 113
 GF_CONFIRMACION: int = 114
+
+# ---------------------------------------------------------------------------
+# Bogota timezone helper (local — avoids circular import with bot.py)
+# ---------------------------------------------------------------------------
+
+_ZONA_BOGOTA: zoneinfo.ZoneInfo = zoneinfo.ZoneInfo("America/Bogota")
+
+
+def _hoy_bogota() -> datetime.date:
+    """Current date in Bogota timezone. Testable via monkeypatching."""
+    return datetime.datetime.now(_ZONA_BOGOTA).date()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -88,6 +111,9 @@ def _teclado_confirmar_cancelar() -> InlineKeyboardMarkup:
                     obtener_mensaje("egreso.boton_confirmar"), callback_data=CB_CONFIRMAR
                 ),
                 InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_editar"), callback_data=CB_EDITAR
+                ),
+                InlineKeyboardButton(
                     obtener_mensaje("egreso.boton_cancelar"), callback_data=CB_CANCELAR
                 ),
             ]
@@ -122,6 +148,32 @@ def _ud(context: ContextTypes.DEFAULT_TYPE) -> dict[str, object]:
     return context.user_data
 
 
+def _resumen_otro(ud: dict[str, object]) -> str:
+    monto: Decimal = ud.get("egreso_monto", Decimal("0"))  # type: ignore[assignment]
+    descripcion: str = ud.get("egreso_descripcion", "")  # type: ignore[assignment]
+    categoria: str = ud.get("egreso_categoria", "")  # type: ignore[assignment]
+    fecha: datetime.date = ud.get("egreso_fecha", datetime.date.today())  # type: ignore[assignment]
+    return obtener_mensaje("egreso.confirmar_resumen").format(
+        monto=_fmt_cop(monto),
+        descripcion=descripcion,
+        categoria=categoria,
+        fecha=fecha.strftime("%d/%m/%Y"),
+    )
+
+
+def _resumen_rec(ud: dict[str, object]) -> str:
+    nombre: str = ud.get("rec_nombre", "")  # type: ignore[assignment]
+    monto: Decimal = ud.get("rec_monto", Decimal("0"))  # type: ignore[assignment]
+    categoria: str = ud.get("rec_categoria", "")  # type: ignore[assignment]
+    fecha: datetime.date = ud.get("rec_fecha", datetime.date.today())  # type: ignore[assignment]
+    return obtener_mensaje("egreso.rec_confirmar_resumen").format(
+        nombre=nombre,
+        monto=_fmt_cop(monto),
+        fecha=fecha.strftime("%d/%m/%Y"),
+        categoria=categoria,
+    )
+
+
 # ---------------------------------------------------------------------------
 # /nuevo_egreso — ConversationHandler states
 # ---------------------------------------------------------------------------
@@ -132,12 +184,21 @@ async def cmd_nuevo_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Entry point for /nuevo_egreso."""
     service = context.bot_data.get("recurrente_service")
     gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+    egreso_repo = context.bot_data.get("egreso_repo")
+    hoy = _hoy_bogota()
     filas: list[list[InlineKeyboardButton]] = []
     for g in gastos:
+        label = f"{g.nombre} — {_fmt_cop(g.monto.monto)}"
+        if egreso_repo is not None:
+            pagado = egreso_repo.sumar_por_recurrente_en_mes(g.id, hoy.year, hoy.month)
+            if pagado.monto > Decimal("0"):
+                label = label + obtener_mensaje("egreso.indicador_pagado").format(
+                    pagado=_fmt_cop(pagado.monto)
+                )
         filas.append(
             [
                 InlineKeyboardButton(
-                    f"{g.nombre} — {_fmt_cop(g.monto.monto)}",
+                    label,
                     callback_data=f"{PREFIJO_REC}{g.id}",
                 )
             ]
@@ -221,14 +282,24 @@ async def handle_egreso_monto(update: Update, context: ContextTypes.DEFAULT_TYPE
     if monto is None:
         await _reply(update, obtener_mensaje("egreso.error_monto"))
         return EGRESO_MONTO
-    _ud(context)["egreso_monto"] = monto
+    ud = _ud(context)
+    ud["egreso_monto"] = monto
+    if ud.get("editando"):
+        ud["editando"] = False
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
     await _reply(update, obtener_mensaje("egreso.pedir_descripcion"))
     return EGRESO_DESCRIPCION
 
 
 async def handle_egreso_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = _input_text(update).strip()
-    _ud(context)["egreso_descripcion"] = texto
+    ud = _ud(context)
+    ud["egreso_descripcion"] = texto
+    if ud.get("editando"):
+        ud["editando"] = False
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
     service = context.bot_data.get("egreso_service")
     categorias: list[str] = service.listar_categorias() if service else []
     teclado = _teclado_inline(categorias)
@@ -244,7 +315,12 @@ async def handle_egreso_categoria(update: Update, context: ContextTypes.DEFAULT_
         teclado = _teclado_inline(categorias)
         await _reply(update, obtener_mensaje("egreso.error_categoria"), teclado)
         return EGRESO_CATEGORIA
-    _ud(context)["egreso_categoria"] = categoria
+    ud = _ud(context)
+    ud["egreso_categoria"] = categoria
+    if ud.get("editando"):
+        ud["editando"] = False
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
     teclado_hoy = InlineKeyboardMarkup(
         [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
     )
@@ -262,24 +338,40 @@ async def handle_egreso_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE
     if fecha is None:
         await _reply(update, obtener_mensaje("egreso.error_fecha"))
         return EGRESO_FECHA
-    _ud(context)["egreso_fecha"] = fecha
     ud = _ud(context)
-    monto: Decimal = ud.get("egreso_monto", Decimal("0"))  # type: ignore[assignment]
-    descripcion: str = ud.get("egreso_descripcion", "")  # type: ignore[assignment]
-    categoria: str = ud.get("egreso_categoria", "")  # type: ignore[assignment]
-    resumen = obtener_mensaje("egreso.confirmar_resumen").format(
-        monto=_fmt_cop(monto),
-        descripcion=descripcion,
-        categoria=categoria,
-        fecha=fecha.strftime("%d/%m/%Y"),
-    )
-    await _reply(update, resumen, _teclado_confirmar_cancelar())
+    ud["egreso_fecha"] = fecha
+    if ud.get("editando"):
+        ud["editando"] = False
+    await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
     return EGRESO_CONFIRMACION
 
 
 async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     accion = _input_text(update).strip()
-    if accion != "confirmar":
+    if accion == CB_EDITAR:
+        teclado = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_monto"), callback_data=CB_EDIT_MONTO
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_descripcion"), callback_data=CB_EDIT_DESCRIPCION
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_categoria_label"),
+                    callback_data=CB_EDIT_CATEGORIA,
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_fecha"), callback_data=CB_EDIT_FECHA
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_volver"), callback_data=CB_EDIT_VOLVER
+                )],
+            ]
+        )
+        await _reply(update, obtener_mensaje("egreso.edit_menu_otro"), teclado)
+        return EGRESO_EDIT_MENU
+    if accion != CB_CONFIRMAR:
         await _reply(update, obtener_mensaje("venta_cancelada"))
         return ConversationHandler.END
     service = context.bot_data.get("egreso_service")
@@ -310,6 +402,40 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
     return ConversationHandler.END
 
 
+async def handle_egreso_edit_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Route field selection for the 'Otro' branch edit menu."""
+    accion = _input_text(update).strip()
+    ud = _ud(context)
+    if accion == CB_EDIT_VOLVER:
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
+    if accion == CB_EDIT_MONTO:
+        ud["editando"] = True
+        await _reply(update, obtener_mensaje("egreso.pedir_monto"))
+        return EGRESO_MONTO
+    if accion == CB_EDIT_DESCRIPCION:
+        ud["editando"] = True
+        await _reply(update, obtener_mensaje("egreso.pedir_descripcion"))
+        return EGRESO_DESCRIPCION
+    if accion == CB_EDIT_CATEGORIA:
+        ud["editando"] = True
+        service = context.bot_data.get("egreso_service")
+        categorias: list[str] = service.listar_categorias() if service else []
+        teclado = _teclado_inline(categorias)
+        await _reply(update, obtener_mensaje("egreso.pedir_categoria"), teclado)
+        return EGRESO_CATEGORIA
+    if accion == CB_EDIT_FECHA:
+        ud["editando"] = True
+        teclado_hoy = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+        )
+        await _reply(update, obtener_mensaje("egreso.pedir_fecha"), teclado_hoy)
+        return EGRESO_FECHA
+    # Unknown — return to summary
+    await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+    return EGRESO_CONFIRMACION
+
+
 # ---------------------------------------------------------------------------
 # /nuevo_egreso — recurring branch (egreso originating from a GastoRecurrente)
 # ---------------------------------------------------------------------------
@@ -332,6 +458,10 @@ async def handle_egreso_rec_monto(update: Update, context: ContextTypes.DEFAULT_
             return EGRESO_REC_MONTO
         monto = parsed
     ud["rec_monto"] = monto
+    if ud.get("editando"):
+        ud["editando"] = False
+        await _reply(update, _resumen_rec(ud), _teclado_confirmar_cancelar())
+        return EGRESO_REC_CONFIRM
     teclado_hoy = InlineKeyboardMarkup(
         [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
     )
@@ -351,16 +481,9 @@ async def handle_egreso_rec_fecha(update: Update, context: ContextTypes.DEFAULT_
         fecha = resultado.date()
     ud = _ud(context)
     ud["rec_fecha"] = fecha
-    nombre: str = ud.get("rec_nombre", "")  # type: ignore[assignment]
-    monto: Decimal = ud.get("rec_monto", Decimal("0"))  # type: ignore[assignment]
-    categoria: str = ud.get("rec_categoria", "")  # type: ignore[assignment]
-    resumen = obtener_mensaje("egreso.rec_confirmar_resumen").format(
-        nombre=nombre,
-        monto=_fmt_cop(monto),
-        fecha=fecha.strftime("%d/%m/%Y"),
-        categoria=categoria,
-    )
-    await _reply(update, resumen, _teclado_confirmar_cancelar())
+    if ud.get("editando"):
+        ud["editando"] = False
+    await _reply(update, _resumen_rec(ud), _teclado_confirmar_cancelar())
     return EGRESO_REC_CONFIRM
 
 
@@ -368,6 +491,22 @@ async def handle_egreso_rec_confirmacion(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
     accion = _input_text(update).strip()
+    if accion == CB_EDITAR:
+        teclado = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_monto"), callback_data=CB_EDIT_MONTO
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_fecha"), callback_data=CB_EDIT_FECHA
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_volver"), callback_data=CB_EDIT_VOLVER
+                )],
+            ]
+        )
+        await _reply(update, obtener_mensaje("egreso.edit_menu_rec"), teclado)
+        return EGRESO_REC_EDIT_MENU
     if accion != CB_CONFIRMAR:
         await _reply(update, obtener_mensaje("venta_cancelada"))
         return ConversationHandler.END
@@ -403,6 +542,49 @@ async def handle_egreso_rec_confirmacion(
         return ConversationHandler.END
     await _reply(update, obtener_mensaje("egreso.registrado"))
     return ConversationHandler.END
+
+
+async def handle_egreso_rec_edit_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Route field selection for the recurring branch edit menu."""
+    accion = _input_text(update).strip()
+    ud = _ud(context)
+    if accion == CB_EDIT_VOLVER:
+        await _reply(update, _resumen_rec(ud), _teclado_confirmar_cancelar())
+        return EGRESO_REC_CONFIRM
+    if accion == CB_EDIT_MONTO:
+        ud["editando"] = True
+        monto_fmt = _fmt_cop(ud.get("rec_monto_sugerido", Decimal("0")))  # type: ignore[arg-type]
+        teclado = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        obtener_mensaje("egreso.boton_usar_sugerido").format(
+                            monto_sugerido=monto_fmt
+                        ),
+                        callback_data=CB_USAR_SUGERIDO,
+                    )
+                ]
+            ]
+        )
+        await _reply(
+            update,
+            obtener_mensaje("egreso.rec_pedir_monto").format(
+                nombre=ud.get("rec_nombre", ""),
+                monto_sugerido=monto_fmt,
+            ),
+            teclado,
+        )
+        return EGRESO_REC_MONTO
+    if accion == CB_EDIT_FECHA:
+        ud["editando"] = True
+        teclado_hoy = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+        )
+        await _reply(update, obtener_mensaje("egreso.rec_pedir_fecha"), teclado_hoy)
+        return EGRESO_REC_FECHA
+    # Unknown — return to summary
+    await _reply(update, _resumen_rec(ud), _teclado_confirmar_cancelar())
+    return EGRESO_REC_CONFIRM
 
 
 # ---------------------------------------------------------------------------
@@ -523,4 +705,3 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
         ),
     )
     return ConversationHandler.END
-

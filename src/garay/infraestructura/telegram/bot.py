@@ -86,14 +86,21 @@ from garay.infraestructura.telegram.handlers import (
     handle_tipo_reserva,
 )
 from garay.infraestructura.telegram.handlers_egresos import (
+    CB_EDIT_CATEGORIA,
+    CB_EDIT_DESCRIPCION,
+    CB_EDIT_FECHA,
+    CB_EDIT_MONTO,
+    CB_EDIT_VOLVER,
     CB_HOY,
     CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
+    EGRESO_EDIT_MENU,
     EGRESO_FECHA,
     EGRESO_MONTO,
     EGRESO_REC_CONFIRM,
+    EGRESO_REC_EDIT_MENU,
     EGRESO_REC_FECHA,
     EGRESO_REC_MONTO,
     EGRESO_SELECCION,
@@ -107,9 +114,11 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_categoria,
     handle_egreso_confirmacion,
     handle_egreso_descripcion,
+    handle_egreso_edit_menu,
     handle_egreso_fecha,
     handle_egreso_monto,
     handle_egreso_rec_confirmacion,
+    handle_egreso_rec_edit_menu,
     handle_egreso_rec_fecha,
     handle_egreso_rec_monto,
     handle_egreso_seleccion,
@@ -603,6 +612,12 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_egreso_fecha),
             ],
             EGRESO_CONFIRMACION: [_CB(handle_egreso_confirmacion)],
+            EGRESO_EDIT_MENU: [
+                _CB(
+                    handle_egreso_edit_menu,
+                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_DESCRIPCION}|{CB_EDIT_CATEGORIA}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
+                ),
+            ],
             EGRESO_REC_MONTO: [
                 _CB(handle_egreso_rec_monto, pattern=f"^{CB_USAR_SUGERIDO}$"),
                 MessageHandler(_TEXT, handle_egreso_rec_monto),
@@ -612,6 +627,12 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_egreso_rec_fecha),
             ],
             EGRESO_REC_CONFIRM: [_CB(handle_egreso_rec_confirmacion)],
+            EGRESO_REC_EDIT_MENU: [
+                _CB(
+                    handle_egreso_rec_edit_menu,
+                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
+                ),
+            ],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )

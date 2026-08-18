@@ -298,6 +298,15 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "egreso.error_categoria": {
         Idioma.ES: "Categoría inválida. Elige una de las opciones."
     },
+    "egreso.boton_editar": {Idioma.ES: "✏️ Editar"},
+    "egreso.boton_monto": {Idioma.ES: "💵 Monto"},
+    "egreso.boton_descripcion": {Idioma.ES: "📝 Descripción"},
+    "egreso.boton_categoria_label": {Idioma.ES: "🏷️ Categoría"},
+    "egreso.boton_fecha": {Idioma.ES: "📅 Fecha"},
+    "egreso.boton_volver": {Idioma.ES: "↩️ Volver"},
+    "egreso.edit_menu_otro": {Idioma.ES: "¿Qué campo quieres editar?"},
+    "egreso.edit_menu_rec": {Idioma.ES: "¿Qué campo quieres editar?"},
+    "egreso.indicador_pagado": {Idioma.ES: " · ✅ {pagado} este mes"},
     # --- Gastos fijos ---
     "gastos_fijos.lista": {Idioma.ES: "📋 *Gastos fijos activos:*\n{lista}"},
     "gastos_fijos.vacio": {
