@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.comun.fechas import parsear_fecha
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import GastoRecurrente
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
@@ -26,6 +27,21 @@ EGRESO_DESCRIPCION: int = 101
 EGRESO_CATEGORIA: int = 102
 EGRESO_FECHA: int = 103
 EGRESO_CONFIRMACION: int = 104
+
+# New states for recurring egreso branch
+EGRESO_SELECCION: int = 120
+EGRESO_REC_MONTO: int = 121
+EGRESO_REC_FECHA: int = 122
+EGRESO_REC_CONFIRM: int = 123
+
+# Callback data constants
+PREFIJO_REC: str = "egr_rec:"
+CB_OTRO_EGRESO: str = "egr_otro"
+CB_CANCELAR_SEL: str = "egr_cancelar"
+CB_USAR_SUGERIDO: str = "egr_sugerido"
+CB_HOY: str = "egr_hoy"
+CB_CONFIRMAR: str = "confirmar"
+CB_CANCELAR: str = "cancelar"
 
 GF_NOMBRE: int = 110
 GF_MONTO: int = 111
@@ -55,25 +71,6 @@ def _parsear_monto_cop(texto: str) -> Decimal | None:
         return None
 
 
-def _parsear_fecha_egreso(texto: str) -> datetime.date | None:
-    """Parse date: 'hoy', DD/MM, DD/MM/YY, DD/MM/YYYY."""
-    t = texto.strip().lower()
-    if t == "hoy":
-        return datetime.date.today()
-    hoy = datetime.date.today()
-    formatos = ["%d/%m/%Y", "%d/%m/%y"]
-    for fmt in formatos:
-        try:
-            return datetime.datetime.strptime(t, fmt).date()
-        except ValueError:
-            pass
-    # DD/MM — assume current year
-    try:
-        return datetime.datetime.strptime(f"{t}/{hoy.year}", "%d/%m/%Y").date()
-    except ValueError:
-        return None
-
-
 def _fmt_cop(valor: Decimal) -> str:
     return "$" + f"{int(valor):,}".replace(",", ".")
 
@@ -87,8 +84,12 @@ def _teclado_confirmar_cancelar() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("✅ Confirmar", callback_data="confirmar"),
-                InlineKeyboardButton("❌ Cancelar", callback_data="cancelar"),
+                InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_confirmar"), callback_data=CB_CONFIRMAR
+                ),
+                InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_cancelar"), callback_data=CB_CANCELAR
+                ),
             ]
         ]
     )
@@ -129,8 +130,89 @@ def _ud(context: ContextTypes.DEFAULT_TYPE) -> dict[str, object]:
 @requiere_admin_conv
 async def cmd_nuevo_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Entry point for /nuevo_egreso."""
-    await _reply(update, obtener_mensaje("egreso.pedir_monto"))
-    return EGRESO_MONTO
+    service = context.bot_data.get("recurrente_service")
+    gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+    filas: list[list[InlineKeyboardButton]] = []
+    for g in gastos:
+        filas.append(
+            [
+                InlineKeyboardButton(
+                    f"{g.nombre} — {_fmt_cop(g.monto.monto)}",
+                    callback_data=f"{PREFIJO_REC}{g.id}",
+                )
+            ]
+        )
+    filas.append(
+        [InlineKeyboardButton(obtener_mensaje("egreso.boton_otro"), callback_data=CB_OTRO_EGRESO)]
+    )
+    filas.append(
+        [
+            InlineKeyboardButton(
+                obtener_mensaje("egreso.boton_cancelar"), callback_data=CB_CANCELAR_SEL
+            )
+        ]
+    )
+    titulo = (
+        obtener_mensaje("egreso.seleccion_titulo")
+        if gastos
+        else obtener_mensaje("egreso.seleccion_sin_recurrentes")
+    )
+    await _reply(update, titulo, InlineKeyboardMarkup(filas))
+    return EGRESO_SELECCION
+
+
+async def handle_egreso_seleccion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    texto = _input_text(update)
+    if texto == CB_CANCELAR_SEL:
+        await _reply(update, obtener_mensaje("venta_cancelada"))
+        return ConversationHandler.END
+    if texto == CB_OTRO_EGRESO:
+        await _reply(update, obtener_mensaje("egreso.pedir_monto"))
+        return EGRESO_MONTO
+    # Pattern: PREFIJO_REC + uuid
+    if texto.startswith(PREFIJO_REC):
+        rec_id_str = texto[len(PREFIJO_REC):]
+        try:
+            rec_id = uuid.UUID(rec_id_str)
+        except ValueError:
+            await _reply(update, obtener_mensaje("egreso.recurrente_no_encontrado"))
+            return ConversationHandler.END
+        service = context.bot_data.get("recurrente_service")
+        gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+        gasto = next((g for g in gastos if g.id == rec_id), None)
+        if gasto is None:
+            await _reply(update, obtener_mensaje("egreso.recurrente_no_encontrado"))
+            return ConversationHandler.END
+        ud = _ud(context)
+        ud["rec_id"] = gasto.id
+        ud["rec_nombre"] = gasto.nombre
+        ud["rec_categoria"] = gasto.categoria
+        ud["rec_monto_sugerido"] = gasto.monto.monto
+        monto_fmt = _fmt_cop(gasto.monto.monto)
+        teclado = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        obtener_mensaje("egreso.boton_usar_sugerido").format(
+                            monto_sugerido=monto_fmt
+                        ),
+                        callback_data=CB_USAR_SUGERIDO,
+                    )
+                ]
+            ]
+        )
+        await _reply(
+            update,
+            obtener_mensaje("egreso.rec_pedir_monto").format(
+                nombre=gasto.nombre,
+                monto_sugerido=monto_fmt,
+            ),
+            teclado,
+        )
+        return EGRESO_REC_MONTO
+    # Unknown callback
+    await _reply(update, obtener_mensaje("venta_cancelada"))
+    return ConversationHandler.END
 
 
 async def handle_egreso_monto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -163,13 +245,20 @@ async def handle_egreso_categoria(update: Update, context: ContextTypes.DEFAULT_
         await _reply(update, obtener_mensaje("egreso.error_categoria"), teclado)
         return EGRESO_CATEGORIA
     _ud(context)["egreso_categoria"] = categoria
-    await _reply(update, obtener_mensaje("egreso.pedir_fecha"))
+    teclado_hoy = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+    )
+    await _reply(update, obtener_mensaje("egreso.pedir_fecha"), teclado_hoy)
     return EGRESO_FECHA
 
 
 async def handle_egreso_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = _input_text(update)
-    fecha = _parsear_fecha_egreso(texto)
+    if texto == CB_HOY:
+        fecha: datetime.date | None = datetime.date.today()
+    else:
+        resultado = parsear_fecha(texto)
+        fecha = resultado.date() if resultado is not None else None
     if fecha is None:
         await _reply(update, obtener_mensaje("egreso.error_fecha"))
         return EGRESO_FECHA
@@ -215,6 +304,101 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
         )
     except Exception:
         logger.exception("Error registrando egreso manual")
+        await _reply(update, obtener_mensaje("error_generico"))
+        return ConversationHandler.END
+    await _reply(update, obtener_mensaje("egreso.registrado"))
+    return ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# /nuevo_egreso — recurring branch (egreso originating from a GastoRecurrente)
+# ---------------------------------------------------------------------------
+
+
+async def handle_egreso_rec_monto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    texto = _input_text(update)
+    ud = _ud(context)
+    monto: Decimal
+    if texto == CB_USAR_SUGERIDO:
+        sugerido = ud.get("rec_monto_sugerido")
+        if not isinstance(sugerido, Decimal):
+            await _reply(update, obtener_mensaje("egreso.sesion_expirada"))
+            return ConversationHandler.END
+        monto = sugerido
+    else:
+        parsed = _parsear_monto_cop(texto)
+        if parsed is None:
+            await _reply(update, obtener_mensaje("egreso.error_monto"))
+            return EGRESO_REC_MONTO
+        monto = parsed
+    ud["rec_monto"] = monto
+    teclado_hoy = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+    )
+    await _reply(update, obtener_mensaje("egreso.rec_pedir_fecha"), teclado_hoy)
+    return EGRESO_REC_FECHA
+
+
+async def handle_egreso_rec_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    texto = _input_text(update)
+    if texto == CB_HOY:
+        fecha: datetime.date = datetime.date.today()
+    else:
+        resultado = parsear_fecha(texto)
+        if resultado is None:
+            await _reply(update, obtener_mensaje("egreso.error_fecha"))
+            return EGRESO_REC_FECHA
+        fecha = resultado.date()
+    ud = _ud(context)
+    ud["rec_fecha"] = fecha
+    nombre: str = ud.get("rec_nombre", "")  # type: ignore[assignment]
+    monto: Decimal = ud.get("rec_monto", Decimal("0"))  # type: ignore[assignment]
+    categoria: str = ud.get("rec_categoria", "")  # type: ignore[assignment]
+    resumen = obtener_mensaje("egreso.rec_confirmar_resumen").format(
+        nombre=nombre,
+        monto=_fmt_cop(monto),
+        fecha=fecha.strftime("%d/%m/%Y"),
+        categoria=categoria,
+    )
+    await _reply(update, resumen, _teclado_confirmar_cancelar())
+    return EGRESO_REC_CONFIRM
+
+
+async def handle_egreso_rec_confirmacion(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    accion = _input_text(update).strip()
+    if accion != CB_CONFIRMAR:
+        await _reply(update, obtener_mensaje("venta_cancelada"))
+        return ConversationHandler.END
+    service = context.bot_data.get("egreso_service")
+    if service is None:
+        logger.error("egreso_service not found in bot_data")
+        return ConversationHandler.END
+    ud = _ud(context)
+    requeridos = ("rec_id", "rec_nombre", "rec_categoria", "rec_monto", "rec_fecha")
+    if any(ud.get(clave) is None for clave in requeridos):
+        await _reply(update, obtener_mensaje("egreso.sesion_expirada"))
+        return ConversationHandler.END
+    rec_id: uuid.UUID = ud.get("rec_id")  # type: ignore[assignment]
+    nombre: str = ud.get("rec_nombre")  # type: ignore[assignment]
+    categoria: str = ud.get("rec_categoria")  # type: ignore[assignment]
+    monto: Decimal = ud.get("rec_monto")  # type: ignore[assignment]
+    fecha: datetime.date = ud.get("rec_fecha")  # type: ignore[assignment]
+    from garay.config.settings import obtener_settings
+
+    moneda = obtener_settings().moneda_predeterminada
+    try:
+        service.registrar(
+            monto=monto,
+            descripcion=nombre,
+            categoria=categoria,
+            fecha=fecha,
+            moneda=moneda,
+            gasto_recurrente_id=rec_id,
+        )
+    except Exception:
+        logger.exception("Error registrando egreso recurrente")
         await _reply(update, obtener_mensaje("error_generico"))
         return ConversationHandler.END
     await _reply(update, obtener_mensaje("egreso.registrado"))

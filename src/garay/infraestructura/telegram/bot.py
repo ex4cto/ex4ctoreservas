@@ -86,11 +86,17 @@ from garay.infraestructura.telegram.handlers import (
     handle_tipo_reserva,
 )
 from garay.infraestructura.telegram.handlers_egresos import (
+    CB_HOY,
+    CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
     EGRESO_FECHA,
     EGRESO_MONTO,
+    EGRESO_REC_CONFIRM,
+    EGRESO_REC_FECHA,
+    EGRESO_REC_MONTO,
+    EGRESO_SELECCION,
     GF_CATEGORIA,
     GF_CONFIRMACION,
     GF_DIA,
@@ -103,6 +109,10 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_descripcion,
     handle_egreso_fecha,
     handle_egreso_monto,
+    handle_egreso_rec_confirmacion,
+    handle_egreso_rec_fecha,
+    handle_egreso_rec_monto,
+    handle_egreso_seleccion,
     handle_gf_categoria,
     handle_gf_confirmacion,
     handle_gf_dia,
@@ -581,14 +591,27 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     egreso_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("nuevo_egreso", cmd_nuevo_egreso)],
         states={
+            EGRESO_SELECCION: [_CB(handle_egreso_seleccion)],
             EGRESO_MONTO: [MessageHandler(_TEXT, handle_egreso_monto)],
             EGRESO_DESCRIPCION: [MessageHandler(_TEXT, handle_egreso_descripcion)],
             EGRESO_CATEGORIA: [
                 _CB(handle_egreso_categoria),
                 MessageHandler(_TEXT, handle_egreso_categoria),
             ],
-            EGRESO_FECHA: [MessageHandler(_TEXT, handle_egreso_fecha)],
+            EGRESO_FECHA: [
+                _CB(handle_egreso_fecha, pattern=f"^{CB_HOY}$"),
+                MessageHandler(_TEXT, handle_egreso_fecha),
+            ],
             EGRESO_CONFIRMACION: [_CB(handle_egreso_confirmacion)],
+            EGRESO_REC_MONTO: [
+                _CB(handle_egreso_rec_monto, pattern=f"^{CB_USAR_SUGERIDO}$"),
+                MessageHandler(_TEXT, handle_egreso_rec_monto),
+            ],
+            EGRESO_REC_FECHA: [
+                _CB(handle_egreso_rec_fecha, pattern=f"^{CB_HOY}$"),
+                MessageHandler(_TEXT, handle_egreso_rec_fecha),
+            ],
+            EGRESO_REC_CONFIRM: [_CB(handle_egreso_rec_confirmacion)],
         },
         fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
     )

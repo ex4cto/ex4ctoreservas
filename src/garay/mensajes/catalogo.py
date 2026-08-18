@@ -247,8 +247,38 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "egreso.pedir_monto": {Idioma.ES: "¿Cuál es el monto del egreso?"},
     "egreso.pedir_descripcion": {Idioma.ES: "¿Qué descripción le das a este egreso?"},
     "egreso.pedir_categoria": {Idioma.ES: "¿Cuál es la categoría?"},
-    "egreso.pedir_fecha": {
-        Idioma.ES: "¿En qué fecha fue? (DD/MM o DD/MM/YYYY, o escribe *hoy*)"
+    "egreso.pedir_fecha": {Idioma.ES: "¿En qué fecha fue? (DD/MM o DD/MM/YYYY)"},
+    "egreso.seleccion_titulo": {Idioma.ES: "¿Qué egreso quieres registrar?"},
+    "egreso.seleccion_sin_recurrentes": {
+        Idioma.ES: (
+            "No hay gastos fijos activos. Crea uno con /gastos_fijos o registra un egreso libre."
+        )
+    },
+    "egreso.recurrente_no_encontrado": {
+        Idioma.ES: "No se encontró el gasto recurrente. Es posible que haya sido desactivado."
+    },
+    "egreso.rec_pedir_monto": {
+        Idioma.ES: (
+            "💸 *{nombre}*\nMonto sugerido: {monto_sugerido}\n\n"
+            "¿Usas el monto sugerido o ingresas otro?"
+        )
+    },
+    "egreso.rec_pedir_fecha": {
+        Idioma.ES: "¿En qué fecha fue este gasto? (DD/MM o DD/MM/YYYY)"
+    },
+    "egreso.rec_confirmar_resumen": {
+        Idioma.ES: (
+            "💸 *Egreso — {nombre}:*\nMonto: {monto}\nFecha: {fecha}\n"
+            "Categoría: {categoria}\n\n¿Confirmamos?"
+        )
+    },
+    "egreso.boton_otro": {Idioma.ES: "➕ Otro egreso"},  # noqa: RUF001
+    "egreso.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
+    "egreso.boton_hoy": {Idioma.ES: "📅 Hoy"},
+    "egreso.boton_usar_sugerido": {Idioma.ES: "✅ Usar {monto_sugerido}"},
+    "egreso.boton_confirmar": {Idioma.ES: "✅ Confirmar"},
+    "egreso.sesion_expirada": {
+        Idioma.ES: "La sesión expiró. Vuelve a empezar con /nuevo_egreso."
     },
     "egreso.confirmar_resumen": {
         Idioma.ES: (
@@ -264,9 +294,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "egreso.error_monto": {
         Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."
     },
-    "egreso.error_fecha": {
-        Idioma.ES: "Fecha inválida. Usa DD/MM, DD/MM/YYYY o escribe *hoy*."
-    },
+    "egreso.error_fecha": {Idioma.ES: "Fecha inválida. Usa DD/MM o DD/MM/YYYY."},
     "egreso.error_categoria": {
         Idioma.ES: "Categoría inválida. Elige una de las opciones."
     },
