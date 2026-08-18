@@ -74,7 +74,7 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("dashboard_ventas", "Dashboard de ventas", _R, _AD),
     ComandoMenu("flujo_caja", "Flujo de caja mensual", _R, _PR),
     ComandoMenu("tours", "Reporte de tours", _R, _PR),
-    ComandoMenu("movimientos", "Movimientos recientes", _R, _PR),
+    ComandoMenu("movimientos", "Movimientos recientes", _R, _AD),
     # ── Administración ──────────────────────────────────────────────────────
     ComandoMenu("listar_freelancers", "Ver freelancers registrados", _A, _AD),
     ComandoMenu("nuevo_freelancer", "Registrar un nuevo freelancer", _A, _AD),

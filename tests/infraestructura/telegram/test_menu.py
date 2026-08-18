@@ -100,8 +100,12 @@ class TestComandosParaTier:
         result = comandos_para_tier(TierComando.ADMIN)
         comandos = [c.comando for c in result]
         assert "flujo_caja" not in comandos
-        assert "movimientos" not in comandos
         assert "tours" not in comandos
+
+    def test_admin_ve_movimientos(self) -> None:
+        """movimientos is admin-visible: owner + admins see recent transactions."""
+        comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
+        assert "movimientos" in comandos
 
     def test_propietario_ve_todos_16(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)

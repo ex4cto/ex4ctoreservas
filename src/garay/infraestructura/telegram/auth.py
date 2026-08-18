@@ -200,6 +200,51 @@ def requiere_admin_o_propietario_conv(
     return wrapper
 
 
+def requiere_admin_o_propietario(
+    handler: Callable[..., Coroutine[Any, Any, int | None]],
+) -> Callable[..., Coroutine[Any, Any, int | None]]:
+    """Guard for standalone CommandHandlers — admins OR the agency owner.
+
+    Allows access when the user is a dev (bypass), listed in
+    ``propietario_telegram_ids``, or a registered freelancer with ``es_admin=True``.
+    Returns ``None`` on deny (not ``ConversationHandler.END``) because these are
+    standalone CommandHandlers, not ConversationHandler entry points.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        user = update.effective_user
+        if user is None:
+            return None
+
+        if _es_dev(user.id):
+            return await handler(update, context)
+
+        settings = obtener_settings()
+        ids_str = settings.propietario_telegram_ids.strip()
+        if ids_str:
+            ids_permitidos = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+            if user.id in ids_permitidos:
+                return await handler(update, context)
+
+        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+        if repo is None:
+            logger.error("freelancer_repo not found in bot_data — wiring error")
+            return None
+
+        freelancer = repo.buscar_por_telegram_id(user.id)
+        if freelancer is not None and freelancer.es_admin:
+            return await handler(update, context)
+
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                "Este comando es solo para administradores o el propietario."
+            )
+        return None
+
+    return wrapper
+
+
 def requiere_propietario(
     handler: Callable[..., Coroutine[Any, Any, Any]],
 ) -> Callable[..., Coroutine[Any, Any, Any]]:
