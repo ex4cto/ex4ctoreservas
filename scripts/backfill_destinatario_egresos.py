@@ -128,7 +128,7 @@ def main() -> None:
                 "SELECT id, descripcion "
                 "FROM egresos "
                 "WHERE destinatario IS NULL AND tipo = 'automatico' "
-                "ORDER BY fecha_egreso"
+                "ORDER BY fecha"
             )
         ).fetchall()
 
