@@ -71,3 +71,29 @@ class TestEgreso:
     def test_reenviado_se_puede_asignar(self) -> None:
         e = _egreso(reenviado=True)
         assert e.reenviado is True
+
+
+class TestEgresoDestinatario:
+    """Tests for destinatario field (REQ-2, REQ-5)."""
+
+    def test_destinatario_none_por_defecto(self) -> None:
+        e = _egreso()
+        assert e.destinatario is None
+
+    def test_destinatario_con_valor_string(self) -> None:
+        e = _egreso(destinatario="Maria Lopez")
+        assert e.destinatario == "Maria Lopez"
+
+    def test_destinatario_none_explicito(self) -> None:
+        e = _egreso(destinatario=None)
+        assert e.destinatario is None
+
+    def test_destinatario_vacio_levanta_error(self) -> None:
+        """Empty string must be rejected — never stored as '' (REQ-5)."""
+        with pytest.raises(ValueError, match="destinatario"):
+            _egreso(destinatario="")
+
+    def test_destinatario_solo_espacios_levanta_error(self) -> None:
+        """Whitespace-only string must also be rejected (REQ-5)."""
+        with pytest.raises(ValueError, match="destinatario"):
+            _egreso(destinatario="   ")

@@ -75,12 +75,17 @@ class Egreso:
     reenviado: bool = field(default=False)
     # FK to GastoRecurrente; None for one-off egresos.
     gasto_recurrente_id: uuid.UUID | None = field(default=None)
+    # Payee/recipient extracted from the bank notification (name, masked account,
+    # or merchant). None for manual egresos and non-payee formats (Uber/DiDi, "Pago factura Nequi").
+    destinatario: str | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.descripcion.strip():
             raise DescripcionEgresoVacia("La descripcion del egreso no puede estar vacia.")
         if self.monto <= _CERO:
             raise MontoInvalido("El monto del egreso debe ser mayor que cero.")
+        if self.destinatario is not None and not self.destinatario.strip():
+            raise ValueError("destinatario no puede ser una cadena vacia o solo espacios.")
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Egreso) and self.id == other.id
