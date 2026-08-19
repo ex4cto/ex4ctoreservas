@@ -216,3 +216,11 @@ def test_mes_desconocido_lanza_error() -> None:
     """A date with an unknown Spanish month abbreviation must raise ErrorParseoBanco."""
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", _TEXTO_MES_DESCONOCIDO)
+
+
+# --- destinatario confirmation (REQ-1, Phase 8.1) ---
+
+def test_didi_destinatario_es_none() -> None:
+    """DiDi trip charges have no payee recipient; destinatario must be None (REQ-1)."""
+    resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
+    assert resultado.destinatario is None

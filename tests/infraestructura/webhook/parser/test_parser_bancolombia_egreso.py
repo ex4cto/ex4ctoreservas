@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
@@ -11,6 +12,7 @@ from garay.infraestructura.webhook.parser.bancolombia_egreso import (
     _parsear_monto_bilingue,
 )
 from garay.infraestructura.webhook.parser.base import ErrorParseoBanco
+from garay.infraestructura.webhook.schemas import EgresoExtraido
 
 _PARSER = ParserBancolombiaEgreso()
 
@@ -200,3 +202,77 @@ def test_transferencia_cuenta_destino_con_espacio_tras_asterisco() -> None:
     assert resultado.monto == Decimal("580000")
     assert resultado.fecha_egreso.date().isoformat() == "2026-08-10"
     assert "08600002475" in resultado.descripcion
+
+
+# --- destinatario wiring (REQ-1, REQ-5) ---
+
+class TestBancolombiaDestinatario:
+    """EgresoExtraido.destinatario is populated from the correct regex group."""
+
+    def test_breb_produce_nombre_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
+        assert resultado.destinatario == "NEIDA GARCIA"
+
+    def test_compra_produce_comercio_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_COMPRA)
+        assert resultado.destinatario == "MOVISTAR PAGOSEPAYCO"
+
+    def test_transferencia_cuenta_produce_mascara(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
+        assert resultado.destinatario == "*3207904880"
+
+    def test_transferencia_cuenta_con_espacio_produce_mascara(self) -> None:
+        texto = (
+            "Transferiste $580,000 desde tu cuenta *5643 a la cuenta * 08600002475 "
+            "el 10/08/2026 a las 10:55."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario == "*08600002475"
+
+    def test_destinatario_nunca_es_cadena_vacia(self) -> None:
+        """EgresoExtraido.destinatario must never be '' — guard returns None (REQ-5)."""
+        # Construct a fake EgresoExtraido directly to verify the schema default
+        eo = EgresoExtraido(
+            monto=Decimal("1000"),
+            descripcion="Test",
+            banco_origen="Bancolombia",
+            fecha_egreso=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+        )
+        assert eo.destinatario is None
+
+
+# --- parser-layer empty-recipient guard (REQ-1, REQ-5) ---
+#
+# _PATRON_TRANSFERENCIA_CUENTA uses ([\d]+) — digits only, cannot ever capture
+# whitespace. The `cuenta or None` guard is structurally unreachable for that
+# sub-type; no test is needed or possible for it.
+#
+# _PATRON_TRANSFERENCIA_BREB and _PATRON_COMPRA use (.+?) which CAN capture
+# a single-space group when extra whitespace is present between the anchor
+# keyword and the trailing delimiter. Bancolombia does NOT normalize whitespace
+# before matching, so such bodies reach the regex unchanged.
+
+class TestBancolombiaEmptyRecipientGuard:
+    """Parser-layer `or None` guard yields None when regex group strips to '' (REQ-1, REQ-5)."""
+
+    def test_breb_nombre_solo_espacios_produce_destinatario_none(self) -> None:
+        """Bre-B body where the name slot contains only whitespace strips to '' → None."""
+        # The name is a single space between 'a ' and ' el'. After strip() → ''.
+        # 'nombre or None' must return None, and the parse must not raise.
+        texto = (
+            "Bancolombia: transferiste $6,000.00 a la llave 3015879983 desde tu cuenta "
+            "*7488 a   el 25/07/26 a las 16:26."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario is None
+
+    def test_compra_comercio_solo_espacios_produce_destinatario_none(self) -> None:
+        """Compra body where the merchant slot has only whitespace strips to '' → None."""
+        # Extra spaces between 'en ' and ' con tu T.Deb'. After strip() → ''.
+        # 'comercio or None' must return None, and the parse must not raise.
+        texto = (
+            "Bancolombia: Compraste $10.000,00 en   con tu T.Deb *9283, "
+            "el 12/07/2026 a las 9:43."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario is None

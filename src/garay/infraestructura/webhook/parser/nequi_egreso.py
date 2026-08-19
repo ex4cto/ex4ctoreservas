@@ -162,13 +162,14 @@ class ParserNequiEgreso(ParserEgreso):
         m = _PATRON_ENVIO.search(texto)
         if m:
             monto = _parsear_monto_bilingue(m.group(1))
-            destinatario = m.group(2).strip()
+            nombre = m.group(2).strip()
             fecha_egreso = _parsear_fecha_hora_envio(m.group(3), m.group(4))
             return EgresoExtraido(
                 monto=monto,
-                descripcion=f"Envio a {destinatario}",
+                descripcion=f"Envio a {nombre}",
                 banco_origen=BANCO_NEQUI,
                 fecha_egreso=fecha_egreso,
+                destinatario=nombre or None,
             )
 
         # Try Tipo 2: Pago factura
@@ -186,6 +187,8 @@ class ParserNequiEgreso(ParserEgreso):
                 descripcion="Pago factura Nequi",
                 banco_origen=BANCO_NEQUI,
                 fecha_egreso=fecha_egreso,
+                # Nequi invoice payments have no payee recipient
+                destinatario=None,
             )
 
         # Try Tipo 3: Pago a comercio
@@ -199,6 +202,7 @@ class ParserNequiEgreso(ParserEgreso):
                 descripcion=f"Pago en {comercio}",
                 banco_origen=BANCO_NEQUI,
                 fecha_egreso=fecha_egreso,
+                destinatario=comercio or None,
             )
 
         raise ErrorParseoBanco(

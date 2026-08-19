@@ -91,13 +91,14 @@ class ParserBancolombiaEgreso(ParserEgreso):
         m = _PATRON_TRANSFERENCIA_BREB.search(texto)
         if m:
             monto = _parsear_monto_bilingue(m.group(1))
-            destinatario = m.group(2).strip()
+            nombre = m.group(2).strip()
             fecha_egreso = _parsear_fecha_hora_bancolombia(m.group(3), m.group(4))
             return EgresoExtraido(
                 monto=monto,
-                descripcion=f"Transferencia a {destinatario}",
+                descripcion=f"Transferencia a {nombre}",
                 banco_origen=BANCO_BANCOLOMBIA,
                 fecha_egreso=fecha_egreso,
+                destinatario=nombre or None,
             )
 
         # Try Tipo 1: Compra tarjeta debito
@@ -114,6 +115,7 @@ class ParserBancolombiaEgreso(ParserEgreso):
                 descripcion=f"Compra en {comercio}",
                 banco_origen=BANCO_BANCOLOMBIA,
                 fecha_egreso=fecha_egreso,
+                destinatario=comercio or None,
             )
 
         # Try Tipo 2: Transferencia a cuenta bancaria
@@ -127,11 +129,13 @@ class ParserBancolombiaEgreso(ParserEgreso):
                     "No se encontro fecha en email de transferencia Bancolombia"
                 )
             fecha_egreso = _parsear_fecha_hora_bancolombia(fecha_m.group(1), fecha_m.group(2))
+            mascara = f"*{cuenta}" if cuenta else None
             return EgresoExtraido(
                 monto=monto,
                 descripcion=f"Transferencia a cuenta *{cuenta}",
                 banco_origen=BANCO_BANCOLOMBIA,
                 fecha_egreso=fecha_egreso,
+                destinatario=mascara,
             )
 
         raise ErrorParseoBanco(

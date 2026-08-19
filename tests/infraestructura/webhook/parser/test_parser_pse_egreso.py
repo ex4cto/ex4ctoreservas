@@ -140,3 +140,43 @@ def test_detectar_direccion_pse_retorna_egreso() -> None:
 def test_obtener_parser_egreso_pse_retorna_instancia() -> None:
     parser = obtener_parser_egreso("PSE")
     assert isinstance(parser, ParserPSEEgreso)
+
+
+# --- destinatario wiring (REQ-1) ---
+
+class TestPSEDestinatario:
+    """EgresoExtraido.destinatario is populated with the company name."""
+
+    def test_pse_produce_empresa_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_PSE)
+        assert resultado.destinatario == "WOMPI S.A.S"
+
+    def test_pse_nbsp_produce_empresa_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_PSE_NBSP)
+        assert resultado.destinatario == "WOMPI S.A.S"
+
+    def test_pse_empresa_con_nombre_largo(self) -> None:
+        texto = _TEXTO_PSE.replace("Empresa: WOMPI S.A.S", "Empresa: Empresas Publicas de Medellin")
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario == "Empresas Publicas de Medellin"
+
+
+# --- parser-layer empty-recipient guard — structural analysis (REQ-1, REQ-5) ---
+#
+# ParserPSEEgreso applies re.sub(r"\s+", " ", ...) before any regex match.
+# _PATRON_EMPRESA = r"Empresa:\s*(.+?)\s+(?:Descripci[oó]n|Fecha)"
+#
+# After whitespace normalization, consecutive whitespace collapses to a single
+# space. The greedy \s* after 'Empresa:' then absorbs that single space.
+# What remains before the lookahead keyword (Descripción/Fecha) must include at
+# least one non-whitespace character for (.+?) to match — otherwise the regex
+# finds no match and raises ErrorParseoBanco instead.
+#
+# A whitespace-only capture would require: normalized text like
+# "Empresa: Descripción:" with nothing between \s* absorption and \s+Descripci.
+# In that case the regex does NOT match at all (no capture, raises error).
+# The 'empresa or None' guard can therefore never be triggered for a successful
+# parse — any successful match already guarantees a non-empty empresa after strip.
+#
+# Conclusion: no parser-layer empty-recipient test is needed or meaningful for
+# PSE. The 'empresa or None' guard is defensive dead code for this sub-type.

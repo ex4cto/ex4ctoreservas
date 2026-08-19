@@ -65,6 +65,7 @@ def guardar_egreso(
         fecha_recibido=datetime.datetime.now(datetime.UTC),
         correo_origen=correo_origen,
         reenviado=reenviado,
+        destinatario=pago.destinatario,
     )
     repo.guardar(egreso)
     return egreso
