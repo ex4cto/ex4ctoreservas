@@ -63,4 +63,5 @@ class ParserPSEEgreso(ParserEgreso):
             descripcion=f"Pago PSE a {empresa}",
             banco_origen=BANCO_PSE,
             fecha_egreso=fecha_egreso,
+            destinatario=empresa or None,
         )

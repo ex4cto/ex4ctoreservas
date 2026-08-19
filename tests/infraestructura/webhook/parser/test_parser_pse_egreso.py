@@ -140,3 +140,22 @@ def test_detectar_direccion_pse_retorna_egreso() -> None:
 def test_obtener_parser_egreso_pse_retorna_instancia() -> None:
     parser = obtener_parser_egreso("PSE")
     assert isinstance(parser, ParserPSEEgreso)
+
+
+# --- destinatario wiring (REQ-1) ---
+
+class TestPSEDestinatario:
+    """EgresoExtraido.destinatario is populated with the company name."""
+
+    def test_pse_produce_empresa_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_PSE)
+        assert resultado.destinatario == "WOMPI S.A.S"
+
+    def test_pse_nbsp_produce_empresa_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_PSE_NBSP)
+        assert resultado.destinatario == "WOMPI S.A.S"
+
+    def test_pse_empresa_con_nombre_largo(self) -> None:
+        texto = _TEXTO_PSE.replace("Empresa: WOMPI S.A.S", "Empresa: Empresas Publicas de Medellin")
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario == "Empresas Publicas de Medellin"
