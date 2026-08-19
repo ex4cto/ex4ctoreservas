@@ -120,8 +120,8 @@ class TestExtraccionEnvio:
         assert extraer_destinatario("Envio a Leonardo Hoyos Serna") == "Leonardo Hoyos Serna"
 
     def test_nombre_prod_sample(self) -> None:
-        # Real prod sample per task doc
-        assert extraer_destinatario("Envio a Leonardo Hoyos Serna") == "Leonardo Hoyos Serna"
+        # Real prod sample (distinct from test_nombre_simple)
+        assert extraer_destinatario("Envio a GRAFHIC DESIGN G D") == "GRAFHIC DESIGN G D"
 
     def test_nombre_utf8(self) -> None:
         # UTF-8 special characters must pass through without encoding loss
@@ -169,12 +169,6 @@ class TestSkipList:
         # "Pago factura Nequi" is a known skip — no recipient
         assert extraer_destinatario("Pago factura Nequi") is None
 
-    def test_viaje_uber_es_none(self) -> None:
-        assert extraer_destinatario("Viaje Uber") is None
-
-    def test_viaje_didi_es_none(self) -> None:
-        assert extraer_destinatario("Viaje DiDi") is None
-
 
 # ---------------------------------------------------------------------------
 # Non-match / free-form — must return None, never fabricate
@@ -194,6 +188,14 @@ class TestNoMatch:
     def test_texto_parcialmente_similar_es_none(self) -> None:
         # Must not partially match if pattern doesn't anchor correctly
         assert extraer_destinatario("compra en minuscula") is None
+
+    def test_viaje_uber_es_none(self) -> None:
+        # Uber trips have no recipient — reach None via non-match, not skip-list
+        assert extraer_destinatario("Viaje Uber") is None
+
+    def test_viaje_didi_es_none(self) -> None:
+        # DiDi trips have no recipient — reach None via non-match, not skip-list
+        assert extraer_destinatario("Viaje DiDi") is None
 
 
 # ---------------------------------------------------------------------------

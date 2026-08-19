@@ -70,6 +70,7 @@ _PATRONES: list[tuple[re.Pattern[str], int, str]] = [
 ]
 
 # Descriptions that intentionally have no recipient — skip without fabricating.
+# "Pago factura Nequi": invoice paid to Nequi itself, not a named payee.
 _SKIP_LIST: frozenset[str] = frozenset(
     {
         "Pago factura Nequi",
