@@ -232,3 +232,11 @@ def test_sin_fecha_lanza_error() -> None:
     )
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", texto_sin_fecha)
+
+
+# --- destinatario confirmation (REQ-1, Phase 8.1) ---
+
+def test_uber_destinatario_es_none() -> None:
+    """Uber trip charges have no payee recipient; destinatario must be None (REQ-1)."""
+    resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
+    assert resultado.destinatario is None
