@@ -124,3 +124,37 @@ def test_guardar_egreso_categoria_didi() -> None:
     resultado = guardar_egreso(pago, "MSG-DIDI-001", repo, moneda="COP", categoria="transporte")
 
     assert resultado.categoria == "transporte"
+
+
+# --- destinatario propagation (REQ-2) ---
+
+class TestGuardarEgresoDestinatario:
+    """guardar_egreso propagates destinatario from EgresoExtraido to Egreso (REQ-2)."""
+
+    def test_destinatario_se_propaga_cuando_tiene_valor(self) -> None:
+        repo = MagicMock()
+        pago = EgresoExtraido(
+            monto=Decimal("50000"),
+            descripcion="Pago en Rappi",
+            banco_origen="Nequi",
+            fecha_egreso=datetime.datetime(2026, 8, 1, 10, 0, tzinfo=datetime.UTC),
+            destinatario="Rappi",
+        )
+
+        resultado = guardar_egreso(pago, "MSG-001", repo, moneda="COP")
+
+        assert resultado.destinatario == "Rappi"
+
+    def test_destinatario_none_se_propaga_como_none(self) -> None:
+        repo = MagicMock()
+        pago = EgresoExtraido(
+            monto=Decimal("3000"),
+            descripcion="Pago factura Nequi",
+            banco_origen="Nequi",
+            fecha_egreso=datetime.datetime(2026, 8, 1, 10, 0, tzinfo=datetime.UTC),
+            destinatario=None,
+        )
+
+        resultado = guardar_egreso(pago, "MSG-002", repo, moneda="COP")
+
+        assert resultado.destinatario is None
