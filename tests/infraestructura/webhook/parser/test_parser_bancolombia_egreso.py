@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
@@ -235,7 +236,7 @@ class TestBancolombiaDestinatario:
             monto=Decimal("1000"),
             descripcion="Test",
             banco_origen="Bancolombia",
-            fecha_egreso=__import__("datetime").datetime(2026, 1, 1, tzinfo=__import__("datetime").timezone.utc),
+            fecha_egreso=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
         )
         assert eo.destinatario is None
 
