@@ -110,3 +110,45 @@ def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
     )
 
     assert resultado == []
+
+
+# --- destinatario roundtrip (REQ-2, design §1 critical finding) ---
+
+def test_destinatario_persiste_y_recarga(sf: sessionmaker[Session]) -> None:
+    """Save Egreso with destinatario and reload — value must survive the roundtrip."""
+    repo = SQLAEgresoRepository(sf)
+    egreso = Egreso(
+        id=uuid.uuid4(),
+        descripcion="Compra en Rappi",
+        monto=Dinero("50000"),
+        fecha=datetime.date(2026, 8, 1),
+        categoria="otro",
+        tipo=TipoEgreso.AUTOMATICO,
+        destinatario="Rappi",
+    )
+
+    repo.guardar(egreso)
+    recargado = repo.buscar_por_id(egreso.id)
+
+    assert recargado is not None
+    assert recargado.destinatario == "Rappi"
+
+
+def test_destinatario_none_persiste_como_null(sf: sessionmaker[Session]) -> None:
+    """Egreso with destinatario=None must reload as None, not empty string."""
+    repo = SQLAEgresoRepository(sf)
+    egreso = Egreso(
+        id=uuid.uuid4(),
+        descripcion="Pago factura Nequi",
+        monto=Dinero("3000"),
+        fecha=datetime.date(2026, 8, 1),
+        categoria="otro",
+        tipo=TipoEgreso.AUTOMATICO,
+        destinatario=None,
+    )
+
+    repo.guardar(egreso)
+    recargado = repo.buscar_por_id(egreso.id)
+
+    assert recargado is not None
+    assert recargado.destinatario is None

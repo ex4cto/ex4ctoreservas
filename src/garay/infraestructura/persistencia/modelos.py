@@ -235,6 +235,8 @@ class EgresoModel(Base):
         ForeignKey("gastos_recurrentes.id"),
         nullable=True,
     )
+    # Payee extracted from the bank notification. Null for manual/legacy rows and non-payee formats.
+    destinatario: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class CategoriaEgresoModel(Base):

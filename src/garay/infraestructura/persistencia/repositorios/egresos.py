@@ -31,6 +31,7 @@ def _to_orm(egreso: Egreso) -> EgresoModel:
         correo_origen=egreso.correo_origen,
         reenviado=egreso.reenviado,
         gasto_recurrente_id=egreso.gasto_recurrente_id,
+        destinatario=egreso.destinatario,
     )
 
 
@@ -47,6 +48,7 @@ def _to_domain(m: EgresoModel) -> Egreso:
         correo_origen=m.correo_origen,
         reenviado=m.reenviado,
         gasto_recurrente_id=m.gasto_recurrente_id,
+        destinatario=m.destinatario,
     )
 
 
