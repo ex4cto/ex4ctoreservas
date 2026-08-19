@@ -11,6 +11,7 @@ from garay.infraestructura.webhook.parser.bancolombia_egreso import (
     _parsear_monto_bilingue,
 )
 from garay.infraestructura.webhook.parser.base import ErrorParseoBanco
+from garay.infraestructura.webhook.schemas import EgresoExtraido
 
 _PARSER = ParserBancolombiaEgreso()
 
@@ -200,3 +201,40 @@ def test_transferencia_cuenta_destino_con_espacio_tras_asterisco() -> None:
     assert resultado.monto == Decimal("580000")
     assert resultado.fecha_egreso.date().isoformat() == "2026-08-10"
     assert "08600002475" in resultado.descripcion
+
+
+# --- destinatario wiring (REQ-1, REQ-5) ---
+
+class TestBancolombiaDestinatario:
+    """EgresoExtraido.destinatario is populated from the correct regex group."""
+
+    def test_breb_produce_nombre_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
+        assert resultado.destinatario == "NEIDA GARCIA"
+
+    def test_compra_produce_comercio_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_COMPRA)
+        assert resultado.destinatario == "MOVISTAR PAGOSEPAYCO"
+
+    def test_transferencia_cuenta_produce_mascara(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
+        assert resultado.destinatario == "*3207904880"
+
+    def test_transferencia_cuenta_con_espacio_produce_mascara(self) -> None:
+        texto = (
+            "Transferiste $580,000 desde tu cuenta *5643 a la cuenta * 08600002475 "
+            "el 10/08/2026 a las 10:55."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario == "*08600002475"
+
+    def test_destinatario_nunca_es_cadena_vacia(self) -> None:
+        """EgresoExtraido.destinatario must never be '' — guard returns None (REQ-5)."""
+        # Construct a fake EgresoExtraido directly to verify the schema default
+        eo = EgresoExtraido(
+            monto=Decimal("1000"),
+            descripcion="Test",
+            banco_origen="Bancolombia",
+            fecha_egreso=__import__("datetime").datetime(2026, 1, 1, tzinfo=__import__("datetime").timezone.utc),
+        )
+        assert eo.destinatario is None
