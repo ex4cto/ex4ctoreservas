@@ -238,3 +238,40 @@ class TestBancolombiaDestinatario:
             fecha_egreso=__import__("datetime").datetime(2026, 1, 1, tzinfo=__import__("datetime").timezone.utc),
         )
         assert eo.destinatario is None
+
+
+# --- parser-layer empty-recipient guard (REQ-1, REQ-5) ---
+#
+# _PATRON_TRANSFERENCIA_CUENTA uses ([\d]+) — digits only, cannot ever capture
+# whitespace. The `cuenta or None` guard is structurally unreachable for that
+# sub-type; no test is needed or possible for it.
+#
+# _PATRON_TRANSFERENCIA_BREB and _PATRON_COMPRA use (.+?) which CAN capture
+# a single-space group when extra whitespace is present between the anchor
+# keyword and the trailing delimiter. Bancolombia does NOT normalize whitespace
+# before matching, so such bodies reach the regex unchanged.
+
+class TestBancolombiaEmptyRecipientGuard:
+    """Parser-layer `or None` guard yields None when regex group strips to '' (REQ-1, REQ-5)."""
+
+    def test_breb_nombre_solo_espacios_produce_destinatario_none(self) -> None:
+        """Bre-B body where the name slot contains only whitespace strips to '' → None."""
+        # The name is a single space between 'a ' and ' el'. After strip() → ''.
+        # 'nombre or None' must return None, and the parse must not raise.
+        texto = (
+            "Bancolombia: transferiste $6,000.00 a la llave 3015879983 desde tu cuenta "
+            "*7488 a   el 25/07/26 a las 16:26."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario is None
+
+    def test_compra_comercio_solo_espacios_produce_destinatario_none(self) -> None:
+        """Compra body where the merchant slot has only whitespace strips to '' → None."""
+        # Extra spaces between 'en ' and ' con tu T.Deb'. After strip() → ''.
+        # 'comercio or None' must return None, and the parse must not raise.
+        texto = (
+            "Bancolombia: Compraste $10.000,00 en   con tu T.Deb *9283, "
+            "el 12/07/2026 a las 9:43."
+        )
+        resultado = _PARSER.parsear("", texto)
+        assert resultado.destinatario is None

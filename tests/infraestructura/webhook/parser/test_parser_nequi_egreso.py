@@ -218,3 +218,30 @@ class TestNequiDestinatario:
         )
         resultado = _PARSER.parsear("", cuerpo)
         assert resultado.destinatario == "José María Ñoño"
+
+
+# --- parser-layer empty-recipient guard — structural analysis (REQ-1, REQ-5) ---
+#
+# ParserNequiEgreso applies re.sub(r"\s+", " ", ...) before any regex match.
+# This normalization collapses all consecutive whitespace (including \xa0, \n)
+# to a single space, making it structurally impossible for (.+?) groups to
+# capture a whitespace-only string after .strip():
+#
+#   _PATRON_ENVIO (.+? between '\s+de\s+' and '\s+el\s+'):
+#     "de   el" normalizes to "de el"; \s+de\s+ consumes " de ", (.+?) would
+#     need to match before "\s+el" but the next text is "el" with no preceding
+#     space — no match. Whitespace-only capture impossible.
+#
+#   _PATRON_PAGO_COMERCIO (.+? between 'en ' and ' por $'):
+#     "en   por" normalizes to "en por"; \s+de\s+ variant consumes space,
+#     (.+?) captures "p" of "por" — not whitespace-only.
+#
+#   _PATRON_FACTURA: no recipient extracted; destinatario is hardcoded None.
+#
+# Conclusion: no parser-layer empty-recipient test is needed or meaningful for
+# Nequi. The 'nombre or None' / 'comercio or None' guards exist for defensive
+# correctness; their trigger condition cannot arise from a real regex match after
+# whitespace normalization.
+#
+# The domain entity guard (ValueError on empty/whitespace string) remains the
+# authoritative last line of defense and is covered in test_egreso.py.
