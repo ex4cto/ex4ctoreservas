@@ -184,3 +184,37 @@ def test_parsea_envio_llave_con_arroba() -> None:
     resultado = _PARSER.parsear("", cuerpo)
     assert resultado.monto == Decimal("10000")
     assert resultado.descripcion == "Envio a NEW DAYS HOSTELS SAS"
+
+
+# --- destinatario wiring (REQ-1) ---
+
+class TestNequiDestinatario:
+    """EgresoExtraido.destinatario is populated from the correct Nequi regex group."""
+
+    def test_envio_breb_produce_nombre_como_destinatario(self) -> None:
+        resultado = _PARSER.parsear("", _TEXTO_ENVIO_1)
+        assert resultado.destinatario == "BRYAN CASTRO"
+
+    def test_pago_comercio_produce_nombre_como_destinatario(self) -> None:
+        cuerpo = (
+            "¡Pago exitoso!\n"
+            "Hiciste un pago en Rappi por $50.000\n"
+            "Fecha: El 5 de agosto de 2026\n"
+            "Hora: 3:15 p. m.\n"
+        )
+        resultado = _PARSER.parsear("", cuerpo)
+        assert resultado.destinatario == "Rappi"
+
+    def test_pago_factura_produce_none(self) -> None:
+        """'Pago factura Nequi' has no recipient — destinatario must be None."""
+        resultado = _PARSER.parsear("", _TEXTO_FACTURA_1)
+        assert resultado.destinatario is None
+
+    def test_envio_con_utf8_nombre(self) -> None:
+        """UTF-8 special characters in name must survive without encoding loss."""
+        cuerpo = (
+            "Enviaste de manera exitosa 10.000 a la llave 3011234567 de "
+            "José María Ñoño el 1 de agosto de 2026 a las 10:00 a.m."
+        )
+        resultado = _PARSER.parsear("", cuerpo)
+        assert resultado.destinatario == "José María Ñoño"
