@@ -101,6 +101,12 @@ class TestGenerarFacturaHtml:
             or "force majeure" in html.lower()
         )
 
+    def test_politica_reprogramacion_usa_72_horas(self) -> None:
+        servicio = GenerarFacturaService()
+        html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
+        assert "72 horas de anticipación" in html
+        assert "24 horas" not in html
+
     def test_numero_factura_formato_correcto(self) -> None:
         venta_id = uuid.UUID("a3f7b200-cafe-0000-0000-000000000000")
         servicio = GenerarFacturaService()
