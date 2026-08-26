@@ -503,4 +503,4 @@ class TestClavesEgresosDestinatario:
     def test_egresos_sin_destinatario_texto_correcto(self) -> None:
         msg = obtener_mensaje("egresos_sin_destinatario")
         # Must convey "no destinatario" concept — e.g. "Sin destinatario"
-        assert len(msg) > 0
+        assert "destinatario" in msg.lower()
