@@ -63,6 +63,7 @@ from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFree
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
+from garay.mensajes.catalogo import obtener_mensaje
 
 MESES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -86,6 +87,11 @@ def _get_session_factory():
 
 def _cop(monto: Decimal) -> str:
     return f"${monto:,.0f}"
+
+
+def _label_dest(d: str | None) -> str:
+    """Map None destinatario to the catalog label; pass named recipients through."""
+    return obtener_mensaje("egresos_sin_destinatario") if d is None else d
 
 
 def _cop_k(monto: Decimal) -> str:
@@ -509,6 +515,18 @@ def pagina_flujo(mes: int, año: int) -> None:
             {
                 "Categoría": [cat for cat, _ in flujo.egresos_por_categoria],
                 "Monto": [_cop(m.monto) for _, m in flujo.egresos_por_categoria],
+            },
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    if flujo.egresos_por_destinatario:
+        st.markdown("---")
+        st.subheader(obtener_mensaje("egresos_por_destinatario_titulo"))
+        st.dataframe(
+            {
+                "Destinatario": [_label_dest(d) for d, _ in flujo.egresos_por_destinatario],
+                "Monto": [_cop(m.monto) for _, m in flujo.egresos_por_destinatario],
             },
             use_container_width=True,
             hide_index=True,

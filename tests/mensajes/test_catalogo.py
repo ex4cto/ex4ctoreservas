@@ -481,3 +481,26 @@ class TestClavesMovimientosPlainText:
     def test_seccion_egresos_sin_asteriscos(self) -> None:
         msg = obtener_mensaje("movimientos.seccion_egresos")
         assert "*" not in msg, f"'movimientos.seccion_egresos' must not contain '*': {msg!r}"
+
+
+class TestClavesEgresosDestinatario:
+    """Phase 10 — catalog keys for the egresos-por-destinatario dashboard section."""
+
+    def test_egresos_por_destinatario_titulo_existe_y_no_vacio(self) -> None:
+        msg = obtener_mensaje("egresos_por_destinatario_titulo")
+        assert isinstance(msg, str)
+        assert len(msg) > 0
+
+    def test_egresos_sin_destinatario_existe_y_no_vacio(self) -> None:
+        msg = obtener_mensaje("egresos_sin_destinatario")
+        assert isinstance(msg, str)
+        assert len(msg) > 0
+
+    def test_egresos_por_destinatario_titulo_texto_correcto(self) -> None:
+        msg = obtener_mensaje("egresos_por_destinatario_titulo")
+        assert "destinatario" in msg.lower()
+
+    def test_egresos_sin_destinatario_texto_correcto(self) -> None:
+        msg = obtener_mensaje("egresos_sin_destinatario")
+        # Must convey "no destinatario" concept — e.g. "Sin destinatario"
+        assert "destinatario" in msg.lower()
