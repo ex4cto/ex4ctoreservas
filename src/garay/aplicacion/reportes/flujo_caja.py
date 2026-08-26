@@ -41,6 +41,9 @@ class FlujoCaja:
     egresos_por_categoria: tuple[tuple[str, Dinero], ...]
     ingresos_por_banco: tuple[ResumenBanco, ...] = ()
     ingresos_por_estado: tuple[ResumenEstado, ...] = ()
+    # Grouping of egresos by payee (destinatario). None key means no payee.
+    # None is always sorted last. Default empty so existing callers do not break.
+    egresos_por_destinatario: tuple[tuple[str | None, Dinero], ...] = ()
 
 
 class FlujoCajaService:
@@ -79,6 +82,13 @@ class FlujoCajaService:
         for e in egresos:
             por_cat[e.categoria] = por_cat.get(e.categoria, Dinero(0)) + e.monto
 
+        # Group by payee (destinatario). None key represents egresos without a payee.
+        # Deterministic sort: named recipients first (alphabetical), None last.
+        por_dest: dict[str | None, Dinero] = {}
+        for e in egresos:
+            clave: str | None = e.destinatario
+            por_dest[clave] = por_dest.get(clave, Dinero(0)) + e.monto
+
         # ingresos_por_banco
         banco_conteo: dict[str, int] = {}
         banco_monto: dict[str, Dinero] = {}
@@ -114,6 +124,13 @@ class FlujoCajaService:
             )
         )
 
+        egresos_por_destinatario = tuple(
+            sorted(
+                por_dest.items(),
+                key=lambda kv: (kv[0] is None, kv[0] or ""),
+            )
+        )
+
         return FlujoCaja(
             mes=mes,
             año=año,
@@ -125,4 +142,5 @@ class FlujoCajaService:
             egresos_por_categoria=tuple(sorted(por_cat.items())),
             ingresos_por_banco=ingresos_por_banco,
             ingresos_por_estado=ingresos_por_estado,
+            egresos_por_destinatario=egresos_por_destinatario,
         )

@@ -30,6 +30,7 @@ def _make_egreso(
     monto: int = 50_000,
     categoria: str = "transporte",
     fecha: datetime.date = datetime.date(2026, 7, 15),
+    destinatario: str | None = None,
 ) -> Egreso:
     return Egreso(
         id=uuid.uuid4(),
@@ -38,6 +39,7 @@ def _make_egreso(
         fecha=fecha,
         categoria=categoria,
         tipo=TipoEgreso.MANUAL,
+        destinatario=destinatario,
     )
 
 
@@ -180,3 +182,121 @@ class TestFlujoCajaServiceIngresosPorBanco:
         flujo = service.ejecutar(mes=7, año=2026)
 
         assert flujo.ingresos_por_estado == ()
+
+
+class TestFlujoCajaEgresosPorDestinatario:
+    """Phase 11 — MONEY-CRITICAL tests for egresos_por_destinatario grouping.
+
+    These tests enforce:
+    - Reconciliation invariant: sum(buckets) == total_egresos
+    - Multi-egreso same destinatario uses exact Decimal addition
+    - None bucket is present and placed last
+    - Month with zero egresos yields empty tuple
+    - No float anywhere in the computation path
+    - Multi-recipient scenario from REQ-4 spec
+    """
+
+    def test_mes_sin_egresos_produce_tupla_vacia(self) -> None:
+        """Month with no egresos must yield empty tuple, no error."""
+        service = _make_service(ingresos=[], egresos=[], conciliaciones=[])
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert flujo.egresos_por_destinatario == ()
+
+    def test_agrupacion_por_destinatario_multiples_recipients(self) -> None:
+        """REQ-4 scenario: two egresos to Maria Lopez, one to Rappi, one None."""
+        e1 = _make_egreso(monto=50_000, destinatario="Maria Lopez")
+        e2 = _make_egreso(monto=50_000, destinatario="Maria Lopez")
+        e3 = _make_egreso(monto=30_000, destinatario="Rappi")
+        e4 = _make_egreso(monto=20_000, destinatario=None)
+        service = _make_service(ingresos=[], egresos=[e1, e2, e3, e4], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+        dest_dict = dict(flujo.egresos_por_destinatario)
+
+        assert dest_dict["Maria Lopez"] == Dinero(100_000)
+        assert dest_dict["Rappi"] == Dinero(30_000)
+        assert dest_dict[None] == Dinero(20_000)
+
+    def test_invariante_reconciliacion(self) -> None:
+        """sum(all destinatario bucket totals) must equal total_egresos (MONEY-CRITICAL)."""
+        e1 = _make_egreso(monto=50_000, destinatario="Maria Lopez")
+        e2 = _make_egreso(monto=30_000, destinatario="Rappi")
+        e3 = _make_egreso(monto=20_000, destinatario=None)
+        service = _make_service(ingresos=[], egresos=[e1, e2, e3], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+        bucket_sum = sum(
+            (monto for _, monto in flujo.egresos_por_destinatario), start=Dinero(0)
+        )
+
+        assert bucket_sum == flujo.total_egresos
+
+    def test_mismo_destinatario_suma_exacta_decimal(self) -> None:
+        """5 egresos to same recipient must total exactly as Decimal addition (REQ-4)."""
+        amounts = [10_000, 20_000, 30_000, 40_000, 50_000]
+        egresos = [_make_egreso(monto=a, destinatario="Carlos Perez") for a in amounts]
+        service = _make_service(ingresos=[], egresos=egresos, conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+        dest_dict = dict(flujo.egresos_por_destinatario)
+
+        assert dest_dict["Carlos Perez"] == Dinero(150_000)
+
+    def test_none_bucket_es_el_ultimo(self) -> None:
+        """None bucket (sin destinatario) must appear last in the tuple."""
+        e1 = _make_egreso(monto=10_000, destinatario=None)
+        e2 = _make_egreso(monto=20_000, destinatario="Rappi")
+        e3 = _make_egreso(monto=30_000, destinatario="ACME Corp")
+        service = _make_service(ingresos=[], egresos=[e1, e2, e3], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        last_key, _ = flujo.egresos_por_destinatario[-1]
+        assert last_key is None
+
+    def test_sin_float_en_la_ruta(self) -> None:
+        """No float must appear anywhere: all values must be Decimal/Dinero."""
+        from decimal import Decimal
+
+        e1 = _make_egreso(monto=75_000, destinatario="Proveedor A")
+        e2 = _make_egreso(monto=25_000, destinatario=None)
+        service = _make_service(ingresos=[], egresos=[e1, e2], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        for _, dinero in flujo.egresos_por_destinatario:
+            # dinero.monto must be Decimal, not float
+            assert isinstance(dinero.monto, Decimal), (
+                f"Expected Decimal, got {type(dinero.monto).__name__}"
+            )
+            assert not isinstance(dinero.monto, float)
+
+    def test_invariante_reconciliacion_con_solo_none(self) -> None:
+        """When all egresos have destinatario=None, single bucket == total_egresos."""
+        e1 = _make_egreso(monto=40_000, destinatario=None)
+        e2 = _make_egreso(monto=60_000, destinatario=None)
+        service = _make_service(ingresos=[], egresos=[e1, e2], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert len(flujo.egresos_por_destinatario) == 1
+        key, total = flujo.egresos_por_destinatario[0]
+        assert key is None
+        assert total == Dinero(100_000)
+        assert total == flujo.total_egresos
+
+    def test_egresos_por_destinatario_es_tupla_de_tuplas(self) -> None:
+        """Result must be a tuple of 2-tuples (str | None, Dinero)."""
+        e1 = _make_egreso(monto=50_000, destinatario="Rappi")
+        service = _make_service(ingresos=[], egresos=[e1], conciliaciones=[])
+
+        flujo = service.ejecutar(mes=7, año=2026)
+
+        assert isinstance(flujo.egresos_por_destinatario, tuple)
+        for item in flujo.egresos_por_destinatario:
+            assert isinstance(item, tuple)
+            assert len(item) == 2
+            key, dinero = item
+            assert key is None or isinstance(key, str)
+            assert isinstance(dinero, Dinero)
