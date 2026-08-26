@@ -673,6 +673,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "tour_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresa un nombre válido:"},
     "tour_nueva_familia_prompt": {Idioma.ES: "Escribe el nombre de la nueva familia:"},
+    # --- Egresos por destinatario (Slice 3 dashboard) ---
+    "egresos_por_destinatario_titulo": {Idioma.ES: "Egresos por destinatario"},
+    "egresos_sin_destinatario": {Idioma.ES: "Sin destinatario"},
     # --- Horarios editor (Fase 3 PR-B) ---
     "tour_horarios_lista": {
         Idioma.ES: "🕐 <b>Horarios del tour</b>\nActuales: {horarios}"
