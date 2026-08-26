@@ -57,6 +57,7 @@ def _cmd(
     cerrador_nombre: str | None = "Luis",
     cliente_nombre: str | None = None,
     cliente_telefono: str | None = None,
+    cliente_email: str | None = None,
     servicio_nombres: list[str] | None = None,
     hotel: str | None = None,
     habitacion: str | None = None,
@@ -83,6 +84,7 @@ def _cmd(
         abono=abono,
         cliente_nombre=cliente_nombre,
         cliente_telefono=cliente_telefono,
+        cliente_email=cliente_email,
         servicio_nombres=servicio_nombres if servicio_nombres is not None else [],
         hotel=hotel,
         habitacion=habitacion,
@@ -277,6 +279,18 @@ class TestMensajeNotificacion:
         service.ejecutar(_cmd(cliente_telefono=None))
         mensaje = notificador.notificar.call_args.args[0]
         assert "Teléfono" not in mensaje
+
+    def test_mensaje_contiene_correo_si_presente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(cliente_email="juan@example.com"))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "juan@example.com" in mensaje
+
+    def test_mensaje_omite_correo_si_ausente(self) -> None:
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(_cmd(cliente_email=None))
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Correo" not in mensaje
 
     def test_mensaje_contiene_abono_si_presente(self) -> None:
         service, notificador = self._capturar_mensaje()
