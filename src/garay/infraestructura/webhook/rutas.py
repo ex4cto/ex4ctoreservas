@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.exc import IntegrityError
 
 from garay.aplicacion.webhook.servicio import guardar_egreso, guardar_ingreso
@@ -41,6 +42,25 @@ from garay.infraestructura.webhook.validador import ErrorSecretInvalido, validar
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Logo served at a public URL so emailed invoices can reference it by `src`.
+# Email clients (Gmail, etc.) block `data:` URI images, so the base64-embedded
+# fallback in GenerarFacturaService is invisible in email. Set GARAY_FACTURA_LOGO_URL
+# to this route's public URL to make the logo render. Loaded once at import.
+_LOGO_PATH = Path(__file__).resolve().parents[4] / "assets" / "logo.png"
+_LOGO_BYTES = _LOGO_PATH.read_bytes() if _LOGO_PATH.exists() else b""
+
+
+@router.get("/logo.png")
+def obtener_logo() -> Response:
+    """Serve the Garay Tours logo (PNG) for emailed invoices."""
+    if not _LOGO_BYTES:
+        raise HTTPException(status_code=404, detail="logo no disponible")
+    return Response(
+        content=_LOGO_BYTES,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 def _get_moneda() -> str:
