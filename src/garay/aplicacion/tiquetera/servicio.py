@@ -176,6 +176,9 @@ class RegistrarVentaService:
         if cmd.cliente_telefono:
             lineas.append(f"📞 Teléfono: {cmd.cliente_telefono}")
 
+        if cmd.cliente_email:
+            lineas.append(f"📧 Correo: {cmd.cliente_email}")
+
         if cmd.hotel:
             hotel_line = f"🏨 Hotel: {cmd.hotel}"
             if cmd.habitacion:

@@ -296,6 +296,7 @@ def _contexto_a_comando(
         numero_fisico=ctx.numero_fisico,
         cliente_nombre=ctx.cliente_nombre,
         cliente_telefono=ctx.cliente_telefono,
+        cliente_email=ctx.cliente_email,
         servicio_nombres=ctx.destinos_nombres,
         hotel=ctx.cliente_hotel,
         habitacion=ctx.cliente_habitacion,
