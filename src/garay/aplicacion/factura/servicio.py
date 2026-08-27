@@ -214,7 +214,7 @@ class GenerarFacturaService:
         </td></tr>
         <tr><td style="padding:6px 0;border-bottom:1px solid #eee;">
           <strong style="color:#1B3B6B;">4. REPROGRAMACIÓN</strong><br>
-          Las solicitudes de reprogramación deben realizarse con al menos 24 horas de anticipación y están sujetas a disponibilidad y condiciones del operador turístico.
+          Las solicitudes de reprogramación deben realizarse con al menos 72 horas de anticipación y están sujetas a disponibilidad y condiciones del operador turístico.
         </td></tr>
         <tr><td style="padding:6px 0;border-bottom:1px solid #eee;">
           <strong style="color:#1B3B6B;">5. PLANES PROMOCIONALES</strong><br>
