@@ -510,7 +510,12 @@ async def handle_edf_campo(
 
     if data == "edf_listo":
         _limpiar_edf(context)
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update,
+            context,
+            obtener_mensaje("freelancer.edicion_finalizada"),
+            GrupoComando.ADMINISTRACION,
+        )
 
     campo = data.removeprefix("edf_campo:")
     if context.user_data is not None:
@@ -725,8 +730,9 @@ async def handle_edf_confirmar(
 
     if accion == "edf_cancelar":
         _limpiar_edf(context)
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     # --- confirm branch ---
     target_id_str = str(ud.get("edf_target_id", ""))
@@ -736,13 +742,15 @@ async def handle_edf_confirmar(
     try:
         target_uuid = uuid.UUID(target_id_str)
     except (ValueError, AttributeError):
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     f = repo.buscar_por_id(target_uuid) if repo else None
     if f is None:
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     # Mutate exactly one field
     if campo == "nombre_completo":

@@ -450,6 +450,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "¿Confirmás cambiar <b>{campo}</b>?\n\nAnterior: {anterior}\nNuevo: {nuevo}"
     },
     "freelancer.editado": {Idioma.ES: "✅ Cambio guardado correctamente."},
+    "freelancer.edicion_finalizada": {Idioma.ES: "✅ Edición finalizada."},
     "freelancer.editar_ficha": {
         Idioma.ES: (
             "👤 <b>{display}</b>\n"
