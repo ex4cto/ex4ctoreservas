@@ -27,6 +27,8 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada, VentaYaAnulada
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
+from garay.infraestructura.telegram.handlers import cerrar_flujo
+from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -252,10 +254,10 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     _limpiar(context)
-    return ConversationHandler.END
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +269,7 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
     """Receive a date string for the new tour date; validates using the canonical parser."""
     if update.effective_message is None:
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     text = update.message.text if update.message else ""
 
@@ -297,7 +299,7 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.effective_message is None:
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     text = update.message.text if update.message else ""
     motivo = (text or "").strip()
@@ -363,16 +365,16 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     if data != "gv_confirmar":
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     user = update.effective_user
     if user is None:
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     user_data = context.user_data or {}
     gv_accion: str = user_data.get("gv_accion", "anular")
@@ -405,7 +407,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     # Resolve realizada_por nombre
     user_id: int = getattr(user, "id", 0)
@@ -435,7 +437,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     try:
         await asyncio.to_thread(editar_service.ejecutar, cmd)
@@ -446,7 +448,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except VentaNoEncontrada:
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -454,7 +456,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except MotivoRequerido:
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -462,7 +464,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except Exception:
         logger.exception("Unexpected error in handle_gv_confirmar (editar)")
         if update.effective_message:
@@ -471,7 +473,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     nueva_fecha_dt = datetime.datetime.fromisoformat(nueva_fecha_str)
     mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_fecha").format(
@@ -512,7 +514,7 @@ async def _handle_confirmar_editar(
                 parse_mode="HTML",
             )
     _limpiar(context)
-    return ConversationHandler.END
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
 
 async def _handle_confirmar_anular(
@@ -532,7 +534,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     # Resolve realizada_por nombre
     user_id_anular: int = getattr(user, "id", 0)
@@ -559,7 +561,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     try:
         await asyncio.to_thread(anular_service.ejecutar, cmd)
@@ -570,7 +572,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except VentaNoEncontrada:
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -578,7 +580,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except MotivoRequerido:
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -586,7 +588,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
     except Exception:
         logger.exception("Unexpected error in handle_gv_confirmar")
         if update.effective_message:
@@ -595,7 +597,7 @@ async def _handle_confirmar_anular(
                 parse_mode="HTML",
             )
         _limpiar(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_anulacion").format(
         cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
@@ -611,4 +613,4 @@ async def _handle_confirmar_anular(
             parse_mode="HTML",
         )
     _limpiar(context)
-    return ConversationHandler.END
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)

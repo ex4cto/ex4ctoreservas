@@ -15,6 +15,8 @@ from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
 from garay.dominio.servicios.horarios import agregar_horario, formato_display, quitar_horario
 from garay.infraestructura.telegram.auth import requiere_admin_conv
+from garay.infraestructura.telegram.handlers import cerrar_flujo, finalizar_flujo
+from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -208,8 +210,9 @@ async def cmd_editar_tour(
     repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
     todos = repo.listar() if repo else []
     if not todos:
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
     if context.user_data is not None:
         context.user_data["edt_servicios"] = todos
     teclado = _teclado_familias(todos, "edt_familia:")
@@ -323,7 +326,7 @@ async def handle_edt_ficha(
 
     if data == "edt_listo":
         _limpiar_edt(context)
-        return ConversationHandler.END
+        return await cerrar_flujo(update, context, GrupoComando.TOURS)
 
     if not data.startswith("edt_campo:"):
         return EDF_FICHA
@@ -582,8 +585,9 @@ async def handle_edt_confirma(
 
     if accion == "edt_cancelar":
         _limpiar_edt(context)
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
 
     target_id_str = str(ud.get("edt_target_id", ""))
     campo = str(ud.get("edt_campo", ""))
@@ -595,8 +599,9 @@ async def handle_edt_confirma(
 
     if s is None:
         _limpiar_edt(context)
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
 
     # Apply mutation
     if campo == "nombre":
@@ -714,8 +719,9 @@ async def handle_edh_agregar_texto(
         s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
 
     if s is None:
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
 
     try:
         nueva_lista = agregar_horario(s.horarios, texto)
@@ -762,8 +768,9 @@ async def cmd_eliminar_tour(
     repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
     todos = repo.listar() if repo else []
     if not todos:
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
     if context.user_data is not None:
         context.user_data["elt_servicios"] = todos
     teclado = _teclado_familias(todos, "elt_familia:")
@@ -809,8 +816,9 @@ async def handle_elt_tour(
     with contextlib.suppress(ValueError, AttributeError):
         s = repo.buscar_por_id(uuid.UUID(tour_id_str)) if repo else None
     if s is None:
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
     if context.user_data is not None:
         context.user_data["elt_target_id"] = tour_id_str
         context.user_data["elt_nombre"] = s.nombre
@@ -847,8 +855,9 @@ async def handle_elt_confirma(
 
     if accion == "elt_cancelar":
         _limpiar_elt(context)
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
 
     target_id_str = (
         str(context.user_data.get("elt_target_id", ""))
@@ -866,10 +875,12 @@ async def handle_elt_confirma(
 
     _refrescar_fsm(context)
     _limpiar_elt(context)
-    await update.effective_message.reply_text(
-        obtener_mensaje("tour_eliminado_ok").format(nombre=nombre), parse_mode="HTML"
+    return await finalizar_flujo(
+        update,
+        context,
+        obtener_mensaje("tour_eliminado_ok").format(nombre=nombre),
+        GrupoComando.TOURS,
     )
-    return ConversationHandler.END
 
 
 # ---------------------------------------------------------------------------
@@ -1366,9 +1377,9 @@ async def handle_nvt_cancelar(
     if query:
         await query.answer()
     _limpiar_nvt(context)
-    if update.effective_message is not None:
-        await update.effective_message.reply_text(obtener_mensaje("tour_cancelado"))
-    return ConversationHandler.END
+    return await finalizar_flujo(
+        update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+    )
 
 
 async def handle_nvt_crear(
@@ -1403,10 +1414,12 @@ async def handle_nvt_crear(
     _refrescar_fsm(context)
     _limpiar_nvt(context)
 
-    await update.effective_message.reply_text(
-        obtener_mensaje("tour_creado_ok").format(nombre=nuevo.nombre)
+    return await finalizar_flujo(
+        update,
+        context,
+        obtener_mensaje("tour_creado_ok").format(nombre=nuevo.nombre),
+        GrupoComando.TOURS,
     )
-    return ConversationHandler.END
 
 
 # ---------------------------------------------------------------------------
