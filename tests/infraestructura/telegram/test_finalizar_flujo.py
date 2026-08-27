@@ -14,7 +14,7 @@ import pytest
 from telegram.error import TelegramError
 from telegram.ext import ConversationHandler
 
-from garay.infraestructura.telegram.handlers import finalizar_flujo
+from garay.infraestructura.telegram.handlers import cerrar_flujo, finalizar_flujo
 from garay.infraestructura.telegram.menu import GrupoComando
 
 
@@ -111,3 +111,17 @@ class TestFinalizarFlujo:
                 update, _make_context(), "Listo", GrupoComando.TOURS
             )
         assert result == ConversationHandler.END
+
+
+class TestCerrarFlujo:
+    """cerrar_flujo clears buttons and shows the submenu without a final message."""
+
+    @pytest.mark.asyncio
+    async def test_limpia_teclado_y_solo_muestra_submenu(self) -> None:
+        update = _make_update(con_callback=True)
+        with _tier_admin():
+            result = await cerrar_flujo(update, _make_context(), GrupoComando.ADMINISTRACION)
+        assert result == ConversationHandler.END
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
+        assert update.effective_message.reply_text.call_count == 1
+        assert "/start" in update.effective_message.reply_text.call_args.args[0]

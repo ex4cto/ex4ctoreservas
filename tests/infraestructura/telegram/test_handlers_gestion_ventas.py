@@ -804,9 +804,8 @@ class TestNotificarGrupoAnular:
         await handle_gv_confirmar(update, ctx)
 
         expected = obtener_mensaje("gestion_ventas.anulada")
-        update.effective_message.reply_text.assert_called_once_with(
-            expected, parse_mode="HTML"
-        )
+        # First reply is the confirmation; cerrar_flujo then adds the submenu.
+        assert update.effective_message.reply_text.call_args_list[0].args[0] == expected
 
 
 # ---------------------------------------------------------------------------
@@ -920,9 +919,8 @@ class TestNotificarGrupoEditar:
         await handle_gv_confirmar(update, ctx)
 
         expected = obtener_mensaje("gestion_ventas.editada")
-        update.effective_message.reply_text.assert_called_once_with(
-            expected, parse_mode="HTML"
-        )
+        # First reply is the confirmation; cerrar_flujo then adds the submenu.
+        assert update.effective_message.reply_text.call_args_list[0].args[0] == expected
 
 
 # ---------------------------------------------------------------------------
