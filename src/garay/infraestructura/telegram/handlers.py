@@ -405,17 +405,16 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
-async def finalizar_flujo(
+async def cerrar_flujo(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
-    mensaje_final: str,
     grupo: GrupoComando,
 ) -> int:
-    """End a conversation cleanly.
+    """Close a conversation cleanly without sending a final message.
 
     Drops the leftover inline keyboard from the message the user just tapped,
-    sends the final message, then shows the group's submenu with a /start hint
-    so no stale buttons linger. Returns ConversationHandler.END.
+    then shows the group's submenu with a /start hint so no stale buttons
+    linger. Use when the flow already sent its own message(s). Returns END.
     """
     query = update.callback_query
     if query is not None:
@@ -423,10 +422,22 @@ async def finalizar_flujo(
             await query.edit_message_reply_markup(reply_markup=None)
     mensaje = update.effective_message
     if mensaje is not None:
-        await mensaje.reply_text(mensaje_final, parse_mode="HTML")
         tier = await _resolver_tier(update, context)
         await mensaje.reply_text(render_submenu(grupo, tier), parse_mode="HTML")
     return ConversationHandler.END
+
+
+async def finalizar_flujo(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    mensaje_final: str,
+    grupo: GrupoComando,
+) -> int:
+    """End a conversation: send the final message, then close via cerrar_flujo."""
+    mensaje = update.effective_message
+    if mensaje is not None:
+        await mensaje.reply_text(mensaje_final, parse_mode="HTML")
+    return await cerrar_flujo(update, context, grupo)
 
 
 async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
