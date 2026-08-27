@@ -11,6 +11,7 @@ from garay.infraestructura.telegram.menu import (
     comandos_bot,
     comandos_para_tier,
     render_menu,
+    render_submenu,
     tier_de_usuario,
 )
 
@@ -230,6 +231,37 @@ class TestRenderMenu:
         assert "nueva_venta" in text
         assert "editar_freelancer" in text
         assert "flujo_caja" in text
+
+
+class TestRenderSubmenu:
+    """Verify render_submenu — the per-group menu shown after a flow ends."""
+
+    def test_submenu_administracion_lista_comandos_del_grupo(self) -> None:
+        text = render_submenu(GrupoComando.ADMINISTRACION, TierComando.ADMIN)
+        assert "eliminar_freelancer" in text
+        assert "nuevo_freelancer" in text
+        assert "editar_freelancer" in text
+
+    def test_submenu_solo_incluye_su_grupo(self) -> None:
+        text = render_submenu(GrupoComando.ADMINISTRACION, TierComando.ADMIN)
+        assert "nueva_venta" not in text
+        assert "nuevo_egreso" not in text
+
+    def test_submenu_muestra_cabecera_del_grupo(self) -> None:
+        text = render_submenu(GrupoComando.TOURS, TierComando.ADMIN)
+        assert "Tours" in text
+
+    def test_submenu_incluye_hint_start(self) -> None:
+        text = render_submenu(GrupoComando.TOURS, TierComando.ADMIN)
+        assert "/start" in text
+
+    def test_submenu_excluye_cancelar(self) -> None:
+        text = render_submenu(GrupoComando.VENTAS, TierComando.ADMIN)
+        assert "/cancelar" not in text
+
+    def test_submenu_respeta_tier(self) -> None:
+        text = render_submenu(GrupoComando.VENTAS, TierComando.FREELANCER)
+        assert "gestionar_ventas" not in text
 
 
 class TestTierDeUsuario:

@@ -125,6 +125,25 @@ def render_menu(tier: TierComando) -> str:
     return "\n".join(lines)
 
 
+def render_submenu(grupo: GrupoComando, tier: TierComando) -> str:
+    """Build the compact per-group menu shown after a flow ends.
+
+    Lists the group's accessible commands (excluding the meta /cancelar) as
+    clickable commands, plus a hint to use /start for the general menu.
+    """
+    group_cmds = [
+        c
+        for c in comandos_para_tier(tier)
+        if c.grupo == grupo and c.comando != "cancelar"
+    ]
+    lines: list[str] = [f"<b>{grupo}</b>"]
+    for cmd in group_cmds:
+        lines.append(f"/{cmd.comando} — {cmd.descripcion}")
+    lines.append("")
+    lines.append("Escribe /start para volver al menú general.")
+    return "\n".join(lines)
+
+
 def tier_de_usuario(
     uid: int | None,
     es_admin: bool,

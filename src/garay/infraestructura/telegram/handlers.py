@@ -7,6 +7,7 @@ import datetime
 import logging
 import uuid
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -38,9 +39,11 @@ from garay.dominio.ventas.valor_objetos import Participantes
 from garay.infraestructura.telegram.auth import dev_telegram_ids, requiere_rol
 from garay.infraestructura.telegram.estados import ESTADO_PTB
 from garay.infraestructura.telegram.menu import (
+    GrupoComando,
     TierComando,
     comandos_bot,
     render_menu,
+    render_submenu,
     tier_de_usuario,
 )
 from garay.mensajes.catalogo import obtener_mensaje
@@ -399,6 +402,30 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
     texto = await _render_menu_para_usuario(update, context)
     await update.message.reply_text(texto, parse_mode="HTML")
+    return ConversationHandler.END
+
+
+async def finalizar_flujo(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    mensaje_final: str,
+    grupo: GrupoComando,
+) -> int:
+    """End a conversation cleanly.
+
+    Drops the leftover inline keyboard from the message the user just tapped,
+    sends the final message, then shows the group's submenu with a /start hint
+    so no stale buttons linger. Returns ConversationHandler.END.
+    """
+    query = update.callback_query
+    if query is not None:
+        with suppress(TelegramError):
+            await query.edit_message_reply_markup(reply_markup=None)
+    mensaje = update.effective_message
+    if mensaje is not None:
+        await mensaje.reply_text(mensaje_final, parse_mode="HTML")
+        tier = await _resolver_tier(update, context)
+        await mensaje.reply_text(render_submenu(grupo, tier), parse_mode="HTML")
     return ConversationHandler.END
 
 
