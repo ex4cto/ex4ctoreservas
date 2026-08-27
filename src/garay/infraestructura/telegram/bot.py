@@ -592,8 +592,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
             MessageHandler(filters.PHOTO | filters.Document.IMAGE, _foto_en_conversacion),
         ],
+        allow_reentry=True,
     )
 
     # /nuevo_egreso conversation handler
@@ -634,7 +636,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 ),
             ],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     # /gastos_fijos (new gasto fijo) conversation handler
@@ -652,7 +657,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GF_DIA: [MessageHandler(_TEXT, handle_gf_dia)],
             GF_CONFIRMACION: [_CB(handle_gf_confirmacion)],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     nuevo_freelancer_conv_handler = ConversationHandler(
@@ -668,7 +676,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             FL_CONFIRMACION: [_CB(handle_fl_confirmacion)],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     eliminar_freelancer_conv_handler = ConversationHandler(
@@ -677,7 +688,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             EF_SELECCIONAR: [_CB(handle_ef_seleccionar)],
             EF_CONFIRMAR: [_CB(handle_ef_confirmar)],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     editar_freelancer_conv_handler = ConversationHandler(
@@ -697,7 +711,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_edf_confirmar, pattern="^edf_(confirmar|cancelar)$"),
             ],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     gestionar_ventas_conv_handler = ConversationHandler(
@@ -709,7 +726,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_CONFIRMAR: [_CB(handle_gv_confirmar, pattern="^gv_(confirmar|cancelar)$")],
             GV_EDIT_FECHA: [MessageHandler(_TEXT, handle_gv_edit_fecha)],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     editar_tour_conv_handler = ConversationHandler(
@@ -743,7 +763,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_edh_agregar_texto),
             ],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     eliminar_tour_conv_handler = ConversationHandler(
@@ -753,7 +776,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ELT_TOUR: [_CB(handle_elt_tour, pattern="^elt_tour:")],
             ELT_CONFIRMA: [_CB(handle_elt_confirma, pattern="^elt_(confirmar|cancelar)$")],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     nuevo_tour_conv_handler = ConversationHandler(
@@ -794,7 +820,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_nvt_hor_agregar_texto),
             ],
         },
-        fallbacks=[CommandHandler("cancelar", cmd_cancelar)],
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
     )
 
     app.add_handler(conv_handler)
