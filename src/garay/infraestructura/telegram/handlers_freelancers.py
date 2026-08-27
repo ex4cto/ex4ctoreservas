@@ -18,6 +18,8 @@ from garay.infraestructura.telegram.auth import (
     requiere_admin,
     requiere_admin_conv,
 )
+from garay.infraestructura.telegram.handlers import finalizar_flujo
+from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -244,8 +246,9 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
     accion = query.data if query else ""
     if accion == "fl_cancelar":
         _limpiar_fl(context)
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
     ud = context.user_data or {}
     nombre = str(ud.get("fl_nombre", ""))
     nombre_completo = str(ud.get("fl_nombre_completo", "")) or None
@@ -267,10 +270,12 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
         )
         repo.guardar(freelancer)
     _limpiar_fl(context)
-    await update.effective_message.reply_text(
-        obtener_mensaje("freelancer.creado").format(nombre=nombre), parse_mode="HTML"
+    return await finalizar_flujo(
+        update,
+        context,
+        obtener_mensaje("freelancer.creado").format(nombre=nombre),
+        GrupoComando.ADMINISTRACION,
     )
-    return ConversationHandler.END
 
 
 def _limpiar_fl(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -356,8 +361,9 @@ async def handle_ef_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     if accion == "ef_cancelar":
         _limpiar_ef(context)
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
     freelancer_id_str = (
         context.user_data.get("ef_freelancer_id", "") if context.user_data is not None else ""
     )
@@ -368,10 +374,12 @@ async def handle_ef_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
             freelancer.activo = False
             repo.guardar(freelancer)
     _limpiar_ef(context)
-    await update.effective_message.reply_text(
-        obtener_mensaje("freelancer.eliminado").format(nombre=nombre), parse_mode="HTML"
+    return await finalizar_flujo(
+        update,
+        context,
+        obtener_mensaje("freelancer.eliminado").format(nombre=nombre),
+        GrupoComando.ADMINISTRACION,
     )
-    return ConversationHandler.END
 
 
 def _limpiar_ef(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -502,7 +510,12 @@ async def handle_edf_campo(
 
     if data == "edf_listo":
         _limpiar_edf(context)
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update,
+            context,
+            obtener_mensaje("freelancer.edicion_finalizada"),
+            GrupoComando.ADMINISTRACION,
+        )
 
     campo = data.removeprefix("edf_campo:")
     if context.user_data is not None:
@@ -717,8 +730,9 @@ async def handle_edf_confirmar(
 
     if accion == "edf_cancelar":
         _limpiar_edf(context)
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     # --- confirm branch ---
     target_id_str = str(ud.get("edf_target_id", ""))
@@ -728,13 +742,15 @@ async def handle_edf_confirmar(
     try:
         target_uuid = uuid.UUID(target_id_str)
     except (ValueError, AttributeError):
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     f = repo.buscar_por_id(target_uuid) if repo else None
     if f is None:
-        await update.effective_message.reply_text(obtener_mensaje("freelancer.cancelado"))
-        return ConversationHandler.END
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
+        )
 
     # Mutate exactly one field
     if campo == "nombre_completo":
