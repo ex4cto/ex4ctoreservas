@@ -38,6 +38,7 @@ class EstadoFSM(StrEnum):
     CLIENTE_NOMBRE = "cliente_nombre"
     CLIENTE_TELEFONO = "cliente_telefono"
     CLIENTE_EMAIL = "cliente_email"
+    FACTURA_IDIOMA = "factura_idioma"
     CLIENTE_TIPO_ID = "cliente_tipo_id"
     CLIENTE_IDENTIFICACION = "cliente_identificacion"
     CLIENTE_HOTEL = "cliente_hotel"
@@ -338,6 +339,7 @@ class FSMTiquetera:
             EstadoFSM.CLIENTE_NOMBRE: self._handle_cliente_nombre,
             EstadoFSM.CLIENTE_TELEFONO: self._handle_cliente_telefono,
             EstadoFSM.CLIENTE_EMAIL: self._handle_cliente_email,
+            EstadoFSM.FACTURA_IDIOMA: self._handle_factura_idioma,
             EstadoFSM.CLIENTE_TIPO_ID: self._handle_cliente_tipo_id,
             EstadoFSM.CLIENTE_IDENTIFICACION: self._handle_cliente_identificacion,
             EstadoFSM.CLIENTE_HOTEL: self._handle_cliente_hotel,
@@ -1041,6 +1043,27 @@ class FSMTiquetera:
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
                 opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.FACTURA_IDIOMA,
+            mensaje=obtener_mensaje("pregunta_factura_idioma"),
+            opciones=["Español", "English"],
+            contexto=ctx,
+        )
+
+    def _handle_factura_idioma(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        seleccion = entrada.strip().lower()
+        if seleccion in ("español", "espanol", "es"):
+            ctx.factura_idioma = "es"
+        elif seleccion in ("english", "inglés", "ingles", "en"):
+            ctx.factura_idioma = "en"
+        else:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.FACTURA_IDIOMA,
+                mensaje=obtener_mensaje("error_factura_idioma_invalido"),
+                opciones=["Español", "English"],
                 contexto=ctx,
             )
         return SalidaFSM(

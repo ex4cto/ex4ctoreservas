@@ -45,6 +45,7 @@ def to_orm(v: Venta) -> VentaModel:
         vendedor_id=v.participantes.vendedor_id,
         cerrador_id=v.participantes.cerrador_id,
         anulada=v.anulada,
+        factura_idioma=v.factura_idioma,
     )
 
 
@@ -84,6 +85,7 @@ def to_domain(m: VentaModel) -> Venta:
             cerrador_id=m.cerrador_id,
         ),
         anulada=m.anulada,
+        factura_idioma=m.factura_idioma,
     )
 
 

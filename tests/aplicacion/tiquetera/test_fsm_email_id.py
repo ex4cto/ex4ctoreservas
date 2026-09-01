@@ -40,12 +40,13 @@ class TestClienteTelefonoTransicion:
 
 
 class TestClienteEmail:
-    def test_email_valido_almacenado_y_avanza_a_tipo_id(
+    def test_email_valido_almacenado_y_avanza_a_factura_idioma(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_EMAIL, "cliente@example.com", ctx)
-        assert salida.nuevo_estado == EstadoFSM.CLIENTE_TIPO_ID
+        assert salida.nuevo_estado == EstadoFSM.FACTURA_IDIOMA
         assert salida.contexto.cliente_email == "cliente@example.com"
+        assert salida.opciones == ["Español", "English"]
 
     def test_email_sin_arroba_rechazado(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -68,6 +69,29 @@ class TestClienteEmail:
         salida = fsm.procesar(EstadoFSM.CLIENTE_EMAIL, "nuevo@email.com", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.cliente_email == "nuevo@email.com"
+
+
+class TestFacturaIdioma:
+    def test_espanol_almacena_es_y_avanza_a_tipo_id(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.FACTURA_IDIOMA, "Español", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_TIPO_ID
+        assert salida.contexto.factura_idioma == "es"
+
+    def test_english_almacena_en_y_avanza_a_tipo_id(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.FACTURA_IDIOMA, "English", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_TIPO_ID
+        assert salida.contexto.factura_idioma == "en"
+
+    def test_opcion_invalida_repregunta(
+        self, fsm: FSMTiquetera, ctx: ContextoVenta
+    ) -> None:
+        salida = fsm.procesar(EstadoFSM.FACTURA_IDIOMA, "Frances", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FACTURA_IDIOMA
+        assert salida.opciones == ["Español", "English"]
 
 
 class TestClienteTipoId:

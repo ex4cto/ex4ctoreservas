@@ -44,3 +44,6 @@ class ContextoVenta:
     canal_origen: str | None = None
     fechas_por_servicio: dict[int, datetime.datetime] = field(default_factory=dict)
     horarios_por_servicio: dict[int, str] = field(default_factory=dict)
+    # Invoice language chosen by the freelancer after the client email step.
+    # "es" (Spanish, default) | "en" (English).
+    factura_idioma: str = "es"

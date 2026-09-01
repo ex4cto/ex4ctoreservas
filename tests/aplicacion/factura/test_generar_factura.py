@@ -59,6 +59,39 @@ def _venta_id(resultado: ResultadoRegistrarVenta | None = None) -> uuid.UUID:
     return uuid.UUID("a3f7b200-0000-0000-0000-000000000000")
 
 
+class TestGenerarFacturaIdioma:
+    """Invoice renders in Spanish ("es", default) or English ("en")."""
+
+    def test_default_es_render_espanol(self) -> None:
+        html = GenerarFacturaService().generar(_ctx_completo(), _venta_id(_resultado()))
+        assert 'lang="es"' in html
+        assert "FACTURA DE SERVICIO" in html
+        assert "POLÍTICAS DE CANCELACIÓN Y CONDICIONES" in html
+
+    def test_en_render_ingles(self) -> None:
+        ctx = _ctx_completo()
+        ctx.factura_idioma = "en"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert 'lang="en"' in html
+        assert "SERVICE INVOICE" in html
+        assert "CANCELLATION POLICIES AND CONDITIONS" in html
+        assert "Balance due" in html
+
+    def test_en_incluye_clausula_prevalece_espanol(self) -> None:
+        """English invoice must state the Spanish version legally prevails."""
+        ctx = _ctx_completo()
+        ctx.factura_idioma = "en"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Spanish" in html and "prevail" in html.lower()
+
+    def test_en_conserva_montos_cop(self) -> None:
+        """Numbers/currency are language-independent — COP formatting unchanged."""
+        ctx = _ctx_completo()
+        ctx.factura_idioma = "en"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "$500.000" in html
+
+
 class TestGenerarFacturaHtml:
     def test_generar_devuelve_string_html(self) -> None:
         servicio = GenerarFacturaService()

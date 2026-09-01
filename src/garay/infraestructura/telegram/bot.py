@@ -67,6 +67,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_editar_selector,
     handle_editar_vendedor,
     handle_esperando_foto,
+    handle_factura_idioma,
     handle_familia,
     handle_fecha_salida,
     handle_horario_salida,
@@ -525,6 +526,9 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             estados[EstadoFSM.CLIENTE_EMAIL]: [
                 MessageHandler(_TEXT, handle_cliente_email),
+            ],
+            estados[EstadoFSM.FACTURA_IDIOMA]: [
+                MessageHandler(_TEXT, handle_factura_idioma),
             ],
             estados[EstadoFSM.CLIENTE_TIPO_ID]: [
                 _CB(handle_cliente_tipo_id),
