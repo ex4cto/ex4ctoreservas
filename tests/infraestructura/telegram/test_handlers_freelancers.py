@@ -1151,3 +1151,66 @@ class TestFichaEnConfirmar:
 
         textos = _reply_texts(update)
         assert any("Ana Maria Garcia Lopez" in t for t in textos)
+
+
+# ---------------------------------------------------------------------------
+# Roster refresh: mutating a freelancer must refresh the sale-flow FSM roster
+# ---------------------------------------------------------------------------
+
+
+class TestFreelancerRefrescaFSM:
+    @pytest.mark.asyncio
+    async def test_crear_refresca_fsm(self) -> None:
+        update = _make_update(callback_data="fl_confirmar")
+        ctx = _make_context(
+            freelancers=[_freelancer("Bryan")],
+            user_data={
+                "fl_nombre": "Bryan",
+                "fl_nombre_completo": "Bryan Castro",
+                "fl_cedula": "12345678",
+                "fl_display": "Bryan C.",
+                "fl_telegram_id": 100,
+            },
+        )
+        fsm = MagicMock()
+        ctx.bot_data["fsm"] = fsm
+
+        await handle_fl_confirmacion(update, ctx)
+
+        fsm.refrescar_freelancers.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_eliminar_refresca_fsm(self) -> None:
+        f = _freelancer("Ana")
+        update = _make_update(callback_data="ef_confirmar")
+        ctx = _make_context(
+            freelancers=[f],
+            user_data={"ef_freelancer_id": str(f.id), "ef_freelancer_nombre": "Ana"},
+        )
+        ctx.bot_data["freelancer_repo"].buscar_por_id.return_value = f
+        fsm = MagicMock()
+        ctx.bot_data["fsm"] = fsm
+
+        await handle_ef_confirmar(update, ctx)
+
+        fsm.refrescar_freelancers.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_editar_refresca_fsm(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            freelancers=[f],
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "nombre",
+                "edf_valor": "Ana Maria",
+            },
+        )
+        fsm = MagicMock()
+        ctx.bot_data["fsm"] = fsm
+
+        await handle_edf_confirmar(update, ctx)
+
+        fsm.refrescar_freelancers.assert_called_once()

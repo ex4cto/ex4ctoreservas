@@ -265,6 +265,20 @@ class FSMTiquetera:
         self._horarios.clear()
         self._horarios.update(nuevos_horarios)
 
+    def refrescar_freelancers(
+        self,
+        freelancers: list[tuple[uuid.UUID, str, bool]],
+    ) -> None:
+        """Replace the freelancer roster in place from a fresh repo snapshot.
+
+        Mirrors refrescar_servicios: safe on the shared singleton because
+        per-conversation state lives in PTB user_data (ContextoVenta), not here.
+        The roster MUST include inactive freelancers (mirror listar_todos, NOT
+        listar_activos) — the participant-edit picker shows them with an
+        [inactivo] suffix; _opciones_freelancers filters actives at build time.
+        """
+        self._freelancers[:] = freelancers
+
     def iniciar(self) -> SalidaFSM:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
