@@ -703,18 +703,8 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.CLIENTE_IDENTIFICACION
         ctx = s.contexto
 
-        # CLIENTE_IDENTIFICACION
+        # CLIENTE_IDENTIFICACION → INTERNO skips hotel/room (hotel = punto de venta)
         s = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
-        assert s.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
-        ctx = s.contexto
-
-        # CLIENTE_HOTEL
-        s = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Caribe", ctx)
-        assert s.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
-        ctx = s.contexto
-
-        # CLIENTE_HABITACION
-        s = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "301", ctx)
         assert s.nuevo_estado == EstadoFSM.FECHA_SALIDA
         ctx = s.contexto
 
@@ -1545,7 +1535,7 @@ class TestValidarDatosConfirmacion:
         ctx_completo.cliente_telefono = None
         assert "Teléfono" in fsm._validar_datos_confirmacion(ctx_completo)
 
-    def test_hotel_habitacion_obligatorios_solo_para_interno(
+    def test_hotel_habitacion_no_obligatorios_para_externo(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
         ctx_completo.tipo_cliente = TipoCliente.EXTERNO
@@ -1555,19 +1545,17 @@ class TestValidarDatosConfirmacion:
         assert "Hotel" not in faltantes
         assert "Habitación" not in faltantes
 
-    def test_hotel_obligatorio_para_interno(
+    def test_hotel_habitacion_no_obligatorios_para_interno(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
     ) -> None:
+        """INTERNO no longer requires hotel/habitación: the hotel is the punto de venta,
+        so the questions are skipped and never enforced."""
         ctx_completo.tipo_cliente = TipoCliente.INTERNO
         ctx_completo.cliente_hotel = None
-        assert "Hotel" in fsm._validar_datos_confirmacion(ctx_completo)
-
-    def test_habitacion_obligatoria_para_interno(
-        self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
-    ) -> None:
-        ctx_completo.tipo_cliente = TipoCliente.INTERNO
         ctx_completo.cliente_habitacion = None
-        assert "Habitación" in fsm._validar_datos_confirmacion(ctx_completo)
+        faltantes = fsm._validar_datos_confirmacion(ctx_completo)
+        assert "Hotel" not in faltantes
+        assert "Habitación" not in faltantes
 
     def test_ninos_cero_es_valido(
         self, fsm: FSMTiquetera, ctx_completo: ContextoVenta
