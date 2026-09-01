@@ -47,3 +47,17 @@ class TestContextoVentaFreelancerIds:
         assert ctx.cerrador_nombre == "Luis"
         assert ctx.vendedor_id == v_id
         assert ctx.cerrador_id == c_id
+
+
+class TestContextoVentaFacturaIdioma:
+    """factura_idioma — ES/EN selector captured after the client email step."""
+
+    def test_default_es(self) -> None:
+        """ContextoVenta() defaults factura_idioma to Spanish ("es")."""
+        assert ContextoVenta().factura_idioma == "es"
+
+    def test_asignable_en(self) -> None:
+        """factura_idioma is mutable and accepts "en"."""
+        ctx = ContextoVenta()
+        ctx.factura_idioma = "en"
+        assert ctx.factura_idioma == "en"

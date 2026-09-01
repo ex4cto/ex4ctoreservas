@@ -288,6 +288,7 @@ def _contexto_a_comando(
     return RegistrarVentaComando(
         valor_venta=Dinero(ctx.valor),
         neto=Dinero(ctx.neto),
+        factura_idioma=ctx.factura_idioma,
         servicio_ids=servicio_ids,
         cliente_id=nuevo_cliente.id,
         tipo_cliente=ctx.tipo_cliente,
@@ -732,6 +733,7 @@ handle_destino = _make_handler(EstadoFSM.DESTINO)
 handle_cliente_nombre = _make_handler(EstadoFSM.CLIENTE_NOMBRE)
 handle_cliente_telefono = _make_handler(EstadoFSM.CLIENTE_TELEFONO)
 handle_cliente_email = _make_handler(EstadoFSM.CLIENTE_EMAIL)
+handle_factura_idioma = _make_handler(EstadoFSM.FACTURA_IDIOMA)
 handle_cliente_tipo_id = _make_handler(EstadoFSM.CLIENTE_TIPO_ID)
 handle_cliente_identificacion = _make_handler(EstadoFSM.CLIENTE_IDENTIFICACION)
 handle_cliente_hotel = _make_handler(EstadoFSM.CLIENTE_HOTEL)

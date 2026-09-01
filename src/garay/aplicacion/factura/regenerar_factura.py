@@ -66,6 +66,9 @@ def reconstruir_contexto(
     ctx.adultos = venta.adultos
     ctx.ninos = venta.ninos
 
+    # Invoice language — carried so a reenvío keeps the client's original choice.
+    ctx.factura_idioma = venta.factura_idioma
+
     # Resolve servicios; build destinos lists in venta.servicio_ids order
     servicio_objects: dict[uuid.UUID, Servicio | None] = {}
     for sid in venta.servicio_ids:

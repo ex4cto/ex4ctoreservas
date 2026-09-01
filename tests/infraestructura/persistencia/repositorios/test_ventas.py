@@ -74,6 +74,47 @@ def test_servicio_ids_round_trip(sf: sessionmaker[Session]) -> None:
     assert set(resultado.servicio_ids) == set(sids)
 
 
+def test_factura_idioma_round_trip(sf: sessionmaker[Session]) -> None:
+    """factura_idioma="en" survives a save/read round trip (needed for reenvíos)."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 1),
+        participantes=Participantes(),
+        factura_idioma="en",
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.factura_idioma == "en"
+
+
+def test_factura_idioma_default_es_round_trip(sf: sessionmaker[Session]) -> None:
+    """A sale saved without an explicit language reads back as Spanish ("es")."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 1),
+        participantes=Participantes(),
+    )
+    repo.guardar(v)
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.factura_idioma == "es"
+
+
 def test_listar(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)

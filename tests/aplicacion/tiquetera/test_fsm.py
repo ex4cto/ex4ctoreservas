@@ -687,9 +687,15 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.CLIENTE_EMAIL
         ctx = s.contexto
 
-        # CLIENTE_EMAIL
+        # CLIENTE_EMAIL → FACTURA_IDIOMA
         s = fsm.procesar(EstadoFSM.CLIENTE_EMAIL, "juan@example.com", ctx)
+        assert s.nuevo_estado == EstadoFSM.FACTURA_IDIOMA
+        ctx = s.contexto
+
+        # FACTURA_IDIOMA → CLIENTE_TIPO_ID
+        s = fsm.procesar(EstadoFSM.FACTURA_IDIOMA, "Español", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_TIPO_ID
+        assert s.contexto.factura_idioma == "es"
         ctx = s.contexto
 
         # CLIENTE_TIPO_ID

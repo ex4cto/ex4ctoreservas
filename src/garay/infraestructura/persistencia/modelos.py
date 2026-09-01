@@ -146,6 +146,9 @@ class VentaModel(Base):
     anulada: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=sa.text("false"), default=False
     )
+    factura_idioma: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="es", default="es"
+    )
 
 
 class TiqueteraModel(Base):

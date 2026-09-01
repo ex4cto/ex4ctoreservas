@@ -232,6 +232,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "Abono actual: {actual}\n¿Nuevo abono? (0 si no hubo)"
     },
     "pregunta_cliente_email": {Idioma.ES: "¿Cuál es el correo electrónico del cliente?"},
+    "pregunta_factura_idioma": {
+        Idioma.ES: "¿En qué idioma se enviará la factura al cliente?"
+    },
+    "error_factura_idioma_invalido": {
+        Idioma.ES: "Opción inválida. Seleccioná Español o English."
+    },
     "pregunta_cliente_tipo_id": {Idioma.ES: "¿Tipo de identificación del cliente?"},
     "pregunta_cliente_identificacion": {Idioma.ES: "¿Número de identificación del cliente?"},
     "error_email_invalido": {Idioma.ES: "Correo inválido. Debe contener '@'."},

@@ -263,3 +263,26 @@ class TestDigitalConPuntoDeVenta:
             participantes=Participantes(punto_de_venta_id=uuid.uuid4()),
         )
         assert venta.tipo_cliente == TipoCliente.INTERNO
+
+
+class TestFacturaIdioma:
+    """factura_idioma persists the client's chosen invoice language on the sale."""
+
+    def test_default_es(self) -> None:
+        """Venta defaults factura_idioma to Spanish ("es")."""
+        assert _venta().factura_idioma == "es"
+
+    def test_acepta_en(self) -> None:
+        """Venta accepts factura_idioma="en"."""
+        venta = Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(1_000_000),
+            neto=Dinero(900_000),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2024, 1, 15),
+            participantes=Participantes(),
+            factura_idioma="en",
+        )
+        assert venta.factura_idioma == "en"

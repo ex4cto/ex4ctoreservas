@@ -64,6 +64,7 @@ def _make_venta(
     servicio_ids: list[uuid.UUID] | None = None,
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None,
     horarios_por_servicio: dict[uuid.UUID, str] | None = None,
+    factura_idioma: str = "es",
 ) -> MagicMock:
     v = MagicMock()
     v.id = uuid.uuid4()
@@ -77,6 +78,7 @@ def _make_venta(
     v.servicio_ids = servicio_ids if servicio_ids is not None else [_sid]
     v.fechas_por_servicio = fechas_por_servicio
     v.horarios_por_servicio = horarios_por_servicio
+    v.factura_idioma = factura_idioma
     return v
 
 
@@ -175,6 +177,23 @@ class TestReconstruirContexto:
         assert ctx.cliente_habitacion == "101"
         assert ctx.cliente_identificacion == "123456"
         assert ctx.cliente_tipo_identificacion == "CC"
+
+    def test_factura_idioma_carried(self) -> None:
+        """reconstruir_contexto must copy venta.factura_idioma so a reenvío keeps
+        the client's chosen language instead of defaulting back to Spanish."""
+        cliente = _make_cliente()
+        servicio = _make_servicio()
+        venta = _make_venta(
+            servicio_ids=[servicio.id],
+            fechas_por_servicio=None,
+            factura_idioma="en",
+        )
+        servicios_repo = MagicMock()
+        servicios_repo.buscar_por_id.return_value = servicio
+
+        ctx = reconstruir_contexto(venta, cliente, servicios_repo)
+
+        assert ctx.factura_idioma == "en"
 
     def test_sin_hotel_always_false(self) -> None:
         """sin_hotel must be set to False regardless of client data (accepted limitation)."""

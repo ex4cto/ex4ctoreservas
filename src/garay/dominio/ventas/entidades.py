@@ -42,6 +42,9 @@ class Venta:
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None
     horarios_por_servicio: dict[uuid.UUID, str] | None = None
     anulada: bool = False
+    # Invoice language: "es" (Spanish, default) | "en" (English). Persisted so a
+    # regenerated invoice (reenvío) keeps the client's original choice.
+    factura_idioma: str = "es"
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:

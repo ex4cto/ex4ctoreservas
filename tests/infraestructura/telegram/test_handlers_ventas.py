@@ -158,6 +158,23 @@ def _make_cmd_update(user_id: int = 1) -> MagicMock:
     return update
 
 
+class TestContextoAComandoFacturaIdioma:
+    """_contexto_a_comando carries ctx.factura_idioma onto the command."""
+
+    def test_idioma_en_carried(self) -> None:
+        ctx = _make_full_context(rol_registrante="ambos")
+        ctx.factura_idioma = "en"
+        cmd = _contexto_a_comando(_make_cmd_update(), _make_cmd_context(), ctx)
+        assert cmd is not None
+        assert cmd.factura_idioma == "en"
+
+    def test_idioma_default_es(self) -> None:
+        ctx = _make_full_context(rol_registrante="ambos")
+        cmd = _contexto_a_comando(_make_cmd_update(), _make_cmd_context(), ctx)
+        assert cmd is not None
+        assert cmd.factura_idioma == "es"
+
+
 class TestContextoAComandoIds:
     """Phase 7 — _contexto_a_comando captures vendedor_id / cerrador_id per rol."""
 
