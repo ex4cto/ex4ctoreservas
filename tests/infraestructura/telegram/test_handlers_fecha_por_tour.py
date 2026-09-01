@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from garay.aplicacion.reportes.mis_ventas import MisVentasService
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.infraestructura.telegram.handlers import _contexto_a_comando, cmd_mis_ventas
@@ -248,7 +250,7 @@ def _venta(
     v = MagicMock()
     v.id = uuid.uuid4()
     v.fecha = fecha
-    v.valor_venta.monto = monto
+    v.valor_venta = Dinero(monto)
     v.canal_origen = None
     v.fechas_por_servicio = fechas_por_servicio
     return v
@@ -263,15 +265,14 @@ def _mis_ventas_context(ventas: list[MagicMock]) -> MagicMock:
 
     venta_repo = MagicMock()
     venta_repo.listar_por_freelancer_y_periodo.return_value = ventas
-
     comision_repo = MagicMock()
     comision_repo.listar_por_venta_ids.return_value = []
+    mis_ventas_service = MisVentasService(ventas=venta_repo, comisiones=comision_repo)
 
     ctx = MagicMock()
     ctx.bot_data = {
         "freelancer_repo": freelancer_repo,
-        "venta_repo": venta_repo,
-        "comision_registrada_repo": comision_repo,
+        "mis_ventas_service": mis_ventas_service,
     }
     return ctx
 

@@ -30,6 +30,23 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Usá /mis_ventas para ver tu historial."
         )
     },
+    "mis_ventas.encabezado": {
+        Idioma.ES: (
+            "*Mis ventas*\n"
+            "Total ventas: {total}\n"
+            "Valor total: {valor}\n"
+            "Mis comisiones: {comision}"
+        )
+    },
+    "mis_ventas.realizados_titulo": {Idioma.ES: "\n*Realizados este mes:*"},
+    "mis_ventas.proximos_titulo": {Idioma.ES: "\n🔜 *Próximos tours vendidos:*"},
+    "mis_ventas.linea": {Idioma.ES: "• {fecha} — {valor}{extra}"},
+    "mis_ventas.varias_fechas": {Idioma.ES: " (varias fechas)"},
+    "mis_ventas.canal": {Idioma.ES: " · 📲 {canal}"},
+    "mis_ventas.vacio": {
+        Idioma.ES: "No tenés ventas este mes ni tours próximos vendidos."
+    },
+    "error_interno": {Idioma.ES: "Error interno. Contactá al administrador."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "pregunta_tipo_reserva": {
         Idioma.ES: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO"
