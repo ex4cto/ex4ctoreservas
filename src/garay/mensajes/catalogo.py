@@ -20,6 +20,16 @@ class Idioma(StrEnum):
 _CATALOGO: dict[str, dict[Idioma, str]] = {
     "bienvenida": {Idioma.ES: "Bienvenido a Garay Tours."},
     "venta_registrada": {Idioma.ES: "Venta registrada correctamente."},
+    "comision_por_rol": {Idioma.ES: "Vendedor: {vendedor} / Cerrador: {cerrador}"},
+    "venta_registrada_ok": {
+        Idioma.ES: (
+            "✅ <b>Venta registrada exitosamente</b>\n\n"
+            "Cliente: {cliente}\n"
+            "Valor: {valor} | Abono: {abono}\n"
+            "Comisión: {comision}\n\n"
+            "Usá /mis_ventas para ver tu historial."
+        )
+    },
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "pregunta_tipo_reserva": {
         Idioma.ES: "¿Qué tipo de reserva es?\nOpciones: INTERNO, EXTERNO"

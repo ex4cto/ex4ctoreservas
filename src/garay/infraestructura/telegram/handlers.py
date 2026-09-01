@@ -489,7 +489,9 @@ def _formatear_comision(desglose: DesgloseComision) -> str:
     vendedor = desglose.vendedor.monto
     cerrador = desglose.cerrador.monto
     if vendedor > 0 and cerrador > 0:
-        return f"Vendedor: {_fmt_cop(vendedor)} / Cerrador: {_fmt_cop(cerrador)}"
+        return obtener_mensaje("comision_por_rol").format(
+            vendedor=_fmt_cop(vendedor), cerrador=_fmt_cop(cerrador)
+        )
     return _fmt_cop(vendedor + cerrador)
 
 
@@ -659,12 +661,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                             return "$" + f"{int(raw):,}".replace(",", ".")
 
                         comision_txt = _formatear_comision(desglose)
-                        msg_ok = (
-                            f"✅ <b>Venta registrada exitosamente</b>\n\n"
-                            f"Cliente: {ctx_final.cliente_nombre or '—'}\n"
-                            f"Valor: {_cop(ctx_final.valor)} | Abono: {_cop(ctx_final.abono)}\n"
-                            f"Comisión: {comision_txt}\n\n"
-                            f"Usá /mis_ventas para ver tu historial."
+                        msg_ok = obtener_mensaje("venta_registrada_ok").format(
+                            cliente=ctx_final.cliente_nombre or "—",
+                            valor=_cop(ctx_final.valor),
+                            abono=_cop(ctx_final.abono),
+                            comision=comision_txt,
                         )
                         try:
                             if update.effective_chat:
