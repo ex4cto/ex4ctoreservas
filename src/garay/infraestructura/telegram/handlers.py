@@ -23,6 +23,11 @@ from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
+from garay.aplicacion.reportes.mis_ventas import (
+    LineaMisVentas,
+    MisVentas,
+    MisVentasService,
+)
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.config.settings import obtener_settings
@@ -30,10 +35,8 @@ from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
-    ComisionRegistradaRepository,
     FreelancerRepository,
     IngresoRepository,
-    VentaRepository,
 )
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -495,6 +498,38 @@ def _formatear_comision(desglose: DesgloseComision) -> str:
     return _fmt_cop(vendedor + cerrador)
 
 
+def _linea_mis_ventas(linea: LineaMisVentas) -> str:
+    extra = ""
+    if linea.varias_fechas:
+        extra += obtener_mensaje("mis_ventas.varias_fechas")
+    if linea.canal_origen:
+        extra += obtener_mensaje("mis_ventas.canal").format(canal=linea.canal_origen)
+    return obtener_mensaje("mis_ventas.linea").format(
+        fecha=linea.fecha.strftime("%d/%m"),
+        valor=_fmt_cop(linea.valor.monto),
+        extra=extra,
+    )
+
+
+def _formatear_mis_ventas(mv: MisVentas) -> str:
+    if mv.total_ventas == 0:
+        return obtener_mensaje("mis_ventas.vacio")
+    lineas = [
+        obtener_mensaje("mis_ventas.encabezado").format(
+            total=mv.total_ventas,
+            valor=_fmt_cop(mv.valor_total.monto),
+            comision=_fmt_cop(mv.comision_total.monto),
+        )
+    ]
+    if mv.realizados:
+        lineas.append(obtener_mensaje("mis_ventas.realizados_titulo"))
+        lineas.extend(_linea_mis_ventas(linea) for linea in mv.realizados)
+    if mv.proximos:
+        lineas.append(obtener_mensaje("mis_ventas.proximos_titulo"))
+        lineas.extend(_linea_mis_ventas(linea) for linea in mv.proximos)
+    return "\n".join(lineas)
+
+
 @requiere_rol
 async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle photo or image document — extract reservation data via AI."""
@@ -819,55 +854,21 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
-    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
-    comision_repo: ComisionRegistradaRepository | None = context.bot_data.get(
-        "comision_registrada_repo"
-    )
+    mis_ventas_service: MisVentasService | None = context.bot_data.get("mis_ventas_service")
 
-    if freelancer_repo is None or venta_repo is None or comision_repo is None:
+    if freelancer_repo is None or mis_ventas_service is None:
         if update.effective_message:
-            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
+            await update.effective_message.reply_text(obtener_mensaje("error_interno"))
         return
 
     freelancer = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user.id)
     if freelancer is None:
         return  # requiere_rol already validated
 
-    hoy = date.today()
-    desde = date(hoy.year, hoy.month, 1)
-    hasta = hoy
-
-    ventas = await asyncio.to_thread(
-        venta_repo.listar_por_freelancer_y_periodo, freelancer.id, freelancer.nombre, desde, hasta
+    resultado = await asyncio.to_thread(
+        mis_ventas_service.ejecutar, freelancer.id, freelancer.nombre, date.today()
     )
-    venta_ids = [v.id for v in ventas]
-    comisiones = await asyncio.to_thread(comision_repo.listar_por_venta_ids, venta_ids)
-
-    total_ventas = len(ventas)
-    valor_total = sum((v.valor_venta.monto for v in ventas), start=Decimal("0"))
-    comision_total = sum(
-        (c.desglose.vendedor.monto + c.desglose.cerrador.monto for c in comisiones),
-        start=Decimal("0"),
-    )
-
-    lineas = [
-        f"*Mis ventas — {desde.strftime('%d/%m/%Y')} al {hasta.strftime('%d/%m/%Y')}*",
-        f"Total ventas: {total_ventas}",
-        f"Valor total: ${valor_total:,.0f}",
-        f"Mis comisiones: ${comision_total:,.0f}",
-    ]
-
-    if ventas:
-        lineas.append("\n*Detalle:*")
-        for v in ventas[-10:]:
-            linea = f"• {v.fecha.strftime('%d/%m')} — ${v.valor_venta.monto:,.0f}"
-            if v.fechas_por_servicio is not None and len(v.fechas_por_servicio) > 1:
-                linea += " (varias fechas)"
-            if v.canal_origen:
-                linea += f" · 📲 {v.canal_origen}"
-            lineas.append(linea)
-
-    mensaje = "\n".join(lineas)
+    mensaje = _formatear_mis_ventas(resultado)
     if len(mensaje) > 4096:
         mensaje = mensaje[:4090] + "\n..."
 

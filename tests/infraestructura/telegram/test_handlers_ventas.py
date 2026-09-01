@@ -53,7 +53,9 @@ _FREELANCER_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 @pytest.mark.asyncio
 async def test_cmd_mis_ventas_sin_ventas() -> None:
-    """Empty ventas list → message mentions 0 ventas; handler passes both id and nombre (SC-15)."""
+    """Empty result → 'sin ventas' message; service is called with id and nombre (SC-15)."""
+    from garay.aplicacion.reportes.mis_ventas import MisVentasService
+
     update = _make_update()
 
     freelancer_repo = MagicMock()
@@ -64,28 +66,23 @@ async def test_cmd_mis_ventas_sin_ventas() -> None:
 
     venta_repo = MagicMock()
     venta_repo.listar_por_freelancer_y_periodo.return_value = []
-
     comision_repo = MagicMock()
     comision_repo.listar_por_venta_ids.return_value = []
+    mis_ventas_service = MisVentasService(ventas=venta_repo, comisiones=comision_repo)
 
     context = _make_context(
         freelancer_repo=freelancer_repo,
-        venta_repo=venta_repo,
-        comision_registrada_repo=comision_repo,
+        mis_ventas_service=mis_ventas_service,
     )
 
     await cmd_mis_ventas.__wrapped__(update, context)  # type: ignore[attr-defined]
 
     update.effective_message.reply_text.assert_called_once()
     msg = update.effective_message.reply_text.call_args[0][0]
-    assert "0" in msg
+    assert "ventas" in msg.lower()
 
-    # SC-15: both freelancer.id and freelancer.nombre must be passed
-    call_kwargs = venta_repo.listar_por_freelancer_y_periodo.call_args
-    assert call_kwargs is not None, "listar_por_freelancer_y_periodo was not called"
-    args = call_kwargs.args
-    kwargs = call_kwargs.kwargs
-    all_args = list(args) + list(kwargs.values())
+    # SC-15: both freelancer.id and freelancer.nombre must reach the query
+    all_args = list(venta_repo.listar_por_freelancer_y_periodo.call_args.args)
     assert _FREELANCER_ID in all_args, f"freelancer.id not passed; got {all_args}"
     assert "Carlos" in all_args, f"freelancer.nombre not passed; got {all_args}"
 

@@ -19,6 +19,7 @@ from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
+from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.ranking_tour import RankingTourService
 from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
@@ -233,6 +234,10 @@ def main() -> None:
         comisiones=comisiones_repo,
         freelancers=freelancer_repo,
     )
+    mis_ventas_service = MisVentasService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+    )
     flujo_caja_service = FlujoCajaService(
         ingresos=ingreso_repo,
         egresos=egreso_repo,
@@ -291,6 +296,7 @@ def main() -> None:
             "recurrente_service": gasto_recurrente_repo,
             "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,
+            "mis_ventas_service": mis_ventas_service,
             "flujo_caja_service": flujo_caja_service,
             "movimientos_service": movimientos_service,
             "waterfall_service": waterfall_service,
