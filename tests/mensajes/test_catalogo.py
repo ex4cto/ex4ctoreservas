@@ -36,6 +36,23 @@ class TestClavesEsperandoFoto:
         assert "foto" in msg.lower()
 
 
+class TestClavesVentaRegistrada:
+    def test_comision_por_rol_formatea(self) -> None:
+        msg = obtener_mensaje("comision_por_rol").format(
+            vendedor="$56.000", cerrador="$56.000"
+        )
+        assert msg == "Vendedor: $56.000 / Cerrador: $56.000"
+
+    def test_venta_registrada_ok_incluye_campos(self) -> None:
+        msg = obtener_mensaje("venta_registrada_ok").format(
+            cliente="Ryan", valor="$1.000.000", abono="$500.000", comision="$112.000"
+        )
+        assert "Venta registrada" in msg
+        assert "Ryan" in msg
+        assert "Comisión: $112.000" in msg
+        assert "/mis_ventas" in msg
+
+
 class TestClavesFormatoFecha:
     def test_pregunta_fecha_salida_incluye_formato_corto(self) -> None:
         msg = obtener_mensaje("pregunta_fecha_salida")
