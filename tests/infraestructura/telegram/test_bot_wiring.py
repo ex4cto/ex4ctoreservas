@@ -162,6 +162,51 @@ class TestBotWiringHorarioSalida:
         )
 
 
+class TestBotWiringFacturaIdioma:
+    """Regression: FACTURA_IDIOMA renders inline buttons (Español/English), so the
+    state MUST have a CallbackQueryHandler or the button tap hangs the bot.
+
+    Rules:
+      - ESTADO_PTB[EstadoFSM.FACTURA_IDIOMA] == 32
+      - The state is registered in the ConversationHandler
+      - A CallbackQueryHandler is registered (handles the inline button tap)
+      - A MessageHandler is also registered (defensive text re-render)
+    """
+
+    def test_factura_idioma_ptb_value_is_32(self) -> None:
+        assert ESTADO_PTB[EstadoFSM.FACTURA_IDIOMA] == 32
+
+    def test_factura_idioma_state_registered(self) -> None:
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.FACTURA_IDIOMA]
+        assert state_int in conv.states, (
+            f"FACTURA_IDIOMA (state {state_int}) is not registered. "
+            f"Registered states: {list(conv.states.keys())}"
+        )
+
+    def test_factura_idioma_has_callback_handler(self) -> None:
+        """Inline Español/English buttons send a callback_query — a
+        CallbackQueryHandler is required or the tap hangs the bot."""
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.FACTURA_IDIOMA]
+        handlers = conv.states.get(state_int, [])
+        cb_handlers = [h for h in handlers if isinstance(h, CallbackQueryHandler)]
+        assert len(cb_handlers) >= 1, (
+            f"FACTURA_IDIOMA (state {state_int}) has no CallbackQueryHandler; "
+            f"the inline button tap would never be handled. Handlers: {handlers}"
+        )
+
+    def test_factura_idioma_has_message_handler(self) -> None:
+        conv = _build_handler()
+        state_int = ESTADO_PTB[EstadoFSM.FACTURA_IDIOMA]
+        handlers = conv.states.get(state_int, [])
+        msg_handlers = [h for h in handlers if isinstance(h, MessageHandler)]
+        assert len(msg_handlers) >= 1, (
+            f"FACTURA_IDIOMA (state {state_int}) has no MessageHandler. "
+            f"Handlers found: {handlers}"
+        )
+
+
 def _build_app() -> Application:  # type: ignore[type-arg]
     """Build the full Application from crear_aplicacion with mocked settings."""
     with patch("garay.infraestructura.telegram.bot.obtener_settings") as mock_settings:
