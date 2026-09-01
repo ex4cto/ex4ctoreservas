@@ -24,6 +24,19 @@ from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
+
+def _refrescar_freelancers_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Refresh the sale-flow FSM roster after a freelancer mutation.
+
+    Uses listar_todos() (NOT listar_activos()) so inactive freelancers stay in
+    the roster for the participant-edit picker. No-op if repo or fsm is absent.
+    """
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    fsm = context.bot_data.get("fsm")
+    if repo is None or fsm is None:
+        return
+    fsm.refrescar_freelancers([(f.id, f.nombre, f.activo) for f in repo.listar_todos()])
+
 # ---------------------------------------------------------------------------
 # State constants — range 200-209 (tiquetera: 0-24, egresos: 100-114)
 # ---------------------------------------------------------------------------
@@ -269,6 +282,7 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
             es_admin=False,
         )
         repo.guardar(freelancer)
+        _refrescar_freelancers_fsm(context)
     _limpiar_fl(context)
     return await finalizar_flujo(
         update,
@@ -373,6 +387,7 @@ async def handle_ef_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         if freelancer:
             freelancer.activo = False
             repo.guardar(freelancer)
+            _refrescar_freelancers_fsm(context)
     _limpiar_ef(context)
     return await finalizar_flujo(
         update,
@@ -769,6 +784,7 @@ async def handle_edf_confirmar(
 
     if repo:
         repo.guardar(f)
+        _refrescar_freelancers_fsm(context)
 
     await update.effective_message.reply_text(obtener_mensaje("freelancer.editado"))
     await update.effective_message.reply_text(_render_ficha(f), parse_mode="HTML")
