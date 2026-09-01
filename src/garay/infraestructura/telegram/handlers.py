@@ -27,6 +27,7 @@ from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
@@ -479,6 +480,19 @@ def _fmt_cop(valor: Decimal) -> str:
     return "$" + f"{int(valor):,}".replace(",", ".")
 
 
+def _formatear_comision(desglose: DesgloseComision) -> str:
+    """Commission text for the 'sale registered' message.
+
+    Shows the per-role split when both vendedor and cerrador earned a commission
+    (including the same freelancer playing both roles); otherwise a single total.
+    """
+    vendedor = desglose.vendedor.monto
+    cerrador = desglose.cerrador.monto
+    if vendedor > 0 and cerrador > 0:
+        return f"Vendedor: {_fmt_cop(vendedor)} / Cerrador: {_fmt_cop(cerrador)}"
+    return _fmt_cop(vendedor + cerrador)
+
+
 @requiere_rol
 async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle photo or image document — extract reservation data via AI."""
@@ -644,17 +658,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                             raw: Any = v.monto if hasattr(v, "monto") else (v or 0)
                             return "$" + f"{int(raw):,}".replace(",", ".")
 
-                        if (
-                            desglose.vendedor
-                            and desglose.cerrador
-                            and desglose.vendedor != desglose.cerrador
-                        ):
-                            comision_txt = (
-                                f"Vendedor: {_cop(desglose.vendedor)} / "
-                                f"Cerrador: {_cop(desglose.cerrador)}"
-                            )
-                        else:
-                            comision_txt = _cop(desglose.vendedor + desglose.cerrador)
+                        comision_txt = _formatear_comision(desglose)
                         msg_ok = (
                             f"✅ <b>Venta registrada exitosamente</b>\n\n"
                             f"Cliente: {ctx_final.cliente_nombre or '—'}\n"
