@@ -528,6 +528,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_cliente_email),
             ],
             estados[EstadoFSM.FACTURA_IDIOMA]: [
+                _CB(handle_factura_idioma),
                 MessageHandler(_TEXT, handle_factura_idioma),
             ],
             estados[EstadoFSM.CLIENTE_TIPO_ID]: [
