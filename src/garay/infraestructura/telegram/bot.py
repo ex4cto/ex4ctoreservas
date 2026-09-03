@@ -174,6 +174,11 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
+from garay.infraestructura.telegram.handlers_propuestas import (
+    PROP_EMPRESA,
+    cmd_nueva_propuesta,
+    handle_prop_empresa,
+)
 from garay.infraestructura.telegram.handlers_tours import (
     EDF_CAMPO,
     EDF_CONFIRMA,
@@ -831,6 +836,18 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
+    # /nueva_propuesta (dev-only) — MVP proposal generator
+    propuesta_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("nueva_propuesta", cmd_nueva_propuesta)],
+        states={
+            PROP_EMPRESA: [MessageHandler(_TEXT, handle_prop_empresa)],
+        },
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
@@ -841,6 +858,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(editar_tour_conv_handler, group=8)
     app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(nuevo_tour_conv_handler, group=8)
+    app.add_handler(propuesta_conv_handler, group=9)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
