@@ -36,3 +36,26 @@ def test_no_deja_placeholders_sin_resolver() -> None:
 def test_reemplaza_todas_las_ocurrencias_de_empresa() -> None:
     svc = GenerarPropuestaAudiovisualService(plantilla="{{EMPRESA}} y {{EMPRESA}}")
     assert svc.generar(_ctx("X")) == "X y X"
+
+
+def test_formatea_precios_por_defecto_en_cop() -> None:
+    plantilla = "{{PRECIO_COMPLETO}}|{{PRECIO_MEDIO}}|{{PRECIO_COMMUNITY}}|{{PRECIO_TRAFFICKER}}"
+    svc = GenerarPropuestaAudiovisualService(plantilla=plantilla)
+    assert svc.generar(_ctx("X")) == "3.000.000|1.800.000|500.000|600.000"
+
+
+def test_precios_personalizados_se_formatean() -> None:
+    from garay.dominio.comun.dinero import Dinero
+    from garay.dominio.propuestas.contexto import PreciosAudiovisual, PropuestaContexto
+
+    ctx = PropuestaContexto(
+        empresa_nombre="X",
+        precios=PreciosAudiovisual(
+            completo=Dinero(4_500_000),
+            medio=Dinero(2_250_000),
+            community=Dinero(500_000),
+            trafficker=Dinero(600_000),
+        ),
+    )
+    svc = GenerarPropuestaAudiovisualService(plantilla="{{PRECIO_COMPLETO}} / {{PRECIO_MEDIO}}")
+    assert svc.generar(ctx) == "4.500.000 / 2.250.000"

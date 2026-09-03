@@ -1,17 +1,28 @@
 """GenerarPropuestaAudiovisualService — fills the audiovisual proposal template.
 
-MVP (walking skeleton): the only variable is the company name. The service is
-pure — it receives the template and logo as strings (no IO) so it stays trivially
-testable, mirroring GenerarFacturaService which receives the logo URL in its
-constructor. Template loading and logo base64 encoding happen at wiring time.
+Variables de la propuesta audiovisual: nombre de la empresa y precios (planes +
+complementos). El servicio es puro — recibe la plantilla y el logo como strings
+(sin IO), como GenerarFacturaService recibe la URL del logo. La carga de la
+plantilla y el base64 del logo ocurren en el wiring (main.py).
 """
 
 from __future__ import annotations
+
+from decimal import Decimal
 
 from garay.dominio.propuestas.contexto import PropuestaContexto
 
 _PH_EMPRESA = "{{EMPRESA}}"
 _PH_LOGO = "{{LOGO}}"
+_PH_PRECIO_COMPLETO = "{{PRECIO_COMPLETO}}"
+_PH_PRECIO_MEDIO = "{{PRECIO_MEDIO}}"
+_PH_PRECIO_COMMUNITY = "{{PRECIO_COMMUNITY}}"
+_PH_PRECIO_TRAFFICKER = "{{PRECIO_TRAFFICKER}}"
+
+
+def _fmt_cop(monto: Decimal) -> str:
+    """Format a Decimal as Colombian thousands: 3000000 -> '3.000.000' (no symbol)."""
+    return f"{int(monto):,}".replace(",", ".")
 
 
 class GenerarPropuestaAudiovisualService:
@@ -22,7 +33,13 @@ class GenerarPropuestaAudiovisualService:
         self._logo_data_uri = logo_data_uri
 
     def generar(self, ctx: PropuestaContexto) -> str:
-        """Return the proposal HTML with the company name and logo filled in."""
-        return self._plantilla.replace(_PH_EMPRESA, ctx.empresa_nombre).replace(
-            _PH_LOGO, self._logo_data_uri
+        """Return the proposal HTML with the company name, logo and prices filled in."""
+        precios = ctx.precios
+        return (
+            self._plantilla.replace(_PH_EMPRESA, ctx.empresa_nombre)
+            .replace(_PH_LOGO, self._logo_data_uri)
+            .replace(_PH_PRECIO_COMPLETO, _fmt_cop(precios.completo.monto))
+            .replace(_PH_PRECIO_MEDIO, _fmt_cop(precios.medio.monto))
+            .replace(_PH_PRECIO_COMMUNITY, _fmt_cop(precios.community.monto))
+            .replace(_PH_PRECIO_TRAFFICKER, _fmt_cop(precios.trafficker.monto))
         )
