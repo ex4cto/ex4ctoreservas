@@ -7,9 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from telegram import InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
-from garay.dominio.propuestas.contexto import PropuestaContexto
+from garay.dominio.comun.dinero import Dinero
+from garay.dominio.propuestas.contexto import PreciosAudiovisual, PropuestaContexto
 from garay.infraestructura.telegram.handlers_propuestas import (
     GEN_EMPRESA,
+    GEN_PRECIO_COMPLETO,
+    GEN_PRECIO_MEDIO,
+    GEN_PRECIOS,
     GEN_SELECCION,
     Documento,
     alternar_seleccion,
@@ -17,7 +21,11 @@ from garay.infraestructura.telegram.handlers_propuestas import (
     construir_teclado,
     handle_gen_continuar,
     handle_gen_empresa,
+    handle_gen_precios,
     handle_gen_toggle,
+    handle_precio_completo,
+    handle_precio_trafficker,
+    parsear_precio,
 )
 
 _AV = Documento.PROPUESTA_AUDIOVISUAL.value
@@ -139,21 +147,18 @@ async def test_continuar_con_seleccion_pide_empresa() -> None:
 # --- empresa → genera -------------------------------------------------------
 
 
-async def test_empresa_genera_y_envia_audiovisual() -> None:
-    service = MagicMock()
-    service.generar.return_value = "<html>Acme</html>"
+async def test_empresa_pide_precios() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
     update.effective_message.text = "Acme S.A.S."
     context = MagicMock()
     context.user_data = {"gen_docs": {_AV}}
-    context.bot_data = {"propuesta_audiovisual_service": service}
 
     result = await handle_gen_empresa(update, context)
 
-    service.generar.assert_called_once_with(PropuestaContexto(empresa_nombre="Acme S.A.S."))
-    update.effective_message.reply_document.assert_called_once()
-    assert result == ConversationHandler.END
+    assert result == GEN_PRECIOS
+    assert context.user_data["gen_empresa"] == "Acme S.A.S."
+    assert "reply_markup" in update.effective_message.reply_text.call_args.kwargs
 
 
 async def test_empresa_vacia_repregunta() -> None:
@@ -162,9 +167,112 @@ async def test_empresa_vacia_repregunta() -> None:
     update.effective_message.text = "   "
     context = MagicMock()
     context.user_data = {"gen_docs": {_AV}}
-    context.bot_data = {"propuesta_audiovisual_service": MagicMock()}
 
     result = await handle_gen_empresa(update, context)
 
-    update.effective_message.reply_document.assert_not_called()
     assert result == GEN_EMPRESA
+
+
+# --- precios ---------------------------------------------------------------
+
+
+def test_parsear_precio_acepta_formatos() -> None:
+    assert parsear_precio("3.000.000") == Dinero(3_000_000)
+    assert parsear_precio("$1.800.000") == Dinero(1_800_000)
+    assert parsear_precio("4500000") == Dinero(4_500_000)
+
+
+def test_parsear_precio_rechaza_invalido() -> None:
+    assert parsear_precio("abc") is None
+    assert parsear_precio("") is None
+
+
+async def test_precios_default_genera_con_defaults() -> None:
+    service = MagicMock()
+    service.generar.return_value = "<html/>"
+    query = AsyncMock()
+    query.data = "gen_precios:default"
+    update = MagicMock()
+    update.callback_query = query
+    update.effective_message = AsyncMock()
+    context = MagicMock()
+    context.user_data = {"gen_empresa": "Acme"}
+    context.bot_data = {"propuesta_audiovisual_service": service}
+
+    result = await handle_gen_precios(update, context)
+
+    service.generar.assert_called_once_with(PropuestaContexto(empresa_nombre="Acme"))
+    update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END
+
+
+async def test_precios_editar_pide_primer_precio() -> None:
+    query = AsyncMock()
+    query.data = "gen_precios:editar"
+    update = MagicMock()
+    update.callback_query = query
+    update.effective_message = AsyncMock()
+    context = MagicMock()
+    context.user_data = {"gen_empresa": "Acme"}
+
+    result = await handle_gen_precios(update, context)
+
+    assert result == GEN_PRECIO_COMPLETO
+    update.effective_message.reply_text.assert_called_once()
+
+
+async def test_precio_completo_valido_avanza() -> None:
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "4000000"
+    context = MagicMock()
+    context.user_data = {}
+
+    result = await handle_precio_completo(update, context)
+
+    assert context.user_data["gen_precio_completo"] == Dinero(4_000_000)
+    assert result == GEN_PRECIO_MEDIO
+
+
+async def test_precio_invalido_repregunta() -> None:
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "no soy número"
+    context = MagicMock()
+    context.user_data = {}
+
+    result = await handle_precio_completo(update, context)
+
+    assert "gen_precio_completo" not in context.user_data
+    assert result == GEN_PRECIO_COMPLETO
+
+
+async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
+    service = MagicMock()
+    service.generar.return_value = "<html/>"
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "800000"
+    context = MagicMock()
+    context.user_data = {
+        "gen_empresa": "Acme",
+        "gen_precio_completo": Dinero(4_000_000),
+        "gen_precio_medio": Dinero(2_000_000),
+        "gen_precio_community": Dinero(700_000),
+    }
+    context.bot_data = {"propuesta_audiovisual_service": service}
+
+    result = await handle_precio_trafficker(update, context)
+
+    esperado = PropuestaContexto(
+        empresa_nombre="Acme",
+        precios=PreciosAudiovisual(
+            completo=Dinero(4_000_000),
+            medio=Dinero(2_000_000),
+            community=Dinero(700_000),
+            trafficker=Dinero(800_000),
+        ),
+    )
+    service.generar.assert_called_once_with(esperado)
+    update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END

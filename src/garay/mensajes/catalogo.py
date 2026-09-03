@@ -747,6 +747,29 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "generar.nada_seleccionado": {
         Idioma.ES: "Selecciona al menos un documento disponible."
     },
+    "generar.precios_pregunta": {
+        Idioma.ES: "¿Usar los precios por defecto o personalizarlos?"
+    },
+    "generar.precios_default": {Idioma.ES: "Usar por defecto"},
+    "generar.precios_editar": {Idioma.ES: "Editar precios ✏️"},
+    "generar.precio_completo": {
+        Idioma.ES: (
+            "💰 Precio mensual del plan Máximo Alcance (28 videos). "
+            "Solo números, ej: 3000000"
+        )
+    },
+    "generar.precio_medio": {
+        Idioma.ES: "💰 Precio mensual del plan Alcance Esencial (14 videos):"
+    },
+    "generar.precio_community": {
+        Idioma.ES: "💰 Precio del complemento Community Manager:"
+    },
+    "generar.precio_trafficker": {
+        Idioma.ES: "💰 Precio del complemento Trafficker Digital:"
+    },
+    "generar.precio_invalido": {
+        Idioma.ES: "Monto inválido. Escribe solo números (ej: 3000000)."
+    },
 }
 
 

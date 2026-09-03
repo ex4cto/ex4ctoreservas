@@ -176,11 +176,21 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
 )
 from garay.infraestructura.telegram.handlers_propuestas import (
     GEN_EMPRESA,
+    GEN_PRECIO_COMMUNITY,
+    GEN_PRECIO_COMPLETO,
+    GEN_PRECIO_MEDIO,
+    GEN_PRECIO_TRAFFICKER,
+    GEN_PRECIOS,
     GEN_SELECCION,
     cmd_generar_documento,
     handle_gen_continuar,
     handle_gen_empresa,
+    handle_gen_precios,
     handle_gen_toggle,
+    handle_precio_community,
+    handle_precio_completo,
+    handle_precio_medio,
+    handle_precio_trafficker,
 )
 from garay.infraestructura.telegram.handlers_tours import (
     EDF_CAMPO,
@@ -848,6 +858,11 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_gen_continuar, pattern="^gen_continuar$"),
             ],
             GEN_EMPRESA: [MessageHandler(_TEXT, handle_gen_empresa)],
+            GEN_PRECIOS: [_CB(handle_gen_precios, pattern="^gen_precios:")],
+            GEN_PRECIO_COMPLETO: [MessageHandler(_TEXT, handle_precio_completo)],
+            GEN_PRECIO_MEDIO: [MessageHandler(_TEXT, handle_precio_medio)],
+            GEN_PRECIO_COMMUNITY: [MessageHandler(_TEXT, handle_precio_community)],
+            GEN_PRECIO_TRAFFICKER: [MessageHandler(_TEXT, handle_precio_trafficker)],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),
