@@ -254,8 +254,8 @@ def _conv_entry_commands(app: object) -> set[str]:
 
 
 class TestBotWiringPropuestas:
-    """MVP: the dev-only /nueva_propuesta command must be registered as a
+    """The dev-only /generar_documento command must be registered as a
     ConversationHandler entry point."""
 
-    def test_nueva_propuesta_command_registered(self) -> None:
-        assert "nueva_propuesta" in _conv_entry_commands(_build_app())
+    def test_generar_documento_command_registered(self) -> None:
+        assert "generar_documento" in _conv_entry_commands(_build_app())

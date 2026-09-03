@@ -735,6 +735,18 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "propuestas.pedir_empresa": {Idioma.ES: "¿Cuál es el nombre de la empresa?"},
     "propuestas.empresa_vacia": {Idioma.ES: "Escribe el nombre de la empresa."},
     "propuestas.enviada": {Idioma.ES: "Propuesta audiovisual — {empresa}"},
+    "generar.elegir_documentos": {
+        Idioma.ES: "¿Qué querés generar? Marca uno o varios y toca Continuar:"
+    },
+    "generar.doc.propuesta_audiovisual": {Idioma.ES: "Propuesta audiovisual"},
+    "generar.doc.propuesta_software": {Idioma.ES: "Propuesta software"},
+    "generar.doc.contrato_audiovisual": {Idioma.ES: "Contrato audiovisual"},
+    "generar.doc.contrato_software": {Idioma.ES: "Contrato software"},
+    "generar.continuar": {Idioma.ES: "Continuar ➡️"},
+    "generar.proximamente": {Idioma.ES: "Próximamente 🔒"},
+    "generar.nada_seleccionado": {
+        Idioma.ES: "Selecciona al menos un documento disponible."
+    },
 }
 
 

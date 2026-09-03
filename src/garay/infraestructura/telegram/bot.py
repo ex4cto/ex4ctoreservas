@@ -175,9 +175,12 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_seleccionar,
 )
 from garay.infraestructura.telegram.handlers_propuestas import (
-    PROP_EMPRESA,
-    cmd_nueva_propuesta,
-    handle_prop_empresa,
+    GEN_EMPRESA,
+    GEN_SELECCION,
+    cmd_generar_documento,
+    handle_gen_continuar,
+    handle_gen_empresa,
+    handle_gen_toggle,
 )
 from garay.infraestructura.telegram.handlers_tours import (
     EDF_CAMPO,
@@ -836,11 +839,15 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
-    # /nueva_propuesta (dev-only) — MVP proposal generator
+    # /generar_documento (dev-only) — multi-select proposal/contract generator
     propuesta_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("nueva_propuesta", cmd_nueva_propuesta)],
+        entry_points=[CommandHandler("generar_documento", cmd_generar_documento)],
         states={
-            PROP_EMPRESA: [MessageHandler(_TEXT, handle_prop_empresa)],
+            GEN_SELECCION: [
+                _CB(handle_gen_toggle, pattern="^gen_toggle:"),
+                _CB(handle_gen_continuar, pattern="^gen_continuar$"),
+            ],
+            GEN_EMPRESA: [MessageHandler(_TEXT, handle_gen_empresa)],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),

@@ -19,8 +19,8 @@ from garay.infraestructura.telegram.menu import (
 class TestCatalogo:
     """Verify catalog structure and completeness."""
 
-    def test_catalogo_tiene_20_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 20
+    def test_catalogo_tiene_21_comandos(self) -> None:
+        assert len(CATALOGO_COMANDOS) == 21
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -99,9 +99,9 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "movimientos" in comandos
 
-    def test_propietario_ve_todos_20(self) -> None:
+    def test_propietario_ve_todos_21(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 20
+        assert len(result) == 21
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -158,9 +158,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_20_botcommands(self) -> None:
+    def test_propietario_retorna_21_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 20
+        assert len(result) == 21
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:
