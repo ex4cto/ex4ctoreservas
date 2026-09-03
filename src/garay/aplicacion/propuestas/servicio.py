@@ -8,6 +8,8 @@ constructor. Template loading and logo base64 encoding happen at wiring time.
 
 from __future__ import annotations
 
+from garay.dominio.propuestas.contexto import PropuestaContexto
+
 _PH_EMPRESA = "{{EMPRESA}}"
 _PH_LOGO = "{{LOGO}}"
 
@@ -19,8 +21,8 @@ class GenerarPropuestaAudiovisualService:
         self._plantilla = plantilla
         self._logo_data_uri = logo_data_uri
 
-    def generar(self, empresa_nombre: str) -> str:
+    def generar(self, ctx: PropuestaContexto) -> str:
         """Return the proposal HTML with the company name and logo filled in."""
-        return self._plantilla.replace(_PH_EMPRESA, empresa_nombre).replace(
+        return self._plantilla.replace(_PH_EMPRESA, ctx.empresa_nombre).replace(
             _PH_LOGO, self._logo_data_uri
         )

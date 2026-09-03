@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from telegram.ext import ConversationHandler
 
 from garay.infraestructura.telegram.auth import requiere_dev_conv
+from garay.mensajes.catalogo import obtener_mensaje
 
 
 class TestRequiereDevConv:
@@ -45,5 +46,5 @@ class TestRequiereDevConv:
             result = await handler(update, MagicMock())
         assert result == ConversationHandler.END
         update.effective_message.reply_text.assert_called_once_with(
-            "Este comando es solo para desarrolladores."
+            obtener_mensaje("solo_desarrolladores")
         )

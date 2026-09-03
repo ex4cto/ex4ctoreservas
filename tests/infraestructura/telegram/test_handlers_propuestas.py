@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from telegram.ext import ConversationHandler
 
+from garay.dominio.propuestas.contexto import PropuestaContexto
 from garay.infraestructura.telegram.handlers_propuestas import (
     PROP_EMPRESA,
     cmd_nueva_propuesta,
@@ -43,7 +44,7 @@ async def test_handle_genera_y_envia_documento() -> None:
 
     result = await handle_prop_empresa(update, context)
 
-    service.generar.assert_called_once_with("Acme S.A.S.")
+    service.generar.assert_called_once_with(PropuestaContexto(empresa_nombre="Acme S.A.S."))
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
 

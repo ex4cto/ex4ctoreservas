@@ -91,7 +91,7 @@ def requiere_dev_conv(
 
         if update.effective_message:
             await update.effective_message.reply_text(
-                "Este comando es solo para desarrolladores."
+                obtener_mensaje("solo_desarrolladores")
             )
         return ConversationHandler.END
 

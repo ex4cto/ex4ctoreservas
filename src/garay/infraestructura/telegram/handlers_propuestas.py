@@ -15,7 +15,9 @@ from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
+from garay.dominio.propuestas.contexto import PropuestaContexto
 from garay.infraestructura.telegram.auth import requiere_dev_conv
+from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,9 @@ def _slug(texto: str) -> str:
 async def cmd_nueva_propuesta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Entry point: ask for the company name."""
     if update.effective_message:
-        await update.effective_message.reply_text("¿Cuál es el nombre de la empresa?")
+        await update.effective_message.reply_text(
+            obtener_mensaje("propuestas.pedir_empresa")
+        )
     return PROP_EMPRESA
 
 
@@ -45,13 +49,13 @@ async def handle_prop_empresa(
     nombre = (mensaje.text or "").strip() if mensaje else ""
     if not nombre:
         if mensaje:
-            await mensaje.reply_text("Escribe el nombre de la empresa.")
+            await mensaje.reply_text(obtener_mensaje("propuestas.empresa_vacia"))
         return PROP_EMPRESA
 
     service: GenerarPropuestaAudiovisualService = context.bot_data[
         "propuesta_audiovisual_service"
     ]
-    html = service.generar(nombre)
+    html = service.generar(PropuestaContexto(empresa_nombre=nombre))
 
     archivo = BytesIO(html.encode("utf-8"))
     archivo.name = f"propuesta-audiovisual-{_slug(nombre)}.html"
@@ -59,6 +63,6 @@ async def handle_prop_empresa(
         await mensaje.reply_document(
             document=archivo,
             filename=archivo.name,
-            caption=f"Propuesta audiovisual — {nombre}",
+            caption=obtener_mensaje("propuestas.enviada").format(empresa=nombre),
         )
     return ConversationHandler.END

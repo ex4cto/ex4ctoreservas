@@ -21,6 +21,21 @@ class TestObtenerMensaje:
             obtener_mensaje("clave_que_no_existe")
 
 
+class TestClavesPropuestas:
+    def test_solo_desarrolladores_existe(self) -> None:
+        assert "desarrolladores" in obtener_mensaje("solo_desarrolladores").lower()
+
+    def test_pedir_empresa_existe(self) -> None:
+        assert "empresa" in obtener_mensaje("propuestas.pedir_empresa").lower()
+
+    def test_empresa_vacia_existe(self) -> None:
+        assert len(obtener_mensaje("propuestas.empresa_vacia")) > 0
+
+    def test_enviada_formatea_empresa(self) -> None:
+        msg = obtener_mensaje("propuestas.enviada").format(empresa="Acme")
+        assert "Acme" in msg
+
+
 class TestClavesEsperandoFoto:
     def test_pregunta_enviar_foto_existe(self) -> None:
         msg = obtener_mensaje("pregunta_enviar_foto")
