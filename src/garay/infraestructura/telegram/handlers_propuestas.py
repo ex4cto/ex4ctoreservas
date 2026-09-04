@@ -19,7 +19,14 @@ from telegram.ext import ContextTypes, ConversationHandler
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
 from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.propuestas.contexto import PreciosAudiovisual, PropuestaContexto
+from garay.dominio.propuestas.contexto import (
+    EJEMPLOS_SERVICIOS_DEFAULT,
+    PRECIOS_AUDIOVISUAL_DEFAULT,
+    PRECIOS_SOFTWARE_DEFAULT,
+    PreciosAudiovisual,
+    PreciosSoftware,
+    PropuestaContexto,
+)
 from garay.infraestructura.telegram.auth import requiere_dev_conv
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -33,13 +40,25 @@ GEN_PRECIO_COMPLETO = 403
 GEN_PRECIO_MEDIO = 404
 GEN_PRECIO_COMMUNITY = 405
 GEN_PRECIO_TRAFFICKER = 406
+GEN_EJEMPLOS = 407
+GEN_PRECIOS_SW = 408
+GEN_SW_DESARROLLO = 409
+GEN_SW_IMPLEMENTACION = 410
+GEN_SW_MENSUAL = 411
+GEN_SW_ANUAL = 412
 
 # user_data keys.
 _SEL_KEY = "gen_docs"
 _EMPRESA_KEY = "gen_empresa"
+_EJEMPLOS_KEY = "gen_ejemplos"
 _P_COMPLETO = "gen_precio_completo"
 _P_MEDIO = "gen_precio_medio"
 _P_COMMUNITY = "gen_precio_community"
+_AV_PRECIOS_KEY = "gen_av_precios"
+_SW_DESARROLLO = "gen_sw_desarrollo"
+_SW_IMPL = "gen_sw_impl"
+_SW_MENSUAL = "gen_sw_mensual"
+_SW_PRECIOS_KEY = "gen_sw_precios"
 
 
 class Documento(StrEnum):
@@ -145,10 +164,25 @@ async def _enviar_html(mensaje: object, html: str, filename: str, caption: str) 
     )
 
 
+def _construir_contexto(context: ContextTypes.DEFAULT_TYPE) -> PropuestaContexto:
+    """Build the PropuestaContexto from whatever the conversation collected.
+
+    Fields not overridden fall back to their domain defaults.
+    """
+    ud = context.user_data if context.user_data is not None else {}
+    return PropuestaContexto(
+        empresa_nombre=ud.get(_EMPRESA_KEY, ""),
+        precios=ud.get(_AV_PRECIOS_KEY, PRECIOS_AUDIOVISUAL_DEFAULT),
+        ejemplos_servicios=ud.get(_EJEMPLOS_KEY, EJEMPLOS_SERVICIOS_DEFAULT),
+        precios_software=ud.get(_SW_PRECIOS_KEY, PRECIOS_SOFTWARE_DEFAULT),
+    )
+
+
 async def _generar_documentos(
-    mensaje: object, context: ContextTypes.DEFAULT_TYPE, ctx: PropuestaContexto
+    mensaje: object, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Generate and send every selected (implemented) document for the context."""
+    """Generate and send every selected (implemented) document."""
+    ctx = _construir_contexto(context)
     seleccion: set[str] = (
         context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
     )
@@ -257,18 +291,53 @@ async def handle_gen_empresa(
     seleccionados: set[str] = (
         context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
     )
-    # Audiovisual has an editable-price sub-flow; ask prices there. Software (and
-    # any other doc) uses defaults in this slice and can be generated right away.
-    if Documento.PROPUESTA_AUDIOVISUAL.value in seleccionados and mensaje:
+    # If software is selected, first ask the business's service examples (copy).
+    if Documento.PROPUESTA_SOFTWARE.value in seleccionados and mensaje:
+        await mensaje.reply_text(obtener_mensaje("generar.pedir_ejemplos"))
+        return GEN_EJEMPLOS
+    return await _iniciar_pricing(update, context)
+
+
+async def handle_ejemplos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Store the service examples for the software copy, then start pricing."""
+    mensaje = update.effective_message
+    texto = (mensaje.text or "").strip() if mensaje else ""
+    if texto and context.user_data is not None:
+        context.user_data[_EJEMPLOS_KEY] = texto
+    return await _iniciar_pricing(update, context)
+
+
+async def _iniciar_pricing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Ask audiovisual prices, else software prices, else generate."""
+    seleccion: set[str] = (
+        context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
+    )
+    mensaje = update.effective_message
+    if Documento.PROPUESTA_AUDIOVISUAL.value in seleccion and mensaje:
         await mensaje.reply_text(
             obtener_mensaje("generar.precios_pregunta"),
             reply_markup=construir_teclado_precios(),
         )
         return GEN_PRECIOS
-    if mensaje:
-        await _generar_documentos(
-            mensaje, context, PropuestaContexto(empresa_nombre=nombre)
+    return await _despues_av_pricing(update, context)
+
+
+async def _despues_av_pricing(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """After audiovisual pricing: ask software prices if selected, else generate."""
+    seleccion: set[str] = (
+        context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
+    )
+    mensaje = update.effective_message
+    if Documento.PROPUESTA_SOFTWARE.value in seleccion and mensaje:
+        await mensaje.reply_text(
+            obtener_mensaje("generar.precios_sw_pregunta"),
+            reply_markup=construir_teclado_precios(),
         )
+        return GEN_PRECIOS_SW
+    if mensaje:
+        await _generar_documentos(mensaje, context)
     return ConversationHandler.END
 
 
@@ -282,14 +351,10 @@ async def handle_gen_precios(
     await query.answer()
     data = query.data or ""
     opcion = data.split(":", 1)[1] if ":" in data else ""
-    nombre = context.user_data.get(_EMPRESA_KEY, "") if context.user_data is not None else ""
 
     if opcion == "default":
-        if update.effective_message:
-            await _generar_documentos(
-                update.effective_message, context, PropuestaContexto(empresa_nombre=nombre)
-            )
-        return ConversationHandler.END
+        # keep audiovisual defaults; continue to software pricing (or generate)
+        return await _despues_av_pricing(update, context)
 
     if update.effective_message:
         await update.effective_message.reply_text(obtener_mensaje("generar.precio_completo"))
@@ -356,14 +421,84 @@ async def handle_precio_trafficker(
             await mensaje.reply_text(obtener_mensaje("generar.precio_invalido"))
         return GEN_PRECIO_TRAFFICKER
 
-    ud = context.user_data if context.user_data is not None else {}
-    precios = PreciosAudiovisual(
-        completo=ud[_P_COMPLETO],
-        medio=ud[_P_MEDIO],
-        community=ud[_P_COMMUNITY],
-        trafficker=precio,
+    if context.user_data is not None:
+        ud = context.user_data
+        context.user_data[_AV_PRECIOS_KEY] = PreciosAudiovisual(
+            completo=ud[_P_COMPLETO],
+            medio=ud[_P_MEDIO],
+            community=ud[_P_COMMUNITY],
+            trafficker=precio,
+        )
+    return await _despues_av_pricing(update, context)
+
+
+async def handle_gen_precios_sw(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Default → generate with default software prices; Edit → ask them."""
+    query = update.callback_query
+    if query is None:
+        return GEN_PRECIOS_SW
+    await query.answer()
+    data = query.data or ""
+    opcion = data.split(":", 1)[1] if ":" in data else ""
+
+    if opcion == "default":
+        if update.effective_message:
+            await _generar_documentos(update.effective_message, context)
+        return ConversationHandler.END
+
+    if update.effective_message:
+        await update.effective_message.reply_text(obtener_mensaje("generar.sw_desarrollo"))
+    return GEN_SW_DESARROLLO
+
+
+async def handle_sw_desarrollo(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    return await _capturar_precio(
+        update, context, _SW_DESARROLLO, "generar.sw_implementacion",
+        GEN_SW_DESARROLLO, GEN_SW_IMPLEMENTACION,
     )
-    ctx = PropuestaContexto(empresa_nombre=ud.get(_EMPRESA_KEY, ""), precios=precios)
+
+
+async def handle_sw_implementacion(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    return await _capturar_precio(
+        update, context, _SW_IMPL, "generar.sw_mensual",
+        GEN_SW_IMPLEMENTACION, GEN_SW_MENSUAL,
+    )
+
+
+async def handle_sw_mensual(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    return await _capturar_precio(
+        update, context, _SW_MENSUAL, "generar.sw_anual",
+        GEN_SW_MENSUAL, GEN_SW_ANUAL,
+    )
+
+
+async def handle_sw_anual(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Capture the annual price, build software prices and generate."""
+    mensaje = update.effective_message
+    precio = parsear_precio(mensaje.text or "") if mensaje else None
+    if precio is None:
+        if mensaje:
+            await mensaje.reply_text(obtener_mensaje("generar.precio_invalido"))
+        return GEN_SW_ANUAL
+
+    if context.user_data is not None:
+        ud = context.user_data
+        context.user_data[_SW_PRECIOS_KEY] = PreciosSoftware(
+            desarrollo=ud[_SW_DESARROLLO],
+            implementacion=ud[_SW_IMPL],
+            mensual=ud[_SW_MENSUAL],
+            anual=precio,
+        )
     if mensaje:
-        await _generar_documentos(mensaje, context, ctx)
+        await _generar_documentos(mensaje, context)
     return ConversationHandler.END

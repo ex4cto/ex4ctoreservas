@@ -771,6 +771,23 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "generar.precio_invalido": {
         Idioma.ES: "Monto inválido. Escribe solo números (ej: 3000000)."
     },
+    "generar.pedir_ejemplos": {
+        Idioma.ES: (
+            "¿Qué servicios ofrece el negocio? (para la copy de la propuesta) "
+            "Ej: reservas, mesas, eventos"
+        )
+    },
+    "generar.precios_sw_pregunta": {
+        Idioma.ES: "Precios del software: ¿usar por defecto o editar?"
+    },
+    "generar.sw_desarrollo": {
+        Idioma.ES: "💰 Valor de desarrollo (referencia). Solo números, ej: 24000000"
+    },
+    "generar.sw_implementacion": {
+        Idioma.ES: "💰 Valor de implementación (pago único):"
+    },
+    "generar.sw_mensual": {Idioma.ES: "💰 Licencia mensual:"},
+    "generar.sw_anual": {Idioma.ES: "💰 Licencia anual:"},
 }
 
 

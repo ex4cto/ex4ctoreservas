@@ -8,23 +8,32 @@ from telegram import InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.propuestas.contexto import PreciosAudiovisual, PropuestaContexto
+from garay.dominio.propuestas.contexto import (
+    PreciosAudiovisual,
+    PreciosSoftware,
+    PropuestaContexto,
+)
 from garay.infraestructura.telegram.handlers_propuestas import (
+    GEN_EJEMPLOS,
     GEN_EMPRESA,
     GEN_PRECIO_COMPLETO,
     GEN_PRECIO_MEDIO,
     GEN_PRECIOS,
+    GEN_PRECIOS_SW,
     GEN_SELECCION,
     Documento,
     alternar_seleccion,
     cmd_generar_documento,
     construir_teclado,
+    handle_ejemplos,
     handle_gen_continuar,
     handle_gen_empresa,
     handle_gen_precios,
+    handle_gen_precios_sw,
     handle_gen_toggle,
     handle_precio_completo,
     handle_precio_trafficker,
+    handle_sw_anual,
     parsear_precio,
 )
 
@@ -284,26 +293,47 @@ async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
 _SW = Documento.PROPUESTA_SOFTWARE.value
 
 
-async def test_empresa_solo_software_genera_directo() -> None:
-    service = MagicMock()
-    service.generar.return_value = "<html/>"
+async def test_empresa_con_software_pide_ejemplos() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
     update.effective_message.text = "Acme"
     context = MagicMock()
     context.user_data = {"gen_docs": {_SW}}
-    context.bot_data = {"propuesta_software_service": service}
 
     result = await handle_gen_empresa(update, context)
 
-    service.generar.assert_called_once_with(PropuestaContexto(empresa_nombre="Acme"))
-    update.effective_message.reply_document.assert_called_once()
-    assert result == ConversationHandler.END
+    assert result == GEN_EJEMPLOS
+    update.effective_message.reply_text.assert_called_once()
 
 
-async def test_precios_default_ambos_genera_dos_documentos() -> None:
-    av = MagicMock()
-    av.generar.return_value = "<a/>"
+async def test_ejemplos_guarda_y_pide_precios_sw() -> None:
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "citas y consultas"
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_SW}, "gen_empresa": "Acme"}
+
+    result = await handle_ejemplos(update, context)
+
+    assert context.user_data["gen_ejemplos"] == "citas y consultas"
+    assert result == GEN_PRECIOS_SW
+
+
+async def test_av_default_con_ambos_pasa_a_precios_sw() -> None:
+    query = AsyncMock()
+    query.data = "gen_precios:default"
+    update = MagicMock()
+    update.callback_query = query
+    update.effective_message = AsyncMock()
+    context = MagicMock()
+    context.user_data = {"gen_empresa": "Acme", "gen_docs": {_AV, _SW}}
+
+    result = await handle_gen_precios(update, context)
+
+    assert result == GEN_PRECIOS_SW
+
+
+async def test_precios_sw_default_genera() -> None:
     sw = MagicMock()
     sw.generar.return_value = "<s/>"
     query = AsyncMock()
@@ -312,15 +342,42 @@ async def test_precios_default_ambos_genera_dos_documentos() -> None:
     update.callback_query = query
     update.effective_message = AsyncMock()
     context = MagicMock()
-    context.user_data = {"gen_empresa": "Acme", "gen_docs": {_AV, _SW}}
-    context.bot_data = {
-        "propuesta_audiovisual_service": av,
-        "propuesta_software_service": sw,
-    }
+    context.user_data = {"gen_empresa": "Acme", "gen_docs": {_SW}}
+    context.bot_data = {"propuesta_software_service": sw}
 
-    result = await handle_gen_precios(update, context)
+    result = await handle_gen_precios_sw(update, context)
 
-    av.generar.assert_called_once()
     sw.generar.assert_called_once()
-    assert update.effective_message.reply_document.call_count == 2
+    update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END
+
+
+async def test_sw_anual_construye_precios_custom_y_genera() -> None:
+    sw = MagicMock()
+    sw.generar.return_value = "<s/>"
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "6000000"
+    context = MagicMock()
+    context.user_data = {
+        "gen_empresa": "Acme",
+        "gen_docs": {_SW},
+        "gen_sw_desarrollo": Dinero(30_000_000),
+        "gen_sw_impl": Dinero(3_000_000),
+        "gen_sw_mensual": Dinero(600_000),
+    }
+    context.bot_data = {"propuesta_software_service": sw}
+
+    result = await handle_sw_anual(update, context)
+
+    esperado = PropuestaContexto(
+        empresa_nombre="Acme",
+        precios_software=PreciosSoftware(
+            desarrollo=Dinero(30_000_000),
+            implementacion=Dinero(3_000_000),
+            mensual=Dinero(600_000),
+            anual=Dinero(6_000_000),
+        ),
+    )
+    sw.generar.assert_called_once_with(esperado)
     assert result == ConversationHandler.END
