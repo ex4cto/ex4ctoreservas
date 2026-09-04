@@ -20,6 +20,7 @@ class Freelancer:
     nombre_completo: str | None = field(default=None)
     cedula: str | None = field(default=None)
     display: str | None = field(default=None)
+    email: str | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.nombre.strip():

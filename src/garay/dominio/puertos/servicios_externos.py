@@ -55,4 +55,10 @@ class ExtractorReserva(ABC):
 
 class NotificadorEmail(ABC):
     @abstractmethod
-    def enviar(self, destinatario: str, asunto: str, cuerpo_html: str) -> None: ...
+    def enviar(
+        self,
+        destinatario: str,
+        asunto: str,
+        cuerpo_html: str,
+        bcc: str | None = None,
+    ) -> None: ...

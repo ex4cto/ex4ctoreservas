@@ -174,6 +174,7 @@ def main() -> None:
         generador=generar_factura_service,
         facturas=factura_repo,
         notificador=notificador_email,
+        freelancers=freelancer_repo,
     )
     regenerar_factura_service: RegenerarFacturaService | None = None
     if notificador_email is not None:
