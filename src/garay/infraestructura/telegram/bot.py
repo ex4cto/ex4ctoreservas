@@ -139,6 +139,7 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     FL_CEDULA,
     FL_CONFIRMACION,
     FL_DISPLAY_OVERRIDE,
+    FL_EMAIL,
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
@@ -156,6 +157,7 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     handle_fl_cedula,
     handle_fl_confirmacion,
     handle_fl_display_override,
+    handle_fl_email,
     handle_fl_nombre_completo,
     handle_fl_nombre_corto,
     handle_fl_skip_tg,
@@ -679,6 +681,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_fl_telegram_id),
                 _CB(handle_fl_skip_tg, pattern="^fl_skip_tg$"),
             ],
+            FL_EMAIL: [MessageHandler(_TEXT, handle_fl_email)],
             FL_CONFIRMACION: [_CB(handle_fl_confirmacion)],
         },
         fallbacks=[

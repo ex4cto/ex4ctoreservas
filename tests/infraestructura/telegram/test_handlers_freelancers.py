@@ -20,6 +20,7 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     FL_CEDULA,
     FL_CONFIRMACION,
     FL_DISPLAY_OVERRIDE,
+    FL_EMAIL,
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
     FL_TELEGRAM_ID,
@@ -38,6 +39,7 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     handle_fl_cedula,
     handle_fl_confirmacion,
     handle_fl_display_override,
+    handle_fl_email,
     handle_fl_nombre_completo,
     handle_fl_nombre_corto,
     handle_fl_skip_tg,
@@ -326,7 +328,7 @@ class TestHandleFlTelegramId:
 
         result = await handle_fl_telegram_id(update, ctx)
 
-        assert result == FL_CONFIRMACION
+        assert result == FL_EMAIL
         assert ctx.user_data["fl_telegram_id"] == 12345678
 
 
@@ -345,7 +347,7 @@ class TestHandleFlSkipTg:
 
         result = await handle_fl_skip_tg(update, ctx)
 
-        assert result == FL_CONFIRMACION
+        assert result == FL_EMAIL
         assert ctx.user_data["fl_telegram_id"] is None
 
 
@@ -521,7 +523,7 @@ class TestEditorFreelancerStateConstants:
 
     def test_no_collision_with_a1_constants(self) -> None:
         a1 = {FL_TELEGRAM_ID, FL_CONFIRMACION, FL_NOMBRE_CORTO, FL_DISPLAY_OVERRIDE,
-               EF_SELECCIONAR, EF_CONFIRMAR, FL_NOMBRE_COMPLETO, FL_CEDULA}
+               EF_SELECCIONAR, EF_CONFIRMAR, FL_NOMBRE_COMPLETO, FL_CEDULA, FL_EMAIL}
         a2 = {EDITAR_SELECCIONAR, EDITAR_CAMPO, EDITAR_VALOR, EDITAR_CONFIRMAR}
         assert a1.isdisjoint(a2), f"Collision: {a1 & a2}"
 
@@ -1214,3 +1216,65 @@ class TestFreelancerRefrescaFSM:
         await handle_edf_confirmar(update, ctx)
 
         fsm.refrescar_freelancers.assert_called_once()
+
+
+class TestEmailFreelancer:
+    """E2: email en crear (/nuevo_freelancer) y editar (/editar_freelancer)."""
+
+    @pytest.mark.asyncio
+    async def test_crear_email_valido_avanza_confirmacion(self) -> None:
+        update = _make_update(text="cerrador@garay.com")
+        ctx = _make_context(user_data={"fl_nombre": "Bryan", "fl_cedula": "12345678"})
+        result = await handle_fl_email(update, ctx)
+        assert result == FL_CONFIRMACION
+        assert ctx.user_data["fl_email"] == "cerrador@garay.com"
+
+    @pytest.mark.asyncio
+    async def test_crear_email_no_omite(self) -> None:
+        update = _make_update(text="no")
+        ctx = _make_context(user_data={"fl_nombre": "Bryan", "fl_cedula": "12345678"})
+        result = await handle_fl_email(update, ctx)
+        assert result == FL_CONFIRMACION
+        assert ctx.user_data["fl_email"] is None
+
+    @pytest.mark.asyncio
+    async def test_crear_email_invalido_repregunta(self) -> None:
+        update = _make_update(text="malito")
+        ctx = _make_context(user_data={})
+        result = await handle_fl_email(update, ctx)
+        assert result == FL_EMAIL
+        assert "fl_email" not in ctx.user_data
+
+    @pytest.mark.asyncio
+    async def test_editar_email_valido(self) -> None:
+        update = _make_update(text="cerr@garay.com")
+        ctx = _make_context_edf(
+            user_data={"edf_campo": "email", "edf_target_id": str(uuid.uuid4())}
+        )
+        result = await handle_edf_valor(update, ctx)
+        assert result == EDITAR_CONFIRMAR
+        assert ctx.user_data["edf_valor"] == "cerr@garay.com"
+
+    @pytest.mark.asyncio
+    async def test_editar_email_invalido(self) -> None:
+        update = _make_update(text="malito")
+        ctx = _make_context_edf(
+            user_data={"edf_campo": "email", "edf_target_id": str(uuid.uuid4())}
+        )
+        result = await handle_edf_valor(update, ctx)
+        assert result == EDITAR_VALOR
+
+    @pytest.mark.asyncio
+    async def test_editar_email_se_guarda(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "email",
+                "edf_valor": "cerr@garay.com",
+            },
+        )
+        await handle_edf_confirmar(update, ctx)
+        assert f.email == "cerr@garay.com"

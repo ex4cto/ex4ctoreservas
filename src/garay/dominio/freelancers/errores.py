@@ -11,3 +11,7 @@ class NombreFreelancerVacio(ErrorDeDominio):
 
 class CedulaInvalida(ErrorDeDominio):
     """La cedula proporcionada no cumple el formato requerido (6-10 digitos)."""
+
+
+class EmailInvalido(ErrorDeDominio):
+    """El correo electronico proporcionado no cumple un formato valido."""
