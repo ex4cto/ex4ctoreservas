@@ -18,6 +18,10 @@ from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaRe
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
+from garay.aplicacion.propuestas.contratos import (
+    GenerarContratoAudiovisualService,
+    GenerarContratoSoftwareService,
+)
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
 from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
@@ -191,6 +195,26 @@ def main() -> None:
         plantilla=_plantilla_software,
         logo_data_uri=_logo_ryan_uri,
     )
+    # Contracts: embed the signature as a base64 data URI (self-contained HTML).
+    _firma_path = _repo_root / "assets" / "firma.png"
+    _firma_uri = ""
+    if _firma_path.exists():
+        _firma_uri = "data:image/png;base64," + base64.b64encode(_firma_path.read_bytes()).decode()
+
+    def _leer_plantilla(nombre: str) -> str:
+        ruta = _repo_root / "assets" / "propuestas" / nombre
+        return ruta.read_text(encoding="utf-8") if ruta.exists() else ""
+
+    contrato_software_service = GenerarContratoSoftwareService(
+        plantilla=_leer_plantilla("contrato-software.html"),
+        logo_data_uri=_logo_ryan_uri,
+        firma_data_uri=_firma_uri,
+    )
+    contrato_audiovisual_service = GenerarContratoAudiovisualService(
+        plantilla=_leer_plantilla("contrato-audiovisual.html"),
+        logo_data_uri=_logo_ryan_uri,
+        firma_data_uri=_firma_uri,
+    )
 
     generar_factura_service = GenerarFacturaService(logo_url=logo_url)
     notificador_email: NotificadorEmail | None = None
@@ -335,6 +359,8 @@ def main() -> None:
             "factura_service": factura_service,
             "propuesta_audiovisual_service": propuesta_audiovisual_service,
             "propuesta_software_service": propuesta_software_service,
+            "contrato_software_service": contrato_software_service,
+            "contrato_audiovisual_service": contrato_audiovisual_service,
             "factura_repo": factura_repo,
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,

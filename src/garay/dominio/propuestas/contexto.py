@@ -12,8 +12,28 @@ nombre (no números mágicos); mover a config/entorno queda como mejora futura.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from garay.dominio.comun.dinero import Dinero
+
+
+class PlanAudiovisual(StrEnum):
+    """Plan audiovisual contratado (para el contrato, que fija uno)."""
+
+    COMPLETO = "completo"  # Máximo Alcance (28 videos)
+    MEDIO = "medio"  # Alcance Esencial (14 videos)
+
+
+@dataclass(frozen=True)
+class DatosCliente:
+    """Datos legales del cliente (CONTRATANTE) para los contratos."""
+
+    razon_social: str
+    nit: str
+    rep_legal: str
+    rep_cc: str
+    direccion: str
+    ciudad: str
 
 
 @dataclass(frozen=True)
@@ -63,3 +83,5 @@ class PropuestaContexto:
     precios: PreciosAudiovisual = field(default=PRECIOS_AUDIOVISUAL_DEFAULT)
     ejemplos_servicios: str = EJEMPLOS_SERVICIOS_DEFAULT
     precios_software: PreciosSoftware = field(default=PRECIOS_SOFTWARE_DEFAULT)
+    datos_cliente: DatosCliente | None = None
+    plan_audiovisual: PlanAudiovisual = PlanAudiovisual.COMPLETO
