@@ -17,6 +17,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
+from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.propuestas.contexto import PreciosAudiovisual, PropuestaContexto
 from garay.infraestructura.telegram.auth import requiere_dev_conv
@@ -59,7 +60,9 @@ _ORDEN: tuple[Documento, ...] = (
 )
 
 # Documents already implemented (selectable). The rest render as "próximamente".
-_IMPLEMENTADOS: frozenset[str] = frozenset({Documento.PROPUESTA_AUDIOVISUAL.value})
+_IMPLEMENTADOS: frozenset[str] = frozenset(
+    {Documento.PROPUESTA_AUDIOVISUAL.value, Documento.PROPUESTA_SOFTWARE.value}
+)
 
 
 def _slug(texto: str) -> str:
@@ -133,21 +136,43 @@ def construir_teclado_precios() -> InlineKeyboardMarkup:
     )
 
 
-async def _enviar_audiovisual(
+async def _enviar_html(mensaje: object, html: str, filename: str, caption: str) -> None:
+    """Send an HTML string as a Telegram document."""
+    archivo = BytesIO(html.encode("utf-8"))
+    archivo.name = filename
+    await mensaje.reply_document(  # type: ignore[attr-defined]
+        document=archivo, filename=filename, caption=caption
+    )
+
+
+async def _generar_documentos(
     mensaje: object, context: ContextTypes.DEFAULT_TYPE, ctx: PropuestaContexto
 ) -> None:
-    """Generate the audiovisual proposal HTML and send it as a document."""
-    service: GenerarPropuestaAudiovisualService = context.bot_data[
-        "propuesta_audiovisual_service"
-    ]
-    html = service.generar(ctx)
-    archivo = BytesIO(html.encode("utf-8"))
-    archivo.name = f"propuesta-audiovisual-{_slug(ctx.empresa_nombre)}.html"
-    await mensaje.reply_document(  # type: ignore[attr-defined]
-        document=archivo,
-        filename=archivo.name,
-        caption=obtener_mensaje("propuestas.enviada").format(empresa=ctx.empresa_nombre),
+    """Generate and send every selected (implemented) document for the context."""
+    seleccion: set[str] = (
+        context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
     )
+    slug = _slug(ctx.empresa_nombre)
+    if Documento.PROPUESTA_AUDIOVISUAL.value in seleccion:
+        svc_av: GenerarPropuestaAudiovisualService = context.bot_data[
+            "propuesta_audiovisual_service"
+        ]
+        await _enviar_html(
+            mensaje,
+            svc_av.generar(ctx),
+            f"propuesta-audiovisual-{slug}.html",
+            obtener_mensaje("propuestas.enviada").format(empresa=ctx.empresa_nombre),
+        )
+    if Documento.PROPUESTA_SOFTWARE.value in seleccion:
+        svc_sw: GenerarPropuestaSoftwareService = context.bot_data[
+            "propuesta_software_service"
+        ]
+        await _enviar_html(
+            mensaje,
+            svc_sw.generar(ctx),
+            f"propuesta-software-{slug}.html",
+            obtener_mensaje("propuestas.software_enviada").format(empresa=ctx.empresa_nombre),
+        )
 
 
 @requiere_dev_conv
@@ -232,12 +257,18 @@ async def handle_gen_empresa(
     seleccionados: set[str] = (
         context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
     )
+    # Audiovisual has an editable-price sub-flow; ask prices there. Software (and
+    # any other doc) uses defaults in this slice and can be generated right away.
     if Documento.PROPUESTA_AUDIOVISUAL.value in seleccionados and mensaje:
         await mensaje.reply_text(
             obtener_mensaje("generar.precios_pregunta"),
             reply_markup=construir_teclado_precios(),
         )
         return GEN_PRECIOS
+    if mensaje:
+        await _generar_documentos(
+            mensaje, context, PropuestaContexto(empresa_nombre=nombre)
+        )
     return ConversationHandler.END
 
 
@@ -255,7 +286,7 @@ async def handle_gen_precios(
 
     if opcion == "default":
         if update.effective_message:
-            await _enviar_audiovisual(
+            await _generar_documentos(
                 update.effective_message, context, PropuestaContexto(empresa_nombre=nombre)
             )
         return ConversationHandler.END
@@ -334,5 +365,5 @@ async def handle_precio_trafficker(
     )
     ctx = PropuestaContexto(empresa_nombre=ud.get(_EMPRESA_KEY, ""), precios=precios)
     if mensaje:
-        await _enviar_audiovisual(mensaje, context, ctx)
+        await _generar_documentos(mensaje, context, ctx)
     return ConversationHandler.END

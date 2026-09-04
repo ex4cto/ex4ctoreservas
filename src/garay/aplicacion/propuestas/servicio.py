@@ -8,8 +8,7 @@ plantilla y el base64 del logo ocurren en el wiring (main.py).
 
 from __future__ import annotations
 
-from decimal import Decimal
-
+from garay.aplicacion.propuestas.formato import formatear_cop
 from garay.dominio.propuestas.contexto import PropuestaContexto
 
 _PH_EMPRESA = "{{EMPRESA}}"
@@ -18,11 +17,6 @@ _PH_PRECIO_COMPLETO = "{{PRECIO_COMPLETO}}"
 _PH_PRECIO_MEDIO = "{{PRECIO_MEDIO}}"
 _PH_PRECIO_COMMUNITY = "{{PRECIO_COMMUNITY}}"
 _PH_PRECIO_TRAFFICKER = "{{PRECIO_TRAFFICKER}}"
-
-
-def _fmt_cop(monto: Decimal) -> str:
-    """Format a Decimal as Colombian thousands: 3000000 -> '3.000.000' (no symbol)."""
-    return f"{int(monto):,}".replace(",", ".")
 
 
 class GenerarPropuestaAudiovisualService:
@@ -38,8 +32,8 @@ class GenerarPropuestaAudiovisualService:
         return (
             self._plantilla.replace(_PH_EMPRESA, ctx.empresa_nombre)
             .replace(_PH_LOGO, self._logo_data_uri)
-            .replace(_PH_PRECIO_COMPLETO, _fmt_cop(precios.completo.monto))
-            .replace(_PH_PRECIO_MEDIO, _fmt_cop(precios.medio.monto))
-            .replace(_PH_PRECIO_COMMUNITY, _fmt_cop(precios.community.monto))
-            .replace(_PH_PRECIO_TRAFFICKER, _fmt_cop(precios.trafficker.monto))
+            .replace(_PH_PRECIO_COMPLETO, formatear_cop(precios.completo.monto))
+            .replace(_PH_PRECIO_MEDIO, formatear_cop(precios.medio.monto))
+            .replace(_PH_PRECIO_COMMUNITY, formatear_cop(precios.community.monto))
+            .replace(_PH_PRECIO_TRAFFICKER, formatear_cop(precios.trafficker.monto))
         )

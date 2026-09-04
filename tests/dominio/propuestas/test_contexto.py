@@ -24,6 +24,19 @@ def test_precios_por_defecto() -> None:
     assert ctx.precios.trafficker == Dinero(600_000)
 
 
+def test_defaults_software() -> None:
+    from garay.dominio.propuestas.contexto import (
+        EJEMPLOS_SERVICIOS_DEFAULT,
+        PRECIOS_SOFTWARE_DEFAULT,
+    )
+
+    ctx = PropuestaContexto(empresa_nombre="X")
+    assert ctx.precios_software == PRECIOS_SOFTWARE_DEFAULT
+    assert ctx.precios_software.desarrollo == Dinero(24_000_000)
+    assert ctx.precios_software.anual == Dinero(5_000_000)
+    assert ctx.ejemplos_servicios == EJEMPLOS_SERVICIOS_DEFAULT
+
+
 def test_precios_personalizados() -> None:
     precios = PreciosAudiovisual(
         completo=Dinero(4_000_000),

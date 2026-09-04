@@ -100,7 +100,7 @@ async def test_toggle_documento_implementado_selecciona() -> None:
 
 async def test_toggle_documento_no_implementado_avisa_proximamente() -> None:
     query = AsyncMock()
-    query.data = f"gen_toggle:{Documento.PROPUESTA_SOFTWARE.value}"
+    query.data = f"gen_toggle:{Documento.CONTRATO_SOFTWARE.value}"
     update = MagicMock()
     update.callback_query = query
     context = MagicMock()
@@ -196,7 +196,7 @@ async def test_precios_default_genera_con_defaults() -> None:
     update.callback_query = query
     update.effective_message = AsyncMock()
     context = MagicMock()
-    context.user_data = {"gen_empresa": "Acme"}
+    context.user_data = {"gen_empresa": "Acme", "gen_docs": {_AV}}
     context.bot_data = {"propuesta_audiovisual_service": service}
 
     result = await handle_gen_precios(update, context)
@@ -256,6 +256,7 @@ async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
     context = MagicMock()
     context.user_data = {
         "gen_empresa": "Acme",
+        "gen_docs": {_AV},
         "gen_precio_completo": Dinero(4_000_000),
         "gen_precio_medio": Dinero(2_000_000),
         "gen_precio_community": Dinero(700_000),
@@ -275,4 +276,51 @@ async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
     )
     service.generar.assert_called_once_with(esperado)
     update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END
+
+
+# --- software (Slice 4a) ----------------------------------------------------
+
+_SW = Documento.PROPUESTA_SOFTWARE.value
+
+
+async def test_empresa_solo_software_genera_directo() -> None:
+    service = MagicMock()
+    service.generar.return_value = "<html/>"
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "Acme"
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_SW}}
+    context.bot_data = {"propuesta_software_service": service}
+
+    result = await handle_gen_empresa(update, context)
+
+    service.generar.assert_called_once_with(PropuestaContexto(empresa_nombre="Acme"))
+    update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END
+
+
+async def test_precios_default_ambos_genera_dos_documentos() -> None:
+    av = MagicMock()
+    av.generar.return_value = "<a/>"
+    sw = MagicMock()
+    sw.generar.return_value = "<s/>"
+    query = AsyncMock()
+    query.data = "gen_precios:default"
+    update = MagicMock()
+    update.callback_query = query
+    update.effective_message = AsyncMock()
+    context = MagicMock()
+    context.user_data = {"gen_empresa": "Acme", "gen_docs": {_AV, _SW}}
+    context.bot_data = {
+        "propuesta_audiovisual_service": av,
+        "propuesta_software_service": sw,
+    }
+
+    result = await handle_gen_precios(update, context)
+
+    av.generar.assert_called_once()
+    sw.generar.assert_called_once()
+    assert update.effective_message.reply_document.call_count == 2
     assert result == ConversationHandler.END

@@ -735,6 +735,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "propuestas.pedir_empresa": {Idioma.ES: "¿Cuál es el nombre de la empresa?"},
     "propuestas.empresa_vacia": {Idioma.ES: "Escribe el nombre de la empresa."},
     "propuestas.enviada": {Idioma.ES: "Propuesta audiovisual — {empresa}"},
+    "propuestas.software_enviada": {Idioma.ES: "Propuesta de software — {empresa}"},
     "generar.elegir_documentos": {
         Idioma.ES: "¿Qué querés generar? Marca uno o varios y toca Continuar:"
     },

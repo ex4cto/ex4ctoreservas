@@ -19,6 +19,7 @@ from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
+from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
@@ -180,6 +181,16 @@ def main() -> None:
         plantilla=_plantilla_audiovisual,
         logo_data_uri=_logo_ryan_uri,
     )
+    _plantilla_software_path = _repo_root / "assets" / "propuestas" / "software.html"
+    _plantilla_software = (
+        _plantilla_software_path.read_text(encoding="utf-8")
+        if _plantilla_software_path.exists()
+        else ""
+    )
+    propuesta_software_service = GenerarPropuestaSoftwareService(
+        plantilla=_plantilla_software,
+        logo_data_uri=_logo_ryan_uri,
+    )
 
     generar_factura_service = GenerarFacturaService(logo_url=logo_url)
     notificador_email: NotificadorEmail | None = None
@@ -323,6 +334,7 @@ def main() -> None:
             "conciliar_service": conciliar_service,
             "factura_service": factura_service,
             "propuesta_audiovisual_service": propuesta_audiovisual_service,
+            "propuesta_software_service": propuesta_software_service,
             "factura_repo": factura_repo,
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,
