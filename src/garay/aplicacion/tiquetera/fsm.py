@@ -19,6 +19,7 @@ from garay.aplicacion.comun.fechas import (
 from garay.aplicacion.comun.fechas import (
     parsear_fecha as _parsear_fecha,
 )
+from garay.dominio.comun.email import es_email_valido, normalizar_email
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
 from garay.dominio.servicios.horarios import formato_display, render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
@@ -1029,8 +1030,10 @@ class FSMTiquetera:
 
     def _handle_cliente_email(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        email = entrada.strip()
-        if "@" not in email:
+        # Normaliza (quita espacios internos + minúsculas) para corregir errores
+        # de captura antes de guardar; el resumen mostrará el correo ya corregido.
+        email = normalizar_email(entrada)
+        if not es_email_valido(email):
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CLIENTE_EMAIL,
                 mensaje=obtener_mensaje("error_email_invalido"),

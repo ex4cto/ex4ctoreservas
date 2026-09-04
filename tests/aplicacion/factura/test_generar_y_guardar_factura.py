@@ -208,3 +208,91 @@ def test_valor_none_es_no_op() -> None:
 
     facturas.buscar_por_venta_id.assert_not_called()
     facturas.guardar.assert_not_called()
+
+
+# --- copia oculta (BCC) al cerrador -----------------------------------------
+
+
+def _ctx_con_cerrador(cerrador_id: uuid.UUID, email: str = "juan@example.com") -> ContextoVenta:
+    ctx = _ctx(email=email)
+    ctx.cerrador_id = cerrador_id
+    return ctx
+
+
+def _freelancer(cid: uuid.UUID, email: str | None) -> object:
+    from garay.dominio.freelancers.entidades import Freelancer
+
+    return Freelancer(id=cid, nombre="Cerrador", email=email)
+
+
+def test_bcc_al_cerrador_cuando_tiene_email() -> None:
+    cid = uuid.uuid4()
+    facturas = MagicMock()
+    facturas.buscar_por_venta_id.return_value = None
+    notificador = MagicMock()
+    freelancers = MagicMock()
+    freelancers.buscar_por_id.return_value = _freelancer(cid, "cerrador@garay.com")
+    servicio = GenerarYGuardarFacturaService(
+        generador=_generador_mock(),
+        facturas=facturas,
+        notificador=notificador,
+        freelancers=freelancers,
+    )
+
+    servicio.ejecutar(_ctx_con_cerrador(cid), _resultado())
+
+    freelancers.buscar_por_id.assert_called_once_with(cid)
+    assert notificador.enviar.call_args.kwargs["bcc"] == "cerrador@garay.com"
+
+
+def test_sin_repo_freelancers_no_bcc() -> None:
+    facturas = MagicMock()
+    facturas.buscar_por_venta_id.return_value = None
+    notificador = MagicMock()
+    servicio = GenerarYGuardarFacturaService(
+        generador=_generador_mock(),
+        facturas=facturas,
+        notificador=notificador,
+    )
+
+    servicio.ejecutar(_ctx_con_cerrador(uuid.uuid4()), _resultado())
+
+    assert notificador.enviar.call_args.kwargs["bcc"] is None
+
+
+def test_cerrador_sin_email_no_bcc() -> None:
+    cid = uuid.uuid4()
+    facturas = MagicMock()
+    facturas.buscar_por_venta_id.return_value = None
+    notificador = MagicMock()
+    freelancers = MagicMock()
+    freelancers.buscar_por_id.return_value = _freelancer(cid, None)
+    servicio = GenerarYGuardarFacturaService(
+        generador=_generador_mock(),
+        facturas=facturas,
+        notificador=notificador,
+        freelancers=freelancers,
+    )
+
+    servicio.ejecutar(_ctx_con_cerrador(cid), _resultado())
+
+    assert notificador.enviar.call_args.kwargs["bcc"] is None
+
+
+def test_cerrador_email_igual_cliente_no_bcc() -> None:
+    cid = uuid.uuid4()
+    facturas = MagicMock()
+    facturas.buscar_por_venta_id.return_value = None
+    notificador = MagicMock()
+    freelancers = MagicMock()
+    freelancers.buscar_por_id.return_value = _freelancer(cid, "juan@example.com")
+    servicio = GenerarYGuardarFacturaService(
+        generador=_generador_mock(),
+        facturas=facturas,
+        notificador=notificador,
+        freelancers=freelancers,
+    )
+
+    servicio.ejecutar(_ctx_con_cerrador(cid, email="juan@example.com"), _resultado())
+
+    assert notificador.enviar.call_args.kwargs["bcc"] is None

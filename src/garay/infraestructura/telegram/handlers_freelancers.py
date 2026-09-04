@@ -10,8 +10,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.dominio.freelancers.entidades import Freelancer
-from garay.dominio.freelancers.errores import CedulaInvalida
-from garay.dominio.freelancers.validaciones import derivar_display, validar_cedula
+from garay.dominio.freelancers.errores import CedulaInvalida, EmailInvalido
+from garay.dominio.freelancers.validaciones import (
+    derivar_display,
+    validar_cedula,
+    validar_email,
+)
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram.auth import (
     dev_telegram_ids,
@@ -51,6 +55,7 @@ EF_CONFIRMAR: int = 206
 
 FL_NOMBRE_COMPLETO: int = 207
 FL_CEDULA: int = 208
+FL_EMAIL: int = 209
 
 # State constants — range 210-213 (/editar_freelancer)
 EDITAR_SELECCIONAR: int = 210
@@ -205,8 +210,9 @@ async def handle_fl_telegram_id(update: Update, context: ContextTypes.DEFAULT_TY
         return FL_TELEGRAM_ID
     if context.user_data is not None:
         context.user_data["fl_telegram_id"] = telegram_id
-    await _mostrar_confirmacion(update, context)
-    return FL_CONFIRMACION
+    if update.effective_message:
+        await update.effective_message.reply_text(obtener_mensaje("freelancer.pedir_email"))
+    return FL_EMAIL
 
 
 async def handle_fl_skip_tg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -216,6 +222,29 @@ async def handle_fl_skip_tg(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await query.answer()
     if context.user_data is not None:
         context.user_data["fl_telegram_id"] = None
+    if update.effective_message:
+        await update.effective_message.reply_text(obtener_mensaje("freelancer.pedir_email"))
+    return FL_EMAIL
+
+
+async def handle_fl_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Optional email step: 'no' skips; otherwise validate before confirmation."""
+    if update.effective_message is None:
+        return FL_EMAIL
+    texto = (update.effective_message.text or "").strip()
+    email: str | None
+    if texto.lower() in ("no", "omitir", "-", "n/a", "na"):
+        email = None
+    else:
+        try:
+            email = validar_email(texto)
+        except EmailInvalido:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_email_invalido")
+            )
+            return FL_EMAIL
+    if context.user_data is not None:
+        context.user_data["fl_email"] = email
     await _mostrar_confirmacion(update, context)
     return FL_CONFIRMACION
 
@@ -269,6 +298,8 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
     display = str(ud.get("fl_display", "")) or None
     raw_tg = ud.get("fl_telegram_id")
     telegram_id: int | None = int(raw_tg) if isinstance(raw_tg, int) else None
+    email_raw = ud.get("fl_email")
+    email: str | None = email_raw if isinstance(email_raw, str) else None
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     if repo:
         freelancer = Freelancer(
@@ -278,6 +309,7 @@ async def handle_fl_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
             cedula=cedula,
             display=display,
             telegram_user_id=telegram_id,
+            email=email,
             activo=True,
             es_admin=False,
         )
@@ -300,6 +332,7 @@ def _limpiar_fl(context: ContextTypes.DEFAULT_TYPE) -> None:
             "fl_cedula",
             "fl_display",
             "fl_telegram_id",
+            "fl_email",
         ):
             context.user_data.pop(key, None)
 
@@ -412,6 +445,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("nombre_completo", "Nombre completo"),
     ("cedula", "Cédula"),
     ("nombre", "Nombre corto"),
+    ("email", "Correo electrónico"),
     ("telegram_id", "Telegram ID"),
     ("activo", "Activo"),
 ]
@@ -447,6 +481,7 @@ def _render_ficha(f: Freelancer) -> str:
         nombre_completo=f.nombre_completo or "—",
         nombre=f.nombre,
         cedula=f.cedula or "—",
+        email=f.email or "—",
         estado="Activo" if f.activo else "Inactivo",
     )
 
@@ -563,6 +598,7 @@ async def handle_edf_campo(
         "nombre_completo": "freelancer.editar_pedir_nombre_completo",
         "cedula": "freelancer.editar_pedir_cedula",
         "nombre": "freelancer.editar_pedir_nombre_corto",
+        "email": "freelancer.editar_pedir_email",
         "telegram_id": "freelancer.editar_pedir_telegram_id",
     }
     prompt_key = prompt_key_map.get(campo, "freelancer.editar_pedir_nombre_completo")
@@ -649,6 +685,19 @@ async def handle_edf_valor(
             return EDITAR_VALOR
         if context.user_data is not None:
             context.user_data["edf_valor"] = nuevo_tg
+        await _mostrar_confirmacion_editar(update, context)
+        return EDITAR_CONFIRMAR
+
+    if campo == "email":
+        try:
+            email = validar_email(texto)
+        except EmailInvalido:
+            await update.effective_message.reply_text(
+                obtener_mensaje("freelancer.error_email_invalido")
+            )
+            return EDITAR_VALOR
+        if context.user_data is not None:
+            context.user_data["edf_valor"] = email
         await _mostrar_confirmacion_editar(update, context)
         return EDITAR_CONFIRMAR
 
@@ -774,6 +823,8 @@ async def handle_edf_confirmar(
         f.display = derivar_display(nuevo_nc)
     elif campo == "cedula":
         f.cedula = str(ud.get("edf_valor", "")) or None
+    elif campo == "email":
+        f.email = str(ud.get("edf_valor", "")) or None
     elif campo == "nombre":
         f.nombre = str(ud.get("edf_valor", ""))
     elif campo == "telegram_id":

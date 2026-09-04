@@ -81,6 +81,7 @@ class FreelancerModel(Base):
     nombre_completo: Mapped[str | None] = mapped_column(String, nullable=True)
     cedula: Mapped[str | None] = mapped_column(String, nullable=True)
     display: Mapped[str | None] = mapped_column(String, nullable=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class PuntoDeVentaModel(Base):

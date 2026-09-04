@@ -4,8 +4,36 @@ from __future__ import annotations
 
 import pytest
 
-from garay.dominio.freelancers.errores import CedulaInvalida
-from garay.dominio.freelancers.validaciones import derivar_display, validar_cedula
+from garay.dominio.freelancers.errores import CedulaInvalida, EmailInvalido
+from garay.dominio.freelancers.validaciones import (
+    derivar_display,
+    validar_cedula,
+    validar_email,
+)
+
+
+class TestValidarEmail:
+    def test_email_valido_se_normaliza(self) -> None:
+        assert validar_email("  cerrador@garay.com  ") == "cerrador@garay.com"
+
+    def test_email_con_subdominio(self) -> None:
+        assert validar_email("a.b@mail.ex4cto.co") == "a.b@mail.ex4cto.co"
+
+    def test_sin_arroba_invalido(self) -> None:
+        with pytest.raises(EmailInvalido):
+            validar_email("cerrador.garay.com")
+
+    def test_sin_punto_en_dominio_invalido(self) -> None:
+        with pytest.raises(EmailInvalido):
+            validar_email("cerrador@garay")
+
+    def test_con_espacios_invalido(self) -> None:
+        with pytest.raises(EmailInvalido):
+            validar_email("cerra dor@garay.com")
+
+    def test_vacio_invalido(self) -> None:
+        with pytest.raises(EmailInvalido):
+            validar_email("")
 
 
 class TestValidarCedula:
