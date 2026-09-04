@@ -788,6 +788,20 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "generar.sw_mensual": {Idioma.ES: "💰 Licencia mensual:"},
     "generar.sw_anual": {Idioma.ES: "💰 Licencia anual:"},
+    "generar.dato_vacio": {Idioma.ES: "No puede estar vacío. Intenta de nuevo:"},
+    "generar.pedir_razon_social": {Idioma.ES: "🏢 Razón social del cliente (CONTRATANTE):"},
+    "generar.pedir_nit": {Idioma.ES: "NIT del cliente:"},
+    "generar.pedir_rep_legal": {Idioma.ES: "Nombre del representante legal:"},
+    "generar.pedir_rep_cc": {Idioma.ES: "Cédula del representante legal:"},
+    "generar.pedir_direccion": {Idioma.ES: "Dirección del cliente:"},
+    "generar.pedir_ciudad": {Idioma.ES: "Ciudad del cliente:"},
+    "generar.plan_contrato_pregunta": {
+        Idioma.ES: "¿Qué plan se contrató? (para el contrato audiovisual)"
+    },
+    "generar.plan_completo": {Idioma.ES: "Máximo Alcance (28 videos)"},
+    "generar.plan_medio": {Idioma.ES: "Alcance Esencial (14 videos)"},
+    "generar.contrato_software_enviado": {Idioma.ES: "Contrato de software — {empresa}"},
+    "generar.contrato_audiovisual_enviado": {Idioma.ES: "Contrato audiovisual — {empresa}"},
 }
 
 

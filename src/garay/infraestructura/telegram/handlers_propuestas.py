@@ -16,6 +16,10 @@ from io import BytesIO
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.propuestas.contratos import (
+    GenerarContratoAudiovisualService,
+    GenerarContratoSoftwareService,
+)
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
 from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.dominio.comun.dinero import Dinero
@@ -23,6 +27,8 @@ from garay.dominio.propuestas.contexto import (
     EJEMPLOS_SERVICIOS_DEFAULT,
     PRECIOS_AUDIOVISUAL_DEFAULT,
     PRECIOS_SOFTWARE_DEFAULT,
+    DatosCliente,
+    PlanAudiovisual,
     PreciosAudiovisual,
     PreciosSoftware,
     PropuestaContexto,
@@ -46,6 +52,13 @@ GEN_SW_DESARROLLO = 409
 GEN_SW_IMPLEMENTACION = 410
 GEN_SW_MENSUAL = 411
 GEN_SW_ANUAL = 412
+GEN_RAZON_SOCIAL = 413
+GEN_NIT = 414
+GEN_REP_LEGAL = 415
+GEN_REP_CC = 416
+GEN_DIRECCION = 417
+GEN_CIUDAD = 418
+GEN_PLAN_CONTRATO = 419
 
 # user_data keys.
 _SEL_KEY = "gen_docs"
@@ -59,6 +72,13 @@ _SW_DESARROLLO = "gen_sw_desarrollo"
 _SW_IMPL = "gen_sw_impl"
 _SW_MENSUAL = "gen_sw_mensual"
 _SW_PRECIOS_KEY = "gen_sw_precios"
+_RAZON_SOCIAL = "gen_razon_social"
+_NIT = "gen_nit"
+_REP_LEGAL = "gen_rep_legal"
+_REP_CC = "gen_rep_cc"
+_DIRECCION = "gen_direccion"
+_CIUDAD = "gen_ciudad"
+_PLAN_KEY = "gen_plan"
 
 
 class Documento(StrEnum):
@@ -78,10 +98,22 @@ _ORDEN: tuple[Documento, ...] = (
     Documento.CONTRATO_SOFTWARE,
 )
 
-# Documents already implemented (selectable). The rest render as "próximamente".
+# Documents already implemented (selectable).
 _IMPLEMENTADOS: frozenset[str] = frozenset(
-    {Documento.PROPUESTA_AUDIOVISUAL.value, Documento.PROPUESTA_SOFTWARE.value}
+    {
+        Documento.PROPUESTA_AUDIOVISUAL.value,
+        Documento.PROPUESTA_SOFTWARE.value,
+        Documento.CONTRATO_AUDIOVISUAL.value,
+        Documento.CONTRATO_SOFTWARE.value,
+    }
 )
+
+
+def _hay_contrato(seleccion: set[str]) -> bool:
+    return bool(
+        {Documento.CONTRATO_AUDIOVISUAL.value, Documento.CONTRATO_SOFTWARE.value}
+        & seleccion
+    )
 
 
 def _slug(texto: str) -> str:
@@ -170,11 +202,26 @@ def _construir_contexto(context: ContextTypes.DEFAULT_TYPE) -> PropuestaContexto
     Fields not overridden fall back to their domain defaults.
     """
     ud = context.user_data if context.user_data is not None else {}
+    datos = None
+    if all(
+        k in ud
+        for k in (_RAZON_SOCIAL, _NIT, _REP_LEGAL, _REP_CC, _DIRECCION, _CIUDAD)
+    ):
+        datos = DatosCliente(
+            razon_social=ud[_RAZON_SOCIAL],
+            nit=ud[_NIT],
+            rep_legal=ud[_REP_LEGAL],
+            rep_cc=ud[_REP_CC],
+            direccion=ud[_DIRECCION],
+            ciudad=ud[_CIUDAD],
+        )
     return PropuestaContexto(
         empresa_nombre=ud.get(_EMPRESA_KEY, ""),
         precios=ud.get(_AV_PRECIOS_KEY, PRECIOS_AUDIOVISUAL_DEFAULT),
         ejemplos_servicios=ud.get(_EJEMPLOS_KEY, EJEMPLOS_SERVICIOS_DEFAULT),
         precios_software=ud.get(_SW_PRECIOS_KEY, PRECIOS_SOFTWARE_DEFAULT),
+        datos_cliente=datos,
+        plan_audiovisual=ud.get(_PLAN_KEY, PlanAudiovisual.COMPLETO),
     )
 
 
@@ -206,6 +253,30 @@ async def _generar_documentos(
             svc_sw.generar(ctx),
             f"propuesta-software-{slug}.html",
             obtener_mensaje("propuestas.software_enviada").format(empresa=ctx.empresa_nombre),
+        )
+    if Documento.CONTRATO_AUDIOVISUAL.value in seleccion:
+        svc_cav: GenerarContratoAudiovisualService = context.bot_data[
+            "contrato_audiovisual_service"
+        ]
+        await _enviar_html(
+            mensaje,
+            svc_cav.generar(ctx),
+            f"contrato-audiovisual-{slug}.html",
+            obtener_mensaje("generar.contrato_audiovisual_enviado").format(
+                empresa=ctx.empresa_nombre
+            ),
+        )
+    if Documento.CONTRATO_SOFTWARE.value in seleccion:
+        svc_csw: GenerarContratoSoftwareService = context.bot_data[
+            "contrato_software_service"
+        ]
+        await _enviar_html(
+            mensaje,
+            svc_csw.generar(ctx),
+            f"contrato-software-{slug}.html",
+            obtener_mensaje("generar.contrato_software_enviado").format(
+                empresa=ctx.empresa_nombre
+            ),
         )
 
 
@@ -336,9 +407,7 @@ async def _despues_av_pricing(
             reply_markup=construir_teclado_precios(),
         )
         return GEN_PRECIOS_SW
-    if mensaje:
-        await _generar_documentos(mensaje, context)
-    return ConversationHandler.END
+    return await _despues_pricing(update, context)
 
 
 async def handle_gen_precios(
@@ -444,9 +513,7 @@ async def handle_gen_precios_sw(
     opcion = data.split(":", 1)[1] if ":" in data else ""
 
     if opcion == "default":
-        if update.effective_message:
-            await _generar_documentos(update.effective_message, context)
-        return ConversationHandler.END
+        return await _despues_pricing(update, context)
 
     if update.effective_message:
         await update.effective_message.reply_text(obtener_mensaje("generar.sw_desarrollo"))
@@ -499,6 +566,132 @@ async def handle_sw_anual(
             mensual=ud[_SW_MENSUAL],
             anual=precio,
         )
+    return await _despues_pricing(update, context)
+
+
+def construir_teclado_plan() -> InlineKeyboardMarkup:
+    """Keyboard to choose the contracted audiovisual plan (pure)."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("generar.plan_completo"),
+                    callback_data="gen_plan:completo",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("generar.plan_medio"),
+                    callback_data="gen_plan:medio",
+                )
+            ],
+        ]
+    )
+
+
+async def _despues_pricing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """After pricing: collect client legal data if a contract is selected, else generate."""
+    seleccion: set[str] = (
+        context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
+    )
+    mensaje = update.effective_message
+    if _hay_contrato(seleccion) and mensaje:
+        await mensaje.reply_text(obtener_mensaje("generar.pedir_razon_social"))
+        return GEN_RAZON_SOCIAL
     if mensaje:
         await _generar_documentos(mensaje, context)
+    return ConversationHandler.END
+
+
+async def _capturar_texto(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    dest_key: str,
+    siguiente_msg: str,
+    este_estado: int,
+    siguiente_estado: int,
+) -> int:
+    """Store a non-empty text field and advance; re-prompt if empty."""
+    mensaje = update.effective_message
+    txt = (mensaje.text or "").strip() if mensaje else ""
+    if not txt:
+        if mensaje:
+            await mensaje.reply_text(obtener_mensaje("generar.dato_vacio"))
+        return este_estado
+    if context.user_data is not None:
+        context.user_data[dest_key] = txt
+    if mensaje:
+        await mensaje.reply_text(obtener_mensaje(siguiente_msg))
+    return siguiente_estado
+
+
+async def handle_razon_social(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _capturar_texto(
+        update, context, _RAZON_SOCIAL, "generar.pedir_nit", GEN_RAZON_SOCIAL, GEN_NIT
+    )
+
+
+async def handle_nit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _capturar_texto(
+        update, context, _NIT, "generar.pedir_rep_legal", GEN_NIT, GEN_REP_LEGAL
+    )
+
+
+async def handle_rep_legal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _capturar_texto(
+        update, context, _REP_LEGAL, "generar.pedir_rep_cc", GEN_REP_LEGAL, GEN_REP_CC
+    )
+
+
+async def handle_rep_cc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _capturar_texto(
+        update, context, _REP_CC, "generar.pedir_direccion", GEN_REP_CC, GEN_DIRECCION
+    )
+
+
+async def handle_direccion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _capturar_texto(
+        update, context, _DIRECCION, "generar.pedir_ciudad", GEN_DIRECCION, GEN_CIUDAD
+    )
+
+
+async def handle_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Last legal field: store city, then ask plan (if AV contract) or generate."""
+    mensaje = update.effective_message
+    txt = (mensaje.text or "").strip() if mensaje else ""
+    if not txt:
+        if mensaje:
+            await mensaje.reply_text(obtener_mensaje("generar.dato_vacio"))
+        return GEN_CIUDAD
+    if context.user_data is not None:
+        context.user_data[_CIUDAD] = txt
+    seleccion: set[str] = (
+        context.user_data.get(_SEL_KEY, set()) if context.user_data is not None else set()
+    )
+    if Documento.CONTRATO_AUDIOVISUAL.value in seleccion and mensaje:
+        await mensaje.reply_text(
+            obtener_mensaje("generar.plan_contrato_pregunta"),
+            reply_markup=construir_teclado_plan(),
+        )
+        return GEN_PLAN_CONTRATO
+    if mensaje:
+        await _generar_documentos(mensaje, context)
+    return ConversationHandler.END
+
+
+async def handle_plan_contrato(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Set the contracted audiovisual plan and generate."""
+    query = update.callback_query
+    if query is None:
+        return GEN_PLAN_CONTRATO
+    await query.answer()
+    data = query.data or ""
+    val = data.split(":", 1)[1] if ":" in data else "completo"
+    plan = PlanAudiovisual.MEDIO if val == "medio" else PlanAudiovisual.COMPLETO
+    if context.user_data is not None:
+        context.user_data[_PLAN_KEY] = plan
+    if update.effective_message:
+        await _generar_documentos(update.effective_message, context)
     return ConversationHandler.END

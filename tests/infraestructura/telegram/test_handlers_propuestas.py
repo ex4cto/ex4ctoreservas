@@ -16,6 +16,8 @@ from garay.dominio.propuestas.contexto import (
 from garay.infraestructura.telegram.handlers_propuestas import (
     GEN_EJEMPLOS,
     GEN_EMPRESA,
+    GEN_NIT,
+    GEN_PLAN_CONTRATO,
     GEN_PRECIO_COMPLETO,
     GEN_PRECIO_MEDIO,
     GEN_PRECIOS,
@@ -25,14 +27,17 @@ from garay.infraestructura.telegram.handlers_propuestas import (
     alternar_seleccion,
     cmd_generar_documento,
     construir_teclado,
+    handle_ciudad,
     handle_ejemplos,
     handle_gen_continuar,
     handle_gen_empresa,
     handle_gen_precios,
     handle_gen_precios_sw,
     handle_gen_toggle,
+    handle_plan_contrato,
     handle_precio_completo,
     handle_precio_trafficker,
+    handle_razon_social,
     handle_sw_anual,
     parsear_precio,
 )
@@ -53,8 +58,9 @@ def test_teclado_marca_seleccionados() -> None:
     assert isinstance(kb, InlineKeyboardMarkup)
     textos = [b.text for fila in kb.inline_keyboard for b in fila]
     assert any("✅" in t for t in textos)
-    assert any("🔒" in t for t in textos)  # docs no implementados
     assert any("Continuar" in t for t in textos)
+    # los 4 documentos + Continuar
+    assert len(textos) == 5
 
 
 def test_teclado_sin_seleccion_no_tiene_check() -> None:
@@ -107,9 +113,9 @@ async def test_toggle_documento_implementado_selecciona() -> None:
     assert result == GEN_SELECCION
 
 
-async def test_toggle_documento_no_implementado_avisa_proximamente() -> None:
+async def test_toggle_documento_desconocido_avisa_proximamente() -> None:
     query = AsyncMock()
-    query.data = f"gen_toggle:{Documento.CONTRATO_SOFTWARE.value}"
+    query.data = "gen_toggle:documento_inexistente"
     update = MagicMock()
     update.callback_query = query
     context = MagicMock()
@@ -380,4 +386,87 @@ async def test_sw_anual_construye_precios_custom_y_genera() -> None:
         ),
     )
     sw.generar.assert_called_once_with(esperado)
+    assert result == ConversationHandler.END
+
+
+# --- contratos (Slice 5b) ---------------------------------------------------
+
+_CAV = Documento.CONTRATO_AUDIOVISUAL.value
+_CSW = Documento.CONTRATO_SOFTWARE.value
+
+_LEGAL = {
+    "gen_razon_social": "Clinica Sonrisa SAS",
+    "gen_nit": "900123456-7",
+    "gen_rep_legal": "Ana Perez",
+    "gen_rep_cc": "43111222",
+    "gen_direccion": "Cra 1 #2-3",
+    "gen_ciudad": "Medellin",
+}
+
+
+async def test_razon_social_avanza_a_nit() -> None:
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "Clinica Sonrisa SAS"
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_CSW}}
+
+    result = await handle_razon_social(update, context)
+
+    assert context.user_data["gen_razon_social"] == "Clinica Sonrisa SAS"
+    assert result == GEN_NIT
+
+
+async def test_ciudad_con_contrato_av_pide_plan() -> None:
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "Medellin"
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_CAV}}
+
+    result = await handle_ciudad(update, context)
+
+    assert result == GEN_PLAN_CONTRATO
+
+
+async def test_ciudad_solo_contrato_software_genera() -> None:
+    svc = MagicMock()
+    svc.generar.return_value = "<c/>"
+    update = MagicMock()
+    update.effective_message = AsyncMock()
+    update.effective_message.text = "Medellin"
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_CSW}, "gen_empresa": "Acme", **_LEGAL}
+    context.bot_data = {"contrato_software_service": svc}
+
+    result = await handle_ciudad(update, context)
+
+    svc.generar.assert_called_once()
+    ctx = svc.generar.call_args[0][0]
+    assert ctx.datos_cliente is not None
+    assert ctx.datos_cliente.nit == "900123456-7"
+    update.effective_message.reply_document.assert_called_once()
+    assert result == ConversationHandler.END
+
+
+async def test_plan_contrato_genera_contrato_audiovisual_con_plan() -> None:
+    from garay.dominio.propuestas.contexto import PlanAudiovisual
+
+    svc = MagicMock()
+    svc.generar.return_value = "<c/>"
+    query = AsyncMock()
+    query.data = "gen_plan:medio"
+    update = MagicMock()
+    update.callback_query = query
+    update.effective_message = AsyncMock()
+    context = MagicMock()
+    context.user_data = {"gen_docs": {_CAV}, "gen_empresa": "Acme", **_LEGAL}
+    context.bot_data = {"contrato_audiovisual_service": svc}
+
+    result = await handle_plan_contrato(update, context)
+
+    svc.generar.assert_called_once()
+    ctx = svc.generar.call_args[0][0]
+    assert ctx.plan_audiovisual is PlanAudiovisual.MEDIO
+    assert ctx.datos_cliente.razon_social == "Clinica Sonrisa SAS"
     assert result == ConversationHandler.END
