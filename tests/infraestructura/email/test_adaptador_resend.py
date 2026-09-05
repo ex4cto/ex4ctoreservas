@@ -64,3 +64,19 @@ class TestResendAdapterEnviar:
             mock_post.return_value = MagicMock()
             adapter.enviar("dest@example.com", "Asunto", "<html>body</html>")
         assert mock_post.call_args[1]["timeout"] == 10.0
+
+    def test_bcc_incluido_como_lista(self) -> None:
+        adapter = ResendAdapter(api_key="key", from_address="facturas@ex4cto.co")
+        with patch("garay.infraestructura.email.adaptador_resend.httpx.post") as mock_post:
+            mock_post.return_value = MagicMock()
+            adapter.enviar("cliente@x.com", "Asunto", "<p>b</p>", bcc="cerrador@garay.com")
+        json_body = mock_post.call_args[1]["json"]
+        assert json_body["bcc"] == ["cerrador@garay.com"]
+
+    def test_sin_bcc_no_incluye_campo(self) -> None:
+        adapter = ResendAdapter(api_key="key", from_address="facturas@ex4cto.co")
+        with patch("garay.infraestructura.email.adaptador_resend.httpx.post") as mock_post:
+            mock_post.return_value = MagicMock()
+            adapter.enviar("cliente@x.com", "Asunto", "<p>b</p>")
+        json_body = mock_post.call_args[1]["json"]
+        assert "bcc" not in json_body

@@ -490,8 +490,18 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Nombre completo: {nombre_completo}\n"
             "• Nombre corto: {nombre}\n"
             "• Cédula: {cedula}\n"
+            "• Correo: {email}\n"
             "• Estado: {estado}"
         )
+    },
+    "freelancer.editar_pedir_email": {
+        Idioma.ES: "¿Cuál es el nuevo correo del freelancer?"
+    },
+    "freelancer.pedir_email": {
+        Idioma.ES: "¿Correo electrónico del freelancer? (o escribí 'no' para omitir)"
+    },
+    "freelancer.error_email_invalido": {
+        Idioma.ES: "Correo inválido. Escribí uno como nombre@dominio.com"
     },
     "freelancer.error_cedula_duplicada_otro": {
         Idioma.ES: "Esa cédula ya pertenece a otro freelancer. Ingresá una diferente:"

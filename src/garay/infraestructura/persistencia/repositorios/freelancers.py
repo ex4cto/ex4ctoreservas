@@ -20,6 +20,7 @@ def to_orm(f: Freelancer) -> FreelancerModel:
         nombre_completo=f.nombre_completo,
         cedula=f.cedula,
         display=f.display,
+        email=f.email,
     )
 
 
@@ -33,6 +34,7 @@ def to_domain(m: FreelancerModel) -> Freelancer:
         nombre_completo=m.nombre_completo,
         cedula=m.cedula,
         display=m.display,
+        email=m.email,
     )
 
 

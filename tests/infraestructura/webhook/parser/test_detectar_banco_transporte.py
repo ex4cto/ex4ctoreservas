@@ -9,6 +9,7 @@ from garay.infraestructura.webhook.parser.base import (
     BANCO_UBER,
     detectar_banco,
     es_banco_transporte,
+    es_recibo_transporte,
 )
 
 
@@ -51,6 +52,47 @@ class TestEsBancoTransporte:
     def test_none_no_es_transporte(self) -> None:
         """es_banco_transporte(None) must return False, not raise TypeError."""
         assert es_banco_transporte(None) is False
+
+
+class TestEsReciboTransporte:
+    """es_recibo_transporte gates transport emails: only real receipts (with a
+    charged amount) pass; promotional/marketing emails are dropped upstream."""
+
+    # Real Uber receipt: states a COP amount.
+    _RECIBO_UBER = (
+        "Tu viaje con Uber\n"
+        "07/08/2026\n"
+        "Tarifa base  COP 9,000\n"
+        "Total  COP 10,700\n"
+    )
+
+    # Real DiDi receipt: states a $ amount.
+    _RECIBO_DIDI = (
+        "Tu viaje DiDi\n"
+        "vie, 31 jul, 2026\n"
+        "Tarifa base  $11.500\n"
+        "Total  $12.800\n"
+    )
+
+    # Real Uber promo (no charged amount) — the one that spammed the dev alert.
+    _PROMO_UBER = (
+        "Llegar al trabajo nunca fue tan facil. Eduardo, realiza traslados "
+        "diarios mas rapido con Moto Moto, simplifica tus viajes hacia y desde "
+        "el trabajo. Disfruta de un viaje tranquilo y ahorra dinero en tus "
+        "traslados diarios. Viaja con Moto."
+    )
+
+    def test_recibo_uber_con_monto_cop_es_recibo(self) -> None:
+        assert es_recibo_transporte(self._RECIBO_UBER) is True
+
+    def test_recibo_didi_con_monto_pesos_es_recibo(self) -> None:
+        assert es_recibo_transporte(self._RECIBO_DIDI) is True
+
+    def test_promo_uber_sin_monto_no_es_recibo(self) -> None:
+        assert es_recibo_transporte(self._PROMO_UBER) is False
+
+    def test_cuerpo_vacio_no_es_recibo(self) -> None:
+        assert es_recibo_transporte("") is False
 
 
 class TestSenalesNoContaminadas:

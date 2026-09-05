@@ -2,7 +2,23 @@
 
 from __future__ import annotations
 
-from garay.dominio.freelancers.errores import CedulaInvalida
+import re
+
+from garay.dominio.freelancers.errores import CedulaInvalida, EmailInvalido
+
+_PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validar_email(texto: str) -> str:
+    """Validate and normalize an email address.
+
+    Returns the stripped email on success. Raises EmailInvalido on a value that
+    is not a plausible ``local@dominio.tld`` (no spaces, one @, a dotted domain).
+    """
+    t = texto.strip()
+    if not _PATRON_EMAIL.match(t):
+        raise EmailInvalido(f"Correo invalido: '{texto!r}'.")
+    return t
 
 
 def validar_cedula(texto: str) -> str:

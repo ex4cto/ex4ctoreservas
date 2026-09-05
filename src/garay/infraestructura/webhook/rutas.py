@@ -33,6 +33,7 @@ from garay.infraestructura.webhook.parser.base import (
     detectar_banco,
     detectar_direccion,
     es_banco_transporte,
+    es_recibo_transporte,
     es_transaccion,
 )
 from garay.infraestructura.webhook.parser.fabrica import obtener_parser, obtener_parser_egreso
@@ -189,6 +190,18 @@ def recibir_email(
     # Their receipts carry no transaction-signal keywords so the normal gate
     # would drop them.  Detection is domain-only (no body-keyword pollution).
     if es_banco_transporte(banco):
+        # But promotional/marketing emails from the same domains are NOT receipts
+        # (no charged amount).  Drop them silently — mirroring the es_transaccion
+        # drop — so they never reach the parser and spam a 'Correo no parseado'
+        # alert.  A real receipt whose format changed still carries an amount, so
+        # it passes this gate and is quarantined + alerted downstream.
+        if not es_recibo_transporte(cuerpo):
+            logger.warning(
+                "DIAG skip: transport non-receipt (no charged amount) from=%r asunto=%r — ignoring",
+                payload.remitente_email[:100],
+                payload.asunto[:80],
+            )
+            return {"estado": "ok"}
         logger.warning(
             "DIAG route: transport banco=%r — bypassing es_transaccion, forcing EGRESO",
             banco,

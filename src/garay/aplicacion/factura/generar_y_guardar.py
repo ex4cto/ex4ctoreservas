@@ -19,7 +19,7 @@ from garay.aplicacion.tiquetera.comandos import ResultadoRegistrarVenta
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.facturas.entidades import Factura
 from garay.dominio.facturas.tipos import EstadoEnvioFactura
-from garay.dominio.puertos.repositorios import FacturaRepository
+from garay.dominio.puertos.repositorios import FacturaRepository, FreelancerRepository
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import obtener_mensaje
@@ -33,10 +33,27 @@ class GenerarYGuardarFacturaService:
         generador: GenerarFacturaService,
         facturas: FacturaRepository,
         notificador: NotificadorEmail | None,
+        freelancers: FreelancerRepository | None = None,
     ) -> None:
         self._generador = generador
         self._facturas = facturas
         self._notificador = notificador
+        self._freelancers = freelancers
+
+    def _bcc_cerrador(self, ctx: ContextoVenta) -> str | None:
+        """Return the closing freelancer's email for a hidden copy, or None.
+
+        Guards: repo present, cerrador known, email set, and not the same as the
+        client's email (to avoid a pointless duplicate).
+        """
+        if self._freelancers is None or ctx.cerrador_id is None:
+            return None
+        cerrador = self._freelancers.buscar_por_id(ctx.cerrador_id)
+        if cerrador is None or not cerrador.email:
+            return None
+        if cerrador.email == ctx.cliente_email:
+            return None
+        return cerrador.email
 
     def ejecutar(
         self, ctx: ContextoVenta, resultado: ResultadoRegistrarVenta
@@ -81,8 +98,11 @@ class GenerarYGuardarFacturaService:
             return factura
 
         asunto = obtener_mensaje("factura.asunto_email")
+        bcc = self._bcc_cerrador(ctx)
         try:
-            self._notificador.enviar(ctx.cliente_email, asunto, factura.html_contenido)
+            self._notificador.enviar(
+                ctx.cliente_email, asunto, factura.html_contenido, bcc=bcc
+            )
         except Exception:
             logger.exception("Error al enviar factura por correo")
             factura.estado_envio = EstadoEnvioFactura.ERROR

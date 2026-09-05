@@ -156,6 +156,21 @@ async def _enviar_salida(
     return ESTADO_PTB[salida.nuevo_estado]
 
 
+def _sincronizar_ids_participantes(
+    ctx: ContextoVenta, cmd: RegistrarVentaComando
+) -> None:
+    """Copy the resolved vendedor/cerrador ids from the command into the context.
+
+    The FSM leaves ``cerrador_id``/``vendedor_id`` unset when the registrant plays
+    that role ('ambos'/'solo cerrador') — those ids are only resolved while
+    building the command (from the registrant's Telegram id). Syncing them onto
+    the context makes the factura's hidden copy (BCC) to the closing freelancer
+    work for EVERY role, not just when the closer is a different picked person.
+    """
+    ctx.vendedor_id = cmd.participantes.vendedor_id
+    ctx.cerrador_id = cmd.participantes.cerrador_id
+
+
 def _contexto_a_comando(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -690,6 +705,9 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                         resultado = await asyncio.to_thread(servicio.ejecutar, cmd)
                         desglose = resultado.desglose
                         ctx_final = salida.contexto
+                        # Sync resolved participant ids so the factura BCC-to-cerrador
+                        # works for 'ambos'/'solo cerrador' (registrant is the closer).
+                        _sincronizar_ids_participantes(ctx_final, cmd)
 
                         def _cop(v: object) -> str:
                             raw: Any = v.monto if hasattr(v, "monto") else (v or 0)
