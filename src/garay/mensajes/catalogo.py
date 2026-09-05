@@ -739,6 +739,79 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Ese horario ya existe en la lista. Ingresa uno diferente:"
         )
     },
+    "solo_desarrolladores": {
+        Idioma.ES: "Este comando es solo para desarrolladores."
+    },
+    "propuestas.pedir_empresa": {Idioma.ES: "¿Cuál es el nombre de la empresa?"},
+    "propuestas.empresa_vacia": {Idioma.ES: "Escribe el nombre de la empresa."},
+    "propuestas.enviada": {Idioma.ES: "Propuesta audiovisual — {empresa}"},
+    "propuestas.software_enviada": {Idioma.ES: "Propuesta de software — {empresa}"},
+    "generar.elegir_documentos": {
+        Idioma.ES: "¿Qué querés generar? Marca uno o varios y toca Continuar:"
+    },
+    "generar.doc.propuesta_audiovisual": {Idioma.ES: "Propuesta audiovisual"},
+    "generar.doc.propuesta_software": {Idioma.ES: "Propuesta software"},
+    "generar.doc.contrato_audiovisual": {Idioma.ES: "Contrato audiovisual"},
+    "generar.doc.contrato_software": {Idioma.ES: "Contrato software"},
+    "generar.continuar": {Idioma.ES: "Continuar ➡️"},
+    "generar.proximamente": {Idioma.ES: "Próximamente 🔒"},
+    "generar.nada_seleccionado": {
+        Idioma.ES: "Selecciona al menos un documento disponible."
+    },
+    "generar.precios_pregunta": {
+        Idioma.ES: "¿Usar los precios por defecto o personalizarlos?"
+    },
+    "generar.precios_default": {Idioma.ES: "Usar por defecto"},
+    "generar.precios_editar": {Idioma.ES: "Editar precios ✏️"},
+    "generar.precio_completo": {
+        Idioma.ES: (
+            "💰 Precio mensual del plan Máximo Alcance (28 videos). "
+            "Solo números, ej: 3000000"
+        )
+    },
+    "generar.precio_medio": {
+        Idioma.ES: "💰 Precio mensual del plan Alcance Esencial (14 videos):"
+    },
+    "generar.precio_community": {
+        Idioma.ES: "💰 Precio del complemento Community Manager:"
+    },
+    "generar.precio_trafficker": {
+        Idioma.ES: "💰 Precio del complemento Trafficker Digital:"
+    },
+    "generar.precio_invalido": {
+        Idioma.ES: "Monto inválido. Escribe solo números (ej: 3000000)."
+    },
+    "generar.pedir_ejemplos": {
+        Idioma.ES: (
+            "¿Qué servicios ofrece el negocio? (para la copy de la propuesta) "
+            "Ej: reservas, mesas, eventos"
+        )
+    },
+    "generar.precios_sw_pregunta": {
+        Idioma.ES: "Precios del software: ¿usar por defecto o editar?"
+    },
+    "generar.sw_desarrollo": {
+        Idioma.ES: "💰 Valor de desarrollo (referencia). Solo números, ej: 24000000"
+    },
+    "generar.sw_implementacion": {
+        Idioma.ES: "💰 Valor de implementación (pago único):"
+    },
+    "generar.sw_mensual": {Idioma.ES: "💰 Licencia mensual:"},
+    "generar.sw_anual": {Idioma.ES: "💰 Licencia anual:"},
+    "generar.dato_vacio": {Idioma.ES: "No puede estar vacío. Intenta de nuevo:"},
+    "generar.pedir_razon_social": {Idioma.ES: "🏢 Razón social del cliente (CONTRATANTE):"},
+    "generar.pedir_nit": {Idioma.ES: "NIT del cliente:"},
+    "generar.pedir_rep_legal": {Idioma.ES: "Nombre del representante legal:"},
+    "generar.pedir_rep_cc": {Idioma.ES: "Cédula del representante legal:"},
+    "generar.pedir_direccion": {Idioma.ES: "Dirección del cliente:"},
+    "generar.pedir_ciudad": {Idioma.ES: "Ciudad del cliente:"},
+    "generar.plan_contrato_pregunta": {
+        Idioma.ES: "¿Qué plan se contrató? (para el contrato audiovisual)"
+    },
+    "generar.plan_completo": {Idioma.ES: "Máximo Alcance (28 videos)"},
+    "generar.plan_medio": {Idioma.ES: "Alcance Esencial (14 videos)"},
+    "generar.contrato_software_enviado": {Idioma.ES: "Contrato de software — {empresa}"},
+    "generar.contrato_audiovisual_enviado": {Idioma.ES: "Contrato audiovisual — {empresa}"},
 }
 
 

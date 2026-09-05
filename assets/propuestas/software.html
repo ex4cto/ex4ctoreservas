@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta — Ex4cto Reservas · {{EMPRESA}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F2F1EA;
+    --cream-2:#EAE9E1;
+    --ink:#161616;
+    --ink-soft:#2A2A2A;
+    --lav:#A6C8E8;
+    --lav-deep:#6E9BCF;
+    --white:#FCFCFA;
+    --muted:#6B6B6B;
+    --line:#DEDDD4;
+    --ok:#2E7D5B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{
+    font-family:'Inter',system-ui,Arial,sans-serif;
+    color:var(--ink);
+    background:#d9d8d0;
+    line-height:1.55;
+    font-size:14px;
+  }
+  .page{
+    width:297mm;
+    min-height:210mm;
+    margin:14px auto;
+    background:var(--cream);
+    padding:13mm 16mm;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 6px 30px rgba(0,0,0,.18);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  h1,h2,h3,.brand,.tag,.price,.big{font-family:'Poppins',sans-serif;}
+  .muted{color:var(--muted);}
+  .accent{color:var(--lav-deep);}
+
+  /* ---------- COVER ---------- */
+  .cover{display:flex;flex-direction:column;justify-content:flex-start;}
+  .cover .logo-img{height:390px;width:auto;align-self:flex-start;object-fit:contain;}
+  .cover .logo{font-family:'Poppins';font-weight:900;font-size:52px;line-height:.92;letter-spacing:-1px;color:var(--ink);}
+  .cover .logo span{display:block;}
+  .cover .blob{position:absolute;top:-60px;right:-70px;width:230px;height:230px;border-radius:50%;background:var(--lav);opacity:.9;}
+  .eyebrow{font-family:'Poppins';font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+  .cover .headline{display:inline-block;background:var(--ink);color:var(--cream);font-family:'Poppins';font-weight:900;font-size:46px;line-height:1;padding:14px 26px 20px;border-radius:6px;margin:8px 0 18px;font-style:italic;}
+  .cover .sub{font-family:'Poppins';font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);max-width:70%;margin:0 auto;}
+  .cover .client{margin-top:auto;padding-top:22px;}
+  .cover .client .to{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+  .cover .client .name{font-family:'Poppins';font-weight:800;font-size:30px;margin-top:2px;}
+  .cover .contact{margin-top:20px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
+  .cover .contact .ci{display:inline-flex;align-items:center;gap:6px;margin:0 10px;white-space:nowrap;}
+  .cover .contact svg{width:19px;height:19px;stroke:var(--lav-deep);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .cover .contact b{color:var(--ink);}
+  .divider{height:1px;background:var(--line);margin:18px 0;}
+
+  /* ---------- CONTENT ---------- */
+  .kicker{font-family:'Poppins';font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--lav-deep);margin-bottom:6px;}
+  h2.section{font-family:'Poppins';font-weight:800;font-size:30px;line-height:1.05;margin-bottom:6px;}
+  h2.section .hl{background:var(--lav);border-radius:4px;padding:0 8px;}
+  .lead{color:var(--ink-soft);max-width:95%;margin-bottom:18px;}
+
+  .pain{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+  .pain h4{font-family:'Poppins';font-weight:700;font-size:14px;margin-bottom:3px;}
+  .pain p{font-size:13px;color:var(--muted);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .mod{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:15px 16px;}
+  .mod .n{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--cream);font-family:'Poppins';font-weight:700;font-size:12px;margin-bottom:8px;}
+  .mod h4{font-family:'Poppins';font-weight:700;font-size:14.5px;margin-bottom:3px;}
+  .mod p{font-size:12.5px;color:var(--muted);}
+
+  /* pricing */
+  .price-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0 14px;}
+  .card{border-radius:16px;padding:20px;border:1px solid var(--line);background:var(--white);}
+  .card.dark{background:var(--ink);color:var(--cream);border:none;}
+  .card .pill{display:inline-block;font-family:'Poppins';font-weight:700;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:5px 12px;border-radius:20px;background:var(--lav);color:var(--ink);margin-bottom:12px;}
+  .card.dark .pill{background:var(--lav);color:var(--ink);}
+  .card .ptitle{font-family:'Poppins';font-weight:700;font-size:14px;margin-bottom:2px;}
+  .card .price{font-family:'Poppins';font-weight:900;font-size:34px;line-height:1;margin:4px 0;}
+  .card .per{font-size:12px;color:var(--muted);}
+  .card.dark .per{color:#B9B9B9;}
+  .card ul{list-style:none;margin-top:12px;}
+  .card li{font-size:12.5px;padding:4px 0 4px 20px;position:relative;}
+  .card li::before{content:"✓";position:absolute;left:0;color:var(--lav-deep);font-weight:700;}
+  .card.dark li::before{color:var(--lav);}
+  .save{display:inline-block;background:var(--ok);color:#fff;font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px;margin-left:8px;font-family:'Poppins';}
+
+  .setup{background:var(--cream-2);border:1px dashed var(--lav-deep);border-radius:14px;padding:16px 18px;margin-bottom:6px;}
+  .setup .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+  .setup h4{font-family:'Poppins';font-weight:800;font-size:16px;}
+  .setup .amt{font-family:'Poppins';font-weight:900;font-size:22px;white-space:nowrap;}
+  .setup p{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px;}
+  .listbox h4{font-family:'Poppins';font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;}
+  .listbox ul{list-style:none;}
+  .listbox li{font-size:12.5px;padding:3px 0 3px 18px;position:relative;color:var(--ink-soft);}
+  .listbox.inc li::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700;}
+  .listbox.exc li::before{content:"✕";position:absolute;left:0;color:#B94A4A;font-weight:700;}
+
+  .terms{font-size:12px;color:var(--ink-soft);}
+  .terms li{margin:5px 0 5px 16px;}
+  .anchor{background:var(--ink);color:var(--cream);border-radius:14px;padding:16px 20px;margin:14px 0;}
+  .anchor b{color:var(--lav);}
+
+  .cta{background:var(--ink);color:var(--cream);border-radius:16px;padding:22px 24px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;}
+  .cta h3{font-family:'Poppins';font-weight:800;font-size:24px;}
+  .cta .c{font-size:13px;text-align:right;line-height:1.9;}
+  .cta .c b{color:var(--lav);}
+  .cta .c .ci{display:inline-flex;align-items:center;gap:6px;}
+  .cta .c svg{width:19px;height:19px;stroke:var(--lav);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .foot{font-size:10.5px;color:var(--muted);text-align:center;margin-top:14px;}
+  .pagenum{position:absolute;bottom:12mm;right:18mm;font-size:10px;color:var(--muted);}
+  .logo-sm{font-family:'Poppins';font-weight:900;font-size:16px;letter-spacing:-.5px;}
+
+  /* before / after visual */
+  .vs{display:grid;grid-template-columns:1fr 64px 1fr;align-items:stretch;margin:22px 0 26px;}
+  .vs-col{border-radius:18px;padding:24px 22px;text-align:center;}
+  .vs-col.bad{background:var(--white);border:1px solid var(--line);}
+  .vs-col.good{background:var(--ink);color:var(--cream);}
+  .vs-head{font-family:'Poppins';font-weight:800;font-size:12px;letter-spacing:2px;margin-bottom:16px;color:var(--muted);}
+  .vs-col.good .vs-head{color:var(--lav);}
+  .vs-ico{margin:0 auto 18px;width:76px;height:76px;}
+  .vs-ico svg{width:100%;height:100%;}
+  .vs ul{list-style:none;text-align:left;display:inline-block;}
+  .vs li{font-family:'Poppins';font-weight:600;font-size:14.5px;padding:6px 0 6px 24px;position:relative;}
+  .vs-col.bad li::before{content:"\2715";position:absolute;left:0;color:#B94A4A;font-weight:700;}
+  .vs-col.good li::before{content:"\2713";position:absolute;left:0;color:var(--lav);font-weight:700;}
+  .vs-arrow{display:flex;align-items:center;justify-content:center;}
+  .vs-arrow svg{width:34px;height:34px;}
+  /* 3-step flow */
+  .flow{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;align-items:center;margin:4px 0 24px;}
+  .flow-step{background:var(--cream-2);border-radius:16px;padding:20px 14px;text-align:center;}
+  .flow-step .fico{width:48px;height:48px;margin:0 auto 10px;}
+  .flow-step .fico svg{width:100%;height:100%;}
+  .flow-step h4{font-family:'Poppins';font-weight:700;font-size:15px;margin-bottom:2px;}
+  .flow-step p{font-size:11.5px;color:var(--muted);}
+  .flow-arrow{display:flex;align-items:center;justify-content:center;}
+  .flow-arrow svg{width:24px;height:24px;}
+  /* feature strip (invoice) */
+  .feature-strip{display:flex;gap:16px;align-items:center;background:var(--ink);color:var(--cream);border-radius:16px;padding:18px 22px;margin-top:16px;}
+  .feature-strip .fs-ico{flex:0 0 auto;width:46px;height:46px;}
+  .feature-strip .fs-ico svg{width:100%;height:100%;}
+  .feature-strip h4{font-family:'Poppins';font-weight:700;font-size:15.5px;margin-bottom:2px;color:var(--lav);}
+  .feature-strip p{font-size:12.5px;color:#D8D8D8;}
+
+  @media print{
+    body{background:#fff;}
+    .page{margin:0;box-shadow:none;width:auto;min-height:auto;page-break-after:always;}
+    .page:last-child{page-break-after:auto;}
+  }
+  @page{size:A4 landscape;margin:0;}
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 — COVER ============ -->
+<section class="page cover">
+  <div class="blob"></div>
+  <img class="logo-img" src="{{LOGO}}" alt="Ryan Deivis">
+  <div style="margin-top:26px;text-align:center;">
+    <div class="headline">Ex4cto&nbsp;Reservas</div>
+    <div class="sub">Reservas digitales · Trazabilidad automática · Dashboard en tiempo real</div>
+  </div>
+  <div class="client">
+    <div class="to">Preparado para</div>
+    <div class="name">{{EMPRESA}}</div>
+  </div>
+  <div class="divider" style="margin-top:26px;"></div>
+  <div class="contact">
+    <span class="ci"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+57 324 661 4697</span>
+    <span class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>ryandeivis1@gmail.com</span>
+    <span class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r="1.1"/></svg>@ryandeivis</span>
+  </div>
+  <div class="pagenum">01</div>
+</section>
+
+<!-- ============ PAGE 2 — PROBLEM / SOLUTION ============ -->
+<section class="page">
+  <div class="kicker">El cambio</div>
+  <h2 class="section">Del <span class="hl">papel</span> al <span class="hl">dato</span></h2>
+
+  <!-- before / after -->
+  <div class="vs">
+    <div class="vs-col bad">
+      <div class="vs-head">HOY</div>
+      <div class="vs-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#161616" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
+      </div>
+      <ul>
+        <li>Tiquetera de papel</li>
+        <li>Excel a mano</li>
+        <li>Errores y fugas</li>
+        <li>Cero visibilidad</li>
+      </ul>
+    </div>
+    <div class="vs-arrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6E9BCF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </div>
+    <div class="vs-col good">
+      <div class="vs-head">CON EX4CTO</div>
+      <div class="vs-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F2F1EA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 15v-4M12 15V8M17 15v-6"/></svg>
+      </div>
+      <ul>
+        <li>Reserva digital</li>
+        <li>Trazabilidad automática</li>
+        <li>Dato confiable</li>
+        <li>Dashboard en vivo</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3-step flow -->
+  <div class="flow">
+    <div class="flow-step">
+      <div class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="#161616" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M15 6v12" stroke-dasharray="2 2"/></svg></div>
+      <h4>Se reserva</h4>
+      <p>Registro digital en segundos</p>
+    </div>
+    <div class="flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="#6E9BCF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="flow-step">
+      <div class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="#161616" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+      <h4>Fluye solo</h4>
+      <p>Sin re-digitar nada</p>
+    </div>
+    <div class="flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="#6E9BCF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="flow-step">
+      <div class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="#161616" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 15v-4M12 15V8M17 15v-6"/></svg></div>
+      <h4>Se ve todo</h4>
+      <p>Dashboard en tiempo real</p>
+    </div>
+  </div>
+
+  <div class="anchor">
+    Ex4cto Reservas ya está construido y probado. Su valor de desarrollo es de <b>${{PRECIO_DESARROLLO}} COP</b>, pero {{EMPRESA}} no lo compra: accede por una <b>licencia de uso</b>, sin asumir el costo total ni el mantenimiento. Tecnología lista, por una fracción.
+  </div>
+  <div class="pagenum">02</div>
+</section>
+
+<!-- ============ PAGE 3 — MODULES ============ -->
+<section class="page">
+  <div class="kicker">Qué hace el sistema</div>
+  <h2 class="section">Módulos <span class="hl">incluidos</span></h2>
+  <p class="lead">Todo lo que hoy es manual, automatizado en un solo lugar.</p>
+
+  <div class="grid2">
+    <div class="mod">
+      <div class="n">1</div>
+      <h4>Reservas digitales</h4>
+      <p>Registro digital de cada reserva y venta ({{EJEMPLOS_SERVICIOS}}). Adiós a la tiquetera de papel: todo queda capturado en segundos.</p>
+    </div>
+    <div class="mod">
+      <div class="n">2</div>
+      <h4>Trazabilidad automática</h4>
+      <p>Cada reserva viaja sola desde su origen hasta el tablero. Sin re-digitar, sin copiar a Excel, sin intermediarios que se equivoquen.</p>
+    </div>
+    <div class="mod">
+      <div class="n">3</div>
+      <h4>Dashboard en tiempo real</h4>
+      <p>Ventas, ocupación, ingresos y desempeño por canal, en vivo. La gerencia deja de suponer y empieza a decidir con datos.</p>
+    </div>
+    <div class="mod">
+      <div class="n">4</div>
+      <h4>Control de ingresos</h4>
+      <p>Cada venta se puede validar contra la plata que realmente entra a la cuenta. Conciliación que hoy nadie hace y que evita fugas.</p>
+    </div>
+    <div class="mod">
+      <div class="n">5</div>
+      <h4>Captura asistida por IA</h4>
+      <p>La información se puede cargar por foto, audio o texto: la IA extrae los datos y el sistema los estructura. Rápido y sin fricción para el personal.</p>
+    </div>
+    <div class="mod">
+      <div class="n">6</div>
+      <h4>Notificación al equipo</h4>
+      <p>Cada reserva confirmada se notifica al instante al canal del equipo, para que operación y coordinación siempre estén sincronizados.</p>
+    </div>
+  </div>
+
+  <div class="feature-strip">
+    <div class="fs-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#A6C8E8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+    </div>
+    <div>
+      <h4>Factura automática al correo del cliente</h4>
+      <p>Al cerrar cada venta, el sistema genera y envía la factura directamente al email del cliente — en <b>español o inglés</b> según su idioma. Cero trabajo manual, imagen profesional inmediata.</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <p class="terms muted" style="font-size:11.5px;">El alcance exacto de cada módulo se ajusta a la operación real de {{EMPRESA}} durante la fase de implementación (ver página siguiente). Algunos módulos pueden habilitarse por etapas según prioridad.</p>
+  <div class="pagenum">03</div>
+</section>
+
+<!-- ============ PAGE 4 — PRICING ============ -->
+<section class="page">
+  <div class="kicker">Inversión</div>
+  <h2 class="section">Implementación <span class="hl">+ licencia de uso</span></h2>
+  <p class="lead">Dos componentes: una puesta en marcha única, y una licencia de uso que puede ser mensual o anual.</p>
+
+  <!-- setup -->
+  <div class="setup">
+    <div class="row">
+      <h4>Fase 1 · Implementación y puesta en marcha</h4>
+      <span class="amt">desde ${{PRECIO_IMPLEMENTACION}}</span>
+    </div>
+    <p><b>Pago único.</b> Levantamiento en sitio de los procesos reales de {{EMPRESA}}, configuración del sistema a su operación (canales, servicios, usuarios), migración de la información existente y capacitación del personal. Es la fase que garantiza que el software calce con cómo trabaja el negocio, no al revés. El valor final se confirma tras el levantamiento inicial, según el alcance real.</p>
+  </div>
+
+  <!-- subscription -->
+  <div class="kicker" style="margin-top:16px;">Fase 2 · Licencia de uso</div>
+  <div class="price-wrap">
+    <div class="card">
+      <span class="pill">Plan mensual</span>
+      <div class="ptitle">Flexibilidad total</div>
+      <div class="price">${{PRECIO_MENSUAL}}</div>
+      <div class="per">COP · por mes</div>
+      <ul>
+        <li>Uso completo del software</li>
+        <li>Hosting y disponibilidad</li>
+        <li>Soporte y mantenimiento</li>
+        <li>Actualizaciones incluidas</li>
+      </ul>
+    </div>
+    <div class="card dark">
+      <span class="pill">Plan anual <span class="save">2 meses gratis</span></span>
+      <div class="ptitle">Mejor valor</div>
+      <div class="price">${{PRECIO_ANUAL}}</div>
+      <div class="per">COP · por año · equivale a ${{PRECIO_ANUAL_MES}}/mes</div>
+      <ul>
+        <li>Todo lo del plan mensual</li>
+        <li>Ahorro de ${{PRECIO_AHORRO}} vs. pago mes a mes</li>
+        <li>Prioridad en soporte</li>
+        <li>Tarifa congelada durante el año</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="listbox inc">
+      <h4>La licencia incluye</h4>
+      <ul>
+        <li>Uso del software y todos sus módulos activos</li>
+        <li>Hosting, respaldos y disponibilidad del servicio</li>
+        <li>Soporte técnico y mantenimiento correctivo</li>
+        <li>Actualizaciones y mejoras del sistema</li>
+      </ul>
+    </div>
+    <div class="listbox exc">
+      <h4>No incluye</h4>
+      <ul>
+        <li>Hardware o equipos del negocio</li>
+        <li>Cuentas o servicios de terceros</li>
+        <li>Inversión en pauta publicitaria</li>
+        <li>Desarrollos nuevos fuera del alcance pactado</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pagenum">04</div>
+</section>
+
+<!-- ============ PAGE 5 — TERMS + CTA ============ -->
+<section class="page">
+  <div class="kicker">Condiciones</div>
+  <h2 class="section">Cómo <span class="hl">trabajamos</span></h2>
+  <ul class="terms">
+    <li><b>Licencia de uso:</b> {{EMPRESA}} accede al software mientras la licencia esté vigente. El software y su código son propiedad de Ryan Deivis; no se transfiere la propiedad.</li>
+    <li><b>Forma de pago:</b> la implementación se paga 50% para iniciar y 50% contra entrega de la puesta en marcha. La licencia se paga por anticipado (mensual o anual).</li>
+    <li><b>Implementación:</b> el valor final se confirma tras el levantamiento inicial en sitio, según cantidad de puntos, usuarios y si hay migración de datos.</li>
+    <li><b>Soporte:</b> canal directo por WhatsApp en horario hábil, con tiempo de respuesta prioritario para el plan anual.</li>
+    <li><b>Vigencia de esta propuesta:</b> 30 días desde su emisión.</li>
+  </ul>
+
+  <div class="anchor">
+    <b>Recomendación:</b> empezar por la Fase 1 (implementación) permite validar en terreno la operación real de {{EMPRESA}} antes de comprometer la suscripción. Es la forma más segura de arrancar: primero conocemos el negocio, luego encendemos el sistema.
+  </div>
+
+  <div class="cta">
+    <div>
+      <h3>Hagámoslo realidad.</h3>
+      <div class="muted" style="color:#B9B9B9;font-size:13px;">Digitalicemos {{EMPRESA}} con datos, no con papel.</div>
+    </div>
+    <div class="c">
+      <span class="ci"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+57 324 661 4697</span><br>
+      <span class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>ryandeivis1@gmail.com</span><br>
+      <span class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r="1.1"/></svg>@ryandeivis</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="logo-sm">RYAN DEIVIS</span> · Manager · Social Media · Analista de Datos certificado (Meta · Google · MinTIC · AWS · Claude · Kommo)
+  </div>
+  <div class="pagenum">05</div>
+</section>
+
+</body>
+</html>

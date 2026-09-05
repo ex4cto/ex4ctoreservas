@@ -70,6 +70,34 @@ def requiere_rol(
     return wrapper
 
 
+def requiere_dev_conv(
+    handler: Callable[..., Coroutine[Any, Any, int | None]],
+) -> Callable[..., Coroutine[Any, Any, int | None]]:
+    """Guard for ConversationHandler entry points — developers ONLY.
+
+    Unlike the other guards, dev is not a bypass here but the sole allowed role.
+    Returns ``ConversationHandler.END`` on any deny so the conversation never
+    opens for non-developers.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        user = update.effective_user
+        if user is None:
+            return ConversationHandler.END
+
+        if _es_dev(user.id):
+            return await handler(update, context)
+
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("solo_desarrolladores")
+            )
+        return ConversationHandler.END
+
+    return wrapper
+
+
 def requiere_admin(
     handler: Callable[..., Coroutine[Any, Any, int | None]],
 ) -> Callable[..., Coroutine[Any, Any, int | None]]:

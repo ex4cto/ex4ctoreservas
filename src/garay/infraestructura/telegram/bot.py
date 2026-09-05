@@ -176,6 +176,50 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
+from garay.infraestructura.telegram.handlers_propuestas import (
+    GEN_CIUDAD,
+    GEN_DIRECCION,
+    GEN_EJEMPLOS,
+    GEN_EMPRESA,
+    GEN_NIT,
+    GEN_PLAN_CONTRATO,
+    GEN_PRECIO_COMMUNITY,
+    GEN_PRECIO_COMPLETO,
+    GEN_PRECIO_MEDIO,
+    GEN_PRECIO_TRAFFICKER,
+    GEN_PRECIOS,
+    GEN_PRECIOS_SW,
+    GEN_RAZON_SOCIAL,
+    GEN_REP_CC,
+    GEN_REP_LEGAL,
+    GEN_SELECCION,
+    GEN_SW_ANUAL,
+    GEN_SW_DESARROLLO,
+    GEN_SW_IMPLEMENTACION,
+    GEN_SW_MENSUAL,
+    cmd_generar_documento,
+    handle_ciudad,
+    handle_direccion,
+    handle_ejemplos,
+    handle_gen_continuar,
+    handle_gen_empresa,
+    handle_gen_precios,
+    handle_gen_precios_sw,
+    handle_gen_toggle,
+    handle_nit,
+    handle_plan_contrato,
+    handle_precio_community,
+    handle_precio_completo,
+    handle_precio_medio,
+    handle_precio_trafficker,
+    handle_razon_social,
+    handle_rep_cc,
+    handle_rep_legal,
+    handle_sw_anual,
+    handle_sw_desarrollo,
+    handle_sw_implementacion,
+    handle_sw_mensual,
+)
 from garay.infraestructura.telegram.handlers_tours import (
     EDF_CAMPO,
     EDF_CONFIRMA,
@@ -834,6 +878,40 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
+    # /generar_documento (dev-only) — multi-select proposal/contract generator
+    propuesta_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("generar_documento", cmd_generar_documento)],
+        states={
+            GEN_SELECCION: [
+                _CB(handle_gen_toggle, pattern="^gen_toggle:"),
+                _CB(handle_gen_continuar, pattern="^gen_continuar$"),
+            ],
+            GEN_EMPRESA: [MessageHandler(_TEXT, handle_gen_empresa)],
+            GEN_EJEMPLOS: [MessageHandler(_TEXT, handle_ejemplos)],
+            GEN_PRECIOS: [_CB(handle_gen_precios, pattern="^gen_precios:")],
+            GEN_PRECIO_COMPLETO: [MessageHandler(_TEXT, handle_precio_completo)],
+            GEN_PRECIO_MEDIO: [MessageHandler(_TEXT, handle_precio_medio)],
+            GEN_PRECIO_COMMUNITY: [MessageHandler(_TEXT, handle_precio_community)],
+            GEN_PRECIO_TRAFFICKER: [MessageHandler(_TEXT, handle_precio_trafficker)],
+            GEN_PRECIOS_SW: [_CB(handle_gen_precios_sw, pattern="^gen_precios:")],
+            GEN_SW_DESARROLLO: [MessageHandler(_TEXT, handle_sw_desarrollo)],
+            GEN_SW_IMPLEMENTACION: [MessageHandler(_TEXT, handle_sw_implementacion)],
+            GEN_SW_MENSUAL: [MessageHandler(_TEXT, handle_sw_mensual)],
+            GEN_SW_ANUAL: [MessageHandler(_TEXT, handle_sw_anual)],
+            GEN_RAZON_SOCIAL: [MessageHandler(_TEXT, handle_razon_social)],
+            GEN_NIT: [MessageHandler(_TEXT, handle_nit)],
+            GEN_REP_LEGAL: [MessageHandler(_TEXT, handle_rep_legal)],
+            GEN_REP_CC: [MessageHandler(_TEXT, handle_rep_cc)],
+            GEN_DIRECCION: [MessageHandler(_TEXT, handle_direccion)],
+            GEN_CIUDAD: [MessageHandler(_TEXT, handle_ciudad)],
+            GEN_PLAN_CONTRATO: [_CB(handle_plan_contrato, pattern="^gen_plan:")],
+        },
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
+    )
+
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
@@ -844,6 +922,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(editar_tour_conv_handler, group=8)
     app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(nuevo_tour_conv_handler, group=8)
+    app.add_handler(propuesta_conv_handler, group=9)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

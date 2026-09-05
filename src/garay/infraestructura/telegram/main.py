@@ -18,6 +18,12 @@ from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaRe
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
+from garay.aplicacion.propuestas.contratos import (
+    GenerarContratoAudiovisualService,
+    GenerarContratoSoftwareService,
+)
+from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
+from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
 from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
@@ -163,6 +169,53 @@ def main() -> None:
             logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
             logo_url = f"data:image/png;base64,{logo_b64}"
 
+    # Proposal generator (MVP): load the audiovisual template + embed Ryan's logo
+    # as a base64 data URI so the sent HTML is self-contained.
+    _repo_root = Path(__file__).parents[4]
+    _plantilla_path = _repo_root / "assets" / "propuestas" / "audiovisual.html"
+    _plantilla_audiovisual = (
+        _plantilla_path.read_text(encoding="utf-8") if _plantilla_path.exists() else ""
+    )
+    _logo_ryan_path = _repo_root / "assets" / "logo-ryan.png"
+    _logo_ryan_uri = ""
+    if _logo_ryan_path.exists():
+        _logo_ryan_b64 = base64.b64encode(_logo_ryan_path.read_bytes()).decode()
+        _logo_ryan_uri = f"data:image/png;base64,{_logo_ryan_b64}"
+    propuesta_audiovisual_service = GenerarPropuestaAudiovisualService(
+        plantilla=_plantilla_audiovisual,
+        logo_data_uri=_logo_ryan_uri,
+    )
+    _plantilla_software_path = _repo_root / "assets" / "propuestas" / "software.html"
+    _plantilla_software = (
+        _plantilla_software_path.read_text(encoding="utf-8")
+        if _plantilla_software_path.exists()
+        else ""
+    )
+    propuesta_software_service = GenerarPropuestaSoftwareService(
+        plantilla=_plantilla_software,
+        logo_data_uri=_logo_ryan_uri,
+    )
+    # Contracts: embed the signature as a base64 data URI (self-contained HTML).
+    _firma_path = _repo_root / "assets" / "firma.png"
+    _firma_uri = ""
+    if _firma_path.exists():
+        _firma_uri = "data:image/png;base64," + base64.b64encode(_firma_path.read_bytes()).decode()
+
+    def _leer_plantilla(nombre: str) -> str:
+        ruta = _repo_root / "assets" / "propuestas" / nombre
+        return ruta.read_text(encoding="utf-8") if ruta.exists() else ""
+
+    contrato_software_service = GenerarContratoSoftwareService(
+        plantilla=_leer_plantilla("contrato-software.html"),
+        logo_data_uri=_logo_ryan_uri,
+        firma_data_uri=_firma_uri,
+    )
+    contrato_audiovisual_service = GenerarContratoAudiovisualService(
+        plantilla=_leer_plantilla("contrato-audiovisual.html"),
+        logo_data_uri=_logo_ryan_uri,
+        firma_data_uri=_firma_uri,
+    )
+
     generar_factura_service = GenerarFacturaService(logo_url=logo_url)
     notificador_email: NotificadorEmail | None = None
     if settings.resend_api_key and settings.resend_from:
@@ -305,6 +358,10 @@ def main() -> None:
             "reconciliacion_service": reconciliacion_service,
             "conciliar_service": conciliar_service,
             "factura_service": factura_service,
+            "propuesta_audiovisual_service": propuesta_audiovisual_service,
+            "propuesta_software_service": propuesta_software_service,
+            "contrato_software_service": contrato_software_service,
+            "contrato_audiovisual_service": contrato_audiovisual_service,
             "factura_repo": factura_repo,
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,

@@ -239,3 +239,23 @@ class TestBotWiringConciliacion:
 
     def test_pendientes_command_registered(self) -> None:
         assert "pendientes" in _command_names(_build_app())
+
+
+def _conv_entry_commands(app: object) -> set[str]:
+    """Collect commands registered as ConversationHandler entry points."""
+    nombres: set[str] = set()
+    for grupo in app.handlers.values():  # type: ignore[attr-defined]
+        for h in grupo:
+            if isinstance(h, ConversationHandler):
+                for ep in h.entry_points:
+                    if isinstance(ep, CommandHandler):
+                        nombres |= set(ep.commands)
+    return nombres
+
+
+class TestBotWiringPropuestas:
+    """The dev-only /generar_documento command must be registered as a
+    ConversationHandler entry point."""
+
+    def test_generar_documento_command_registered(self) -> None:
+        assert "generar_documento" in _conv_entry_commands(_build_app())

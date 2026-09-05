@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrato de Licencia de Uso y Servicios de Software — Ryan Deivis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F2F1EA;--ink:#161616;--ink-soft:#2A2A2A;
+    --lav:#A6C8E8;--lav-deep:#6E9BCF;--white:#FCFCFA;--muted:#6B6B6B;--line:#DEDDD4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{font-family:'Inter',system-ui,Arial,sans-serif;color:var(--ink);background:#d9d8d0;line-height:1.6;font-size:12.5px;}
+  .page{width:210mm;min-height:297mm;margin:14px auto;background:var(--white);padding:18mm 20mm;position:relative;box-shadow:0 6px 30px rgba(0,0,0,.18);}
+  h1,h2,h3{font-family:'Poppins',sans-serif;}
+  .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--lav);padding-bottom:14px;margin-bottom:20px;}
+  .head img{height:70px;width:auto;object-fit:contain;}
+  .head .title{text-align:right;}
+  .head .title h1{font-family:'Poppins';font-weight:800;font-size:18px;line-height:1.15;color:var(--ink);}
+  .head .title .sub{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+  .intro{text-align:justify;margin-bottom:14px;}
+  .clausula{margin-bottom:12px;text-align:justify;}
+  .clausula h3{font-family:'Poppins';font-weight:700;font-size:13px;color:var(--lav-deep);margin-bottom:4px;}
+  .clausula ol,.clausula ul{margin:6px 0 6px 22px;}
+  .clausula li{margin:3px 0;}
+  .ph{background:var(--lav);color:var(--ink);padding:0 5px;border-radius:3px;font-weight:600;white-space:nowrap;}
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
+  .firma{text-align:center;}
+  .firma .firma-img{height:80px;width:auto;object-fit:contain;margin-bottom:2px;}
+  .firma .espacio{height:82px;}
+  .firma .linea{border-top:1.5px solid var(--ink);margin:0 10px 8px;}
+  .firma .rol{font-family:'Poppins';font-weight:700;font-size:12px;}
+  .firma .dato{font-size:11.5px;color:var(--ink-soft);}
+  .foot{font-size:10px;color:var(--muted);text-align:center;margin-top:26px;border-top:1px solid var(--line);padding-top:10px;}
+  .pagenum{position:absolute;bottom:10mm;right:20mm;font-size:10px;color:var(--muted);}
+  @media print{
+    body{background:#fff;}
+    .page{margin:0;box-shadow:none;width:auto;min-height:auto;page-break-after:always;}
+    .page:last-child{page-break-after:auto;}
+  }
+  @page{size:A4;margin:0;}
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div class="head">
+    <img src="{{LOGO}}" alt="Ryan Deivis">
+    <div class="title">
+      <h1>CONTRATO DE LICENCIA DE USO<br>Y SERVICIOS DE SOFTWARE</h1>
+      <div class="sub">Ex4cto Reservas · N° <span class="ph">{{NUMERO_CONTRATO}}</span></div>
+    </div>
+  </div>
+
+  <p class="intro">
+    Entre los suscritos, <b>Bryan David Castro Alarcón</b>, mayor de edad, identificado con C.C. 1.047.487.553, con
+    domicilio en Cartagena, quien obra en nombre propio y en adelante se denominará
+    <b>EL CONTRATISTA</b>; y <b><span class="ph">{{CONTRATANTE_RAZON_SOCIAL}}</span></b>, identificada con NIT
+    <span class="ph">{{CONTRATANTE_NIT}}</span>, representada legalmente por <span class="ph">{{CONTRATANTE_REP_LEGAL}}</span>,
+    identificado(a) con C.C. <span class="ph">{{CONTRATANTE_REP_CC}}</span>, con domicilio en
+    <span class="ph">{{CONTRATANTE_DIRECCION}}</span>, <span class="ph">{{CONTRATANTE_CIUDAD}}</span>, quien en adelante se
+    denominará <b>EL CONTRATANTE</b>, hemos acordado celebrar el presente <b>contrato de licencia de uso y prestación de
+    servicios de software</b>, regido por las siguientes cláusulas:
+  </p>
+
+  <div class="clausula">
+    <h3>PRIMERA — OBJETO</h3>
+    <p>EL CONTRATISTA concede a EL CONTRATANTE una licencia de uso del software de su propiedad denominado <b>Ex4cto
+    Reservas</b>, y presta los servicios de implementación, puesta en marcha, soporte y mantenimiento asociados, conforme
+    a la propuesta comercial aceptada, la cual hace parte integral de este contrato.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>SEGUNDA — ALCANCE Y ESPECIFICACIONES</h3>
+    <p>El alcance de los módulos, la implementación y los entregables corresponden a los descritos en la propuesta
+    aceptada: <span class="ph">{{ALCANCE_RESUMEN}}</span>. Todo requerimiento o desarrollo por fuera de dicho alcance será
+    cotizado y acordado por escrito de manera independiente.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>TERCERA — OBLIGACIONES DEL CONTRATISTA</h3>
+    <ol>
+      <li>Poner a disposición el software y sus módulos activos con la disponibilidad pactada.</li>
+      <li>Prestar soporte técnico, mantenimiento correctivo y las actualizaciones del sistema.</li>
+      <li>Realizar la implementación y capacitación acordadas.</li>
+      <li>Guardar reserva sobre la información a la que acceda con ocasión del contrato.</li>
+    </ol>
+  </div>
+
+  <div class="clausula">
+    <h3>CUARTA — OBLIGACIONES DEL CONTRATANTE</h3>
+    <ol>
+      <li>Pagar oportunamente los valores pactados en la cláusula quinta.</li>
+      <li>Usar el software conforme a la licencia y a las condiciones de este contrato.</li>
+      <li>Suministrar la información, accesos y recursos necesarios para la operación.</li>
+      <li>Designar un interlocutor para la coordinación del servicio.</li>
+    </ol>
+  </div>
+
+  <div class="clausula">
+    <h3>QUINTA — VALOR Y FORMA DE PAGO</h3>
+    <p>La implementación y puesta en marcha tiene un valor de <span class="ph">{{VALOR_IMPLEMENTACION}}</span>, pagadero
+    50% para iniciar y 50% contra entrega. La licencia de uso tiene un valor de <span class="ph">{{VALOR_LICENCIA}}</span>
+    con periodicidad <span class="ph">{{PERIODICIDAD}}</span>, pagadera por anticipado. El servicio no incluye hardware,
+    cuentas de terceros ni inversión en pauta.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>SEXTA — DURACIÓN Y VIGENCIA</h3>
+    <p>El presente contrato tendrá una vigencia de <span class="ph">{{VIGENCIA}}</span>, contada a partir del
+    <span class="ph">{{FECHA_INICIO}}</span>, prorrogable por acuerdo escrito entre las partes.</p>
+  </div>
+
+  <div class="pagenum">1 / 3</div>
+</section>
+
+<section class="page">
+  <div class="clausula">
+    <h3>SÉPTIMA — PROPIEDAD INTELECTUAL Y LICENCIA DE USO</h3>
+    <p>El software Ex4cto Reservas, su código fuente, arquitectura y componentes son de propiedad <b>exclusiva</b> de EL
+    CONTRATISTA. La licencia otorgada es <b>no exclusiva, intransferible y revocable</b>, y faculta a EL CONTRATANTE
+    únicamente para usar el software mientras la licencia se encuentre vigente. Queda prohibido copiar, sublicenciar,
+    revender, descompilar o realizar ingeniería inversa sobre el software. En ningún caso se transfiere la propiedad. Los
+    <b>datos operativos</b> cargados por EL CONTRATANTE son de su propiedad y le serán entregados a la terminación, en un
+    formato estándar.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>OCTAVA — CONFIDENCIALIDAD</h3>
+    <p>Las partes mantendrán estricta confidencialidad sobre la información de la otra a la que accedan con ocasión de este
+    contrato, obligación que subsistirá aún después de su terminación.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>NOVENA — NATURALEZA DEL CONTRATO</h3>
+    <p>Este es un contrato de naturaleza civil/comercial y <b>no genera relación laboral</b> alguna entre las partes ni el
+    pago de prestaciones sociales, actuando EL CONTRATISTA con plena autonomía técnica y administrativa.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA — SUSPENSIÓN POR MORA</h3>
+    <p>El incumplimiento en el pago faculta a EL CONTRATISTA para <b>suspender la licencia y los servicios</b> hasta que se
+    ponga al día la obligación, sin que ello constituya incumplimiento de su parte ni genere responsabilidad alguna. La
+    mora causará intereses a la tasa máxima legal permitida.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA PRIMERA — TERMINACIÓN</h3>
+    <p>El contrato podrá terminarse: (i) por mutuo acuerdo; (ii) por vencimiento del plazo; (iii) por incumplimiento de
+    cualquiera de las obligaciones, previo aviso escrito con <b>quince (15) días</b> de anticipación, otorgando la
+    oportunidad de subsanar.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA SEGUNDA — CLÁUSULA PENAL</h3>
+    <p>El incumplimiento total o parcial de las obligaciones dará lugar a una pena equivalente al
+    15% del valor del contrato, exigible de inmediato y sin necesidad de
+    requerimiento judicial, sin perjuicio del cumplimiento de la obligación principal y de los perjuicios adicionales a que
+    haya lugar.</p>
+  </div>
+
+  <div class="pagenum">2 / 3</div>
+</section>
+
+<section class="page">
+  <div class="clausula">
+    <h3>DÉCIMA TERCERA — TRATAMIENTO DE DATOS PERSONALES</h3>
+    <p>EL CONTRATANTE autoriza a EL CONTRATISTA para recolectar, almacenar y tratar los datos personales necesarios para la
+    ejecución del objeto, conforme a la Ley 1581 de 2012 y el Decreto 1074 de 2015. EL CONTRATISTA los usará únicamente para
+    los fines del contrato y aplicará medidas de seguridad razonables para su protección.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA CUARTA — USO EN PORTAFOLIO</h3>
+    <p>EL CONTRATANTE autoriza a EL CONTRATISTA para referenciar el proyecto y mostrar el trabajo realizado (sistema,
+    resultados y logotipo del cliente) en su portafolio, sitio web y redes sociales como caso de éxito, respetando la
+    confidencialidad de la información sensible.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA QUINTA — CESIÓN</h3>
+    <p>Ninguna de las partes podrá ceder total o parcialmente este contrato sin autorización previa y escrita de la otra.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA SEXTA — SOLUCIÓN DE CONTROVERSIAS</h3>
+    <p>Las diferencias se resolverán primero mediante arreglo directo; de no lograrse, mediante los mecanismos alternativos
+    de solución de conflictos y, en su defecto, ante la jurisdicción ordinaria competente.</p>
+  </div>
+
+  <div class="clausula">
+    <h3>DÉCIMA SÉPTIMA — LEY APLICABLE Y DOMICILIO</h3>
+    <p>El presente contrato se rige por las leyes de la República de Colombia. Se fija como domicilio contractual la ciudad
+    de <span class="ph">{{CIUDAD_FIRMA}}</span>.</p>
+  </div>
+
+  <p class="intro" style="margin-top:14px;">En constancia, se firma en <span class="ph">{{CIUDAD_FIRMA}}</span>, a los
+    <span class="ph">{{FECHA_FIRMA}}</span>.</p>
+
+  <div class="firmas">
+    <div class="firma">
+      <img class="firma-img" src="{{FIRMA}}" alt="Firma de EL CONTRATISTA">
+      <div class="linea"></div>
+      <div class="rol">EL CONTRATISTA</div>
+      <div class="dato">Bryan David Castro Alarcón</div>
+      <div class="dato">C.C. 1.047.487.553</div>
+    </div>
+    <div class="firma">
+      <div class="espacio"></div>
+      <div class="linea"></div>
+      <div class="rol">EL CONTRATANTE</div>
+      <div class="dato"><span class="ph">{{CONTRATANTE_REP_LEGAL}}</span></div>
+      <div class="dato"><span class="ph">{{CONTRATANTE_RAZON_SOCIAL}}</span> — NIT <span class="ph">{{CONTRATANTE_NIT}}</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    RYAN DEIVIS · Manager · Social Media · Analista de Datos certificado (Meta · Google · MinTIC · AWS · Claude · Kommo)
+  </div>
+  <div class="pagenum">3 / 3</div>
+</section>
+
+</body>
+</html>
