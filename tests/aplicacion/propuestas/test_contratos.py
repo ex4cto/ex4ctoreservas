@@ -25,8 +25,14 @@ _DATOS = DatosCliente(
 _FECHA = datetime.date(2026, 9, 4)
 
 
-def _ctx(**kw: object) -> PropuestaContexto:
-    return PropuestaContexto(empresa_nombre="Clinica Sonrisa", datos_cliente=_DATOS, **kw)
+def _ctx(
+    plan_audiovisual: PlanAudiovisual = PlanAudiovisual.COMPLETO,
+) -> PropuestaContexto:
+    return PropuestaContexto(
+        empresa_nombre="Clinica Sonrisa",
+        datos_cliente=_DATOS,
+        plan_audiovisual=plan_audiovisual,
+    )
 
 
 def test_contrato_software_llena_legal_y_deriva_precios() -> None:
