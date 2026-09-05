@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from abc import ABC, abstractmethod
 from datetime import UTC
 from typing import Final
@@ -161,6 +162,29 @@ def detectar_banco(remitente_email: str, cuerpo: str = "") -> str | None:
         return BANCO_NEQUI
 
     return None
+
+
+# A real transport receipt always states a charged amount: Uber uses
+# "COP 10,700" and DiDi uses "$12.800".  Marketing/promo emails from the same
+# domains carry no charged amount, so the absence of this pattern is the signal
+# to drop the email silently instead of routing it to the parser (which would
+# fail and raise a noisy 'Correo no parseado' dev alert).
+_PATRON_MONTO_TRANSPORTE: Final = re.compile(r"COP\s*[\d.,]+|\$\s*[\d.,]+")
+
+
+def es_recibo_transporte(cuerpo: str) -> bool:
+    """Return True if a transport-bank email looks like a real ride receipt.
+
+    Conservative gate mirroring ``es_transaccion``: a receipt always states a
+    charged amount (Uber ``COP 10,700``, DiDi ``$12.800``).  Promotional or
+    marketing emails carry no charged amount, so they return False and are
+    dropped silently upstream instead of being quarantined and alerted.
+
+    Lenient on purpose: any charged amount passes the gate, so a real receipt
+    whose ``Total`` line format changed still reaches the parser, fails, and is
+    quarantined + alerted — the signal we want when Uber/DiDi change formats.
+    """
+    return bool(_PATRON_MONTO_TRANSPORTE.search(cuerpo))
 
 
 def es_banco_transporte(banco: str | None) -> bool:

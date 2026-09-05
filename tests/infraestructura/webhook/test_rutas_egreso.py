@@ -320,25 +320,27 @@ class TestTransporteBypass:
 # FIX 3 — Quarantine integration: malformed transport body -> correo_repo fires
 # ---------------------------------------------------------------------------
 
-# Uber payload with a body that is detected as transport bank but unparseable
-# (no Total line, no date — guaranteed to raise ErrorParseoBanco in the parser)
+# Uber payload with a body that IS a receipt (states a COP amount, so it passes
+# the es_recibo_transporte gate) but has NO 'Total' line — a real receipt whose
+# format the parser cannot read.  This is the case that MUST still quarantine +
+# alert, so a changed Uber receipt format never slips by silently.
 _PAYLOAD_UBER_MALFORMADO = {
     "message_id": "egr-uber-mal-001",
     "remitente_email": "noreply@uber.com",
     "correo_destinatario": "pagos@garaytours.com",
     "asunto": "Tu viaje con Uber",
     "cuerpo_html": "",
-    "cuerpo_texto": "Hola, gracias por usar Uber. Sin datos de monto.",
+    "cuerpo_texto": "Gracias por tu viaje. Valor del viaje COP 10,700. Sin linea Total.",
 }
 
-# DiDi payload with a body that is detected as transport bank but unparseable
+# DiDi payload with a body that IS a receipt ($ amount) but has NO 'Total' line.
 _PAYLOAD_DIDI_MALFORMADO = {
     "message_id": "egr-didi-mal-001",
     "remitente_email": "didi@co.didiglobal.com",
     "correo_destinatario": "pagos@garaytours.com",
     "asunto": "Tu viaje DiDi",
     "cuerpo_html": "",
-    "cuerpo_texto": "Hola, gracias por usar DiDi. Sin datos de monto.",
+    "cuerpo_texto": "Gracias por tu viaje. Valor del viaje $12.800. Sin linea Total.",
 }
 
 
@@ -378,3 +380,75 @@ class TestCuarentenaTransporte:
         mock_correo_repo.guardar.assert_called_once()
         mock_egreso_repo.guardar.assert_not_called()
         mock_ingreso_repo.guardar.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Promotional transport emails: dropped silently (no quarantine, no alert)
+# ---------------------------------------------------------------------------
+
+# Real Uber marketing email (no charged amount) — the one that spammed the
+# 'Correo no parseado' dev alert.  Must be dropped silently: it is not a receipt.
+_PAYLOAD_UBER_PROMO = {
+    "message_id": "egr-uber-promo-001",
+    "remitente_email": "uber@uber.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Llegar al trabajo nunca fue tan facil",
+    "cuerpo_html": "",
+    "cuerpo_texto": (
+        "Llegar al trabajo nunca fue tan facil. Eduardo, realiza traslados "
+        "diarios mas rapido con Moto Moto, simplifica tus viajes hacia y desde "
+        "el trabajo. Disfruta de un viaje tranquilo y ahorra dinero en tus "
+        "traslados diarios. Viaja con Moto."
+    ),
+}
+
+# DiDi marketing email (no charged amount) — must also be dropped silently.
+_PAYLOAD_DIDI_PROMO = {
+    "message_id": "egr-didi-promo-001",
+    "remitente_email": "didi@co.didiglobal.com",
+    "correo_destinatario": "pagos@garaytours.com",
+    "asunto": "Descuentos en tus viajes",
+    "cuerpo_html": "",
+    "cuerpo_texto": (
+        "Aprovecha nuestros descuentos y viaja mas por menos con DiDi. "
+        "Pide tu viaje ahora y ahorra en tus traslados."
+    ),
+}
+
+
+class TestTransportePromoDescartada:
+    """A transport-bank promotional email (no charged amount) must be dropped
+    silently: no egreso, no ingreso, and NO quarantine/alert."""
+
+    def test_uber_promo_descartada_sin_cuarentena(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_UBER_PROMO,
+        )
+        assert response.status_code == 200
+        assert response.json() == {"estado": "ok"}
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
+        mock_correo_repo.guardar.assert_not_called()
+
+    def test_didi_promo_descartada_sin_cuarentena(
+        self,
+        client: TestClient,
+        mock_egreso_repo: MagicMock,
+        mock_ingreso_repo: MagicMock,
+        mock_correo_repo: MagicMock,
+    ) -> None:
+        response = client.post(
+            f"/webhook/email?secret={_SECRET}",
+            json=_PAYLOAD_DIDI_PROMO,
+        )
+        assert response.status_code == 200
+        mock_egreso_repo.guardar.assert_not_called()
+        mock_ingreso_repo.guardar.assert_not_called()
+        mock_correo_repo.guardar.assert_not_called()
