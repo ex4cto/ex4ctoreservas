@@ -6,19 +6,10 @@ import datetime
 import uuid
 
 from garay.aplicacion.ventas.comandos import EditarFechaVentaComando
+from garay.aplicacion.ventas.limite_ediciones import verificar_limite_ediciones
 from garay.dominio.puertos.repositorios import AuditoriaVentaRepository, VentaRepository
 from garay.dominio.ventas.auditoria import AccionAuditoria, AuditoriaVenta
-from garay.dominio.ventas.errores import (
-    LimiteEdicionesAlcanzado,
-    MotivoRequerido,
-    VentaNoEncontrada,
-)
-
-# A venta may be edited at most twice; the third edit is blocked. Anular is
-# terminal and does not count. When new edit actions appear (e.g. EDITAR_CLIENTE)
-# they must be added here so they count toward the same limit.
-_MAX_EDICIONES = 2
-_ACCIONES_EDICION = frozenset({AccionAuditoria.EDITAR_FECHA})
+from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada
 
 
 class EditarFechaVentaService:
@@ -38,13 +29,7 @@ class EditarFechaVentaService:
         if venta is None:
             raise VentaNoEncontrada(f"No se encontró la venta con id={cmd.venta_id}.")
 
-        registros = self._auditoria.listar_por_venta_id(cmd.venta_id)
-        ediciones = sum(1 for r in registros if r.accion in _ACCIONES_EDICION)
-        if ediciones >= _MAX_EDICIONES:
-            raise LimiteEdicionesAlcanzado(
-                f"La venta {cmd.venta_id} ya alcanzó el máximo de "
-                f"{_MAX_EDICIONES} ediciones permitidas."
-            )
+        verificar_limite_ediciones(self._auditoria, cmd.venta_id)
 
         # Capture the old fecha BEFORE mutating — this becomes datos_previos.
         datos_previos = {"fecha": venta.fecha.isoformat()}
