@@ -25,6 +25,7 @@ from garay.dominio.puertos.repositorios import (
     ServicioRepository,
     VentaRepository,
 )
+from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada, VentaYaAnulada
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cerrar_flujo
@@ -76,6 +77,30 @@ _ROLLING_DAYS = 30
 _MAX_VENTAS = 15
 
 
+def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
+    """Build the newest-first (up to _MAX_VENTAS) inline keyboard for the venta list.
+
+    Each button shows vendedor / cerrador · fecha · monto. Shared by the entry
+    point and the "Atrás" navigation so the list is built in exactly one place.
+    """
+    ventas_sorted = sorted(ventas, key=lambda v: v.fecha, reverse=True)[:_MAX_VENTAS]
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_venta").format(
+                    vendedor=v.participantes.vendedor_nombre or "—",
+                    cerrador=v.participantes.cerrador_nombre or "—",
+                    fecha=f"{v.fecha:%d/%m}",
+                    monto=v.valor_venta.monto,
+                ),
+                callback_data=f"gv_sel:{v.id}",
+            )
+        ]
+        for v in ventas_sorted
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 # ---------------------------------------------------------------------------
 # /gestionar_ventas entry point
 # ---------------------------------------------------------------------------
@@ -106,22 +131,9 @@ async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return ConversationHandler.END
 
-    # Sort newest-first, take up to 15
-    ventas_sorted = sorted(ventas, key=lambda v: v.fecha, reverse=True)[:_MAX_VENTAS]
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                f"{v.fecha:%d/%m} · ${v.valor_venta.monto:,.0f}",
-                callback_data=f"gv_sel:{v.id}",
-            )
-        ]
-        for v in ventas_sorted
-    ]
-
     await update.effective_message.reply_text(
         obtener_mensaje("gestion_ventas.seleccionar"),
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=_construir_teclado_ventas(ventas),
         parse_mode="HTML",
     )
     return GV_SELECCIONAR
@@ -203,14 +215,19 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
                 callback_data="gv_cancelar",
             ),
         ],
+        [InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.boton_atras"),
+            callback_data="gv_atras",
+        )],
     ]
 
-    if update.effective_message:
-        await update.effective_message.reply_text(
-            detail_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+    # Edit the list message in place so the list is hidden and only the selected
+    # venta detail remains (with an Atrás button to return to the list).
+    await query.edit_message_text(
+        detail_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="HTML",
+    )
     return GV_DETALLE
 
 
@@ -247,6 +264,9 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             )
         return GV_EDIT_FECHA
 
+    if data == "gv_atras":
+        return await _handle_volver_a_lista(update, context)
+
     if data == "gv_cancelar":
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -258,6 +278,39 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     _limpiar(context)
     return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_volver_a_lista(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Rebuild the venta list and edit the message back to it (Atrás navigation)."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    if venta_repo is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    hasta = datetime.date.today()
+    desde = hasta - datetime.timedelta(days=_ROLLING_DAYS)
+    ventas = await asyncio.to_thread(venta_repo.listar_por_periodo, desde, hasta)
+
+    if not ventas:
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.sin_ventas"),
+            parse_mode="HTML",
+        )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    await query.edit_message_text(
+        obtener_mensaje("gestion_ventas.seleccionar"),
+        reply_markup=_construir_teclado_ventas(ventas),
+        parse_mode="HTML",
+    )
+    return GV_SELECCIONAR
 
 
 # ---------------------------------------------------------------------------

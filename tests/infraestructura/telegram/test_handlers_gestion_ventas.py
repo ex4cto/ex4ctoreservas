@@ -33,6 +33,8 @@ def _make_venta(
     cliente_id: uuid.UUID | None = None,
     fecha: datetime.date | None = None,
     valor_monto: float = 500_000,
+    vendedor_nombre: str | None = "Ana",
+    cerrador_nombre: str | None = "Luis",
 ) -> MagicMock:
     v = MagicMock()
     v.id = venta_id or uuid.uuid4()
@@ -41,6 +43,9 @@ def _make_venta(
     v.fecha = fecha or datetime.date(2026, 8, 1)
     v.valor_venta = MagicMock()
     v.valor_venta.monto = valor_monto
+    v.participantes = MagicMock()
+    v.participantes.vendedor_nombre = vendedor_nombre
+    v.participantes.cerrador_nombre = cerrador_nombre
     return v
 
 
@@ -168,6 +173,64 @@ class TestCmdGestionarVentas:
 
 
 # ---------------------------------------------------------------------------
+# Button label — vendedor / cerrador / fecha / monto
+# ---------------------------------------------------------------------------
+
+
+def _extract_buttons(update: MagicMock) -> list:  # type: ignore[type-arg]
+    """Flatten the InlineKeyboardMarkup rows from the reply_text call."""
+    markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
+    return [btn for row in markup.inline_keyboard for btn in row]
+
+
+def _extract_buttons_from_edit(update: MagicMock) -> list:  # type: ignore[type-arg]
+    """Flatten the InlineKeyboardMarkup rows from the edit_message_text call."""
+    markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+    return [btn for row in markup.inline_keyboard for btn in row]
+
+
+class TestCmdGestionarVentasBotonLabel:
+    @pytest.mark.asyncio
+    async def test_boton_incluye_vendedor_cerrador_fecha_y_monto(self) -> None:
+        venta = _make_venta(
+            fecha=datetime.date(2026, 8, 15),
+            valor_monto=750_000,
+            vendedor_nombre="Ana",
+            cerrador_nombre="Luis",
+        )
+        update = _make_update()
+        ctx = _make_context(ventas=[venta])
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
+        ):
+            await cmd_gestionar_ventas(update, ctx)
+
+        (button,) = _extract_buttons(update)
+        assert "Ana" in button.text
+        assert "Luis" in button.text
+        assert "15/08" in button.text
+        assert "750" in button.text
+
+    @pytest.mark.asyncio
+    async def test_boton_sin_participantes_usa_guion(self) -> None:
+        """A venta with no vendedor/cerrador snapshot must fall back to '—'."""
+        venta = _make_venta(vendedor_nombre=None, cerrador_nombre=None)
+        update = _make_update()
+        ctx = _make_context(ventas=[venta])
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
+        ):
+            await cmd_gestionar_ventas(update, ctx)
+
+        (button,) = _extract_buttons(update)
+        assert "—" in button.text
+
+
+# ---------------------------------------------------------------------------
 # handle_gv_seleccionar
 # ---------------------------------------------------------------------------
 
@@ -195,6 +258,64 @@ class TestHandleGvSeleccionar:
         result = await handle_gv_seleccionar(update, ctx)
 
         assert result == ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# #4: seleccionar edits the list message (hides list) + Atrás button
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGvSeleccionarHidesList:
+    @pytest.mark.asyncio
+    async def test_seleccionar_edita_mensaje_en_vez_de_reply(self) -> None:
+        """Selecting a venta must EDIT the list message (hide list), not send a new one."""
+        venta = _make_venta()
+        update = _make_update(callback_data=f"gv_sel:{venta.id}")
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        await handle_gv_seleccionar(update, ctx)
+
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_detalle_incluye_boton_atras(self) -> None:
+        """The detail keyboard must include an Atrás button (callback gv_atras)."""
+        venta = _make_venta()
+        update = _make_update(callback_data=f"gv_sel:{venta.id}")
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        await handle_gv_seleccionar(update, ctx)
+
+        callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
+        assert "gv_atras" in callbacks
+
+
+class TestHandleGvAtras:
+    @pytest.mark.asyncio
+    async def test_atras_vuelve_a_gv_seleccionar(self) -> None:
+        """Pressing Atrás must rebuild the list and return to GV_SELECCIONAR."""
+        ventas = [_make_venta(), _make_venta()]
+        update = _make_update(callback_data="gv_atras")
+        ctx = _make_context(ventas=ventas)
+
+        result = await handle_gv_detalle(update, ctx)
+
+        assert result == GV_SELECCIONAR
+
+    @pytest.mark.asyncio
+    async def test_atras_muestra_lista_de_ventas(self) -> None:
+        """Atrás must edit the message back to the ventas list (gv_sel buttons)."""
+        ventas = [_make_venta(), _make_venta()]
+        update = _make_update(callback_data="gv_atras")
+        ctx = _make_context(ventas=ventas)
+
+        await handle_gv_detalle(update, ctx)
+
+        callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
+        assert all(cb.startswith("gv_sel:") for cb in callbacks)
+        assert len(callbacks) == 2
 
 
 # ---------------------------------------------------------------------------

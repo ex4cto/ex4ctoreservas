@@ -571,6 +571,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.sin_ventas": {
         Idioma.ES: "No hay ventas registradas en los últimos 30 días."
     },
+    "gestion_ventas.boton_venta": {
+        Idioma.ES: "{vendedor} / {cerrador} · {fecha} · ${monto:,.0f}"
+    },
     "gestion_ventas.detalle": {
         Idioma.ES: (
             "<b>Detalle de la venta</b>\n"
@@ -613,6 +616,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     # --- Gestión de ventas B3: editar fecha ---
     "gestion_ventas.boton_editar": {Idioma.ES: "✏️ Editar fecha"},
+    "gestion_ventas.boton_atras": {Idioma.ES: "⬅️ Atrás"},
     "gestion_ventas.pedir_fecha": {
         Idioma.ES: (
             "Escribe la nueva fecha del tour.\n"
