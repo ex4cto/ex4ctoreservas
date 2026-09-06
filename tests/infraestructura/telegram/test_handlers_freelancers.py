@@ -719,6 +719,71 @@ class TestHandleEdfCampo:
         assert result == EDITAR_CONFIRMAR
 
     @pytest.mark.asyncio
+    async def test_cedula_muestra_valor_actual(self) -> None:
+        f = _make_freelancer(cedula="1234567")
+        update = _make_update(callback_data="edf_campo:cedula")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f, user_data={"edf_target_id": str(f.id)}
+        )
+
+        await handle_edf_campo(update, ctx)
+
+        prompt = update.effective_message.reply_text.call_args.args[0]
+        assert "1234567" in prompt
+        assert ctx.user_data.get("edf_anterior") == "1234567"
+
+    @pytest.mark.asyncio
+    async def test_telegram_id_muestra_valor_actual(self) -> None:
+        f = _make_freelancer(telegram_user_id=555)
+        update = _make_update(callback_data="edf_campo:telegram_id")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f, user_data={"edf_target_id": str(f.id)}
+        )
+
+        await handle_edf_campo(update, ctx)
+
+        prompt = update.effective_message.reply_text.call_args.args[0]
+        assert "555" in prompt
+
+    @pytest.mark.asyncio
+    async def test_campo_sin_valor_muestra_placeholder(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        f = _make_freelancer(cedula=None)
+        update = _make_update(callback_data="edf_campo:cedula")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f, user_data={"edf_target_id": str(f.id)}
+        )
+
+        await handle_edf_campo(update, ctx)
+
+        assert ctx.user_data.get("edf_anterior") == obtener_mensaje("freelancer.sin_dato")
+
+
+class TestMostrarConfirmacionEditar:
+    @pytest.mark.asyncio
+    async def test_confirmacion_muestra_anterior_real_no_placeholder(self) -> None:
+        from garay.infraestructura.telegram.handlers_freelancers import (
+            _mostrar_confirmacion_editar,
+        )
+
+        update = _make_update()
+        ctx = _make_context_edf(
+            user_data={
+                "edf_campo": "cedula",
+                "edf_valor": "9999999",
+                "edf_anterior": "1234567",
+            }
+        )
+
+        await _mostrar_confirmacion_editar(update, ctx)
+
+        texto = update.effective_message.reply_text.call_args.args[0]
+        assert "1234567" in texto  # anterior real
+        assert "9999999" in texto  # nuevo
+        assert "(actual)" not in texto  # ya no el placeholder hardcodeado
+
+    @pytest.mark.asyncio
     async def test_edf_listo_termina_conversacion(self) -> None:
         update = _make_update(callback_data="edf_listo")
         ctx = _make_context_edf(user_data={
