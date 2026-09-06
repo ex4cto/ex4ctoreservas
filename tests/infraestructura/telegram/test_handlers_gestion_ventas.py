@@ -12,13 +12,17 @@ from telegram.ext import ConversationHandler
 from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_CONFIRMAR,
     GV_DETALLE,
+    GV_EDIT_CAMPO,
     GV_EDIT_FECHA,
+    GV_EDIT_VALOR,
     GV_MOTIVO,
     GV_SELECCIONAR,
     cmd_gestionar_ventas,
     handle_gv_confirmar,
     handle_gv_detalle,
+    handle_gv_edit_campo,
     handle_gv_edit_fecha,
+    handle_gv_edit_valor,
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
@@ -104,6 +108,7 @@ def _make_context(
 
     anular_service = MagicMock()
     editar_fecha_service = MagicMock()
+    editar_cliente_service = MagicMock()
     notificador = MagicMock()
 
     ctx.bot_data = {
@@ -113,6 +118,7 @@ def _make_context(
         "servicio_repo": servicio_repo,
         "anular_venta_service": anular_service,
         "editar_fecha_venta_service": editar_fecha_service,
+        "editar_cliente_venta_service": editar_cliente_service,
         "notificador": notificador,
         "grupo_id": "-1001234567",
     }
@@ -569,15 +575,18 @@ class TestCmdGestionarVentasClearsStaleKeys:
 
 class TestHandleGvDetalleEditar:
     @pytest.mark.asyncio
-    async def test_gv_editar_retorna_gv_edit_fecha(self) -> None:
-        """gv_editar dispatch must return GV_EDIT_FECHA and set gv_accion='editar'."""
+    async def test_gv_editar_muestra_submenu_de_campos(self) -> None:
+        """gv_editar now opens the field submenu (edit in place) and returns GV_EDIT_CAMPO."""
         update = _make_update(callback_data="gv_editar")
         ctx = _make_context()
 
         result = await handle_gv_detalle(update, ctx)
 
-        assert result == GV_EDIT_FECHA
-        assert ctx.user_data.get("gv_accion") == "editar"
+        assert result == GV_EDIT_CAMPO
+        callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
+        assert "gv_campo:fecha" in callbacks
+        assert "gv_campo:telefono" in callbacks
+        assert "gv_volver_detalle" in callbacks
 
     @pytest.mark.asyncio
     async def test_gv_anular_sets_accion_anular(self) -> None:
@@ -1219,3 +1228,149 @@ class TestRegenerarFacturaTrasEditar:
         assert result == ConversationHandler.END
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.editada") in calls
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: field submenu + client-field edit flow
+# ---------------------------------------------------------------------------
+
+
+class TestGvEditCampoPatternCoversKeyboard:
+    def test_todos_los_callbacks_del_submenu_matchean_el_patron(self) -> None:
+        import re
+
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_CAMPO_PATTERN,
+            _construir_teclado_campos,
+        )
+
+        markup = _construir_teclado_campos()
+        callbacks = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "gv_campo:fecha" in callbacks
+        assert "gv_volver_detalle" in callbacks
+        for cb in callbacks:
+            assert re.match(GV_EDIT_CAMPO_PATTERN, str(cb)), f"{cb} no matchea"
+
+
+class TestHandleGvEditCampo:
+    @pytest.mark.asyncio
+    async def test_campo_fecha_va_a_gv_edit_fecha(self) -> None:
+        update = _make_update(callback_data="gv_campo:fecha")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_EDIT_FECHA
+        assert ctx.user_data.get("gv_accion") == "editar"
+
+    @pytest.mark.asyncio
+    async def test_campo_cliente_va_a_gv_edit_valor(self) -> None:
+        update = _make_update(callback_data="gv_campo:telefono")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_EDIT_VALOR
+        assert ctx.user_data.get("gv_accion") == "editar_cliente"
+        assert ctx.user_data.get("gv_campo") == "telefono"
+
+    @pytest.mark.asyncio
+    async def test_volver_detalle_regresa_a_gv_detalle(self) -> None:
+        venta = _make_venta()
+        update = _make_update(callback_data="gv_volver_detalle")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_DETALLE
+
+
+class TestHandleGvEditValor:
+    @pytest.mark.asyncio
+    async def test_valor_vacio_stays(self) -> None:
+        update = _make_update(text="   ")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_valor(update, ctx)
+
+        assert result == GV_EDIT_VALOR
+
+    @pytest.mark.asyncio
+    async def test_valor_valido_guarda_y_va_a_gv_motivo(self) -> None:
+        update = _make_update(text="3009998877")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_valor(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_nuevo_valor") == "3009998877"
+
+
+class TestHandleGvConfirmarEditarCliente:
+    @pytest.mark.asyncio
+    async def test_confirmar_editar_cliente_llama_servicio(self) -> None:
+        from garay.aplicacion.ventas.comandos import EditarClienteVentaComando
+        from garay.dominio.clientes.entidades import CampoCliente
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_cliente"
+        ctx.user_data["gv_campo"] = "telefono"
+        ctx.user_data["gv_nuevo_valor"] = "3009998877"
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        service = ctx.bot_data["editar_cliente_venta_service"]
+        service.ejecutar.assert_called_once()
+        cmd: EditarClienteVentaComando = service.ejecutar.call_args[0][0]
+        assert cmd.venta_id == venta_id
+        assert cmd.campo == CampoCliente.TELEFONO
+        assert cmd.nuevo_valor == "3009998877"
+        assert cmd.motivo == "Corrección"
+
+    @pytest.mark.asyncio
+    async def test_confirmar_editar_cliente_reply_cliente_editado(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_cliente"
+        ctx.user_data["gv_campo"] = "email"
+        ctx.user_data["gv_nuevo_valor"] = "a@b.com"
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.cliente_editado") in calls
+
+    @pytest.mark.asyncio
+    async def test_confirmar_editar_cliente_limite_reply_limite(self) -> None:
+        from garay.dominio.ventas.errores import LimiteEdicionesAlcanzado
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_cliente"
+        ctx.user_data["gv_campo"] = "telefono"
+        ctx.user_data["gv_nuevo_valor"] = "300"
+        ctx.bot_data["editar_cliente_venta_service"].ejecutar.side_effect = (
+            LimiteEdicionesAlcanzado("tope")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.limite_ediciones") in calls

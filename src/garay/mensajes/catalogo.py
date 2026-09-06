@@ -621,8 +621,32 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "Ocurrió un error al procesar la solicitud. Intenta de nuevo."
     },
     # --- Gestión de ventas B3: editar fecha ---
-    "gestion_ventas.boton_editar": {Idioma.ES: "✏️ Editar fecha"},
+    "gestion_ventas.boton_editar": {Idioma.ES: "✏️ Editar"},
     "gestion_ventas.boton_atras": {Idioma.ES: "⬅️ Atrás"},
+    "gestion_ventas.seleccionar_campo": {Idioma.ES: "¿Qué dato quieres editar?"},
+    "gestion_ventas.campo_fecha": {Idioma.ES: "📅 Fecha"},
+    "gestion_ventas.campo_nombre": {Idioma.ES: "Nombre"},
+    "gestion_ventas.campo_telefono": {Idioma.ES: "Teléfono"},
+    "gestion_ventas.campo_email": {Idioma.ES: "Correo"},
+    "gestion_ventas.campo_identificacion": {Idioma.ES: "Identificación"},
+    "gestion_ventas.campo_hotel": {Idioma.ES: "Hotel"},
+    "gestion_ventas.campo_habitacion": {Idioma.ES: "Habitación"},
+    "gestion_ventas.pedir_valor": {
+        Idioma.ES: "Escribe el nuevo valor de {campo}:"
+    },
+    "gestion_ventas.valor_vacio": {
+        Idioma.ES: "El valor no puede estar vacío. Escribe el nuevo valor:"
+    },
+    "gestion_ventas.confirmar_editar_cliente": {
+        Idioma.ES: (
+            "Vas a cambiar <b>{campo}</b> a: {valor}\n"
+            "Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.cliente_editado": {
+        Idioma.ES: "Dato del cliente actualizado correctamente."
+    },
     "gestion_ventas.pedir_fecha": {
         Idioma.ES: (
             "Escribe la nueva fecha del tour.\n"
