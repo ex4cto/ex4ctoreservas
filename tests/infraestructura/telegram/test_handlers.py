@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from telegram.ext import ConversationHandler
 
-from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
+from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.infraestructura.telegram.estados import ESTADO_PTB
@@ -472,10 +472,7 @@ class TestTourPickerColumns:
 class TestEnviarSalidaFallback:
     """A BadRequest parse-entities error must degrade to plain text, never freeze."""
 
-    def _salida(self) -> object:
-        from garay.aplicacion.tiquetera.fsm import EstadoFSM, SalidaFSM
-        from garay.dominio.ventas.contexto import ContextoVenta
-
+    def _salida(self) -> SalidaFSM:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje="📋 *Resumen:* dato_roto con _ suelto",
