@@ -26,7 +26,12 @@ from garay.dominio.puertos.repositorios import (
     VentaRepository,
 )
 from garay.dominio.ventas.entidades import Venta
-from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada, VentaYaAnulada
+from garay.dominio.ventas.errores import (
+    LimiteEdicionesAlcanzado,
+    MotivoRequerido,
+    VentaNoEncontrada,
+    VentaYaAnulada,
+)
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cerrar_flujo
 from garay.infraestructura.telegram.menu import GrupoComando
@@ -506,6 +511,14 @@ async def _handle_confirmar_editar(
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.no_encontrada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+    except LimiteEdicionesAlcanzado:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.limite_ediciones"),
                 parse_mode="HTML",
             )
         _limpiar(context)

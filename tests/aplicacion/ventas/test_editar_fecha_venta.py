@@ -11,7 +11,12 @@ import pytest
 from garay.aplicacion.ventas.comandos import EditarFechaVentaComando
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.dominio.ventas.auditoria import AccionAuditoria
-from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada, VentaYaAnulada
+from garay.dominio.ventas.errores import (
+    LimiteEdicionesAlcanzado,
+    MotivoRequerido,
+    VentaNoEncontrada,
+    VentaYaAnulada,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -39,7 +44,16 @@ def _make_repos(venta: MagicMock | None = None) -> tuple[MagicMock, MagicMock]:
     ventas_repo = MagicMock()
     ventas_repo.buscar_por_id.return_value = venta
     auditoria_repo = MagicMock()
+    # Default: no prior audit records, so the edit-limit check never triggers.
+    auditoria_repo.listar_por_venta_id.return_value = []
     return ventas_repo, auditoria_repo
+
+
+def _rec(accion: AccionAuditoria) -> MagicMock:
+    """Minimal audit-record stub carrying only the accion the limit check reads."""
+    r = MagicMock()
+    r.accion = accion
+    return r
 
 
 def _make_cmd(
@@ -171,6 +185,50 @@ class TestEditarFechaVentaService:
 
         ventas_repo.guardar.assert_not_called()
         auditoria_repo.guardar.assert_not_called()
+
+    def test_dos_ediciones_previas_bloquean_la_tercera(self) -> None:
+        """With 2 prior EDITAR_FECHA records, the 3rd edit must be blocked — nothing persisted."""
+        venta = _make_venta()
+        ventas_repo, auditoria_repo = _make_repos(venta)
+        auditoria_repo.listar_por_venta_id.return_value = [
+            _rec(AccionAuditoria.EDITAR_FECHA),
+            _rec(AccionAuditoria.EDITAR_FECHA),
+        ]
+        service = EditarFechaVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
+
+        with pytest.raises(LimiteEdicionesAlcanzado):
+            service.ejecutar(_make_cmd(venta_id=venta.id))
+
+        venta.cambiar_fecha.assert_not_called()
+        ventas_repo.guardar.assert_not_called()
+        auditoria_repo.guardar.assert_not_called()
+
+    def test_una_edicion_previa_permite_editar(self) -> None:
+        """Triangulation: with only 1 prior edit the 2nd edit is still allowed."""
+        venta = _make_venta()
+        ventas_repo, auditoria_repo = _make_repos(venta)
+        auditoria_repo.listar_por_venta_id.return_value = [
+            _rec(AccionAuditoria.EDITAR_FECHA),
+        ]
+        service = EditarFechaVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
+
+        service.ejecutar(_make_cmd(venta_id=venta.id))
+
+        ventas_repo.guardar.assert_called_once_with(venta)
+
+    def test_anular_no_cuenta_para_el_limite(self) -> None:
+        """ANULAR records must NOT count toward the edit limit."""
+        venta = _make_venta()
+        ventas_repo, auditoria_repo = _make_repos(venta)
+        auditoria_repo.listar_por_venta_id.return_value = [
+            _rec(AccionAuditoria.ANULAR),
+            _rec(AccionAuditoria.ANULAR),
+        ]
+        service = EditarFechaVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
+
+        service.ejecutar(_make_cmd(venta_id=venta.id))
+
+        ventas_repo.guardar.assert_called_once_with(venta)
 
     def test_venta_anulada_raises_venta_ya_anulada_nada_persistido(self) -> None:
         """cambiar_fecha on anulada venta propagates VentaYaAnulada — nothing persisted."""
