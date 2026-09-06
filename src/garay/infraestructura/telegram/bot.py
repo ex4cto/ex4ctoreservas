@@ -5,12 +5,15 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import traceback
 import zoneinfo
+from contextlib import suppress
 
 from telegram import (
     BotCommand,
     BotCommandScopeChat,
     BotCommandScopeDefault,
+    Update,
 )
 from telegram.error import TelegramError
 from telegram.ext import (
@@ -268,6 +271,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     handle_nvt_nueva_familia,
 )
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
+from garay.mensajes.catalogo import obtener_mensaje
 
 _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler
@@ -514,6 +518,49 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
         logger.info(
             "monitor: no monitors configured — daily job not registered"
         )
+
+
+# Telegram hard limit for a single message; the dev report is truncated to fit.
+_LIMITE_MENSAJE_TELEGRAM = 4096
+
+
+def _formatear_error_dev(update: object, error: BaseException | None) -> str:
+    """Build the plain-text error report sent to developers, capped to Telegram's limit."""
+    if error is None:
+        detalle_traceback = "sin traceback"
+    else:
+        detalle_traceback = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__)
+        )
+    reporte = obtener_mensaje("error.reporte_dev").format(
+        error=repr(error),
+        traceback=detalle_traceback,
+    )
+    return reporte[:_LIMITE_MENSAJE_TELEGRAM]
+
+
+async def _manejar_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Global error handler: log, tell the user to contact Ryan, report to devs.
+
+    Never raises — a failure while notifying must not crash the update pipeline
+    (that is exactly what makes the bot look frozen). Every notification is sent
+    as plain text so a formatting error can never re-trigger this handler.
+    """
+    error = context.error
+    logger.error("Unhandled exception in handler", exc_info=error)
+
+    # 1. Tell the user, in the chat where it failed, to contact Ryan.
+    if isinstance(update, Update) and update.effective_message is not None:
+        with suppress(Exception):
+            await update.effective_message.reply_text(
+                obtener_mensaje("error.contactar_soporte")
+            )
+
+    # 2. Report the error details to every configured developer (plain text).
+    reporte = _formatear_error_dev(update, error)
+    for dev_id in _parsear_ids(obtener_settings().dev_telegram_ids):
+        with suppress(Exception):
+            await context.bot.send_message(chat_id=dev_id, text=reporte)
 
 
 def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
@@ -931,4 +978,5 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
     handlers_conciliacion.registrar_handlers(app)
+    app.add_error_handler(_manejar_error)
     return app
