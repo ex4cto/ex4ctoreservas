@@ -292,6 +292,28 @@ class TestHandleGvSeleccionarHidesList:
         assert "gv_atras" in callbacks
 
 
+class TestGvDetallePatternCoversKeyboard:
+    def test_todos_los_callbacks_del_detalle_matchean_el_patron(self) -> None:
+        """Every detail-keyboard callback_data must be routed by GV_DETALLE_PATTERN.
+
+        Regression guard: the Atrás button (gv_atras) once shipped unrouted because
+        the pattern did not cover it.
+        """
+        import re
+
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_DETALLE_PATTERN,
+            _construir_teclado_detalle,
+        )
+
+        markup = _construir_teclado_detalle()
+        callbacks = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        assert "gv_atras" in callbacks  # the button that regressed
+        for cb in callbacks:
+            assert re.match(GV_DETALLE_PATTERN, str(cb)), f"{cb} no matchea el patrón"
+
+
 class TestHandleGvAtras:
     @pytest.mark.asyncio
     async def test_atras_vuelve_a_gv_seleccionar(self) -> None:
