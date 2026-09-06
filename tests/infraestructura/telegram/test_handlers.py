@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from telegram.ext import ConversationHandler
 
-from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
+from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.infraestructura.telegram.estados import ESTADO_PTB
@@ -467,6 +467,82 @@ class TestTourPickerColumns:
             contexto=ContextoVenta(),
         )
         assert _columnas_para_salida(salida_fl) == 2
+
+
+class TestEnviarSalidaFallback:
+    """A BadRequest parse-entities error must degrade to plain text, never freeze."""
+
+    def _salida(self) -> SalidaFSM:
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.CONFIRMACION,
+            mensaje="📋 *Resumen:* dato_roto con _ suelto",
+            opciones=["✅ Confirmar"],
+            contexto=ContextoVenta(),
+        )
+
+    @pytest.mark.asyncio
+    async def test_callback_query_parse_error_reintenta_texto_plano(self) -> None:
+        from telegram.error import BadRequest
+
+        from garay.infraestructura.telegram.handlers import _enviar_salida
+
+        update = MagicMock()
+        update.message = None
+        update.callback_query = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock(
+            side_effect=[
+                BadRequest("Can't parse entities: can't find end of the entity"),
+                None,
+            ]
+        )
+        context = MagicMock()
+        context.user_data = {}
+
+        await _enviar_salida(update, context, self._salida())
+
+        assert update.callback_query.edit_message_text.call_count == 2
+        first = update.callback_query.edit_message_text.call_args_list[0]
+        second = update.callback_query.edit_message_text.call_args_list[1]
+        assert first.kwargs["parse_mode"] == "Markdown"
+        assert second.kwargs["parse_mode"] is None
+
+    @pytest.mark.asyncio
+    async def test_markdown_ok_no_reintenta(self) -> None:
+        from garay.infraestructura.telegram.handlers import _enviar_salida
+
+        update = MagicMock()
+        update.message = None
+        update.callback_query = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock(return_value=None)
+        context = MagicMock()
+        context.user_data = {}
+
+        await _enviar_salida(update, context, self._salida())
+
+        assert update.callback_query.edit_message_text.call_count == 1
+        assert (
+            update.callback_query.edit_message_text.call_args.kwargs["parse_mode"]
+            == "Markdown"
+        )
+
+    @pytest.mark.asyncio
+    async def test_badrequest_no_parse_se_propaga(self) -> None:
+        """A BadRequest NOT about entities must not be swallowed."""
+        from telegram.error import BadRequest
+
+        from garay.infraestructura.telegram.handlers import _enviar_salida
+
+        update = MagicMock()
+        update.message = None
+        update.callback_query = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock(
+            side_effect=BadRequest("Message to edit not found")
+        )
+        context = MagicMock()
+        context.user_data = {}
+
+        with pytest.raises(BadRequest):
+            await _enviar_salida(update, context, self._salida())
 
 
 class TestCmdStart:
