@@ -1254,25 +1254,58 @@ class TestGvEditCampoPatternCoversKeyboard:
 
 class TestHandleGvEditCampo:
     @pytest.mark.asyncio
-    async def test_campo_fecha_va_a_gv_edit_fecha(self) -> None:
+    async def test_campo_fecha_muestra_fecha_actual(self) -> None:
+        venta = _make_venta(fecha=datetime.date(2026, 8, 15))
         update = _make_update(callback_data="gv_campo:fecha")
         ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
 
         result = await handle_gv_edit_campo(update, ctx)
 
         assert result == GV_EDIT_FECHA
         assert ctx.user_data.get("gv_accion") == "editar"
+        prompt = update.callback_query.edit_message_text.call_args.args[0]
+        assert "15/08/2026" in prompt
 
     @pytest.mark.asyncio
-    async def test_campo_cliente_va_a_gv_edit_valor(self) -> None:
+    async def test_campo_cliente_muestra_valor_actual(self) -> None:
+        venta = _make_venta()
         update = _make_update(callback_data="gv_campo:telefono")
         ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        cliente = MagicMock()
+        cliente.telefono = "3001112233"
+        ctx.bot_data["cliente_repo"].buscar_por_id.return_value = cliente
 
         result = await handle_gv_edit_campo(update, ctx)
 
         assert result == GV_EDIT_VALOR
         assert ctx.user_data.get("gv_accion") == "editar_cliente"
         assert ctx.user_data.get("gv_campo") == "telefono"
+        assert ctx.user_data.get("gv_valor_anterior") == "3001112233"
+        prompt = update.callback_query.edit_message_text.call_args.args[0]
+        assert "3001112233" in prompt
+
+    @pytest.mark.asyncio
+    async def test_campo_cliente_sin_valor_muestra_placeholder(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta = _make_venta()
+        update = _make_update(callback_data="gv_campo:hotel")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        cliente = MagicMock()
+        cliente.hotel = None
+        ctx.bot_data["cliente_repo"].buscar_por_id.return_value = cliente
+
+        await handle_gv_edit_campo(update, ctx)
+
+        assert ctx.user_data.get("gv_valor_anterior") == obtener_mensaje(
+            "gestion_ventas.sin_dato"
+        )
 
     @pytest.mark.asyncio
     async def test_volver_detalle_regresa_a_gv_detalle(self) -> None:
@@ -1306,6 +1339,24 @@ class TestHandleGvEditValor:
 
         assert result == GV_MOTIVO
         assert ctx.user_data.get("gv_nuevo_valor") == "3009998877"
+
+
+class TestGvMotivoConfirmEditarCliente:
+    @pytest.mark.asyncio
+    async def test_confirmacion_muestra_antes_y_despues(self) -> None:
+        update = _make_update(text="Cliente pidió corrección")
+        ctx = _make_context()
+        ctx.user_data["gv_accion"] = "editar_cliente"
+        ctx.user_data["gv_campo"] = "telefono"
+        ctx.user_data["gv_valor_anterior"] = "3001112233"
+        ctx.user_data["gv_nuevo_valor"] = "3009998877"
+
+        result = await handle_gv_motivo(update, ctx)
+
+        assert result == GV_CONFIRMAR
+        confirm_text = update.effective_message.reply_text.call_args.args[0]
+        assert "3001112233" in confirm_text  # antes
+        assert "3009998877" in confirm_text  # después
 
 
 class TestHandleGvConfirmarEditarCliente:

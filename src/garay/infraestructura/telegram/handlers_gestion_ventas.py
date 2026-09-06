@@ -58,6 +58,7 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_tours", None)
         context.user_data.pop("gv_campo", None)
         context.user_data.pop("gv_nuevo_valor", None)
+        context.user_data.pop("gv_valor_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -401,15 +402,19 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
 
     data = query.data or ""
 
-    if data == "gv_volver_detalle":
-        venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
-        venta_id_str = (context.user_data or {}).get("gv_venta_id")
-        if venta_repo is not None and venta_id_str:
-            venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
-            if venta is not None:
-                return await _render_detalle(query, context, venta)
+    # Fetch the venta once — needed both to go back to detail and to show the
+    # current value of the field being edited.
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    venta_id_str = (context.user_data or {}).get("gv_venta_id")
+    venta = None
+    if venta_repo is not None and venta_id_str:
+        venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+    if venta is None:
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if data == "gv_volver_detalle":
+        return await _render_detalle(query, context, venta)
 
     campo_str = data.removeprefix("gv_campo:")
 
@@ -417,7 +422,9 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         if context.user_data is not None:
             context.user_data["gv_accion"] = "editar"
         await query.edit_message_text(
-            obtener_mensaje("gestion_ventas.pedir_fecha"),
+            obtener_mensaje("gestion_ventas.pedir_fecha").format(
+                actual=f"{venta.fecha:%d/%m/%Y}"
+            ),
             parse_mode="HTML",
         )
         return GV_EDIT_FECHA
@@ -428,17 +435,35 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
+    valor_actual = await _valor_actual_cliente(context, venta.cliente_id, campo)
+
     if context.user_data is not None:
         context.user_data["gv_accion"] = "editar_cliente"
         context.user_data["gv_campo"] = campo.value
+        context.user_data["gv_valor_anterior"] = valor_actual
 
     await query.edit_message_text(
         obtener_mensaje("gestion_ventas.pedir_valor").format(
-            campo=obtener_mensaje(_ETIQUETA_POR_CAMPO[campo])
+            campo=obtener_mensaje(_ETIQUETA_POR_CAMPO[campo]),
+            actual=valor_actual,
         ),
         parse_mode="HTML",
     )
     return GV_EDIT_VALOR
+
+
+async def _valor_actual_cliente(
+    context: ContextTypes.DEFAULT_TYPE, cliente_id: uuid.UUID, campo: CampoCliente
+) -> str:
+    """Return the client's current value for `campo`, or a '(sin dato)' placeholder."""
+    cliente_repo: ClienteRepository | None = context.bot_data.get("cliente_repo")
+    if cliente_repo is not None:
+        cliente = await asyncio.to_thread(cliente_repo.buscar_por_id, cliente_id)
+        if cliente is not None:
+            valor = getattr(cliente, campo.value)
+            if valor:
+                return str(valor)
+    return obtener_mensaje("gestion_ventas.sin_dato")
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +571,7 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_cliente").format(
             campo=campo_label,
+            anterior=user_data.get("gv_valor_anterior") or "—",
             valor=user_data.get("gv_nuevo_valor") or "—",
             motivo=motivo,
         )
