@@ -11,6 +11,7 @@ from typing import Any
 
 class AccionAuditoria(StrEnum):
     EDITAR_FECHA = "EDITAR_FECHA"
+    EDITAR_CLIENTE = "EDITAR_CLIENTE"
     ANULAR = "ANULAR"
 
 

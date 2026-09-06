@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.clientes.entidades import CampoCliente, Cliente
 from garay.dominio.clientes.errores import NombreClienteVacio
 from garay.dominio.comun.tipos import TipoCliente
 
@@ -50,3 +50,40 @@ class TestCliente:
         assert c.telefono is None
         assert c.hotel is None
         assert c.numero_habitacion is None
+
+
+class TestActualizarCampo:
+    def _cliente(self) -> Cliente:
+        return Cliente(id=uuid.uuid4(), nombre="Juan Perez", tipo=TipoCliente.EXTERNO)
+
+    def test_actualiza_telefono(self) -> None:
+        c = self._cliente()
+        c.actualizar_campo(CampoCliente.TELEFONO, "3001234567")
+        assert c.telefono == "3001234567"
+
+    def test_actualiza_nombre(self) -> None:
+        c = self._cliente()
+        c.actualizar_campo(CampoCliente.NOMBRE, "Pedro Gómez")
+        assert c.nombre == "Pedro Gómez"
+
+    def test_actualiza_email_hotel_identificacion_habitacion(self) -> None:
+        c = self._cliente()
+        c.actualizar_campo(CampoCliente.EMAIL, "a@b.com")
+        c.actualizar_campo(CampoCliente.HOTEL, "Hotel Sol")
+        c.actualizar_campo(CampoCliente.IDENTIFICACION, "CC123")
+        c.actualizar_campo(CampoCliente.NUMERO_HABITACION, "204")
+        assert c.email == "a@b.com"
+        assert c.hotel == "Hotel Sol"
+        assert c.identificacion == "CC123"
+        assert c.numero_habitacion == "204"
+
+    def test_recorta_espacios(self) -> None:
+        c = self._cliente()
+        c.actualizar_campo(CampoCliente.TELEFONO, "  300  ")
+        assert c.telefono == "300"
+
+    def test_nombre_vacio_levanta_error(self) -> None:
+        c = self._cliente()
+        with pytest.raises(NombreClienteVacio):
+            c.actualizar_campo(CampoCliente.NOMBRE, "   ")
+        assert c.nombre == "Juan Perez"
