@@ -19,7 +19,7 @@ from telegram import (
     InlineKeyboardMarkup,
     Update,
 )
-from telegram.error import TelegramError
+from telegram.error import BadRequest, TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
@@ -120,6 +120,27 @@ def _get_fsm(context: ContextTypes.DEFAULT_TYPE) -> FSMTiquetera | None:
     return fsm
 
 
+async def _responder_seguro(
+    enviar: Callable[..., Any],
+    mensaje: str,
+    teclado: Any,
+) -> None:
+    """Send a message as Markdown; on a parse-entities error retry as plain text.
+
+    Legacy Markdown breaks when user-provided data contains a stray control
+    character (``_ * ` [``): Telegram returns BadRequest "Can't parse entities".
+    Without this fallback the update crashes unhandled and the bot appears frozen.
+    Any other BadRequest (e.g. "message to edit not found") is re-raised.
+    """
+    try:
+        await enviar(mensaje, reply_markup=teclado, parse_mode="Markdown")
+    except BadRequest as exc:
+        if "parse entities" not in str(exc).lower():
+            raise
+        logger.warning("Markdown parse failed; retrying as plain text: %s", exc)
+        await enviar(mensaje, reply_markup=teclado, parse_mode=None)
+
+
 async def _enviar_salida(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -134,22 +155,14 @@ async def _enviar_salida(
     else:
         teclado = _teclado(salida.opciones)
     if update.message:
-        await update.message.reply_text(
-            salida.mensaje,
-            reply_markup=teclado,
-            parse_mode="Markdown",
-        )
+        await _responder_seguro(update.message.reply_text, salida.mensaje, teclado)
     elif update.callback_query:
-        await update.callback_query.edit_message_text(
-            salida.mensaje,
-            reply_markup=teclado,
-            parse_mode="Markdown",
+        await _responder_seguro(
+            update.callback_query.edit_message_text, salida.mensaje, teclado
         )
     elif update.effective_message:
-        await update.effective_message.reply_text(
-            salida.mensaje,
-            reply_markup=teclado,
-            parse_mode="Markdown",
+        await _responder_seguro(
+            update.effective_message.reply_text, salida.mensaje, teclado
         )
     if salida.nuevo_estado in (EstadoFSM.TERMINADO, EstadoFSM.CANCELADO):
         return ConversationHandler.END
