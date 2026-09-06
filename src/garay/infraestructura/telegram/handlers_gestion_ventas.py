@@ -78,6 +78,11 @@ GV_MOTIVO: int = 222
 GV_CONFIRMAR: int = 223
 GV_EDIT_FECHA: int = 224
 
+# Single source of truth for the GV_DETALLE callback pattern. Must match every
+# callback_data the detail keyboard produces (see _construir_teclado_detalle);
+# a test guards this so a new button can never silently go unrouted again.
+GV_DETALLE_PATTERN = "^gv_(editar|anular|cancelar|atras)$"
+
 _ROLLING_DAYS = 30
 _MAX_VENTAS = 15
 
@@ -104,6 +109,33 @@ def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
         for v in ventas_sorted
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def _construir_teclado_detalle() -> InlineKeyboardMarkup:
+    """Build the detail-view keyboard. Every callback_data here MUST be covered by
+    GV_DETALLE_PATTERN (a test enforces it)."""
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_editar"),
+                callback_data="gv_editar",
+            )],
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("gestion_ventas.boton_anular"),
+                    callback_data="gv_anular",
+                ),
+                InlineKeyboardButton(
+                    obtener_mensaje("gestion_ventas.boton_cancelar"),
+                    callback_data="gv_cancelar",
+                ),
+            ],
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_atras"),
+                callback_data="gv_atras",
+            )],
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -205,32 +237,11 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
         valor=venta.valor_venta.monto,
     )
 
-    keyboard = [
-        [InlineKeyboardButton(
-            obtener_mensaje("gestion_ventas.boton_editar"),
-            callback_data="gv_editar",
-        )],
-        [
-            InlineKeyboardButton(
-                obtener_mensaje("gestion_ventas.boton_anular"),
-                callback_data="gv_anular",
-            ),
-            InlineKeyboardButton(
-                obtener_mensaje("gestion_ventas.boton_cancelar"),
-                callback_data="gv_cancelar",
-            ),
-        ],
-        [InlineKeyboardButton(
-            obtener_mensaje("gestion_ventas.boton_atras"),
-            callback_data="gv_atras",
-        )],
-    ]
-
     # Edit the list message in place so the list is hidden and only the selected
     # venta detail remains (with an Atrás button to return to the list).
     await query.edit_message_text(
         detail_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=_construir_teclado_detalle(),
         parse_mode="HTML",
     )
     return GV_DETALLE
