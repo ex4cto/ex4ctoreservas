@@ -36,6 +36,7 @@ from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentasService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
+from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
@@ -116,6 +117,9 @@ def main() -> None:
     anular_venta_service = AnularVentaService(ventas=ventas_repo, auditoria=auditoria_venta_repo)
     editar_fecha_venta_service = EditarFechaVentaService(
         ventas=ventas_repo, auditoria=auditoria_venta_repo
+    )
+    editar_cliente_venta_service = EditarClienteVentaService(
+        ventas=ventas_repo, clientes=cliente_repo, auditoria=auditoria_venta_repo
     )
 
     egreso_service = RegistrarEgresoManualService(
@@ -366,6 +370,7 @@ def main() -> None:
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,
             "editar_fecha_venta_service": editar_fecha_venta_service,
+            "editar_cliente_venta_service": editar_cliente_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
             "notificador": notificador,
             "grupo_id": settings.grupo_id,

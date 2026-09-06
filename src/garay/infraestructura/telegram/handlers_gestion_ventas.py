@@ -8,7 +8,7 @@ import logging
 import uuid
 from html import escape
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
@@ -17,8 +17,15 @@ from garay.aplicacion.factura.regenerar_factura import (
     ResultadoRegenerarFactura,
 )
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
-from garay.aplicacion.ventas.comandos import AnularVentaComando, EditarFechaVentaComando
+from garay.aplicacion.ventas.comandos import (
+    AnularVentaComando,
+    EditarClienteVentaComando,
+    EditarFechaVentaComando,
+)
+from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.dominio.clientes.entidades import CampoCliente
+from garay.dominio.clientes.errores import ClienteNoEncontrado
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     FreelancerRepository,
@@ -49,6 +56,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_nueva_fecha", None)
         context.user_data.pop("gv_cliente_nombre", None)
         context.user_data.pop("gv_tours", None)
+        context.user_data.pop("gv_campo", None)
+        context.user_data.pop("gv_nuevo_valor", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -77,11 +86,27 @@ GV_DETALLE: int = 221
 GV_MOTIVO: int = 222
 GV_CONFIRMAR: int = 223
 GV_EDIT_FECHA: int = 224
+GV_EDIT_CAMPO: int = 225
+GV_EDIT_VALOR: int = 226
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
 # a test guards this so a new button can never silently go unrouted again.
 GV_DETALLE_PATTERN = "^gv_(editar|anular|cancelar|atras)$"
+
+# Field-submenu callbacks: one per editable field (gv_campo:<campo>) plus a back
+# button to the detail view. Guarded by a test against _construir_teclado_campos.
+GV_EDIT_CAMPO_PATTERN = "^(gv_campo:[a-z_]+|gv_volver_detalle)$"
+
+# Editable client fields shown in the submenu, in display order (label key, campo).
+_CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
+    ("gestion_ventas.campo_nombre", CampoCliente.NOMBRE),
+    ("gestion_ventas.campo_telefono", CampoCliente.TELEFONO),
+    ("gestion_ventas.campo_email", CampoCliente.EMAIL),
+    ("gestion_ventas.campo_identificacion", CampoCliente.IDENTIFICACION),
+    ("gestion_ventas.campo_hotel", CampoCliente.HOTEL),
+    ("gestion_ventas.campo_habitacion", CampoCliente.NUMERO_HABITACION),
+)
 
 _ROLLING_DAYS = 30
 _MAX_VENTAS = 15
@@ -136,6 +161,33 @@ def _construir_teclado_detalle() -> InlineKeyboardMarkup:
             )],
         ]
     )
+
+
+def _construir_teclado_campos() -> InlineKeyboardMarkup:
+    """Build the edit-field submenu: fecha + client fields, plus back-to-detail.
+
+    Every callback_data here MUST be covered by GV_EDIT_CAMPO_PATTERN (test-guarded).
+    """
+    filas = [
+        [InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.campo_fecha"),
+            callback_data="gv_campo:fecha",
+        )],
+    ]
+    filas += [
+        [InlineKeyboardButton(
+            obtener_mensaje(label_key),
+            callback_data=f"gv_campo:{campo.value}",
+        )]
+        for label_key, campo in _CAMPOS_CLIENTE
+    ]
+    filas.append(
+        [InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.boton_atras"),
+            callback_data="gv_volver_detalle",
+        )]
+    )
+    return InlineKeyboardMarkup(filas)
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +259,14 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
             )
         return ConversationHandler.END
 
-    # Resolve client name
+    return await _render_detalle(query, context, venta)
+
+
+async def _render_detalle(
+    query: CallbackQuery, context: ContextTypes.DEFAULT_TYPE, venta: Venta
+) -> int:
+    """Resolve client + tour names, stash them, and edit the message into the
+    detail view (hides list / submenu). Shared by seleccionar and volver-al-detalle."""
     cliente_repo: ClienteRepository | None = context.bot_data.get("cliente_repo")
     cliente_nombre = "—"
     if cliente_repo is not None:
@@ -215,7 +274,6 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
         if cliente is not None:
             cliente_nombre = cliente.nombre
 
-    # Resolve tour names
     servicio_repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
     tour_nombres: list[str] = []
     if servicio_repo is not None:
@@ -237,8 +295,6 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
         valor=venta.valor_venta.monto,
     )
 
-    # Edit the list message in place so the list is hidden and only the selected
-    # venta detail remains (with an Atrás button to return to the list).
     await query.edit_message_text(
         detail_text,
         reply_markup=_construir_teclado_detalle(),
@@ -271,14 +327,13 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return GV_MOTIVO
 
     if data == "gv_editar":
-        if context.user_data is not None:
-            context.user_data["gv_accion"] = "editar"
-        if update.effective_message:
-            await update.effective_message.reply_text(
-                obtener_mensaje("gestion_ventas.pedir_fecha"),
-                parse_mode="HTML",
-            )
-        return GV_EDIT_FECHA
+        # Edit the detail message in place into the field submenu (no lingering buttons).
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_campo"),
+            reply_markup=_construir_teclado_campos(),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_CAMPO
 
     if data == "gv_atras":
         return await _handle_volver_a_lista(update, context)
@@ -327,6 +382,92 @@ async def _handle_volver_a_lista(
         parse_mode="HTML",
     )
     return GV_SELECCIONAR
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_CAMPO state — user picks which field to edit
+# ---------------------------------------------------------------------------
+
+_ETIQUETA_POR_CAMPO: dict[CampoCliente, str] = {
+    campo: label_key for label_key, campo in _CAMPOS_CLIENTE
+}
+
+
+async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+
+    if data == "gv_volver_detalle":
+        venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_id_str = (context.user_data or {}).get("gv_venta_id")
+        if venta_repo is not None and venta_id_str:
+            venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+            if venta is not None:
+                return await _render_detalle(query, context, venta)
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    campo_str = data.removeprefix("gv_campo:")
+
+    if campo_str == "fecha":
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar"
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_fecha"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_FECHA
+
+    try:
+        campo = CampoCliente(campo_str)
+    except ValueError:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if context.user_data is not None:
+        context.user_data["gv_accion"] = "editar_cliente"
+        context.user_data["gv_campo"] = campo.value
+
+    await query.edit_message_text(
+        obtener_mensaje("gestion_ventas.pedir_valor").format(
+            campo=obtener_mensaje(_ETIQUETA_POR_CAMPO[campo])
+        ),
+        parse_mode="HTML",
+    )
+    return GV_EDIT_VALOR
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_VALOR state — text input for the new client-field value
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_valor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = update.message.text if update.message else ""
+    valor = (text or "").strip()
+    if not valor:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.valor_vacio"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_VALOR
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_valor"] = valor
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +537,18 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             )
         else:
             confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
+    elif gv_accion == "editar_cliente":
+        campo_str: str | None = user_data.get("gv_campo")
+        campo_label = (
+            obtener_mensaje(_ETIQUETA_POR_CAMPO[CampoCliente(campo_str)])
+            if campo_str
+            else "—"
+        )
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_cliente").format(
+            campo=campo_label,
+            valor=user_data.get("gv_nuevo_valor") or "—",
+            motivo=motivo,
+        )
     else:
         confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
 
@@ -450,6 +603,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar":
         return await _handle_confirmar_editar(update, context, user_data, user)
+
+    if gv_accion == "editar_cliente":
+        return await _handle_confirmar_editar_cliente(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -590,6 +746,89 @@ async def _handle_confirmar_editar(
                 obtener_mensaje("gestion_ventas.factura_error"),
                 parse_mode="HTML",
             )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_cliente(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-cliente action."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    campo_str: str | None = user_data.get("gv_campo")
+    nuevo_valor: str | None = user_data.get("gv_nuevo_valor")
+
+    if not venta_id_str or not motivo or not campo_str or not nuevo_valor:
+        logger.error("editar_cliente confirm: estado incompleto")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarClienteVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        campo=CampoCliente(campo_str),
+        nuevo_valor=nuevo_valor,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarClienteVentaService | None = context.bot_data.get(
+        "editar_cliente_venta_service"
+    )
+    if service is None:
+        logger.error("editar_cliente_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except ClienteNoEncontrado:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in handle_gv_confirmar (editar_cliente)")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.cliente_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
     _limpiar(context)
     return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
