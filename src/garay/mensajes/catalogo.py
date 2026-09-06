@@ -487,6 +487,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "o presioná «Quitar» para desvincularlo:"
         )
     },
+    "freelancer.editar_valor_actual": {Idioma.ES: "Actual: {actual}"},
+    "freelancer.sin_dato": {Idioma.ES: "(sin dato)"},
     "freelancer.editar_activo_estado": {Idioma.ES: "Estado actual: {estado}\n¿Qué querés hacer?"},
     "freelancer.editar_confirmar": {
         Idioma.ES: "¿Confirmás cambiar <b>{campo}</b>?\n\nAnterior: {anterior}\nNuevo: {nuevo}"

@@ -470,8 +470,29 @@ def _teclado_menu_campo() -> InlineKeyboardMarkup:
 def _limpiar_edf(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Pop all edf_* keys from user_data."""
     if context.user_data is not None:
-        for key in ("edf_target_id", "edf_campo", "edf_valor", "edf_activo"):
+        for key in ("edf_target_id", "edf_campo", "edf_valor", "edf_activo", "edf_anterior"):
             context.user_data.pop(key, None)
+
+
+# Editable field -> Freelancer attribute (telegram_id maps to telegram_user_id).
+_ATRIBUTO_ACTUAL_POR_CAMPO: dict[str, str] = {
+    "nombre_completo": "nombre_completo",
+    "cedula": "cedula",
+    "nombre": "nombre",
+    "email": "email",
+    "telegram_id": "telegram_user_id",
+}
+
+
+def _valor_actual_freelancer(f: Freelancer | None, campo: str) -> str:
+    """Return the freelancer's current value for `campo`, or a '(sin dato)' placeholder."""
+    if f is not None:
+        attr = _ATRIBUTO_ACTUAL_POR_CAMPO.get(campo)
+        if attr:
+            valor = getattr(f, attr)
+            if valor:
+                return str(valor)
+    return obtener_mensaje("freelancer.sin_dato")
 
 
 def _render_ficha(f: Freelancer) -> str:
@@ -571,15 +592,19 @@ async def handle_edf_campo(
     if context.user_data is not None:
         context.user_data["edf_campo"] = campo
 
+    # Load the selected freelancer once, to show the CURRENT value being edited.
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    target_id_str = (
+        str(context.user_data.get("edf_target_id", ""))
+        if context.user_data is not None
+        else ""
+    )
+    f = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo and target_id_str else None
+
     if campo == "activo":
-        repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
-        target_id_str = (
-            str(context.user_data.get("edf_target_id", ""))
-            if context.user_data is not None
-            else ""
-        )
-        f = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo and target_id_str else None
         estado_str = "Activo" if (f and f.activo) else "Inactivo"
+        if context.user_data is not None:
+            context.user_data["edf_anterior"] = estado_str
         teclado = InlineKeyboardMarkup(
             [
                 [
@@ -603,6 +628,15 @@ async def handle_edf_campo(
     }
     prompt_key = prompt_key_map.get(campo, "freelancer.editar_pedir_nombre_completo")
 
+    valor_actual = _valor_actual_freelancer(f, campo)
+    if context.user_data is not None:
+        context.user_data["edf_anterior"] = valor_actual
+    mensaje = (
+        obtener_mensaje("freelancer.editar_valor_actual").format(actual=valor_actual)
+        + "\n\n"
+        + obtener_mensaje(prompt_key)
+    )
+
     extra_markup: InlineKeyboardMarkup | None = None
     if campo == "telegram_id":
         extra_markup = InlineKeyboardMarkup(
@@ -610,12 +644,9 @@ async def handle_edf_campo(
         )
 
     if extra_markup:
-        await update.effective_message.reply_text(
-            obtener_mensaje(prompt_key),
-            reply_markup=extra_markup,
-        )
+        await update.effective_message.reply_text(mensaje, reply_markup=extra_markup)
     else:
-        await update.effective_message.reply_text(obtener_mensaje(prompt_key))
+        await update.effective_message.reply_text(mensaje)
     return EDITAR_VALOR
 
 
@@ -739,7 +770,9 @@ async def _mostrar_confirmacion_editar(
     )
     await update.effective_message.reply_text(
         obtener_mensaje("freelancer.editar_confirmar").format(
-            campo=campo, anterior="(actual)", nuevo=nuevo_str
+            campo=campo,
+            anterior=ud.get("edf_anterior") or obtener_mensaje("freelancer.sin_dato"),
+            nuevo=nuevo_str,
         ),
         reply_markup=teclado,
         parse_mode="HTML",
@@ -770,12 +803,13 @@ async def handle_edf_activo_toggle(
     )
     await update.effective_message.reply_text(
         obtener_mensaje("freelancer.editar_confirmar").format(
-            campo="activo", anterior="(actual)", nuevo=nuevo_str
+            campo="activo",
+            anterior=ud.get("edf_anterior") or obtener_mensaje("freelancer.sin_dato"),
+            nuevo=nuevo_str,
         ),
         reply_markup=teclado,
         parse_mode="HTML",
     )
-    _ = ud  # suppress unused warning
     return EDITAR_CONFIRMAR
 
 
