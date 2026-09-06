@@ -47,7 +47,6 @@ from garay.infraestructura.telegram.alertas_monitor import (
     construir_alerta_renovacion,
 )
 from garay.infraestructura.telegram.estados import ESTADO_PTB
-from garay.mensajes.catalogo import obtener_mensaje
 from garay.infraestructura.telegram.handlers import (
     _foto_en_conversacion,
     cmd_cancelar,
@@ -272,6 +271,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     handle_nvt_nueva_familia,
 )
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
+from garay.mensajes.catalogo import obtener_mensaje
 
 _TEXT = filters.TEXT & ~filters.COMMAND
 _CB = CallbackQueryHandler

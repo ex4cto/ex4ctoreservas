@@ -49,7 +49,10 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "error_interno": {Idioma.ES: "Error interno. Contactá al administrador."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "error.contactar_soporte": {
-        Idioma.ES: "Ocurrió un error inesperado. Por favor contacta a Ryan e infórmale de lo sucedido."
+        Idioma.ES: (
+            "Ocurrió un error inesperado. "
+            "Por favor contacta a Ryan e infórmale de lo sucedido."
+        )
     },
     "error.reporte_dev": {
         Idioma.ES: "⚠️ Error en el bot:\n{error}\n\n{traceback}"
