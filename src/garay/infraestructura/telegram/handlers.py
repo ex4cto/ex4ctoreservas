@@ -120,6 +120,18 @@ def _get_fsm(context: ContextTypes.DEFAULT_TYPE) -> FSMTiquetera | None:
     return fsm
 
 
+# Telegram rejects text messages longer than 4096 characters with a BadRequest.
+_LIMITE_MENSAJE_TELEGRAM = 4096
+_MARCA_TRUNCADO = "\n[…]"
+
+
+def _recortar_a_limite(mensaje: str) -> str:
+    """Truncate to Telegram's per-message limit so a huge field degrades instead of failing."""
+    if len(mensaje) <= _LIMITE_MENSAJE_TELEGRAM:
+        return mensaje
+    return mensaje[: _LIMITE_MENSAJE_TELEGRAM - len(_MARCA_TRUNCADO)] + _MARCA_TRUNCADO
+
+
 async def _responder_seguro(
     enviar: Callable[..., Any],
     mensaje: str,
@@ -131,7 +143,9 @@ async def _responder_seguro(
     character (``_ * ` [``): Telegram returns BadRequest "Can't parse entities".
     Without this fallback the update crashes unhandled and the bot appears frozen.
     Any other BadRequest (e.g. "message to edit not found") is re-raised.
+    Overlong text is truncated first so it degrades instead of failing.
     """
+    mensaje = _recortar_a_limite(mensaje)
     try:
         await enviar(mensaje, reply_markup=teclado, parse_mode="Markdown")
     except BadRequest as exc:

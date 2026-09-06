@@ -545,6 +545,48 @@ class TestEnviarSalidaFallback:
             await _enviar_salida(update, context, self._salida())
 
 
+class TestRecortarALimite:
+    """A message over Telegram's 4096-char limit must be truncated, not sent whole."""
+
+    def test_mensaje_corto_no_cambia(self) -> None:
+        from garay.infraestructura.telegram.handlers import _recortar_a_limite
+
+        assert _recortar_a_limite("hola") == "hola"
+
+    def test_mensaje_largo_se_recorta_al_limite(self) -> None:
+        from garay.infraestructura.telegram.handlers import _recortar_a_limite
+
+        recortado = _recortar_a_limite("x" * 5000)
+
+        assert len(recortado) <= 4096
+        assert recortado.endswith("[…]")
+
+    @pytest.mark.asyncio
+    async def test_enviar_salida_recorta_mensaje_largo(self) -> None:
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM, SalidaFSM
+        from garay.dominio.ventas.contexto import ContextoVenta
+        from garay.infraestructura.telegram.handlers import _enviar_salida
+
+        update = MagicMock()
+        update.message = None
+        update.callback_query = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock(return_value=None)
+        context = MagicMock()
+        context.user_data = {}
+
+        salida = SalidaFSM(
+            nuevo_estado=EstadoFSM.CONFIRMACION,
+            mensaje="x" * 5000,
+            opciones=["✅ Confirmar"],
+            contexto=ContextoVenta(),
+        )
+
+        await _enviar_salida(update, context, salida)
+
+        enviado = update.callback_query.edit_message_text.call_args.args[0]
+        assert len(enviado) <= 4096
+
+
 class TestCmdStart:
     """WU-6: /start shows menu and returns END (does not start FSM)."""
 
