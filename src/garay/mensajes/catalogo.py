@@ -611,6 +611,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.ya_anulada": {
         Idioma.ES: "Esta venta ya fue anulada anteriormente."
     },
+    "gestion_ventas.limite_ediciones": {
+        Idioma.ES: (
+            "Esta venta ya alcanzó el máximo de ediciones permitidas "
+            "y no se puede editar más."
+        )
+    },
     "gestion_ventas.error_generico": {
         Idioma.ES: "Ocurrió un error al procesar la solicitud. Intenta de nuevo."
     },

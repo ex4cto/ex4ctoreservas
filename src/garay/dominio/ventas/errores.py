@@ -36,3 +36,7 @@ class MotivoRequerido(ErrorDeDominio):
 
 class VentaNoEncontrada(ErrorDeDominio):
     """No se encontró la venta con el ID indicado."""
+
+
+class LimiteEdicionesAlcanzado(ErrorDeDominio):
+    """La venta alcanzó el máximo de ediciones permitidas y no puede editarse más."""

@@ -721,6 +721,30 @@ class TestHandleGvConfirmarEditar:
         update.effective_message.reply_text.assert_called()
 
     @pytest.mark.asyncio
+    async def test_confirmar_editar_limite_ediciones_reply_y_end(self) -> None:
+        """If the service raises LimiteEdicionesAlcanzado, reply limite_ediciones + END."""
+        from garay.dominio.ventas.errores import LimiteEdicionesAlcanzado
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
+        update = _make_update(callback_data="gv_confirmar")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Motivo"
+        ctx.user_data["gv_nueva_fecha"] = nueva_fecha_str
+        ctx.user_data["gv_accion"] = "editar"
+        ctx.bot_data["editar_fecha_venta_service"].ejecutar.side_effect = (
+            LimiteEdicionesAlcanzado("tope alcanzado")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.limite_ediciones") in calls
+
+    @pytest.mark.asyncio
     async def test_confirmar_anular_path_regression(self) -> None:
         """Regression: anular path still works when gv_accion='anular'."""
         venta_id = uuid.uuid4()
