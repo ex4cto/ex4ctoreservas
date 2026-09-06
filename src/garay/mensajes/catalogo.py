@@ -631,15 +631,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.campo_identificacion": {Idioma.ES: "Identificación"},
     "gestion_ventas.campo_hotel": {Idioma.ES: "Hotel"},
     "gestion_ventas.campo_habitacion": {Idioma.ES: "Habitación"},
+    "gestion_ventas.sin_dato": {Idioma.ES: "(sin dato)"},
     "gestion_ventas.pedir_valor": {
-        Idioma.ES: "Escribe el nuevo valor de {campo}:"
+        Idioma.ES: (
+            "<b>{campo}</b>\n"
+            "Actual: {actual}\n\n"
+            "Escribe el nuevo valor:"
+        )
     },
     "gestion_ventas.valor_vacio": {
         Idioma.ES: "El valor no puede estar vacío. Escribe el nuevo valor:"
     },
     "gestion_ventas.confirmar_editar_cliente": {
         Idioma.ES: (
-            "Vas a cambiar <b>{campo}</b> a: {valor}\n"
+            "Vas a cambiar <b>{campo}</b>:\n"
+            "Antes: {anterior}\n"
+            "Después: {valor}\n"
             "Motivo: {motivo}\n\n"
             "¿Confirmas?"
         )
@@ -649,6 +656,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "gestion_ventas.pedir_fecha": {
         Idioma.ES: (
+            "Fecha actual: {actual}\n\n"
             "Escribe la nueva fecha del tour.\n"
             "Formato: DD/MM/AAAA HH:MM (o DD/MM/AAAA si no hay hora específica)."
         )
