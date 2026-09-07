@@ -114,3 +114,25 @@ class TestResumenHorarioLine:
         result = fsm._construir_resumen(ctx)
 
         assert "19:00" not in result
+
+
+class TestResumenEscapaHtml:
+    """Slice 1 (Markdown→HTML): user data in the resumen must be HTML-escaped."""
+
+    def test_cliente_nombre_con_html_se_escapa(self) -> None:
+        fsm = _fsm()
+        ctx = ContextoVenta(
+            destinos_numeros=[3],
+            destinos_nombres=["Islas del Rosario"],
+            cliente_nombre="O'Hara & <b>x</b>",
+            fecha_salida=datetime.datetime(2026, 9, 20, 8, 0),
+        )
+
+        result = fsm._construir_resumen(ctx)
+
+        assert "&amp;" in result
+        assert "&lt;b&gt;x&lt;/b&gt;" in result
+        # The raw injected markup must never leak through un-escaped.
+        assert "<b>x</b>" not in result
+        # The template's own legit bold title is still present.
+        assert "<b>Resumen de la venta:</b>" in result
