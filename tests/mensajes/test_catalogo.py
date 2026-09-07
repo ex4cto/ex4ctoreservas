@@ -288,9 +288,9 @@ class TestClavesFotoExtraccion:
         assert "$260.000" in result
         assert "{" not in result
 
-    def test_titulo_datos_extraidos_foto_tiene_markdown(self) -> None:
+    def test_titulo_datos_extraidos_foto_tiene_negrita_html(self) -> None:
         msg = obtener_mensaje("titulo_datos_extraidos_foto")
-        assert "*" in msg  # Markdown bold
+        assert "<b>" in msg and "</b>" in msg  # HTML bold
 
     def test_error_extraccion_no_disponible_no_tiene_voseo(self) -> None:
         msg = obtener_mensaje("error_extraccion_no_disponible")

@@ -23,7 +23,7 @@ from garay.dominio.comun.email import es_email_valido, normalizar_email
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
 from garay.dominio.servicios.horarios import formato_display, render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
-from garay.mensajes.catalogo import obtener_mensaje
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 
 class EstadoFSM(StrEnum):
@@ -426,7 +426,7 @@ class FSMTiquetera:
         nombre = self._servicios[numero][0] if numero in self._servicios else str(numero)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.HORARIO_SALIDA,
-            mensaje=obtener_mensaje("pregunta_horario_salida").format(tour=nombre),
+            mensaje=formatear_html(obtener_mensaje("pregunta_horario_salida"), tour=nombre),
             opciones_estructuradas=self._opciones_horario(numero),
             contexto=ctx,
         )
@@ -491,8 +491,9 @@ class FSMTiquetera:
         """Message for the DESTINO accumulator: list selected tours by name."""
         num_map = {n: info[0] for n, info in self._servicios.items()}
         nombres = [num_map.get(n, str(n)) for n in ctx.destinos_numeros]
-        return obtener_mensaje("info_destinos_acumulados").format(
-            seleccionados=", ".join(nombres) if nombres else "—"
+        return formatear_html(
+            obtener_mensaje("info_destinos_acumulados"),
+            seleccionados=", ".join(nombres) if nombres else "—",
         )
 
     # DORMANT: multi-tour-en-una-venta — reserva-por-tour (owner 2026-08-11).
@@ -1217,7 +1218,7 @@ class FSMTiquetera:
                 nombre = str(siguiente)
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje=obtener_mensaje("pregunta_fecha_salida_tour").format(tour=nombre),
+                mensaje=formatear_html(obtener_mensaje("pregunta_fecha_salida_tour"), tour=nombre),
                 contexto=ctx,
             )
 
@@ -1406,7 +1407,7 @@ class FSMTiquetera:
         tours_str = ", ".join(sin_precio) if sin_precio else "algún tour seleccionado"
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MONTO_NETO,
-            mensaje=obtener_mensaje("pregunta_neto_sin_precio").format(tours=tours_str),
+            mensaje=formatear_html(obtener_mensaje("pregunta_neto_sin_precio"), tours=tours_str),
             contexto=ctx,
         )
 
@@ -1744,8 +1745,9 @@ class FSMTiquetera:
         if ctx.rol_registrante == "ambos":
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_CERRADOR,
-                mensaje=obtener_mensaje("pregunta_editar_cerrador").format(
-                    actual=ctx.cerrador_nombre or "—"
+                mensaje=formatear_html(
+                    obtener_mensaje("pregunta_editar_cerrador"),
+                    actual=ctx.cerrador_nombre or "—",
                 ),
                 opciones_estructuradas=self._opciones_freelancers(solo_activos=False),
                 contexto=ctx,
@@ -1800,54 +1802,64 @@ class FSMTiquetera:
         if siguiente is None:
             return obtener_mensaje("pregunta_fecha_salida")
         nombre = self._servicios[siguiente][0] if siguiente in self._servicios else str(siguiente)
-        return obtener_mensaje("pregunta_fecha_salida_tour").format(tour=nombre)
+        return formatear_html(obtener_mensaje("pregunta_fecha_salida_tour"), tour=nombre)
 
     def _mensaje_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> str:
         msgs: dict[EstadoFSM, str] = {
             EstadoFSM.MODALIDAD_VENTA: obtener_mensaje("pregunta_modalidad_venta"),
             EstadoFSM.TIPO_RESERVA: obtener_mensaje("pregunta_tipo_reserva"),
-            EstadoFSM.CANAL_ORIGEN: obtener_mensaje("pregunta_editar_canal").format(
-                actual=ctx.canal_origen or "—"
+            EstadoFSM.CANAL_ORIGEN: formatear_html(
+                obtener_mensaje("pregunta_editar_canal"), actual=ctx.canal_origen or "—"
             ),
             EstadoFSM.PUNTO_DE_VENTA: obtener_mensaje("pregunta_punto_de_venta"),
             EstadoFSM.DESTINO: self._acumulador_mensaje(ctx),
-            EstadoFSM.CLIENTE_NOMBRE: obtener_mensaje("pregunta_editar_cliente_nombre").format(
-                actual=ctx.cliente_nombre or "—"
+            EstadoFSM.CLIENTE_NOMBRE: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_nombre"),
+                actual=ctx.cliente_nombre or "—",
             ),
-            EstadoFSM.CLIENTE_TELEFONO: obtener_mensaje("pregunta_editar_cliente_telefono").format(
-                actual=ctx.cliente_telefono or "—"
+            EstadoFSM.CLIENTE_TELEFONO: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_telefono"),
+                actual=ctx.cliente_telefono or "—",
             ),
-            EstadoFSM.CLIENTE_EMAIL: obtener_mensaje("pregunta_editar_cliente_email").format(
-                actual=ctx.cliente_email or "—"
+            EstadoFSM.CLIENTE_EMAIL: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_email"),
+                actual=ctx.cliente_email or "—",
             ),
-            EstadoFSM.CLIENTE_IDENTIFICACION: obtener_mensaje(
-                "pregunta_editar_cliente_identificacion"
-            ).format(actual=ctx.cliente_identificacion or "—"),
-            EstadoFSM.CLIENTE_HOTEL: obtener_mensaje("pregunta_editar_cliente_hotel").format(
-                actual="Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—")
+            EstadoFSM.CLIENTE_IDENTIFICACION: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_identificacion"),
+                actual=ctx.cliente_identificacion or "—",
             ),
-            EstadoFSM.CLIENTE_HABITACION: obtener_mensaje(
-                "pregunta_editar_cliente_habitacion"
-            ).format(actual=ctx.cliente_habitacion or "—"),
-            EstadoFSM.FECHA_SALIDA: obtener_mensaje("pregunta_editar_fecha_salida").format(
-                actual=ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else "—"
+            EstadoFSM.CLIENTE_HOTEL: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_hotel"),
+                actual="Sin hotel" if ctx.sin_hotel else (ctx.cliente_hotel or "—"),
             ),
-            EstadoFSM.PAX_ADULTOS: obtener_mensaje("pregunta_editar_adultos_ninos").format(
+            EstadoFSM.CLIENTE_HABITACION: formatear_html(
+                obtener_mensaje("pregunta_editar_cliente_habitacion"),
+                actual=ctx.cliente_habitacion or "—",
+            ),
+            EstadoFSM.FECHA_SALIDA: formatear_html(
+                obtener_mensaje("pregunta_editar_fecha_salida"),
+                actual=ctx.fecha_salida.strftime("%d/%m/%Y %H:%M") if ctx.fecha_salida else "—",
+            ),
+            EstadoFSM.PAX_ADULTOS: formatear_html(
+                obtener_mensaje("pregunta_editar_adultos_ninos"),
                 adultos=ctx.adultos if ctx.adultos is not None else "—",
                 ninos=ctx.ninos if ctx.ninos is not None else "—",
             ),
-            EstadoFSM.MONTO_VALOR: obtener_mensaje("pregunta_editar_monto_valor").format(
-                actual=_formatear_monto(ctx.valor)
+            EstadoFSM.MONTO_VALOR: formatear_html(
+                obtener_mensaje("pregunta_editar_monto_valor"),
+                actual=_formatear_monto(ctx.valor),
             ),
-            EstadoFSM.MONTO_ABONO: obtener_mensaje("pregunta_editar_monto_abono").format(
-                actual=_formatear_monto(ctx.abono)
+            EstadoFSM.MONTO_ABONO: formatear_html(
+                obtener_mensaje("pregunta_editar_monto_abono"),
+                actual=_formatear_monto(ctx.abono),
             ),
             EstadoFSM.PARTICIPANTE_ROL: obtener_mensaje("pregunta_rol_venta"),
-            EstadoFSM.EDITAR_VENDEDOR: obtener_mensaje("pregunta_editar_vendedor").format(
-                actual=ctx.vendedor_nombre or "—"
+            EstadoFSM.EDITAR_VENDEDOR: formatear_html(
+                obtener_mensaje("pregunta_editar_vendedor"), actual=ctx.vendedor_nombre or "—"
             ),
-            EstadoFSM.EDITAR_CERRADOR: obtener_mensaje("pregunta_editar_cerrador").format(
-                actual=ctx.cerrador_nombre or "—"
+            EstadoFSM.EDITAR_CERRADOR: formatear_html(
+                obtener_mensaje("pregunta_editar_cerrador"), actual=ctx.cerrador_nombre or "—"
             ),
         }
         return msgs.get(estado, "")
@@ -1942,7 +1954,8 @@ class FSMTiquetera:
         # The template has no bare newline after {horario_salida}, so no \n\n on empty path.
         horario_salida = f"Horario: {horario_val}\n" if horario_val else ""
 
-        return obtener_mensaje("confirmacion_resumen").format(
+        return formatear_html(
+            obtener_mensaje("confirmacion_resumen"),
             tipo=ctx.tipo_cliente or "—",
             canal=ctx.canal_origen or "—",
             punto_de_venta=ctx.punto_de_venta_nombre or "—",

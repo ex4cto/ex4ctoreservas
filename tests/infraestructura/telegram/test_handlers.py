@@ -503,7 +503,7 @@ class TestEnviarSalidaFallback:
         assert update.callback_query.edit_message_text.call_count == 2
         first = update.callback_query.edit_message_text.call_args_list[0]
         second = update.callback_query.edit_message_text.call_args_list[1]
-        assert first.kwargs["parse_mode"] == "Markdown"
+        assert first.kwargs["parse_mode"] == "HTML"
         assert second.kwargs["parse_mode"] is None
 
     @pytest.mark.asyncio
@@ -522,7 +522,7 @@ class TestEnviarSalidaFallback:
         assert update.callback_query.edit_message_text.call_count == 1
         assert (
             update.callback_query.edit_message_text.call_args.kwargs["parse_mode"]
-            == "Markdown"
+            == "HTML"
         )
 
     @pytest.mark.asyncio

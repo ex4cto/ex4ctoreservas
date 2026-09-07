@@ -76,7 +76,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "¿Fecha del tour {tour}? (DD/MM, DD/MM/YY o DD/MM/YYYY HH:MM)"
     },
     "pregunta_horario_salida": {
-        Idioma.ES: "⏰ ¿A qué hora sale el tour *{tour}*?"
+        Idioma.ES: "⏰ ¿A qué hora sale el tour <b>{tour}</b>?"
     },
     "pregunta_adultos": {Idioma.ES: "¿Cuántos adultos? (mínimo 1)"},
     "pregunta_ninos": {Idioma.ES: "¿Cuántos niños? (puede ser 0)"},
@@ -110,7 +110,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_editar_canal": {Idioma.ES: "Canal actual: {actual}\n¿Nuevo canal de origen?"},
     "confirmacion_resumen": {
         Idioma.ES: (
-            "📋 *Resumen de la venta:*\n"
+            "📋 <b>Resumen de la venta:</b>\n"
             "Tipo: {tipo}\n"
             "Canal: {canal}\n"
             "Punto de venta: {punto_de_venta}\n"
@@ -136,7 +136,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "pregunta_metodo_input": {
         Idioma.ES: (
             "¿Cómo querés registrar la venta?\n\n"
-            "_Podés modificar cualquier dato en el resumen antes de confirmar._"
+            "<i>Podés modificar cualquier dato en el resumen antes de confirmar.</i>"
         )
     },
     "pregunta_familia": {Idioma.ES: "Elegí la familia de tours:"},
@@ -200,7 +200,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "error_neto_supera_valor_monto_neto": {
         Idioma.ES: "El neto ({neto}) no puede superar el valor ({valor})."
     },
-    "titulo_datos_extraidos_foto": {Idioma.ES: "*Datos extraidos de la foto:*"},
+    "titulo_datos_extraidos_foto": {Idioma.ES: "<b>Datos extraidos de la foto:</b>"},
     "completar_datos_faltantes": {Idioma.ES: "\nCompletemos lo que falta:"},
     "dato_extraido_nombre": {Idioma.ES: "Nombre: {valor}"},
     "dato_extraido_telefono": {Idioma.ES: "Teléfono: {valor}"},

@@ -50,7 +50,7 @@ from garay.infraestructura.telegram.menu import (
     render_submenu,
     tier_de_usuario,
 )
-from garay.mensajes.catalogo import obtener_mensaje
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 _UTC = datetime.UTC
 
@@ -137,21 +137,22 @@ async def _responder_seguro(
     mensaje: str,
     teclado: Any,
 ) -> None:
-    """Send a message as Markdown; on a parse-entities error retry as plain text.
+    """Send a message as HTML; on a parse-entities error retry as plain text.
 
-    Legacy Markdown breaks when user-provided data contains a stray control
-    character (``_ * ` [``): Telegram returns BadRequest "Can't parse entities".
-    Without this fallback the update crashes unhandled and the bot appears frozen.
-    Any other BadRequest (e.g. "message to edit not found") is re-raised.
-    Overlong text is truncated first so it degrades instead of failing.
+    Messages are built with HTML markup and values escaped via ``formatear_html``,
+    but this fallback stays as defense: if any unescaped value slips through and
+    Telegram returns BadRequest "Can't parse entities", the message degrades to
+    plain text instead of the bot appearing frozen. Any other BadRequest
+    (e.g. "message to edit not found") is re-raised. Overlong text is truncated
+    first so it degrades instead of failing.
     """
     mensaje = _recortar_a_limite(mensaje)
     try:
-        await enviar(mensaje, reply_markup=teclado, parse_mode="Markdown")
+        await enviar(mensaje, reply_markup=teclado, parse_mode="HTML")
     except BadRequest as exc:
         if "parse entities" not in str(exc).lower():
             raise
-        logger.warning("Markdown parse failed; retrying as plain text: %s", exc)
+        logger.warning("HTML parse failed; retrying as plain text: %s", exc)
         await enviar(mensaje, reply_markup=teclado, parse_mode=None)
 
 
@@ -782,8 +783,9 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                 context.user_data.get("reservas_registradas", 0) + 1  # type: ignore[union-attr]
             )
             context.user_data["contexto"] = salida.contexto  # type: ignore[index]
-            mensaje_otro = obtener_mensaje("pregunta_otro_tour").format(
-                cliente=salida.contexto.cliente_nombre or "el cliente"
+            mensaje_otro = formatear_html(
+                obtener_mensaje("pregunta_otro_tour"),
+                cliente=salida.contexto.cliente_nombre or "el cliente",
             )
             teclado_otro = _teclado(
                 [
@@ -796,7 +798,7 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                     chat_id=update.effective_chat.id,
                     text=mensaje_otro,
                     reply_markup=teclado_otro,
-                    parse_mode="Markdown",
+                    parse_mode="HTML",
                 )
             return ESTADO_PTB[EstadoFSM.OTRO_TOUR]
         return await _enviar_salida(update, context, salida)
