@@ -320,11 +320,11 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data == "gv_anular":
         if context.user_data is not None:
             context.user_data["gv_accion"] = "anular"
-        if update.effective_message:
-            await update.effective_message.reply_text(
-                obtener_mensaje("gestion_ventas.pedir_motivo"),
-                parse_mode="HTML",
-            )
+        # Edit the detail message in place so its buttons don't linger during the flow.
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_motivo"),
+            parse_mode="HTML",
+        )
         return GV_MOTIVO
 
     if data == "gv_editar":

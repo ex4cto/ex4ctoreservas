@@ -362,6 +362,18 @@ class TestHandleGvDetalle:
         assert result == GV_MOTIVO
 
     @pytest.mark.asyncio
+    async def test_gv_anular_edita_mensaje_en_lugar_sin_dejar_botones(self) -> None:
+        """Anular must EDIT the detail message in place (drop its buttons), not leave them."""
+        update = _make_update(callback_data="gv_anular")
+        ctx = _make_context()
+
+        await handle_gv_detalle(update, ctx)
+
+        # The detail message is edited (buttons gone), no new reply_text with the old keyboard.
+        update.callback_query.edit_message_text.assert_called_once()
+        update.effective_message.reply_text.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_gv_cancelar_retorna_end(self) -> None:
         update = _make_update(callback_data="gv_cancelar")
         ctx = _make_context()
