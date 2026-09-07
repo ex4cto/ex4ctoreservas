@@ -405,6 +405,10 @@ class TestHandleNvtFamilia:
 
         assert result == NVT_NOMBRE
         assert ctx.user_data.get("nvt_familia") == "PLAYERO"
+        # No dangling buttons: the tapped family menu is cleared.
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
 
     @pytest.mark.asyncio
     async def test_boton_nueva_familia_avanza_a_nvt_nueva_familia(self) -> None:

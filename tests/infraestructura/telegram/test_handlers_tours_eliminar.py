@@ -110,6 +110,10 @@ class TestHandleEltFamilia:
         result = await handle_elt_familia(update, ctx)
 
         assert result == ELT_TOUR
+        # No dangling buttons: the tapped family menu is cleared.
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
 
 
 class TestHandleEltTour:
