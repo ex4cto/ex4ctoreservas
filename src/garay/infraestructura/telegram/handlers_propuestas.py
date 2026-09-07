@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import logging
 import re
+from contextlib import suppress
 from enum import StrEnum
 from io import BytesIO
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.propuestas.contratos import (
@@ -320,6 +322,12 @@ async def handle_gen_toggle(
     return GEN_SELECCION
 
 
+async def _limpiar_botones(query: CallbackQuery) -> None:
+    """Drop the inline keyboard from the just-tapped message so it doesn't linger."""
+    with suppress(TelegramError):
+        await query.edit_message_reply_markup(reply_markup=None)
+
+
 async def handle_gen_continuar(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
@@ -338,6 +346,7 @@ async def handle_gen_continuar(
         return GEN_SELECCION
 
     await query.answer()
+    await _limpiar_botones(query)
     if update.effective_message:
         await update.effective_message.reply_text(
             obtener_mensaje("propuestas.pedir_empresa")
@@ -418,6 +427,7 @@ async def handle_gen_precios(
     if query is None:
         return GEN_PRECIOS
     await query.answer()
+    await _limpiar_botones(query)
     data = query.data or ""
     opcion = data.split(":", 1)[1] if ":" in data else ""
 
@@ -509,6 +519,7 @@ async def handle_gen_precios_sw(
     if query is None:
         return GEN_PRECIOS_SW
     await query.answer()
+    await _limpiar_botones(query)
     data = query.data or ""
     opcion = data.split(":", 1)[1] if ":" in data else ""
 
@@ -687,6 +698,7 @@ async def handle_plan_contrato(
     if query is None:
         return GEN_PLAN_CONTRATO
     await query.answer()
+    await _limpiar_botones(query)
     data = query.data or ""
     val = data.split(":", 1)[1] if ":" in data else "completo"
     plan = PlanAudiovisual.MEDIO if val == "medio" else PlanAudiovisual.COMPLETO

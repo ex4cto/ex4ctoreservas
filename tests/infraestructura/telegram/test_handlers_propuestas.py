@@ -157,6 +157,8 @@ async def test_continuar_con_seleccion_pide_empresa() -> None:
 
     assert result == GEN_EMPRESA
     update.effective_message.reply_text.assert_called_once()
+    # The document menu buttons must be dropped so they don't linger.
+    query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
 
 
 # --- empresa → genera -------------------------------------------------------
@@ -234,6 +236,7 @@ async def test_precios_editar_pide_primer_precio() -> None:
 
     assert result == GEN_PRECIO_COMPLETO
     update.effective_message.reply_text.assert_called_once()
+    query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
 
 
 async def test_precio_completo_valido_avanza() -> None:
@@ -356,6 +359,7 @@ async def test_precios_sw_default_genera() -> None:
     sw.generar.assert_called_once()
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
+    query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
 
 
 async def test_sw_anual_construye_precios_custom_y_genera() -> None:
@@ -470,3 +474,4 @@ async def test_plan_contrato_genera_contrato_audiovisual_con_plan() -> None:
     assert ctx.plan_audiovisual is PlanAudiovisual.MEDIO
     assert ctx.datos_cliente.razon_social == "Clinica Sonrisa SAS"
     assert result == ConversationHandler.END
+    query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
