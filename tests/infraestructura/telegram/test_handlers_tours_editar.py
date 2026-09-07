@@ -127,6 +127,10 @@ class TestHandleEdtFamilia:
 
         assert result == EDF_TOUR
         update.effective_message.reply_text.assert_called_once()
+        # No dangling buttons: the tapped family menu is cleared.
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
 
 
 class TestHandleEdtTour:

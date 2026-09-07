@@ -7,7 +7,8 @@ import logging
 import uuid
 from decimal import Decimal, InvalidOperation
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.dominio.puertos.repositorios import ServicioRepository
@@ -20,6 +21,17 @@ from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
+
+
+async def _limpiar_botones(query: CallbackQuery) -> None:
+    """Drop the inline keyboard from the just-tapped message so it doesn't linger.
+
+    Tours always sends new messages (never edits in place), so every callback
+    handler must clear the buttons of the message the user just tapped.
+    """
+    with contextlib.suppress(TelegramError):
+        await query.edit_message_reply_markup(reply_markup=None)
+
 
 # ---------------------------------------------------------------------------
 # State constants — range 220-229
@@ -235,6 +247,7 @@ async def handle_edt_familia(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return EDF_FAMILIA
 
@@ -294,6 +307,7 @@ async def handle_edt_tour(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return EDF_TOUR
     tour_id_str = query.data.removeprefix("edt_tour:")
@@ -319,6 +333,7 @@ async def handle_edt_ficha(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return EDF_FICHA
 
@@ -577,6 +592,7 @@ async def handle_edt_confirma(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None:
         return ConversationHandler.END
 
@@ -651,6 +667,7 @@ async def handle_edh_lista(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return EDH_LISTA
 
@@ -787,6 +804,7 @@ async def handle_elt_familia(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return ELT_FAMILIA
     familia = query.data.removeprefix("elt_familia:")
@@ -808,6 +826,7 @@ async def handle_elt_tour(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return ELT_TOUR
     tour_id_str = query.data.removeprefix("elt_tour:")
@@ -843,6 +862,7 @@ async def handle_elt_confirma(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None:
         return ConversationHandler.END
 
@@ -1022,6 +1042,7 @@ async def handle_nvt_familia(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return NVT_FAMILIA
 
@@ -1139,6 +1160,7 @@ async def handle_nvt_dup(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return NVT_DUP_CONFIRMA
 
@@ -1314,6 +1336,7 @@ async def handle_nvt_edit(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return NVT_CONFIRMA
 
@@ -1376,6 +1399,7 @@ async def handle_nvt_cancelar(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     _limpiar_nvt(context)
     return await finalizar_flujo(
         update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
@@ -1389,6 +1413,7 @@ async def handle_nvt_crear(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None:
         return ConversationHandler.END
 
@@ -1437,6 +1462,7 @@ async def handle_nvt_hor_lista(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return NVT_HOR_LISTA
 
