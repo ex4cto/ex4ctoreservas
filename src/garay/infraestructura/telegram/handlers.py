@@ -546,7 +546,9 @@ def _linea_mis_ventas(linea: LineaMisVentas) -> str:
     if linea.varias_fechas:
         extra += obtener_mensaje("mis_ventas.varias_fechas")
     if linea.canal_origen:
-        extra += obtener_mensaje("mis_ventas.canal").format(canal=linea.canal_origen)
+        extra += formatear_html(
+            obtener_mensaje("mis_ventas.canal"), canal=linea.canal_origen
+        )
     return obtener_mensaje("mis_ventas.linea").format(
         fecha=linea.fecha.strftime("%d/%m"),
         valor=_fmt_cop(linea.valor.monto),
@@ -920,7 +922,7 @@ async def cmd_mis_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         mensaje = mensaje[:4090] + "\n..."
 
     if update.effective_message:
-        await update.effective_message.reply_text(mensaje, parse_mode="Markdown")
+        await update.effective_message.reply_text(mensaje, parse_mode="HTML")
 
 
 def _fmt_hace_minutos(fecha_recibido: datetime.datetime) -> str:
@@ -954,7 +956,7 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
         return
 
-    lineas = ["✅ *Pagos recibidos (últimos 5 min):*", ""]
+    lineas = [obtener_mensaje("verificar_pago.encabezado"), ""]
     for ingreso in ingresos:
         monto_fmt = _fmt_cop(ingreso.monto.monto)
         remitente = ingreso.remitente or "Desconocido"
@@ -963,9 +965,17 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
             if ingreso.fecha_recibido is not None
             else "hora desconocida"
         )
-        lineas.append(f"• {monto_fmt} — {remitente} ({ingreso.banco}) — {tiempo}")
+        lineas.append(
+            formatear_html(
+                obtener_mensaje("verificar_pago.linea"),
+                monto=monto_fmt,
+                remitente=remitente,
+                banco=ingreso.banco,
+                tiempo=tiempo,
+            )
+        )
 
     if update.effective_message:
-        await update.effective_message.reply_text("\n".join(lineas), parse_mode="Markdown")
+        await update.effective_message.reply_text("\n".join(lineas), parse_mode="HTML")
 
 
