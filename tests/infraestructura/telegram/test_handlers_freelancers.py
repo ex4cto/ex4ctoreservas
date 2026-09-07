@@ -1343,3 +1343,89 @@ class TestEmailFreelancer:
         )
         await handle_edf_confirmar(update, ctx)
         assert f.email == "cerr@garay.com"
+
+
+# ---------------------------------------------------------------------------
+# Botones no colgados: cada handler de avance por botón limpia el teclado
+# ---------------------------------------------------------------------------
+
+
+class TestFreelancersLimpiaBotones:
+    @pytest.mark.asyncio
+    async def test_edf_seleccionar_limpia_botones(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data=f"edf_sel:{f.id}")
+        ctx = _make_context_edf(buscar_por_id_result=f)
+
+        await handle_edf_seleccionar(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_edf_campo_limpia_menu(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_campo:cedula")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f, user_data={"edf_target_id": str(f.id)}
+        )
+
+        await handle_edf_campo(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_edf_activo_toggle_limpia(self) -> None:
+        update = _make_update(callback_data="edf_activo:true")
+        ctx = _make_context_edf(user_data={"edf_target_id": str(uuid.uuid4())})
+
+        await handle_edf_activo_toggle(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_edf_confirmar_limpia(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": str(f.id),
+                "edf_campo": "nombre",
+                "edf_valor": "Nuevo",
+            },
+        )
+
+        await handle_edf_confirmar(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_ef_seleccionar_limpia(self) -> None:
+        f = _make_freelancer()
+        update = _make_update(callback_data=f"ef_sel:{f.id}")
+        ctx = _make_context_edf(buscar_por_id_result=f)
+
+        await handle_ef_seleccionar(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_fl_skip_tg_limpia(self) -> None:
+        update = _make_update(callback_data="fl_skip_tg")
+        ctx = _make_context()
+
+        await handle_fl_skip_tg(update, ctx)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )

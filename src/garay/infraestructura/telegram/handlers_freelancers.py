@@ -6,7 +6,8 @@ import contextlib
 import logging
 import uuid
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.dominio.freelancers.entidades import Freelancer
@@ -215,11 +216,18 @@ async def handle_fl_telegram_id(update: Update, context: ContextTypes.DEFAULT_TY
     return FL_EMAIL
 
 
+async def _limpiar_botones(query: CallbackQuery) -> None:
+    """Drop the inline keyboard from the just-tapped message so it doesn't linger."""
+    with contextlib.suppress(TelegramError):
+        await query.edit_message_reply_markup(reply_markup=None)
+
+
 async def handle_fl_skip_tg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Callback handler for the 'Omitir' button in the telegram step."""
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if context.user_data is not None:
         context.user_data["fl_telegram_id"] = None
     if update.effective_message:
@@ -372,6 +380,7 @@ async def handle_ef_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
         await query.answer()
     if update.effective_message is None or query is None or query.data is None:
         return EF_SELECCIONAR
+    await _limpiar_botones(query)
     freelancer_id_str = query.data.removeprefix("ef_sel:")
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     freelancer = repo.buscar_por_id(uuid.UUID(freelancer_id_str)) if repo else None
@@ -551,6 +560,7 @@ async def handle_edf_seleccionar(
         await query.answer()
     if update.effective_message is None or query is None or query.data is None:
         return EDITAR_SELECCIONAR
+    await _limpiar_botones(query)
     freelancer_id_str = query.data.removeprefix("edf_sel:")
     if context.user_data is not None:
         context.user_data["edf_target_id"] = freelancer_id_str
@@ -588,6 +598,8 @@ async def handle_edf_campo(
             GrupoComando.ADMINISTRACION,
         )
 
+    # A field was picked: drop the field-menu buttons so they don't linger.
+    await _limpiar_botones(query)
     campo = data.removeprefix("edf_campo:")
     if context.user_data is not None:
         context.user_data["edf_campo"] = campo
@@ -788,6 +800,7 @@ async def handle_edf_activo_toggle(
         await query.answer()
     if update.effective_message is None or query is None or query.data is None:
         return EDITAR_CONFIRMAR
+    await _limpiar_botones(query)
     valor_bool = query.data.removeprefix("edf_activo:") == "true"
     if context.user_data is not None:
         context.user_data["edf_activo"] = valor_bool
@@ -820,6 +833,7 @@ async def handle_edf_confirmar(
     query = update.callback_query
     if query:
         await query.answer()
+        await _limpiar_botones(query)
     if update.effective_message is None:
         return ConversationHandler.END
 
