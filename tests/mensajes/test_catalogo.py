@@ -7,7 +7,31 @@ from typing import ClassVar
 import pytest
 
 from garay.dominio.comun.errores import ErrorDeConfiguracion
-from garay.mensajes.catalogo import obtener_mensaje
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
+
+
+class TestFormatearHtml:
+    def test_escapa_caracteres_html_en_valores_string(self) -> None:
+        resultado = formatear_html("Cliente: {nombre}", nombre="A & <b>B</b>")
+        assert resultado == "Cliente: A &amp; &lt;b&gt;B&lt;/b&gt;"
+
+    def test_preserva_el_markup_del_template(self) -> None:
+        resultado = formatear_html("<b>{titulo}</b>", titulo="Resumen")
+        assert resultado == "<b>Resumen</b>"
+
+    def test_valor_con_markup_dentro_de_bold_no_rompe(self) -> None:
+        resultado = formatear_html("<b>{nombre}</b>", nombre="O'Hara & <i>x")
+        assert resultado == "<b>O'Hara &amp; &lt;i&gt;x</b>"
+
+    def test_valores_numericos_conservan_format_spec(self) -> None:
+        resultado = formatear_html("Total: {monto:,.0f}", monto=1000000)
+        assert resultado == "Total: 1,000,000"
+
+    def test_mezcla_string_y_numerico(self) -> None:
+        resultado = formatear_html(
+            "{nombre}: {n}", nombre="<x>", n=5
+        )
+        assert resultado == "&lt;x&gt;: 5"
 
 
 class TestObtenerMensaje:
