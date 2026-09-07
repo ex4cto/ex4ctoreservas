@@ -7,6 +7,7 @@ idioma es agregar entradas: el codigo que consume mensajes no cambia (i18n-ready
 from __future__ import annotations
 
 from enum import StrEnum
+from html import escape
 
 from garay.dominio.comun.errores import ErrorDeConfiguracion
 
@@ -879,3 +880,19 @@ def obtener_mensaje(clave: str, idioma: Idioma = Idioma.ES) -> str:
         raise ErrorDeConfiguracion(
             f"Mensaje no encontrado: clave={clave!r}, idioma={idioma.value!r}."
         ) from exc
+
+
+def formatear_html(plantilla: str, **valores: object) -> str:
+    """Format an HTML-parse-mode template, HTML-escaping the injected values.
+
+    Only ``str`` values are escaped (via :func:`html.escape`) so user/external data
+    can never break Telegram's HTML parser or inject markup. Non-string values
+    (``int``, ``Decimal``, ``Dinero``…) are left untouched so format specs such as
+    ``{monto:,.0f}`` keep working. The template's own markup (``<b>``, ``<i>``) is
+    preserved because only the substituted values are escaped, not the template.
+    """
+    escapados: dict[str, object] = {
+        clave: escape(valor, quote=False) if isinstance(valor, str) else valor
+        for clave, valor in valores.items()
+    }
+    return plantilla.format(**escapados)
