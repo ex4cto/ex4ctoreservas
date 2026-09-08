@@ -69,3 +69,56 @@ def test_post_init_chat_not_found_warning_sin_traceback(
     assert "111" in menu_warnings[0].getMessage()
     # The noise fix: no full traceback attached to an expected condition.
     assert menu_warnings[0].exc_info is None
+
+
+def test_parsear_grupo_id_casos() -> None:
+    from garay.infraestructura.telegram.bot import _parsear_grupo_id
+
+    assert _parsear_grupo_id("-1001234567") == -1001234567
+    assert _parsear_grupo_id("  -100 ") == -100
+    assert _parsear_grupo_id("") is None
+    assert _parsear_grupo_id(None) is None
+    assert _parsear_grupo_id("no-es-numero") is None
+
+
+def test_ignorar_grupo_notificaciones_detiene_el_pipeline() -> None:
+    import pytest
+    from telegram.ext import ApplicationHandlerStop
+
+    from garay.infraestructura.telegram.bot import _ignorar_grupo_notificaciones
+
+    with pytest.raises(ApplicationHandlerStop):
+        asyncio.run(_ignorar_grupo_notificaciones(MagicMock(), MagicMock()))
+
+
+def test_post_init_oculta_menu_en_grupo_notificaciones(monkeypatch: Any) -> None:
+    """_post_init debe fijar comandos vacíos ([]) para el scope del grupo de notificaciones."""
+    from unittest.mock import AsyncMock
+
+    from telegram import BotCommandScopeChat
+
+    settings = MagicMock()
+    settings.propietario_telegram_ids = ""
+    settings.dev_telegram_ids = ""
+    settings.grupo_id = "-1009999"
+    monkeypatch.setattr(
+        "garay.infraestructura.telegram.bot.obtener_settings", lambda: settings
+    )
+
+    app = MagicMock()
+    app.bot.set_my_commands = AsyncMock()
+    repo = MagicMock()
+    repo.listar_activos.return_value = []
+    app.bot_data = {"freelancer_repo": repo}
+
+    asyncio.run(_post_init(app))
+
+    hides = [
+        c
+        for c in app.bot.set_my_commands.call_args_list
+        if c.args
+        and c.args[0] == []
+        and isinstance(c.kwargs.get("scope"), BotCommandScopeChat)
+        and c.kwargs["scope"].chat_id == -1009999
+    ]
+    assert len(hides) == 1
