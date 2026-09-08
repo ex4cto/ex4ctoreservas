@@ -15,7 +15,7 @@ from garay.infraestructura.telegram.auth import (
     requiere_admin_o_propietario,
     requiere_propietario,
 )
-from garay.mensajes.catalogo import obtener_mensaje
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +87,12 @@ def _formatear_resumen_ventas(resumen: object, mes: int, año: int) -> str:
     ]
     if resumen.por_vendedor:
         lineas.append("")
-        lineas.append("👥 *Por vendedor:*")
+        lineas.append("👥 <b>Por vendedor:</b>")
         for v in resumen.por_vendedor:
             if v.ventas > 0:
                 lineas.append(
-                    obtener_mensaje("reporte.ventas.vendedor_item").format(
+                    formatear_html(
+                        obtener_mensaje("reporte.ventas.vendedor_item"),
                         nombre=v.nombre,
                         ventas=v.ventas,
                         comision=f"{v.comision.monto:,.0f}",
@@ -123,10 +124,11 @@ def _formatear_flujo_caja(flujo: object, mes: int, año: int) -> str:
     ]
     if flujo.egresos_por_categoria:
         lineas.append("")
-        lineas.append("📤 *Egresos por categoría:*")
+        lineas.append("📤 <b>Egresos por categoría:</b>")
         for cat, monto in flujo.egresos_por_categoria:
             lineas.append(
-                obtener_mensaje("reporte.caja.categoria_item").format(
+                formatear_html(
+                    obtener_mensaje("reporte.caja.categoria_item"),
                     categoria=cat,
                     monto=f"{monto.monto:,.0f}",
                 )
@@ -162,10 +164,11 @@ def _formatear_tours(waterfall: object, ranking: object, reconciliacion: object,
     ]
     if ranking.filas:
         lineas.append("")
-        lineas.append("🏝️ *Top familias:*")
+        lineas.append("🏝️ <b>Top familias:</b>")
         for f in ranking.filas[:5]:
             lineas.append(
-                obtener_mensaje("reporte.tours.familia_item").format(
+                formatear_html(
+                    obtener_mensaje("reporte.tours.familia_item"),
                     familia=f.familia,
                     vendidos=f.vendidos,
                     margen=f"{f.margen.monto:,.0f}",
@@ -206,7 +209,7 @@ async def cmd_dashboard_ventas(
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
     if update.effective_message:
         await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="Markdown"
+            texto, reply_markup=teclado, parse_mode="HTML"
         )
 
 
@@ -223,7 +226,7 @@ async def cmd_flujo_caja(
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_c")
     if update.effective_message:
         await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="Markdown"
+            texto, reply_markup=teclado, parse_mode="HTML"
         )
 
 
@@ -245,7 +248,7 @@ async def cb_dashboard_ventas(
     texto = _formatear_resumen_ventas(resumen, mes, año)
     teclado = _teclado_navegacion(mes, año, "rep_v")
     if query.message:
-        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
+        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
 
 
 async def cb_flujo_caja(
@@ -266,7 +269,7 @@ async def cb_flujo_caja(
     texto = _formatear_flujo_caja(flujo, mes, año)
     teclado = _teclado_navegacion(mes, año, "rep_c")
     if query.message:
-        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
+        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
 
 
 @requiere_propietario
@@ -276,7 +279,7 @@ async def cmd_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_t")
     if update.effective_message:
         await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="Markdown"
+            texto, reply_markup=teclado, parse_mode="HTML"
         )
 
 
@@ -292,7 +295,7 @@ async def cb_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     texto = _tours_para(context, mes, año)
     teclado = _teclado_navegacion(mes, año, "rep_t")
     if query.message:
-        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="Markdown")
+        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
 
 
 def _fmt_cop(valor: Decimal) -> str:
@@ -337,7 +340,8 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
             monto_str = _fmt_cop(ing.monto.monto)
             reenvio_tag = f" {tag_reenvio}" if ing.reenviado else ""
             lineas.append(
-                obtener_mensaje("movimientos.linea").format(
+                formatear_html(
+                    obtener_mensaje("movimientos.linea"),
                     monto=monto_str,
                     detalle=f"{ing.banco}{reenvio_tag}",
                     hora=hora_str,
@@ -356,7 +360,8 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
             monto_str = _fmt_cop(egr.monto.monto)
             reenvio_tag = f" {tag_reenvio}" if egr.reenviado else ""
             lineas.append(
-                obtener_mensaje("movimientos.linea").format(
+                formatear_html(
+                    obtener_mensaje("movimientos.linea"),
                     monto=monto_str,
                     detalle=f"{egr.descripcion}{reenvio_tag}",
                     hora=hora_str,
