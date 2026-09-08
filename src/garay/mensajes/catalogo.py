@@ -33,19 +33,25 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "mis_ventas.encabezado": {
         Idioma.ES: (
-            "*Mis ventas*\n"
+            "<b>Mis ventas</b>\n"
             "Total ventas: {total}\n"
             "Valor total: {valor}\n"
             "Mis comisiones: {comision}"
         )
     },
-    "mis_ventas.realizados_titulo": {Idioma.ES: "\n*Realizados este mes:*"},
-    "mis_ventas.proximos_titulo": {Idioma.ES: "\n🔜 *Próximos tours vendidos:*"},
+    "mis_ventas.realizados_titulo": {Idioma.ES: "\n<b>Realizados este mes:</b>"},
+    "mis_ventas.proximos_titulo": {Idioma.ES: "\n🔜 <b>Próximos tours vendidos:</b>"},
     "mis_ventas.linea": {Idioma.ES: "• {fecha} — {valor}{extra}"},
     "mis_ventas.varias_fechas": {Idioma.ES: " (varias fechas)"},
     "mis_ventas.canal": {Idioma.ES: " · 📲 {canal}"},
     "mis_ventas.vacio": {
         Idioma.ES: "No tenés ventas este mes ni tours próximos vendidos."
+    },
+    "verificar_pago.encabezado": {
+        Idioma.ES: "✅ <b>Pagos recibidos (últimos 5 min):</b>"
+    },
+    "verificar_pago.linea": {
+        Idioma.ES: "• {monto} — {remitente} ({banco}) — {tiempo}"
     },
     "error_interno": {Idioma.ES: "Error interno. Contactá al administrador."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},

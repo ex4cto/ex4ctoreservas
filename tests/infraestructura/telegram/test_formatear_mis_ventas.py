@@ -86,3 +86,22 @@ def test_realizados_y_proximos_en_secciones_separadas() -> None:
     assert "Próximos" in txt
     assert "10/09" in txt
     assert "20/09" in txt
+
+
+def test_canal_con_html_se_escapa() -> None:
+    """Slice 2: canal_origen (user/AI data) must be HTML-escaped in the output."""
+    mv = _mv(
+        total=1,
+        valor=100_000,
+        comision=10_000,
+        realizados=(
+            _linea(datetime.date(2026, 9, 10), 100_000, canal="A & <b>x</b>"),
+        ),
+    )
+
+    txt = _formatear_mis_ventas(mv)
+
+    assert "&amp;" in txt
+    assert "&lt;b&gt;x&lt;/b&gt;" in txt
+    assert "<b>x</b>" not in txt  # raw injected markup must not leak
+    assert "<b>Mis ventas</b>" in txt  # legit HTML title still present

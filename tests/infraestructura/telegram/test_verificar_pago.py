@@ -140,3 +140,23 @@ async def test_verificar_pago_remitente_none_no_rompe() -> None:
     await cmd_verificar_pago.__wrapped__(update, context)  # type: ignore[attr-defined]
 
     update.effective_message.reply_text.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_verificar_pago_escapa_datos_externos_html() -> None:
+    """Slice 2: remitente/banco (external bank data) must be HTML-escaped."""
+    ingreso = _make_ingreso(remitente="Ana & <b>Pedro</b>", banco="B<x>")
+    ingreso_repo = MagicMock()
+    ingreso_repo.listar_recientes.return_value = [ingreso]
+    update = _make_update()
+    context = _make_context(ingreso_repo=ingreso_repo)
+
+    await cmd_verificar_pago.__wrapped__(update, context)  # type: ignore[attr-defined]
+
+    msg: str = update.effective_message.reply_text.call_args[0][0]
+    assert "&amp;" in msg
+    assert "&lt;b&gt;Pedro&lt;/b&gt;" in msg
+    assert "<b>Pedro</b>" not in msg  # raw injected markup must not leak
+    assert (
+        update.effective_message.reply_text.call_args.kwargs.get("parse_mode") == "HTML"
+    )
