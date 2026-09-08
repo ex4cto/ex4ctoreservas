@@ -281,3 +281,35 @@ def test_formatear_tours_sin_ventas() -> None:
         diferencia=z, porcentaje_desviacion=Decimal("0"),
     )
     assert "No hay datos" in _formatear_tours(wf, rk, rc, 7, 2026)
+
+
+def test_formatear_resumen_ventas_escapa_nombre_html() -> None:
+    """Slice 4: el nombre del vendedor (dato DB) debe escaparse en HTML."""
+    from garay.aplicacion.reportes.resumen_ventas import ResumenVendedor, ResumenVentas
+    from garay.dominio.comun.dinero import Dinero
+    from garay.infraestructura.telegram.handlers_reportes import (
+        _formatear_resumen_ventas,
+    )
+
+    resumen = ResumenVentas(
+        mes=7,
+        año=2026,
+        total_ventas=1,
+        total_valor=Dinero(100_000),
+        ganancia_agencia=Dinero(10_000),
+        por_vendedor=(
+            ResumenVendedor(
+                nombre="A & <b>x</b>",
+                ventas=1,
+                valor_total=Dinero(100_000),
+                comision=Dinero(5_000),
+            ),
+        ),
+    )
+
+    txt = _formatear_resumen_ventas(resumen, 7, 2026)
+
+    assert "&amp;" in txt
+    assert "&lt;b&gt;x&lt;/b&gt;" in txt
+    assert "<b>x</b>" not in txt  # raw injected markup must not leak
+    assert "<b>Ventas — " in txt  # legit HTML title still present

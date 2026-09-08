@@ -404,7 +404,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.sin_datos": {Idioma.ES: "No hay datos para este período."},
     "reporte.ventas.encabezado": {
         Idioma.ES: (
-            "📊 *Ventas — {mes} {año}*\n"
+            "📊 <b>Ventas — {mes} {año}</b>\n"
             "{total_ventas} ventas · ${total_valor}\n"
             "Ganancia agencia: ${ganancia}"
         )
@@ -414,7 +414,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "reporte.caja.encabezado": {
         Idioma.ES: (
-            "💰 *Flujo de Caja — {mes} {año}*\n"
+            "💰 <b>Flujo de Caja — {mes} {año}</b>\n"
             "Ingresos: ${ingresos}\n"
             "Egresos: ${egresos}\n"
             "Balance: {signo}${balance}\n"
@@ -424,18 +424,18 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.caja.categoria_item": {Idioma.ES: "• {categoria}: ${monto}"},
     "reporte.tours.encabezado": {
         Idioma.ES: (
-            "🏝️ *Tours — {mes} {año}*\n"
+            "🏝️ <b>Tours — {mes} {año}</b>\n"
             "Bruto vendido: ${bruto}\n"
             "Costo operadores: -${neto}\n"
             "Margen: ${margen}\n"
             "Comisiones: -${comisiones}\n"
-            "*Agencia (Garay): ${agencia}*"
+            "<b>Agencia (Garay): ${agencia}</b>"
         )
     },
     "reporte.tours.familia_item": {Idioma.ES: "• {familia}: {vendidos} vta · margen ${margen}"},
     "reporte.tours.conciliacion": {
         Idioma.ES: (
-            "🏦 *Conciliación banco:*\n"
+            "🏦 <b>Conciliación banco:</b>\n"
             "Agencia esperada: ${agencia}\n"
             "Ingresos banco: ${banco}\n"
             "Desviación: {desviacion}%"
