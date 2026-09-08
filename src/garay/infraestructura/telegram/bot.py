@@ -15,7 +15,7 @@ from telegram import (
     BotCommandScopeDefault,
     Update,
 )
-from telegram.error import TelegramError
+from telegram.error import NetworkError, TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -553,6 +553,14 @@ async def _manejar_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> 
     as plain text so a formatting error can never re-trigger this handler.
     """
     error = context.error
+
+    # Transient network errors (long-polling connection blips, e.g. httpx.ReadError)
+    # are expected and not actionable — log a warning and stop, so they don't spam
+    # the dev nor tell the user to "contact Ryan". TimedOut subclasses NetworkError.
+    if isinstance(error, NetworkError):
+        logger.warning("Transient network error (ignored): %r", error)
+        return
+
     logger.error("Unhandled exception in handler", exc_info=error)
 
     # 1. Tell the user, in the chat where it failed, to contact Ryan.
