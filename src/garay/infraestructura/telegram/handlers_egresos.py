@@ -15,7 +15,7 @@ from garay.aplicacion.comun.fechas import parsear_fecha
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import GastoRecurrente
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
-from garay.mensajes.catalogo import obtener_mensaje
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +125,11 @@ async def _reply(update: Update, texto: str, teclado: InlineKeyboardMarkup | Non
     if update.callback_query is not None:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text(
-            texto, reply_markup=teclado, parse_mode="Markdown"
+            texto, reply_markup=teclado, parse_mode="HTML"
         )
     elif update.effective_message is not None:
         await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="Markdown"
+            texto, reply_markup=teclado, parse_mode="HTML"
         )
 
 
@@ -153,7 +153,8 @@ def _resumen_otro(ud: dict[str, object]) -> str:
     descripcion: str = ud.get("egreso_descripcion", "")  # type: ignore[assignment]
     categoria: str = ud.get("egreso_categoria", "")  # type: ignore[assignment]
     fecha: datetime.date = ud.get("egreso_fecha", datetime.date.today())  # type: ignore[assignment]
-    return obtener_mensaje("egreso.confirmar_resumen").format(
+    return formatear_html(
+        obtener_mensaje("egreso.confirmar_resumen"),
         monto=_fmt_cop(monto),
         descripcion=descripcion,
         categoria=categoria,
@@ -166,7 +167,8 @@ def _resumen_rec(ud: dict[str, object]) -> str:
     monto: Decimal = ud.get("rec_monto", Decimal("0"))  # type: ignore[assignment]
     categoria: str = ud.get("rec_categoria", "")  # type: ignore[assignment]
     fecha: datetime.date = ud.get("rec_fecha", datetime.date.today())  # type: ignore[assignment]
-    return obtener_mensaje("egreso.rec_confirmar_resumen").format(
+    return formatear_html(
+        obtener_mensaje("egreso.rec_confirmar_resumen"),
         nombre=nombre,
         monto=_fmt_cop(monto),
         fecha=fecha.strftime("%d/%m/%Y"),
@@ -264,7 +266,8 @@ async def handle_egreso_seleccion(update: Update, context: ContextTypes.DEFAULT_
         )
         await _reply(
             update,
-            obtener_mensaje("egreso.rec_pedir_monto").format(
+            formatear_html(
+                obtener_mensaje("egreso.rec_pedir_monto"),
                 nombre=gasto.nombre,
                 monto_sugerido=monto_fmt,
             ),
@@ -568,7 +571,8 @@ async def handle_egreso_rec_edit_menu(update: Update, context: ContextTypes.DEFA
         )
         await _reply(
             update,
-            obtener_mensaje("egreso.rec_pedir_monto").format(
+            formatear_html(
+                obtener_mensaje("egreso.rec_pedir_monto"),
                 nombre=ud.get("rec_nombre", ""),
                 monto_sugerido=monto_fmt,
             ),
@@ -601,7 +605,9 @@ async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await _reply(update, obtener_mensaje("gastos_fijos.vacio"))
     else:
         lineas = [f"• {g.nombre} — {_fmt_cop(g.monto.monto)} (dia {g.dia_mes})" for g in gastos]
-        texto = obtener_mensaje("gastos_fijos.lista").format(lista="\n".join(lineas))
+        texto = formatear_html(
+            obtener_mensaje("gastos_fijos.lista"), lista="\n".join(lineas)
+        )
         botones = [
             [InlineKeyboardButton(f"Desactivar {g.nombre}", callback_data=f"desactivar:{g.id}")]
             for g in gastos
@@ -662,7 +668,8 @@ async def handle_gf_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     nombre: str = ud.get("gf_nombre", "")  # type: ignore[assignment]
     monto: Decimal = ud.get("gf_monto", Decimal("0"))  # type: ignore[assignment]
     categoria: str = ud.get("gf_categoria", "")  # type: ignore[assignment]
-    resumen = obtener_mensaje("gastos_fijos.confirmacion").format(
+    resumen = formatear_html(
+        obtener_mensaje("gastos_fijos.confirmacion"),
         nombre=nombre,
         monto=_fmt_cop(monto),
         categoria=categoria,
@@ -700,8 +707,11 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
     service.guardar(gasto)
     await _reply(
         update,
-        obtener_mensaje("gastos_fijos.creado").format(
-            nombre=nombre, monto=_fmt_cop(monto), dia=dia
+        formatear_html(
+            obtener_mensaje("gastos_fijos.creado"),
+            nombre=nombre,
+            monto=_fmt_cop(monto),
+            dia=dia,
         ),
     )
     return ConversationHandler.END
