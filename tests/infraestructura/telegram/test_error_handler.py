@@ -116,3 +116,40 @@ def test_crear_aplicacion_registra_error_handler() -> None:
     app = crear_aplicacion("123456:FAKETOKEN")
 
     assert _manejar_error in app.error_handlers
+
+
+class TestManejarErrorRed:
+    @pytest.mark.asyncio
+    async def test_network_error_no_notifica_ni_dev_ni_usuario(self, monkeypatch: Any) -> None:
+        """Transient NetworkError must be ignored (no dev report, no user message)."""
+        from telegram.error import NetworkError
+
+        monkeypatch.setattr(
+            "garay.infraestructura.telegram.bot.obtener_settings",
+            lambda: _settings("111,222"),
+        )
+        update = MagicMock(spec=Update)
+        update.effective_message = AsyncMock()
+        ctx = _context()
+        ctx.error = NetworkError("httpx.ReadError: ")
+
+        await _manejar_error(update, ctx)
+
+        ctx.bot.send_message.assert_not_called()
+        update.effective_message.reply_text.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_timedout_tambien_se_ignora(self, monkeypatch: Any) -> None:
+        """TimedOut (subclass of NetworkError) is also ignored."""
+        from telegram.error import TimedOut
+
+        monkeypatch.setattr(
+            "garay.infraestructura.telegram.bot.obtener_settings",
+            lambda: _settings("111"),
+        )
+        ctx = _context()
+        ctx.error = TimedOut()
+
+        await _manejar_error("not-an-update", ctx)
+
+        ctx.bot.send_message.assert_not_called()
