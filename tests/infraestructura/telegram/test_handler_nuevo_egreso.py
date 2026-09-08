@@ -759,3 +759,22 @@ class TestEditarRecurrente:
         assert call_kwargs.kwargs.get("monto") == Decimal("900000")
         assert call_kwargs.kwargs.get("gasto_recurrente_id") == rec_id
 
+
+
+def test_resumen_egreso_escapa_descripcion_html() -> None:
+    """Slice 3: la descripción (dato del usuario) debe escaparse en HTML."""
+    from garay.infraestructura.telegram.handlers_egresos import _resumen_otro
+
+    ud: dict[str, object] = {
+        "egreso_monto": Decimal("50000"),
+        "egreso_descripcion": "Pago a Juan & <b>Pedro</b>",
+        "egreso_categoria": "Varios",
+        "egreso_fecha": datetime.date(2026, 9, 10),
+    }
+
+    txt = _resumen_otro(ud)
+
+    assert "&amp;" in txt
+    assert "&lt;b&gt;Pedro&lt;/b&gt;" in txt
+    assert "<b>Pedro</b>" not in txt  # raw injected markup must not leak
+    assert "<b>Nuevo egreso:</b>" in txt  # legit HTML title still present

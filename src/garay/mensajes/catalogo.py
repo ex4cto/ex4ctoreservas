@@ -308,7 +308,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "egreso.rec_pedir_monto": {
         Idioma.ES: (
-            "💸 *{nombre}*\nMonto sugerido: {monto_sugerido}\n\n"
+            "💸 <b>{nombre}</b>\nMonto sugerido: {monto_sugerido}\n\n"
             "¿Usas el monto sugerido o ingresas otro?"
         )
     },
@@ -317,7 +317,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "egreso.rec_confirmar_resumen": {
         Idioma.ES: (
-            "💸 *Egreso — {nombre}:*\nMonto: {monto}\nFecha: {fecha}\n"
+            "💸 <b>Egreso — {nombre}:</b>\nMonto: {monto}\nFecha: {fecha}\n"
             "Categoría: {categoria}\n\n¿Confirmamos?"
         )
     },
@@ -331,7 +331,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "egreso.confirmar_resumen": {
         Idioma.ES: (
-            "💸 *Nuevo egreso:*\n"
+            "💸 <b>Nuevo egreso:</b>\n"
             "Monto: {monto}\n"
             "Descripción: {descripcion}\n"
             "Categoría: {categoria}\n"
@@ -357,7 +357,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "egreso.edit_menu_rec": {Idioma.ES: "¿Qué campo quieres editar?"},
     "egreso.indicador_pagado": {Idioma.ES: " · ✅ {pagado} este mes"},
     # --- Gastos fijos ---
-    "gastos_fijos.lista": {Idioma.ES: "📋 *Gastos fijos activos:*\n{lista}"},
+    "gastos_fijos.lista": {Idioma.ES: "📋 <b>Gastos fijos activos:</b>\n{lista}"},
     "gastos_fijos.vacio": {
         Idioma.ES: "No hay gastos fijos configurados. Usa el botón para agregar."
     },
@@ -370,12 +370,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "¿Qué día del mes se genera este gasto? (1 al 28)"
     },
     "gastos_fijos.creado": {
-        Idioma.ES: "✅ Gasto fijo creado: *{nombre}* — {monto} el día {dia} de cada mes."
+        Idioma.ES: "✅ Gasto fijo creado: <b>{nombre}</b> — {monto} el día {dia} de cada mes."
     },
-    "gastos_fijos.desactivado": {Idioma.ES: "✅ *{nombre}* desactivado."},
+    "gastos_fijos.desactivado": {Idioma.ES: "✅ <b>{nombre}</b> desactivado."},
     "gastos_fijos.confirmacion": {
         Idioma.ES: (
-            "📋 *Nuevo gasto fijo:*\n"
+            "📋 <b>Nuevo gasto fijo:</b>\n"
             "Nombre: {nombre}\n"
             "Monto: {monto}\n"
             "Categoría: {categoria}\n"
