@@ -24,6 +24,7 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
     MessageHandler,
+    TypeHandler,
     filters,
 )
 
@@ -346,12 +347,23 @@ def _parsear_grupo_id(grupo_id_str: str | None) -> int | None:
 async def _ignorar_grupo_notificaciones(
     update: object, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Drop any update coming from the notifications group (broadcast-only).
+    """Drop ANY update (message, command, callback query…) from the notifications
+    group so it never reaches a command/conversation handler.
 
-    Registered in the earliest handler group so commands/messages typed in that
-    group never reach any command or conversation handler.
+    Registered as a TypeHandler(Update) in the earliest handler group (-1), so it
+    runs first for every update; it only stops the pipeline for updates whose
+    effective_chat is the notifications group (a MessageHandler would miss
+    callback queries from inline buttons).
     """
-    raise ApplicationHandlerStop
+    grupo_id = _parsear_grupo_id(obtener_settings().grupo_id)
+    if (
+        grupo_id is not None
+        and isinstance(update, Update)
+        and update.effective_chat is not None
+        and update.effective_chat.id == grupo_id
+    ):
+        logger.info("Update del grupo de notificaciones ignorado (broadcast-only).")
+        raise ApplicationHandlerStop
 
 
 def asignar_menus(
@@ -1007,16 +1019,11 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
-    # Broadcast-only: drop everything from the notifications group before any
-    # command/conversation handler can react (group=-1 runs first).
-    grupo_notif_id = _parsear_grupo_id(obtener_settings().grupo_id)
-    if grupo_notif_id is not None:
-        app.add_handler(
-            MessageHandler(
-                filters.Chat(chat_id=grupo_notif_id), _ignorar_grupo_notificaciones
-            ),
-            group=-1,
-        )
+    # Broadcast-only: drop EVERY update (incl. callback queries from inline
+    # buttons) coming from the notifications group before any command/conversation
+    # handler can react (group=-1 runs first). TypeHandler(Update) sees all update
+    # types; the handler itself checks effective_chat and stops only for the group.
+    app.add_handler(TypeHandler(Update, _ignorar_grupo_notificaciones), group=-1)
 
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
