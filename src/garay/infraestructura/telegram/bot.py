@@ -18,6 +18,7 @@ from telegram import (
 from telegram.error import NetworkError, TelegramError
 from telegram.ext import (
     Application,
+    ApplicationHandlerStop,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
@@ -331,6 +332,28 @@ def _parsear_ids(ids_str: str) -> set[int]:
     return ids
 
 
+def _parsear_grupo_id(grupo_id_str: str | None) -> int | None:
+    """Parse the notifications group id into an int, or None if unset/invalid."""
+    if not grupo_id_str or not str(grupo_id_str).strip():
+        return None
+    try:
+        return int(str(grupo_id_str).strip())
+    except (ValueError, TypeError):
+        logger.warning("grupo_id inválido en config, ignorado: %r", grupo_id_str)
+        return None
+
+
+async def _ignorar_grupo_notificaciones(
+    update: object, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Drop any update coming from the notifications group (broadcast-only).
+
+    Registered in the earliest handler group so commands/messages typed in that
+    group never reach any command or conversation handler.
+    """
+    raise ApplicationHandlerStop
+
+
 def asignar_menus(
     propietario_ids: set[int],
     dev_ids: set[int],
@@ -497,6 +520,15 @@ async def _post_init(app: Application) -> None:  # type: ignore[type-arg]
                 "No se pudo fijar el menú para chat %s (¿el usuario inició el bot?): %s",
                 uid,
                 exc,
+            )
+
+    # Hide the "/" command menu in the notifications group (broadcast-only):
+    # an empty command list for that chat scope removes the menu there.
+    grupo_id = _parsear_grupo_id(settings.grupo_id)
+    if grupo_id is not None:
+        with suppress(TelegramError):
+            await app.bot.set_my_commands(
+                [], scope=BotCommandScopeChat(chat_id=grupo_id)
             )
 
     # Register the daily monitor job when at least one monitor is active:
@@ -974,6 +1006,17 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("start", cmd_start),
         ],
     )
+
+    # Broadcast-only: drop everything from the notifications group before any
+    # command/conversation handler can react (group=-1 runs first).
+    grupo_notif_id = _parsear_grupo_id(obtener_settings().grupo_id)
+    if grupo_notif_id is not None:
+        app.add_handler(
+            MessageHandler(
+                filters.Chat(chat_id=grupo_notif_id), _ignorar_grupo_notificaciones
+            ),
+            group=-1,
+        )
 
     app.add_handler(conv_handler)
     app.add_handler(egreso_conv_handler, group=2)
