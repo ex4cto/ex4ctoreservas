@@ -81,14 +81,42 @@ def test_parsear_grupo_id_casos() -> None:
     assert _parsear_grupo_id("no-es-numero") is None
 
 
-def test_ignorar_grupo_notificaciones_detiene_el_pipeline() -> None:
+def test_ignorar_grupo_detiene_updates_del_grupo(monkeypatch: Any) -> None:
     import pytest
+    from telegram import Update
     from telegram.ext import ApplicationHandlerStop
 
     from garay.infraestructura.telegram.bot import _ignorar_grupo_notificaciones
 
+    settings = MagicMock()
+    settings.grupo_id = "-5146969249"
+    monkeypatch.setattr(
+        "garay.infraestructura.telegram.bot.obtener_settings", lambda: settings
+    )
+    update = MagicMock(spec=Update)
+    update.effective_chat = MagicMock()
+    update.effective_chat.id = -5146969249
+
     with pytest.raises(ApplicationHandlerStop):
-        asyncio.run(_ignorar_grupo_notificaciones(MagicMock(), MagicMock()))
+        asyncio.run(_ignorar_grupo_notificaciones(update, MagicMock()))
+
+
+def test_ignorar_grupo_no_afecta_otros_chats(monkeypatch: Any) -> None:
+    from telegram import Update
+
+    from garay.infraestructura.telegram.bot import _ignorar_grupo_notificaciones
+
+    settings = MagicMock()
+    settings.grupo_id = "-5146969249"
+    monkeypatch.setattr(
+        "garay.infraestructura.telegram.bot.obtener_settings", lambda: settings
+    )
+    update = MagicMock(spec=Update)
+    update.effective_chat = MagicMock()
+    update.effective_chat.id = 12345  # a DM, not the group
+
+    # Must NOT raise (returns None) so normal chats keep working.
+    asyncio.run(_ignorar_grupo_notificaciones(update, MagicMock()))
 
 
 def test_post_init_oculta_menu_en_grupo_notificaciones(monkeypatch: Any) -> None:
