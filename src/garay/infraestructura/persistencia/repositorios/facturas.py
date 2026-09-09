@@ -64,6 +64,19 @@ class SQLAFacturaRepository(FacturaRepository):
             ).scalar_one_or_none()
             return _to_domain(row) if row else None
 
+    def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[Factura]:
+        if not ids:
+            return []
+        with self._sf.begin() as session:
+            rows = (
+                session.execute(
+                    select(FacturaModel).where(FacturaModel.venta_id.in_(ids))
+                )
+                .scalars()
+                .all()
+            )
+            return [_to_domain(m) for m in rows]
+
     def listar_por_periodo(
         self, desde: datetime.date, hasta: datetime.date
     ) -> list[Factura]:

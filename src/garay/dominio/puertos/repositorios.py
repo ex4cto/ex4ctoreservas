@@ -215,6 +215,9 @@ class FacturaRepository(ABC):
     def buscar_por_venta_id(self, venta_id: uuid.UUID) -> Factura | None: ...
 
     @abstractmethod
+    def listar_por_venta_ids(self, ids: list[uuid.UUID]) -> list[Factura]: ...
+
+    @abstractmethod
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Factura]: ...
 
 

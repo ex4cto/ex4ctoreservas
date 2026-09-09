@@ -207,6 +207,8 @@ def cargar_consulta_ventas(desde: date, hasta: date) -> list[FilaVentaConsulta]:
         servicios=SQLAServicioRepository(sf),
         freelancers=SQLAFreelancerRepository(sf),
         puntos_de_venta=SQLAPuntoDeVentaRepository(sf),
+        comisiones=SQLAComisionRegistradaRepository(sf),
+        facturas=SQLAFacturaRepository(sf),
     )
     return servicio.ejecutar(desde, hasta)
 
@@ -782,6 +784,28 @@ def _tab_ventas() -> None:
             ],
             "Neto": [_cop(f.neto.monto) for f in filtradas],
             "Ganancia": [_cop(f.ganancia.monto) for f in filtradas],
+            "Com. vendedor": [
+                _cop(f.comision_vendedor.monto) if f.comision_vendedor else "—"
+                for f in filtradas
+            ],
+            "Com. cerrador": [
+                _cop(f.comision_cerrador.monto) if f.comision_cerrador else "—"
+                for f in filtradas
+            ],
+            "Com. punto": [
+                _cop(f.comision_punto_de_venta.monto)
+                if f.comision_punto_de_venta
+                else "—"
+                for f in filtradas
+            ],
+            "Com. referido": [
+                _cop(f.comision_referido.monto) if f.comision_referido else "—"
+                for f in filtradas
+            ],
+            "Com. agencia": [
+                _cop(f.comision_agencia.monto) if f.comision_agencia else "—"
+                for f in filtradas
+            ],
             "Tipo": [f.tipo_cliente for f in filtradas],
             "Canal": [f.canal_origen or "—" for f in filtradas],
             "Vendedor": [f.vendedor or "—" for f in filtradas],
@@ -792,6 +816,8 @@ def _tab_ventas() -> None:
             "Niños": [f.ninos for f in filtradas],
             "Estado": [f.estado for f in filtradas],
             "Anulada": ["Sí" if f.anulada else "No" for f in filtradas],
+            "Factura N°": [f.factura_numero or "—" for f in filtradas],
+            "Factura estado": [f.factura_estado or "—" for f in filtradas],
             "Idioma factura": [f.factura_idioma for f in filtradas],
             "ID venta": [f.venta_id for f in filtradas],
         },
@@ -801,9 +827,10 @@ def _tab_ventas() -> None:
     columnas = [
         "Fecha", "Cliente", "Teléfono", "Email", "Identificación", "Hotel",
         "Habitación", "Servicios", "Fechas/Horarios", "Valor", "Abono", "Saldo",
-        "Neto", "Ganancia", "Tipo", "Canal", "Vendedor", "Cerrador", "Referido",
-        "Punto de venta", "Adultos", "Niños", "Estado", "Anulada",
-        "Idioma factura", "ID venta",
+        "Neto", "Ganancia", "Com. vendedor", "Com. cerrador", "Com. punto",
+        "Com. referido", "Com. agencia", "Tipo", "Canal", "Vendedor", "Cerrador",
+        "Referido", "Punto de venta", "Adultos", "Niños", "Estado", "Anulada",
+        "Factura N°", "Factura estado", "Idioma factura", "ID venta",
     ]
     export = [
         [
@@ -813,10 +840,17 @@ def _tab_ventas() -> None:
             f.servicios, f.fechas_horarios, f.valor.monto,
             f.abono.monto if f.abono is not None else "",
             f.saldo_pendiente.monto if f.saldo_pendiente is not None else "",
-            f.neto.monto, f.ganancia.monto, f.tipo_cliente,
-            f.canal_origen or "", f.vendedor or "", f.cerrador or "",
+            f.neto.monto, f.ganancia.monto,
+            f.comision_vendedor.monto if f.comision_vendedor else "",
+            f.comision_cerrador.monto if f.comision_cerrador else "",
+            f.comision_punto_de_venta.monto if f.comision_punto_de_venta else "",
+            f.comision_referido.monto if f.comision_referido else "",
+            f.comision_agencia.monto if f.comision_agencia else "",
+            f.tipo_cliente, f.canal_origen or "", f.vendedor or "", f.cerrador or "",
             f.referido or "", f.punto_de_venta or "", f.adultos, f.ninos,
-            f.estado, "Sí" if f.anulada else "No", f.factura_idioma, f.venta_id,
+            f.estado, "Sí" if f.anulada else "No",
+            f.factura_numero or "", f.factura_estado or "",
+            f.factura_idioma, f.venta_id,
         ]
         for f in filtradas
     ]
