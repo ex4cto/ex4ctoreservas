@@ -340,6 +340,48 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         )
     },
     "egreso.registrado": {Idioma.ES: "✅ Egreso registrado correctamente."},
+    # ── Categorías de egreso (gestión) ───────────────────────────────────
+    "categoria.menu_titulo": {
+        Idioma.ES: "🗂️ <b>Categorías de egreso</b>\n✅ activa · 🚫 inactiva · 🔒 protegida"
+    },
+    "categoria.boton_nueva": {Idioma.ES: "➕ Nueva categoría"},  # noqa: RUF001
+    "categoria.boton_cerrar": {Idioma.ES: "❌ Cerrar"},
+    "categoria.boton_atras": {Idioma.ES: "⬅️ Atrás"},
+    "categoria.boton_desactivar": {Idioma.ES: "🚫 Desactivar"},
+    "categoria.boton_activar": {Idioma.ES: "✅ Activar"},
+    "categoria.boton_editar_desc": {Idioma.ES: "📝 Editar descripción"},
+    "categoria.boton_usar_existente": {Idioma.ES: "Usar «{parecida}»"},
+    "categoria.boton_crear_igual": {Idioma.ES: "Crear «{nombre}» igual"},
+    "categoria.boton_cancelar_parecido": {Idioma.ES: "❌ Cancelar"},
+    "categoria.estado_activa": {Idioma.ES: "activa ✅"},
+    "categoria.estado_inactiva": {Idioma.ES: "inactiva 🚫"},
+    "categoria.acciones_titulo": {
+        Idioma.ES: "Categoría: <b>{nombre}</b>\nEstado: {estado}\n\n¿Qué quieres hacer?"
+    },
+    "categoria.nota_protegida": {
+        Idioma.ES: "🔒 Es una categoría protegida: no se puede desactivar."
+    },
+    "categoria.pedir_nombre": {Idioma.ES: "Escribe el nombre de la nueva categoría:"},
+    "categoria.pedir_descripcion": {
+        Idioma.ES: "Escribe la nueva descripción para «{nombre}»:"
+    },
+    "categoria.nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Escribe uno:"},
+    "categoria.duplicada": {
+        Idioma.ES: "⚠️ Ya existe una categoría «{nombre}». Escribe otro nombre:"
+    },
+    "categoria.parecida_aviso": {
+        Idioma.ES: "⚠️ «{nombre}» se parece a «{parecida}» que ya existe.\n"
+        "¿Usar la que existe o crear «{nombre}» igual?"
+    },
+    "categoria.creada": {Idioma.ES: "✅ Categoría «{nombre}» creada."},
+    "categoria.usa_existente": {Idioma.ES: "👍 Perfecto, usa «{parecida}»."},
+    "categoria.protegida": {
+        Idioma.ES: "🔒 «{nombre}» es una categoría protegida y no se puede desactivar."
+    },
+    "categoria.descripcion_actualizada": {
+        Idioma.ES: "📝 Descripción de «{nombre}» actualizada."
+    },
+    "categoria.cerrado": {Idioma.ES: "Listo. 🗂️"},
     "egreso.error_monto": {
         Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."
     },
