@@ -11,6 +11,7 @@ from garay.aplicacion.reportes.consulta_ventas import ConsultaVentasService
 from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.facturas.tipos import EstadoEnvioFactura
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
@@ -23,6 +24,13 @@ _UUID_G = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
 def _make_freelancer(fid: uuid.UUID, nombre: str, display: str | None) -> Freelancer:
     return Freelancer(id=fid, nombre=nombre, display=display, activo=True)
+
+
+def _repo_vacio(metodo: str) -> MagicMock:
+    """MagicMock repo whose ``metodo`` returns an empty list."""
+    repo = MagicMock()
+    getattr(repo, metodo).return_value = []
+    return repo
 
 
 def _make_venta_con_ids(
@@ -102,12 +110,32 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     puntos.listar.return_value = [
         PuntoDeVenta(id=punto_id, nombre="Recepción", porcentaje_capa=Decimal(10))
     ]
+
+    comision = MagicMock()
+    comision.venta_id = venta.id
+    comision.desglose.vendedor = Dinero("50000")
+    comision.desglose.cerrador = Dinero("30000")
+    comision.desglose.punto_de_venta = Dinero("10000")
+    comision.desglose.referido = Dinero("5000")
+    comision.desglose.agencia = Dinero("205000")
+    comisiones = MagicMock()
+    comisiones.listar_por_venta_ids.return_value = [comision]
+
+    factura = MagicMock()
+    factura.venta_id = venta.id
+    factura.numero = "F-001"
+    factura.estado_envio = EstadoEnvioFactura.ENVIADO
+    facturas = MagicMock()
+    facturas.listar_por_venta_ids.return_value = [factura]
+
     servicio = ConsultaVentasService(
         ventas=ventas,
         clientes=clientes,
         servicios=servicios,
         freelancers=freelancers,
         puntos_de_venta=puntos,
+        comisiones=comisiones,
+        facturas=facturas,
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -138,9 +166,50 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     assert fila.referido == "Pedro"
     assert "Tour Islas — 12/07/2026 09:00 (mañana)" in fila.fechas_horarios
     assert "City Tour — 10/07/2026" in fila.fechas_horarios
+    # Comisión + factura (PR B)
+    assert fila.comision_vendedor == Dinero("50000")
+    assert fila.comision_cerrador == Dinero("30000")
+    assert fila.comision_punto_de_venta == Dinero("10000")
+    assert fila.comision_referido == Dinero("5000")
+    assert fila.comision_agencia == Dinero("205000")
+    assert fila.factura_numero == "F-001"
+    assert fila.factura_estado == "ENVIADO"
+    comisiones.listar_por_venta_ids.assert_called_once_with([venta.id])
+    facturas.listar_por_venta_ids.assert_called_once_with([venta.id])
     ventas.listar_por_periodo.assert_called_once_with(
         datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
+
+
+def test_venta_sin_comision_ni_factura_deja_campos_none() -> None:
+    venta = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("100000"),
+        neto=Dinero("50000"),
+        servicio_ids=[],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 7, 5),
+        participantes=Participantes(),
+    )
+    ventas = MagicMock()
+    ventas.listar_por_periodo.return_value = [venta]
+    servicio = ConsultaVentasService(
+        ventas=ventas,
+        clientes=_repo_vacio("listar"),
+        servicios=_repo_vacio("listar"),
+        freelancers=_repo_vacio("listar_todos"),
+        puntos_de_venta=_repo_vacio("listar"),
+        comisiones=_repo_vacio("listar_por_venta_ids"),
+        facturas=_repo_vacio("listar_por_venta_ids"),
+    )
+    filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
+
+    fila = filas[0]
+    assert fila.comision_vendedor is None
+    assert fila.comision_agencia is None
+    assert fila.factura_numero is None
+    assert fila.factura_estado is None
 
 
 def test_cliente_desconocido_usa_placeholder() -> None:
@@ -156,21 +225,14 @@ def test_cliente_desconocido_usa_placeholder() -> None:
     )
     ventas = MagicMock()
     ventas.listar_por_periodo.return_value = [venta]
-    clientes = MagicMock()
-    clientes.listar.return_value = []
-    servicios = MagicMock()
-    servicios.listar.return_value = []
-
-    freelancers = MagicMock()
-    freelancers.listar_todos.return_value = []
-    puntos = MagicMock()
-    puntos.listar.return_value = []
     servicio = ConsultaVentasService(
         ventas=ventas,
-        clientes=clientes,
-        servicios=servicios,
-        freelancers=freelancers,
-        puntos_de_venta=puntos,
+        clientes=_repo_vacio("listar"),
+        servicios=_repo_vacio("listar"),
+        freelancers=_repo_vacio("listar_todos"),
+        puntos_de_venta=_repo_vacio("listar"),
+        comisiones=_repo_vacio("listar_por_venta_ids"),
+        facturas=_repo_vacio("listar_por_venta_ids"),
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -181,21 +243,14 @@ def test_cliente_desconocido_usa_placeholder() -> None:
 def test_sin_ventas_devuelve_vacio() -> None:
     ventas = MagicMock()
     ventas.listar_por_periodo.return_value = []
-    clientes = MagicMock()
-    clientes.listar.return_value = []
-    servicios = MagicMock()
-    servicios.listar.return_value = []
-
-    freelancers = MagicMock()
-    freelancers.listar_todos.return_value = []
-    puntos = MagicMock()
-    puntos.listar.return_value = []
     servicio = ConsultaVentasService(
         ventas=ventas,
-        clientes=clientes,
-        servicios=servicios,
-        freelancers=freelancers,
-        puntos_de_venta=puntos,
+        clientes=_repo_vacio("listar"),
+        servicios=_repo_vacio("listar"),
+        freelancers=_repo_vacio("listar_todos"),
+        puntos_de_venta=_repo_vacio("listar"),
+        comisiones=_repo_vacio("listar_por_venta_ids"),
+        facturas=_repo_vacio("listar_por_venta_ids"),
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -211,20 +266,16 @@ def _make_consulta_service(
 ) -> ConsultaVentasService:
     ventas_repo = MagicMock()
     ventas_repo.listar_por_periodo.return_value = lista_ventas
-    clientes_repo = MagicMock()
-    clientes_repo.listar.return_value = []
-    servicios_repo = MagicMock()
-    servicios_repo.listar.return_value = []
     freelancers_repo = MagicMock()
     freelancers_repo.listar_todos.return_value = lista_freelancers or []
-    puntos_repo = MagicMock()
-    puntos_repo.listar.return_value = []
     return ConsultaVentasService(
         ventas=ventas_repo,
-        clientes=clientes_repo,
-        servicios=servicios_repo,
+        clientes=_repo_vacio("listar"),
+        servicios=_repo_vacio("listar"),
         freelancers=freelancers_repo,
-        puntos_de_venta=puntos_repo,
+        puntos_de_venta=_repo_vacio("listar"),
+        comisiones=_repo_vacio("listar_por_venta_ids"),
+        facturas=_repo_vacio("listar_por_venta_ids"),
     )
 
 
@@ -258,20 +309,16 @@ class TestConsultaVentasDisplayResolution:
         ]
         ventas_repo = MagicMock()
         ventas_repo.listar_por_periodo.return_value = ventas
-        clientes_repo = MagicMock()
-        clientes_repo.listar.return_value = []
-        servicios_repo = MagicMock()
-        servicios_repo.listar.return_value = []
         freelancers_repo = MagicMock()
         freelancers_repo.listar_todos.return_value = [fl]
-        puntos_repo = MagicMock()
-        puntos_repo.listar.return_value = []
         service = ConsultaVentasService(
             ventas=ventas_repo,
-            clientes=clientes_repo,
-            servicios=servicios_repo,
+            clientes=_repo_vacio("listar"),
+            servicios=_repo_vacio("listar"),
             freelancers=freelancers_repo,
-            puntos_de_venta=puntos_repo,
+            puntos_de_venta=_repo_vacio("listar"),
+            comisiones=_repo_vacio("listar_por_venta_ids"),
+            facturas=_repo_vacio("listar_por_venta_ids"),
         )
         service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 

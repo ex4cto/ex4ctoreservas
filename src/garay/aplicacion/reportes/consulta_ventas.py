@@ -9,6 +9,8 @@ from datetime import date
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
+    ComisionRegistradaRepository,
+    FacturaRepository,
     FreelancerRepository,
     PuntoDeVentaRepository,
     ServicioRepository,
@@ -46,6 +48,14 @@ class FilaVentaConsulta:
     punto_de_venta: str | None = None
     referido: str | None = None
     fechas_horarios: str = ""
+    # --- Comisión + factura (PR B) ---
+    comision_vendedor: Dinero | None = None
+    comision_cerrador: Dinero | None = None
+    comision_punto_de_venta: Dinero | None = None
+    comision_referido: Dinero | None = None
+    comision_agencia: Dinero | None = None
+    factura_numero: str | None = None
+    factura_estado: str | None = None
 
 
 def _detalle_tours(venta: Venta, nombre_por_servicio: dict[uuid.UUID, str]) -> str:
@@ -77,12 +87,16 @@ class ConsultaVentasService:
         servicios: ServicioRepository,
         freelancers: FreelancerRepository,
         puntos_de_venta: PuntoDeVentaRepository,
+        comisiones: ComisionRegistradaRepository,
+        facturas: FacturaRepository,
     ) -> None:
         self._ventas = ventas
         self._clientes = clientes
         self._servicios = servicios
         self._freelancers = freelancers
         self._puntos = puntos_de_venta
+        self._comisiones = comisiones
+        self._facturas = facturas
 
     def ejecutar(self, desde: date, hasta: date) -> list[FilaVentaConsulta]:
         ventas = self._ventas.listar_por_periodo(desde, hasta)
@@ -92,6 +106,15 @@ class ConsultaVentasService:
         cliente_por_id = {c.id: c for c in self._clientes.listar()}
         nombre_por_servicio = {s.id: s.nombre for s in self._servicios.listar()}
         punto_por_id = {p.id: p.nombre for p in self._puntos.listar()}
+
+        # Bulk-load commission + invoice indexed by venta_id (one query each)
+        venta_ids = [v.id for v in ventas]
+        comision_por_venta = {
+            c.venta_id: c for c in self._comisiones.listar_por_venta_ids(venta_ids)
+        }
+        factura_por_venta = {
+            f.venta_id: f for f in self._facturas.listar_por_venta_ids(venta_ids)
+        }
 
         # Build display dict once — includes inactive freelancers
         display_por_id: dict[uuid.UUID, str] = {
@@ -127,6 +150,10 @@ class ConsultaVentasService:
                 else None
             )
 
+            comision = comision_por_venta.get(v.id)
+            desglose = comision.desglose if comision is not None else None
+            factura = factura_por_venta.get(v.id)
+
             filas.append(
                 FilaVentaConsulta(
                     fecha=v.fecha,
@@ -159,6 +186,17 @@ class ConsultaVentasService:
                     punto_de_venta=punto,
                     referido=p.referido_nombre,
                     fechas_horarios=_detalle_tours(v, nombre_por_servicio),
+                    comision_vendedor=desglose.vendedor if desglose else None,
+                    comision_cerrador=desglose.cerrador if desglose else None,
+                    comision_punto_de_venta=(
+                        desglose.punto_de_venta if desglose else None
+                    ),
+                    comision_referido=desglose.referido if desglose else None,
+                    comision_agencia=desglose.agencia if desglose else None,
+                    factura_numero=factura.numero if factura is not None else None,
+                    factura_estado=(
+                        str(factura.estado_envio) if factura is not None else None
+                    ),
                 )
             )
         return filas
