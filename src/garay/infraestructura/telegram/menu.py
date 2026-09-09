@@ -69,8 +69,7 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("verificar_pago", "Pagos recibidos (últimos 5 min)", _P, _FL),
     ComandoMenu("conciliar", "Conciliar pagos con ventas", _P, _PR),
     ComandoMenu("pendientes", "Revisar conciliaciones pendientes", _P, _PR),
-    ComandoMenu("nuevo_egreso", "Registrar un egreso manual", _P, _AD),
-    ComandoMenu("gastos_fijos", "Ver y gestionar gastos fijos", _P, _AD),
+    ComandoMenu("egresos", "Egresos: registrar, gastos fijos y categorías", _P, _AD),
     ComandoMenu("categorias_egreso", "Gestionar categorías de egreso", _P, _AD),
     # ── Reportes ────────────────────────────────────────────────────────────
     ComandoMenu("dashboard_ventas", "Dashboard de ventas", _R, _AD),
