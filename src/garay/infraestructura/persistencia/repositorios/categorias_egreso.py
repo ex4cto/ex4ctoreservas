@@ -42,6 +42,14 @@ class SQLACategoriaEgresoRepository(CategoriaEgresoRepository):
             rows = session.execute(stmt).scalars().all()
             return [r.nombre for r in rows]
 
+    def listar_todas(self) -> list[CategoriaEgreso]:
+        with self._sf.begin() as session:
+            stmt = select(CategoriaEgresoModel).order_by(
+                CategoriaEgresoModel.orden, CategoriaEgresoModel.nombre
+            )
+            rows = session.execute(stmt).scalars().all()
+            return [_to_domain(r) for r in rows]
+
     def guardar(self, categoria: CategoriaEgreso) -> None:
         with self._sf.begin() as session:
             session.merge(_to_orm(categoria))

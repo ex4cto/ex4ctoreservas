@@ -66,3 +66,39 @@ def test_guardar_es_idempotente(sf: sessionmaker[Session]) -> None:
 def test_listar_activas_vacio(sf: sessionmaker[Session]) -> None:
     repo = SQLACategoriaEgresoRepository(sf)
     assert repo.listar_activas() == []
+
+
+def test_listar_todas_incluye_inactivas(sf: sessionmaker[Session]) -> None:
+    repo = SQLACategoriaEgresoRepository(sf)
+    repo.guardar(_cat("activa", 1, activo=True))
+    repo.guardar(_cat("inactiva", 2, activo=False))
+
+    nombres = [c.nombre for c in repo.listar_todas()]
+    assert "activa" in nombres
+    assert "inactiva" in nombres
+
+
+def test_listar_todas_ordenadas_por_orden(sf: sessionmaker[Session]) -> None:
+    repo = SQLACategoriaEgresoRepository(sf)
+    repo.guardar(_cat("tercera", 3))
+    repo.guardar(_cat("primera", 1))
+    repo.guardar(_cat("segunda", 2))
+
+    assert [c.nombre for c in repo.listar_todas()] == ["primera", "segunda", "tercera"]
+
+
+def test_listar_todas_retorna_entidades_completas(sf: sessionmaker[Session]) -> None:
+    repo = SQLACategoriaEgresoRepository(sf)
+    repo.guardar(_cat("arriendo", 1))
+
+    todas = repo.listar_todas()
+    assert len(todas) == 1
+    assert isinstance(todas[0], CategoriaEgreso)
+    assert todas[0].descripcion == "Descripcion de arriendo"
+    assert todas[0].activo is True
+    assert todas[0].orden == 1
+
+
+def test_listar_todas_vacio(sf: sessionmaker[Session]) -> None:
+    repo = SQLACategoriaEgresoRepository(sf)
+    assert repo.listar_todas() == []

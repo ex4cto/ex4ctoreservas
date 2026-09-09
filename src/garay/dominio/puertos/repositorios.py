@@ -111,6 +111,11 @@ class CategoriaEgresoRepository(ABC):
     def listar_activas(self) -> list[str]: ...
 
     @abstractmethod
+    def listar_todas(self) -> list[CategoriaEgreso]:
+        """Return every category (active and inactive), ordered by orden then nombre."""
+        ...
+
+    @abstractmethod
     def guardar(self, categoria: CategoriaEgreso) -> None: ...
 
 
