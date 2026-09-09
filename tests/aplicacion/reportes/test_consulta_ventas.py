@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from decimal import Decimal
 from unittest.mock import MagicMock
 
 from garay.aplicacion.reportes.consulta_ventas import ConsultaVentasService
@@ -11,6 +12,7 @@ from garay.dominio.clientes.entidades import Cliente
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.freelancers.entidades import Freelancer
+from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -51,24 +53,42 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     cliente_id = uuid.uuid4()
     serv_a = uuid.uuid4()
     serv_b = uuid.uuid4()
+    punto_id = uuid.uuid4()
     venta = Venta(
         id=uuid.uuid4(),
         valor_venta=Dinero("500000"),
         neto=Dinero("300000"),
+        abono=Dinero("200000"),
         servicio_ids=[serv_a, serv_b],
         cliente_id=cliente_id,
-        tipo_cliente=TipoCliente.DIGITAL,
+        tipo_cliente=TipoCliente.EXTERNO,
         fecha=datetime.date(2026, 7, 10),
-        participantes=Participantes(vendedor_nombre="Carlos", cerrador_nombre="Maria"),
+        participantes=Participantes(
+            vendedor_nombre="Carlos",
+            cerrador_nombre="Maria",
+            punto_de_venta_id=punto_id,
+            referido_nombre="Pedro",
+        ),
         adultos=2,
         ninos=1,
         canal_origen="WhatsApp",
+        fechas_por_servicio={serv_a: datetime.datetime(2026, 7, 12, 9, 0)},
+        horarios_por_servicio={serv_a: "mañana"},
     )
     ventas = MagicMock()
     ventas.listar_por_periodo.return_value = [venta]
     clientes = MagicMock()
     clientes.listar.return_value = [
-        Cliente(id=cliente_id, nombre="Juan Perez", tipo=TipoCliente.DIGITAL)
+        Cliente(
+            id=cliente_id,
+            nombre="Juan Perez",
+            tipo=TipoCliente.EXTERNO,
+            telefono="3001234567",
+            email="juan@example.com",
+            identificacion="12345",
+            hotel="Hotel Mar",
+            numero_habitacion="101",
+        )
     ]
     servicios = MagicMock()
     servicios.listar.return_value = [
@@ -78,8 +98,16 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
 
     freelancers = MagicMock()
     freelancers.listar_todos.return_value = []
+    puntos = MagicMock()
+    puntos.listar.return_value = [
+        PuntoDeVenta(id=punto_id, nombre="Recepción", porcentaje_capa=Decimal(10))
+    ]
     servicio = ConsultaVentasService(
-        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+        ventas=ventas,
+        clientes=clientes,
+        servicios=servicios,
+        freelancers=freelancers,
+        puntos_de_venta=puntos,
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -90,12 +118,26 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     assert fila.valor == Dinero("500000")
     assert fila.neto == Dinero("300000")
     assert fila.ganancia == Dinero("200000")
-    assert fila.tipo_cliente == "DIGITAL"
+    assert fila.tipo_cliente == "EXTERNO"
     assert fila.canal_origen == "WhatsApp"
     assert fila.vendedor == "Carlos"
     assert fila.cerrador == "Maria"
     assert fila.adultos == 2
     assert fila.ninos == 1
+    # Raw-data expansion (PR A)
+    assert fila.venta_id == str(venta.id)
+    assert fila.abono == Dinero("200000")
+    assert fila.saldo_pendiente == Dinero("300000")
+    assert fila.anulada is False
+    assert fila.cliente_telefono == "3001234567"
+    assert fila.cliente_email == "juan@example.com"
+    assert fila.cliente_identificacion == "12345"
+    assert fila.cliente_hotel == "Hotel Mar"
+    assert fila.cliente_habitacion == "101"
+    assert fila.punto_de_venta == "Recepción"
+    assert fila.referido == "Pedro"
+    assert "Tour Islas — 12/07/2026 09:00 (mañana)" in fila.fechas_horarios
+    assert "City Tour — 10/07/2026" in fila.fechas_horarios
     ventas.listar_por_periodo.assert_called_once_with(
         datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
@@ -121,8 +163,14 @@ def test_cliente_desconocido_usa_placeholder() -> None:
 
     freelancers = MagicMock()
     freelancers.listar_todos.return_value = []
+    puntos = MagicMock()
+    puntos.listar.return_value = []
     servicio = ConsultaVentasService(
-        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+        ventas=ventas,
+        clientes=clientes,
+        servicios=servicios,
+        freelancers=freelancers,
+        puntos_de_venta=puntos,
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -140,8 +188,14 @@ def test_sin_ventas_devuelve_vacio() -> None:
 
     freelancers = MagicMock()
     freelancers.listar_todos.return_value = []
+    puntos = MagicMock()
+    puntos.listar.return_value = []
     servicio = ConsultaVentasService(
-        ventas=ventas, clientes=clientes, servicios=servicios, freelancers=freelancers
+        ventas=ventas,
+        clientes=clientes,
+        servicios=servicios,
+        freelancers=freelancers,
+        puntos_de_venta=puntos,
     )
     filas = servicio.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 
@@ -163,11 +217,14 @@ def _make_consulta_service(
     servicios_repo.listar.return_value = []
     freelancers_repo = MagicMock()
     freelancers_repo.listar_todos.return_value = lista_freelancers or []
+    puntos_repo = MagicMock()
+    puntos_repo.listar.return_value = []
     return ConsultaVentasService(
         ventas=ventas_repo,
         clientes=clientes_repo,
         servicios=servicios_repo,
         freelancers=freelancers_repo,
+        puntos_de_venta=puntos_repo,
     )
 
 
@@ -207,11 +264,14 @@ class TestConsultaVentasDisplayResolution:
         servicios_repo.listar.return_value = []
         freelancers_repo = MagicMock()
         freelancers_repo.listar_todos.return_value = [fl]
+        puntos_repo = MagicMock()
+        puntos_repo.listar.return_value = []
         service = ConsultaVentasService(
             ventas=ventas_repo,
             clientes=clientes_repo,
             servicios=servicios_repo,
             freelancers=freelancers_repo,
+            puntos_de_venta=puntos_repo,
         )
         service.ejecutar(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
 

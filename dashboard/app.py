@@ -61,6 +61,9 @@ from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRe
 from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
+from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
+    SQLAPuntoDeVentaRepository,
+)
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.mensajes.catalogo import obtener_mensaje
@@ -203,6 +206,7 @@ def cargar_consulta_ventas(desde: date, hasta: date) -> list[FilaVentaConsulta]:
         clientes=SQLAClienteRepository(sf),
         servicios=SQLAServicioRepository(sf),
         freelancers=SQLAFreelancerRepository(sf),
+        puntos_de_venta=SQLAPuntoDeVentaRepository(sf),
     )
     return servicio.ejecutar(desde, hasta)
 
@@ -760,30 +764,59 @@ def _tab_ventas() -> None:
         {
             "Fecha": [f.fecha for f in filtradas],
             "Cliente": [f.cliente_nombre for f in filtradas],
+            "Teléfono": [f.cliente_telefono or "—" for f in filtradas],
+            "Email": [f.cliente_email or "—" for f in filtradas],
+            "Identificación": [f.cliente_identificacion or "—" for f in filtradas],
+            "Hotel": [f.cliente_hotel or "—" for f in filtradas],
+            "Habitación": [f.cliente_habitacion or "—" for f in filtradas],
             "Servicios": [f.servicios for f in filtradas],
+            "Fechas/Horarios": [f.fechas_horarios for f in filtradas],
             "Valor": [_cop(f.valor.monto) for f in filtradas],
+            "Abono": [
+                _cop(f.abono.monto) if f.abono is not None else "—"
+                for f in filtradas
+            ],
+            "Saldo": [
+                _cop(f.saldo_pendiente.monto) if f.saldo_pendiente is not None else "—"
+                for f in filtradas
+            ],
             "Neto": [_cop(f.neto.monto) for f in filtradas],
             "Ganancia": [_cop(f.ganancia.monto) for f in filtradas],
             "Tipo": [f.tipo_cliente for f in filtradas],
             "Canal": [f.canal_origen or "—" for f in filtradas],
             "Vendedor": [f.vendedor or "—" for f in filtradas],
             "Cerrador": [f.cerrador or "—" for f in filtradas],
+            "Referido": [f.referido or "—" for f in filtradas],
+            "Punto de venta": [f.punto_de_venta or "—" for f in filtradas],
             "Adultos": [f.adultos for f in filtradas],
             "Niños": [f.ninos for f in filtradas],
+            "Estado": [f.estado for f in filtradas],
+            "Anulada": ["Sí" if f.anulada else "No" for f in filtradas],
+            "Idioma factura": [f.factura_idioma for f in filtradas],
+            "ID venta": [f.venta_id for f in filtradas],
         },
         use_container_width=True,
         hide_index=True,
     )
     columnas = [
-        "Fecha", "Cliente", "Servicios", "Valor", "Neto", "Ganancia",
-        "Tipo", "Canal", "Vendedor", "Cerrador", "Adultos", "Niños",
+        "Fecha", "Cliente", "Teléfono", "Email", "Identificación", "Hotel",
+        "Habitación", "Servicios", "Fechas/Horarios", "Valor", "Abono", "Saldo",
+        "Neto", "Ganancia", "Tipo", "Canal", "Vendedor", "Cerrador", "Referido",
+        "Punto de venta", "Adultos", "Niños", "Estado", "Anulada",
+        "Idioma factura", "ID venta",
     ]
     export = [
         [
-            f.fecha.isoformat(), f.cliente_nombre, f.servicios,
-            f.valor.monto, f.neto.monto, f.ganancia.monto,
-            f.tipo_cliente, f.canal_origen or "", f.vendedor or "",
-            f.cerrador or "", f.adultos, f.ninos,
+            f.fecha.isoformat(), f.cliente_nombre, f.cliente_telefono or "",
+            f.cliente_email or "", f.cliente_identificacion or "",
+            f.cliente_hotel or "", f.cliente_habitacion or "",
+            f.servicios, f.fechas_horarios, f.valor.monto,
+            f.abono.monto if f.abono is not None else "",
+            f.saldo_pendiente.monto if f.saldo_pendiente is not None else "",
+            f.neto.monto, f.ganancia.monto, f.tipo_cliente,
+            f.canal_origen or "", f.vendedor or "", f.cerrador or "",
+            f.referido or "", f.punto_de_venta or "", f.adultos, f.ninos,
+            f.estado, "Sí" if f.anulada else "No", f.factura_idioma, f.venta_id,
         ]
         for f in filtradas
     ]
