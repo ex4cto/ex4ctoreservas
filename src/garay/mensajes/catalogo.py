@@ -382,6 +382,13 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "📝 Descripción de «{nombre}» actualizada."
     },
     "categoria.cerrado": {Idioma.ES: "Listo. 🗂️"},
+    # ── Hub de egresos ───────────────────────────────────────────────────
+    "hub.titulo": {Idioma.ES: "💸 <b>Egresos</b> — ¿qué quieres hacer?"},
+    "hub.boton_nuevo": {Idioma.ES: "✏️ Nuevo egreso"},
+    "hub.boton_fijos": {Idioma.ES: "📌 Gastos fijos"},
+    "hub.boton_categorias": {Idioma.ES: "🗂️ Categorías"},
+    "hub.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
+    "hub.cerrado": {Idioma.ES: "Listo. 💸"},
     "egreso.error_monto": {
         Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."
     },

@@ -103,6 +103,10 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CB_EDIT_MONTO,
     CB_EDIT_VOLVER,
     CB_HOY,
+    CB_HUB_CANCELAR,
+    CB_HUB_CATEGORIAS,
+    CB_HUB_FIJOS,
+    CB_HUB_NUEVO,
     CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
@@ -121,6 +125,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     GF_MONTO,
     GF_NOMBRE,
     cmd_categorias_egreso,
+    cmd_egresos,
     cmd_gastos_fijos,
     cmd_nuevo_egreso,
     handle_cat_acciones,
@@ -144,6 +149,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_gf_dia,
     handle_gf_monto,
     handle_gf_nombre,
+    handle_hub_cancelar,
 )
 from garay.infraestructura.telegram.handlers_freelancers import (
     EDITAR_CAMPO,
@@ -767,7 +773,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
 
     # /nuevo_egreso conversation handler
     egreso_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("nuevo_egreso", cmd_nuevo_egreso)],
+        entry_points=[
+            CommandHandler("nuevo_egreso", cmd_nuevo_egreso),
+            CallbackQueryHandler(cmd_nuevo_egreso, pattern=f"^{CB_HUB_NUEVO}$"),
+        ],
         states={
             EGRESO_SELECCION: [_CB(handle_egreso_seleccion)],
             EGRESO_MONTO: [MessageHandler(_TEXT, handle_egreso_monto)],
@@ -832,7 +841,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
 
     # /categorias_egreso conversation handler
     categorias_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("categorias_egreso", cmd_categorias_egreso)],
+        entry_points=[
+            CommandHandler("categorias_egreso", cmd_categorias_egreso),
+            CallbackQueryHandler(cmd_categorias_egreso, pattern=f"^{CB_HUB_CATEGORIAS}$"),
+        ],
         states={
             CAT_MENU: [_CB(handle_cat_menu)],
             CAT_ACCIONES: [_CB(handle_cat_acciones)],
@@ -1068,6 +1080,13 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
     app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
+    app.add_handler(CommandHandler("egresos", cmd_egresos), group=1)
+    app.add_handler(
+        CallbackQueryHandler(cmd_gastos_fijos, pattern=f"^{CB_HUB_FIJOS}$"), group=1
+    )
+    app.add_handler(
+        CallbackQueryHandler(handle_hub_cancelar, pattern=f"^{CB_HUB_CANCELAR}$"), group=1
+    )
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)

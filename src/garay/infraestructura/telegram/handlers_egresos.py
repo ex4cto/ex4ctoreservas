@@ -952,3 +952,34 @@ async def handle_cat_edit_desc(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     await _reply(update, actualizada + "\n\n" + texto, teclado)
     return CAT_MENU
+
+
+# ---------------------------------------------------------------------------
+# /egresos — hub menu that routes to the existing flows.
+# The buttons are callback entry points of the respective ConversationHandlers
+# (nuevo egreso, gastos fijos, categorías), so no flow is rewritten here.
+# ---------------------------------------------------------------------------
+
+CB_HUB_NUEVO: str = "hub_egreso_nuevo"
+CB_HUB_FIJOS: str = "hub_egreso_fijos"
+CB_HUB_CATEGORIAS: str = "hub_categorias"
+CB_HUB_CANCELAR: str = "hub_cancelar"
+
+
+@requiere_admin
+async def cmd_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Hub de egresos: registrar, gastos fijos y categorías."""
+    teclado = InlineKeyboardMarkup(
+        [
+            _fila_boton(obtener_mensaje("hub.boton_nuevo"), CB_HUB_NUEVO),
+            _fila_boton(obtener_mensaje("hub.boton_fijos"), CB_HUB_FIJOS),
+            _fila_boton(obtener_mensaje("hub.boton_categorias"), CB_HUB_CATEGORIAS),
+            _fila_boton(obtener_mensaje("hub.boton_cancelar"), CB_HUB_CANCELAR),
+        ]
+    )
+    await _reply(update, obtener_mensaje("hub.titulo"), teclado)
+
+
+async def handle_hub_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Cierra el hub, quitando los botones (no dejar botones colgados)."""
+    await _reply(update, obtener_mensaje("hub.cerrado"))
