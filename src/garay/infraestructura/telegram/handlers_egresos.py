@@ -13,7 +13,13 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.conciliacion.entidades import GastoRecurrente
+from garay.dominio.conciliacion.categorias import (
+    es_categoria_duplicada,
+    es_categoria_protegida,
+    sugerir_categoria_parecida,
+)
+from garay.dominio.conciliacion.entidades import CategoriaEgreso, GastoRecurrente
+from garay.dominio.conciliacion.errores import CategoriaEgresoProtegida
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
@@ -715,3 +721,234 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
         ),
     )
     return ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# /categorias_egreso — manage egreso categories (list, create, toggle, edit)
+# States 130-134 to avoid collision with egreso (100-124) and gastos fijos (110-114).
+# ---------------------------------------------------------------------------
+
+CAT_MENU: int = 130
+CAT_ACCIONES: int = 131
+CAT_NUEVA_NOMBRE: int = 132
+CAT_NUEVA_PARECIDO: int = 133
+CAT_EDIT_DESC: int = 134
+
+PREFIJO_CATSEL: str = "catsel:"
+CB_CAT_NUEVA: str = "cat_nueva"
+CB_CAT_CERRAR: str = "cat_cerrar"
+CB_CAT_ATRAS: str = "cat_atras"
+CB_CAT_TOGGLE: str = "cat_toggle"
+CB_CAT_EDIT_DESC: str = "cat_edit_desc"
+CB_CAT_USAR_EXISTENTE: str = "cat_usar_existente"
+CB_CAT_CREAR_IGUAL: str = "cat_crear_igual"
+CB_CAT_CANCELAR: str = "cat_cancelar"
+
+
+def _fila_boton(texto: str, data: str) -> list[InlineKeyboardButton]:
+    return [InlineKeyboardButton(texto, callback_data=data)]
+
+
+def _menu_categorias(
+    context: ContextTypes.DEFAULT_TYPE, ud: dict[str, object]
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Render the category list and store the index->nombre map for callbacks."""
+    service = context.bot_data.get("categoria_service")
+    categorias: list[CategoriaEgreso] = service.listar_todas() if service else []
+    ud["cat_indices"] = [c.nombre for c in categorias]
+    filas: list[list[InlineKeyboardButton]] = []
+    for i, c in enumerate(categorias):
+        icono = "✅" if c.activo else "🚫"
+        candado = " 🔒" if es_categoria_protegida(c.nombre) else ""
+        filas.append(_fila_boton(f"{icono} {c.nombre}{candado}", f"{PREFIJO_CATSEL}{i}"))
+    filas.append(_fila_boton(obtener_mensaje("categoria.boton_nueva"), CB_CAT_NUEVA))
+    filas.append(_fila_boton(obtener_mensaje("categoria.boton_cerrar"), CB_CAT_CERRAR))
+    return obtener_mensaje("categoria.menu_titulo"), InlineKeyboardMarkup(filas)
+
+
+def _acciones_categoria(ud: dict[str, object]) -> tuple[str, InlineKeyboardMarkup]:
+    nombre = str(ud.get("cat_sel_nombre", ""))
+    activo = bool(ud.get("cat_sel_activo", True))
+    protegida = bool(ud.get("cat_sel_protegida", False))
+    estado = obtener_mensaje(
+        "categoria.estado_activa" if activo else "categoria.estado_inactiva"
+    )
+    filas: list[list[InlineKeyboardButton]] = []
+    if not protegida:
+        toggle = obtener_mensaje(
+            "categoria.boton_desactivar" if activo else "categoria.boton_activar"
+        )
+        filas.append(_fila_boton(toggle, CB_CAT_TOGGLE))
+    filas.append(_fila_boton(obtener_mensaje("categoria.boton_editar_desc"), CB_CAT_EDIT_DESC))
+    filas.append(_fila_boton(obtener_mensaje("categoria.boton_atras"), CB_CAT_ATRAS))
+    texto = formatear_html(
+        obtener_mensaje("categoria.acciones_titulo"), nombre=nombre, estado=estado
+    )
+    if protegida:
+        texto = texto + "\n\n" + obtener_mensaje("categoria.nota_protegida")
+    return texto, InlineKeyboardMarkup(filas)
+
+
+@requiere_admin_conv
+async def cmd_categorias_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Entry point for /categorias_egreso."""
+    ud = _ud(context)
+    texto, teclado = _menu_categorias(context, ud)
+    await _reply(update, texto, teclado)
+    return CAT_MENU
+
+
+async def handle_cat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    data = _input_text(update)
+    if data == CB_CAT_CERRAR:
+        await _reply(update, obtener_mensaje("categoria.cerrado"))
+        return ConversationHandler.END
+    if data == CB_CAT_NUEVA:
+        await _reply(update, obtener_mensaje("categoria.pedir_nombre"))
+        return CAT_NUEVA_NOMBRE
+    if data.startswith(PREFIJO_CATSEL):
+        indices: list[str] = ud.get("cat_indices", [])  # type: ignore[assignment]
+        try:
+            nombre = indices[int(data[len(PREFIJO_CATSEL):])]
+        except (ValueError, IndexError):
+            texto, teclado = _menu_categorias(context, ud)
+            await _reply(update, texto, teclado)
+            return CAT_MENU
+        service = context.bot_data.get("categoria_service")
+        categorias: list[CategoriaEgreso] = service.listar_todas() if service else []
+        categoria = next((c for c in categorias if c.nombre == nombre), None)
+        if categoria is None:
+            texto, teclado = _menu_categorias(context, ud)
+            await _reply(update, texto, teclado)
+            return CAT_MENU
+        ud["cat_sel_nombre"] = categoria.nombre
+        ud["cat_sel_activo"] = categoria.activo
+        ud["cat_sel_protegida"] = es_categoria_protegida(categoria.nombre)
+        texto, teclado = _acciones_categoria(ud)
+        await _reply(update, texto, teclado)
+        return CAT_ACCIONES
+    texto, teclado = _menu_categorias(context, ud)
+    await _reply(update, texto, teclado)
+    return CAT_MENU
+
+
+async def handle_cat_acciones(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    data = _input_text(update)
+    service = context.bot_data.get("categoria_service")
+    nombre = str(ud.get("cat_sel_nombre", ""))
+    if data == CB_CAT_ATRAS:
+        texto, teclado = _menu_categorias(context, ud)
+        await _reply(update, texto, teclado)
+        return CAT_MENU
+    if data == CB_CAT_EDIT_DESC:
+        await _reply(
+            update,
+            formatear_html(obtener_mensaje("categoria.pedir_descripcion"), nombre=nombre),
+        )
+        return CAT_EDIT_DESC
+    if data == CB_CAT_TOGGLE:
+        activo = bool(ud.get("cat_sel_activo", True))
+        aviso = ""
+        try:
+            if service is not None:
+                if activo:
+                    service.desactivar(nombre)
+                else:
+                    service.activar(nombre)
+        except CategoriaEgresoProtegida:
+            aviso = formatear_html(obtener_mensaje("categoria.protegida"), nombre=nombre) + "\n\n"
+        texto, teclado = _menu_categorias(context, ud)
+        await _reply(update, aviso + texto, teclado)
+        return CAT_MENU
+    texto, teclado = _menu_categorias(context, ud)
+    await _reply(update, texto, teclado)
+    return CAT_MENU
+
+
+async def handle_cat_nueva_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    nombre = _input_text(update).strip()
+    service = context.bot_data.get("categoria_service")
+    existentes = [c.nombre for c in (service.listar_todas() if service else [])]
+    if not nombre:
+        await _reply(update, obtener_mensaje("categoria.nombre_vacio"))
+        return CAT_NUEVA_NOMBRE
+    if es_categoria_duplicada(nombre, existentes):
+        await _reply(
+            update, formatear_html(obtener_mensaje("categoria.duplicada"), nombre=nombre)
+        )
+        return CAT_NUEVA_NOMBRE
+    parecida = sugerir_categoria_parecida(nombre, existentes)
+    if parecida is not None:
+        ud["cat_nueva_pendiente"] = nombre
+        ud["cat_parecida"] = parecida
+        teclado = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton(
+                    obtener_mensaje("categoria.boton_usar_existente").format(parecida=parecida),
+                    callback_data=CB_CAT_USAR_EXISTENTE,
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("categoria.boton_crear_igual").format(nombre=nombre),
+                    callback_data=CB_CAT_CREAR_IGUAL,
+                )],
+                [InlineKeyboardButton(
+                    obtener_mensaje("categoria.boton_cancelar_parecido"),
+                    callback_data=CB_CAT_CANCELAR,
+                )],
+            ]
+        )
+        await _reply(
+            update,
+            formatear_html(
+                obtener_mensaje("categoria.parecida_aviso"), nombre=nombre, parecida=parecida
+            ),
+            teclado,
+        )
+        return CAT_NUEVA_PARECIDO
+    if service is not None:
+        service.crear(nombre)
+    texto, teclado = _menu_categorias(context, ud)
+    creada = formatear_html(obtener_mensaje("categoria.creada"), nombre=nombre)
+    await _reply(update, creada + "\n\n" + texto, teclado)
+    return CAT_MENU
+
+
+async def handle_cat_nueva_parecido(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    data = _input_text(update)
+    service = context.bot_data.get("categoria_service")
+    pendiente = str(ud.get("cat_nueva_pendiente", ""))
+    aviso = ""
+    if data == CB_CAT_CREAR_IGUAL and pendiente:
+        if service is not None:
+            service.crear(pendiente)
+        aviso = formatear_html(obtener_mensaje("categoria.creada"), nombre=pendiente) + "\n\n"
+    elif data == CB_CAT_USAR_EXISTENTE:
+        parecida = str(ud.get("cat_parecida", ""))
+        aviso = (
+            formatear_html(obtener_mensaje("categoria.usa_existente"), parecida=parecida)
+            + "\n\n"
+        )
+    ud.pop("cat_nueva_pendiente", None)
+    ud.pop("cat_parecida", None)
+    texto, teclado = _menu_categorias(context, ud)
+    await _reply(update, aviso + texto, teclado)
+    return CAT_MENU
+
+
+async def handle_cat_edit_desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    descripcion = _input_text(update).strip()
+    service = context.bot_data.get("categoria_service")
+    nombre = str(ud.get("cat_sel_nombre", ""))
+    if service is not None:
+        service.editar_descripcion(nombre, descripcion)
+    texto, teclado = _menu_categorias(context, ud)
+    actualizada = formatear_html(
+        obtener_mensaje("categoria.descripcion_actualizada"), nombre=nombre
+    )
+    await _reply(update, actualizada + "\n\n" + texto, teclado)
+    return CAT_MENU
