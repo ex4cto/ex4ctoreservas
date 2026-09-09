@@ -13,3 +13,11 @@ class DescripcionEgresoVacia(ErrorDeDominio):
 
 class ReferenciaIngresoVacia(ErrorDeDominio):
     """La referencia del ingreso no puede estar vacia."""
+
+
+class CategoriaEgresoDuplicada(ErrorDeDominio):
+    """Ya existe una categoria de egreso con ese nombre."""
+
+
+class CategoriaEgresoProtegida(ErrorDeDominio):
+    """La categoria de egreso esta protegida y no puede desactivarse ni renombrarse."""
