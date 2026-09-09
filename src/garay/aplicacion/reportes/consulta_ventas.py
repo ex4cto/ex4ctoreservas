@@ -10,9 +10,11 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     FreelancerRepository,
+    PuntoDeVentaRepository,
     ServicioRepository,
     VentaRepository,
 )
+from garay.dominio.ventas.entidades import Venta
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,41 @@ class FilaVentaConsulta:
     canal_origen: str | None = None
     vendedor: str | None = None
     cerrador: str | None = None
+    # --- Raw-data expansion (PR A) ---
+    venta_id: str = ""
+    abono: Dinero | None = None
+    saldo_pendiente: Dinero | None = None
+    anulada: bool = False
+    factura_idioma: str = "es"
+    cliente_telefono: str | None = None
+    cliente_email: str | None = None
+    cliente_identificacion: str | None = None
+    cliente_hotel: str | None = None
+    cliente_habitacion: str | None = None
+    punto_de_venta: str | None = None
+    referido: str | None = None
+    fechas_horarios: str = ""
+
+
+def _detalle_tours(venta: Venta, nombre_por_servicio: dict[uuid.UUID, str]) -> str:
+    """Per-service schedule: 'Tour — DD/MM/YYYY HH:MM (horario)' joined by '; '.
+
+    Falls back to the venta's primary fecha when a service has no per-service date.
+    """
+    partes: list[str] = []
+    for sid in venta.servicio_ids:
+        nombre = nombre_por_servicio.get(sid, str(sid))
+        fecha_serv = (venta.fechas_por_servicio or {}).get(sid)
+        if fecha_serv is not None:
+            fecha_txt = fecha_serv.strftime("%d/%m/%Y %H:%M")
+        else:
+            fecha_txt = venta.fecha.strftime("%d/%m/%Y")
+        horario = (venta.horarios_por_servicio or {}).get(sid)
+        detalle = f"{nombre} — {fecha_txt}"
+        if horario:
+            detalle += f" ({horario})"
+        partes.append(detalle)
+    return "; ".join(partes)
 
 
 class ConsultaVentasService:
@@ -39,19 +76,22 @@ class ConsultaVentasService:
         clientes: ClienteRepository,
         servicios: ServicioRepository,
         freelancers: FreelancerRepository,
+        puntos_de_venta: PuntoDeVentaRepository,
     ) -> None:
         self._ventas = ventas
         self._clientes = clientes
         self._servicios = servicios
         self._freelancers = freelancers
+        self._puntos = puntos_de_venta
 
     def ejecutar(self, desde: date, hasta: date) -> list[FilaVentaConsulta]:
         ventas = self._ventas.listar_por_periodo(desde, hasta)
         if not ventas:
             return []
 
-        nombre_por_cliente = {c.id: c.nombre for c in self._clientes.listar()}
+        cliente_por_id = {c.id: c for c in self._clientes.listar()}
         nombre_por_servicio = {s.id: s.nombre for s in self._servicios.listar()}
+        punto_por_id = {p.id: p.nombre for p in self._puntos.listar()}
 
         # Build display dict once — includes inactive freelancers
         display_por_id: dict[uuid.UUID, str] = {
@@ -79,10 +119,18 @@ class ConsultaVentasService:
             else:
                 cerrador = p.cerrador_nombre
 
+            cliente = cliente_por_id.get(v.cliente_id)
+            saldo = v.valor_venta - v.abono if v.abono is not None else v.valor_venta
+            punto = (
+                punto_por_id.get(p.punto_de_venta_id)
+                if p.punto_de_venta_id is not None
+                else None
+            )
+
             filas.append(
                 FilaVentaConsulta(
                     fecha=v.fecha,
-                    cliente_nombre=nombre_por_cliente.get(v.cliente_id, "—"),
+                    cliente_nombre=cliente.nombre if cliente is not None else "—",
                     servicios=servicios_txt,
                     valor=v.valor_venta,
                     neto=v.neto,
@@ -94,6 +142,23 @@ class ConsultaVentasService:
                     canal_origen=v.canal_origen,
                     vendedor=vendedor,
                     cerrador=cerrador,
+                    venta_id=str(v.id),
+                    abono=v.abono,
+                    saldo_pendiente=saldo,
+                    anulada=v.anulada,
+                    factura_idioma=v.factura_idioma,
+                    cliente_telefono=cliente.telefono if cliente is not None else None,
+                    cliente_email=cliente.email if cliente is not None else None,
+                    cliente_identificacion=(
+                        cliente.identificacion if cliente is not None else None
+                    ),
+                    cliente_hotel=cliente.hotel if cliente is not None else None,
+                    cliente_habitacion=(
+                        cliente.numero_habitacion if cliente is not None else None
+                    ),
+                    punto_de_venta=punto,
+                    referido=p.referido_nombre,
+                    fechas_horarios=_detalle_tours(v, nombre_por_servicio),
                 )
             )
         return filas
