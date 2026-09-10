@@ -217,6 +217,36 @@ class TestContextoAComandoIds:
 
         assert cmd is not None
         assert cmd.participantes.cerrador_id == _REGISTRANT_ID
+
+    def test_ninguno_toma_ambos_ids_del_ctx(self) -> None:
+        """rol='ninguno': vendedor_id y cerrador_id vienen del ctx (freelancers elegidos)."""
+        ctx = _make_full_context(
+            rol_registrante="ninguno",
+            vendedor_id=_COUNTERPART_ID,
+            vendedor_nombre="Luis",
+            cerrador_id=_COUNTERPART_ID,
+            cerrador_nombre="Luis",
+        )
+        cmd = _contexto_a_comando(_make_cmd_update(), _make_cmd_context(), ctx)
+        assert cmd is not None
+        assert cmd.participantes.vendedor_id == _COUNTERPART_ID
+        assert cmd.participantes.cerrador_id == _COUNTERPART_ID
+
+    def test_ninguno_funciona_aunque_registrante_no_sea_freelancer(self) -> None:
+        """dev/dueño no-freelancer: 'ninguno' construye el comando con ids del ctx."""
+        ctx = _make_full_context(
+            rol_registrante="ninguno",
+            vendedor_id=_COUNTERPART_ID,
+            vendedor_nombre="Luis",
+            cerrador_id=_COUNTERPART_ID,
+            cerrador_nombre="Luis",
+        )
+        context = _make_cmd_context()
+        context.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value = None
+        cmd = _contexto_a_comando(_make_cmd_update(), context, ctx)
+        assert cmd is not None
+        assert cmd.participantes.vendedor_id == _COUNTERPART_ID
+        assert cmd.participantes.cerrador_id == _COUNTERPART_ID
         assert cmd.participantes.vendedor_id == _COUNTERPART_ID
 
 
