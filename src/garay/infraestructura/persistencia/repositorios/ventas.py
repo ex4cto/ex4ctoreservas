@@ -4,7 +4,7 @@ import datetime
 import uuid
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
@@ -46,6 +46,7 @@ def to_orm(v: Venta) -> VentaModel:
         cerrador_id=v.participantes.cerrador_id,
         anulada=v.anulada,
         factura_idioma=v.factura_idioma,
+        registrado_en=v.registrado_en,
     )
 
 
@@ -86,6 +87,7 @@ def to_domain(m: VentaModel) -> Venta:
         ),
         anulada=m.anulada,
         factura_idioma=m.factura_idioma,
+        registrado_en=m.registrado_en,
     )
 
 
@@ -145,6 +147,22 @@ class SQLAVentaRepository(VentaRepository):
                 .where(VentaModel.anulada == False)  # noqa: E712
                 .where(VentaModel.fecha >= desde)
                 .where(VentaModel.fecha <= hasta)
+            )
+            rows = session.execute(stmt).scalars().all()
+            return [to_domain(r) for r in rows]
+
+    def listar_para_gestion(self, desde: date) -> list[Venta]:
+        # Gestiona por recencia de REGISTRO: usa registrado_en; para ventas viejas
+        # (registrado_en NULL) cae a la fecha del tour. Excluye anuladas.
+        fecha_gestion = func.coalesce(
+            func.date(VentaModel.registrado_en), VentaModel.fecha
+        )
+        with self._sf.begin() as session:
+            stmt = (
+                select(VentaModel)
+                .where(VentaModel.anulada == False)  # noqa: E712
+                .where(fecha_gestion >= desde)
+                .order_by(fecha_gestion.desc())
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]

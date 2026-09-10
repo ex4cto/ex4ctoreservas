@@ -147,6 +147,9 @@ class VentaModel(Base):
     anulada: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=sa.text("false"), default=False
     )
+    registrado_en: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
     factura_idioma: Mapped[str] = mapped_column(
         String, nullable=False, server_default="es", default="es"
     )

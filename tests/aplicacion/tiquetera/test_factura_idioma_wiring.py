@@ -77,3 +77,24 @@ class TestRegistrarVentaServiceFacturaIdioma:
 
         venta_guardada = ventas_mock.guardar.call_args[0][0]
         assert venta_guardada.factura_idioma == "en"
+
+
+class TestRegistrarVentaServiceRegistradoEn:
+    def test_servicio_sella_registrado_en_utc(self) -> None:
+        ventas_mock = MagicMock()
+        motor_mock = MagicMock()
+        motor_mock.calcular.return_value = MagicMock(
+            vendedor=Dinero(0), cerrador=Dinero(0), agencia=Dinero(0), referido=Dinero(0)
+        )
+        service = _build_service(
+            ventas=ventas_mock, motor=motor_mock, comisiones_repo=MagicMock()
+        )
+        cmd = _cmd(tipo_cliente=TipoCliente.DIGITAL)
+
+        antes = datetime.datetime.now(datetime.UTC)
+        service.ejecutar(cmd)
+        despues = datetime.datetime.now(datetime.UTC)
+
+        venta_guardada = ventas_mock.guardar.call_args[0][0]
+        assert venta_guardada.registrado_en is not None
+        assert antes <= venta_guardada.registrado_en <= despues

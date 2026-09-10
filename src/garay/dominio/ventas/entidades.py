@@ -45,6 +45,10 @@ class Venta:
     # Invoice language: "es" (Spanish, default) | "en" (English). Persisted so a
     # regenerated invoice (reenvío) keeps the client's original choice.
     factura_idioma: str = "es"
+    # UTC timestamp de cuándo se registró la venta. Sirve para gestionar ventas por
+    # recencia de registro (no por fecha del tour). Nullable: las ventas anteriores
+    # a esta funcionalidad quedan en None.
+    registrado_en: datetime.datetime | None = None
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:
