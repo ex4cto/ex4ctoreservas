@@ -332,13 +332,19 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "egreso.confirmar_resumen": {
         Idioma.ES: (
             "💸 <b>Nuevo egreso:</b>\n"
-            "Monto: {monto}\n"
-            "Descripción: {descripcion}\n"
             "Categoría: {categoria}\n"
+            "A quién: {destinatario}\n"
+            "Concepto: {descripcion}\n"
+            "Monto: {monto}\n"
             "Fecha: {fecha}\n\n"
             "¿Confirmamos?"
         )
     },
+    "egreso.pedir_destinatario": {
+        Idioma.ES: "👤 ¿A quién le pagaste? (proveedor, persona o comercio)"
+    },
+    "egreso.boton_omitir": {Idioma.ES: "Omitir"},
+    "egreso.boton_destinatario_label": {Idioma.ES: "👤 A quién"},
     "egreso.registrado": {Idioma.ES: "✅ Egreso registrado correctamente."},
     # ── Categorías de egreso (gestión) ───────────────────────────────────
     "categoria.menu_titulo": {

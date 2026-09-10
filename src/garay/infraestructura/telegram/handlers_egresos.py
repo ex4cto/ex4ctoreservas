@@ -35,6 +35,7 @@ EGRESO_CATEGORIA: int = 102
 EGRESO_FECHA: int = 103
 EGRESO_CONFIRMACION: int = 104
 EGRESO_EDIT_MENU: int = 105  # "Otro" edit field menu
+EGRESO_DESTINATARIO: int = 106  # "¿A quién?" (opcional) en la rama Otro
 
 # New states for recurring egreso branch
 EGRESO_SELECCION: int = 120
@@ -57,7 +58,9 @@ CB_EDIT_MONTO: str = "egr_edit_monto"
 CB_EDIT_DESCRIPCION: str = "egr_edit_desc"
 CB_EDIT_CATEGORIA: str = "egr_edit_cat"
 CB_EDIT_FECHA: str = "egr_edit_fecha"
+CB_EDIT_DESTINATARIO: str = "egr_edit_dest"
 CB_EDIT_VOLVER: str = "egr_edit_volver"
+CB_OMITIR: str = "egr_omitir"
 # (CB_EDIT_MONTO, CB_EDIT_FECHA, CB_EDIT_VOLVER are shared with recurring branch)
 
 GF_NOMBRE: int = 110
@@ -109,6 +112,12 @@ def _teclado_inline(opciones: list[str]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(botones)
 
 
+def _teclado_omitir() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(obtener_mensaje("egreso.boton_omitir"), callback_data=CB_OMITIR)]]
+    )
+
+
 def _teclado_confirmar_cancelar() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -158,12 +167,15 @@ def _resumen_otro(ud: dict[str, object]) -> str:
     monto: Decimal = ud.get("egreso_monto", Decimal("0"))  # type: ignore[assignment]
     descripcion: str = ud.get("egreso_descripcion", "")  # type: ignore[assignment]
     categoria: str = ud.get("egreso_categoria", "")  # type: ignore[assignment]
+    destinatario_val = ud.get("egreso_destinatario")
+    destinatario = str(destinatario_val) if destinatario_val else "—"
     fecha: datetime.date = ud.get("egreso_fecha", datetime.date.today())  # type: ignore[assignment]
     return formatear_html(
         obtener_mensaje("egreso.confirmar_resumen"),
         monto=_fmt_cop(monto),
         descripcion=descripcion,
         categoria=categoria,
+        destinatario=destinatario,
         fecha=fecha.strftime("%d/%m/%Y"),
     )
 
@@ -236,8 +248,12 @@ async def handle_egreso_seleccion(update: Update, context: ContextTypes.DEFAULT_
         await _reply(update, obtener_mensaje("venta_cancelada"))
         return ConversationHandler.END
     if texto == CB_OTRO_EGRESO:
-        await _reply(update, obtener_mensaje("egreso.pedir_monto"))
-        return EGRESO_MONTO
+        service = context.bot_data.get("egreso_service")
+        categorias_otro: list[str] = service.listar_categorias() if service else []
+        await _reply(
+            update, obtener_mensaje("egreso.pedir_categoria"), _teclado_inline(categorias_otro)
+        )
+        return EGRESO_CATEGORIA
     # Pattern: PREFIJO_REC + uuid
     if texto.startswith(PREFIJO_REC):
         rec_id_str = texto[len(PREFIJO_REC):]
@@ -297,8 +313,11 @@ async def handle_egreso_monto(update: Update, context: ContextTypes.DEFAULT_TYPE
         ud["editando"] = False
         await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
         return EGRESO_CONFIRMACION
-    await _reply(update, obtener_mensaje("egreso.pedir_descripcion"))
-    return EGRESO_DESCRIPCION
+    teclado_hoy = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+    )
+    await _reply(update, obtener_mensaje("egreso.pedir_fecha"), teclado_hoy)
+    return EGRESO_FECHA
 
 
 async def handle_egreso_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -309,11 +328,8 @@ async def handle_egreso_descripcion(update: Update, context: ContextTypes.DEFAUL
         ud["editando"] = False
         await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
         return EGRESO_CONFIRMACION
-    service = context.bot_data.get("egreso_service")
-    categorias: list[str] = service.listar_categorias() if service else []
-    teclado = _teclado_inline(categorias)
-    await _reply(update, obtener_mensaje("egreso.pedir_categoria"), teclado)
-    return EGRESO_CATEGORIA
+    await _reply(update, obtener_mensaje("egreso.pedir_monto"))
+    return EGRESO_MONTO
 
 
 async def handle_egreso_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -330,17 +346,31 @@ async def handle_egreso_categoria(update: Update, context: ContextTypes.DEFAULT_
         ud["editando"] = False
         await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
         return EGRESO_CONFIRMACION
-    teclado_hoy = InlineKeyboardMarkup(
-        [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
-    )
-    await _reply(update, obtener_mensaje("egreso.pedir_fecha"), teclado_hoy)
-    return EGRESO_FECHA
+    await _reply(update, obtener_mensaje("egreso.pedir_destinatario"), _teclado_omitir())
+    return EGRESO_DESTINATARIO
+
+
+async def handle_egreso_destinatario(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """'¿A quién?' — opcional. Botón Omitir o texto libre. Reutiliza Egreso.destinatario."""
+    texto = _input_text(update)
+    ud = _ud(context)
+    if texto == CB_OMITIR:
+        ud["egreso_destinatario"] = None
+    else:
+        limpio = texto.strip()
+        ud["egreso_destinatario"] = limpio or None
+    if ud.get("editando"):
+        ud["editando"] = False
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
+    await _reply(update, obtener_mensaje("egreso.pedir_descripcion"))
+    return EGRESO_DESCRIPCION
 
 
 async def handle_egreso_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = _input_text(update)
     if texto == CB_HOY:
-        fecha: datetime.date | None = datetime.date.today()
+        fecha: datetime.date | None = _hoy_bogota()
     else:
         resultado = parsear_fecha(texto)
         fecha = resultado.date() if resultado is not None else None
@@ -371,6 +401,10 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
                     callback_data=CB_EDIT_CATEGORIA,
                 )],
                 [InlineKeyboardButton(
+                    obtener_mensaje("egreso.boton_destinatario_label"),
+                    callback_data=CB_EDIT_DESTINATARIO,
+                )],
+                [InlineKeyboardButton(
                     obtener_mensaje("egreso.boton_fecha"), callback_data=CB_EDIT_FECHA
                 )],
                 [InlineKeyboardButton(
@@ -392,6 +426,7 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
     descripcion: str = ud.get("egreso_descripcion")  # type: ignore[assignment]
     categoria: str = ud.get("egreso_categoria")  # type: ignore[assignment]
     fecha: datetime.date = ud.get("egreso_fecha")  # type: ignore[assignment]
+    destinatario: str | None = ud.get("egreso_destinatario")  # type: ignore[assignment]
     from garay.config.settings import obtener_settings
 
     moneda = obtener_settings().moneda_predeterminada
@@ -402,6 +437,7 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
             categoria=categoria,
             fecha=fecha,
             moneda=moneda,
+            destinatario=destinatario,
         )
     except Exception:
         logger.exception("Error registrando egreso manual")
@@ -433,6 +469,10 @@ async def handle_egreso_edit_menu(update: Update, context: ContextTypes.DEFAULT_
         teclado = _teclado_inline(categorias)
         await _reply(update, obtener_mensaje("egreso.pedir_categoria"), teclado)
         return EGRESO_CATEGORIA
+    if accion == CB_EDIT_DESTINATARIO:
+        ud["editando"] = True
+        await _reply(update, obtener_mensaje("egreso.pedir_destinatario"), _teclado_omitir())
+        return EGRESO_DESTINATARIO
     if accion == CB_EDIT_FECHA:
         ud["editando"] = True
         teclado_hoy = InlineKeyboardMarkup(

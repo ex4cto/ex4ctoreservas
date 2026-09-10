@@ -30,6 +30,7 @@ class RegistrarEgresoManualService:
         *,
         moneda: str,
         gasto_recurrente_id: uuid.UUID | None = None,
+        destinatario: str | None = None,
     ) -> Egreso:
         if gasto_recurrente_id is None:
             activas = self._categorias.listar_activas()
@@ -44,6 +45,7 @@ class RegistrarEgresoManualService:
             tipo=TipoEgreso.MANUAL,
             fecha_recibido=datetime.datetime.now(datetime.UTC),
             gasto_recurrente_id=gasto_recurrente_id,
+            destinatario=destinatario,
         )
         self._egresos.guardar(egreso)
         return egreso
