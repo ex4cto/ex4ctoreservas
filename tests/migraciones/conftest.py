@@ -75,6 +75,30 @@ def build_servicios_at_0010(engine: Engine) -> None:
         )
 
 
+def build_servicios_at_0020(engine: Engine) -> None:
+    """Create the servicios table as it exists at revision 0020 (no permite_ninos column).
+
+    Includes horarios (added in 0011) and categoria, so migration 0021 can be tested
+    in isolation against the schema state that precedes it.
+    """
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+            CREATE TABLE IF NOT EXISTS servicios (
+                id TEXT PRIMARY KEY,
+                numero INTEGER NOT NULL UNIQUE,
+                nombre TEXT NOT NULL,
+                descripcion TEXT NOT NULL DEFAULT '',
+                activo INTEGER NOT NULL DEFAULT 1,
+                precio_neto_adulto NUMERIC(14,2),
+                precio_neto_nino NUMERIC(14,2),
+                categoria TEXT NOT NULL DEFAULT '',
+                horarios JSON NOT NULL DEFAULT '[]'
+            )
+            """)
+        )
+
+
 def build_ventas_at_0011(engine: Engine) -> None:
     """Create the ventas table as it exists at revision 0011 (no horarios_por_servicio column).
 

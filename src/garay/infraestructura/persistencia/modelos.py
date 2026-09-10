@@ -49,6 +49,9 @@ class ServicioModel(Base):
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     precio_neto_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     precio_neto_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    permite_ninos: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
     categoria: Mapped[str] = mapped_column(String, nullable=False, default="", server_default="")
     horarios: Mapped[list[str]] = mapped_column(
         JSON, nullable=False, default=list, server_default=sa.text("'[]'")

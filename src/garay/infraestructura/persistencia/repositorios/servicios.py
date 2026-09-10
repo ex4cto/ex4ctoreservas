@@ -19,6 +19,7 @@ def to_orm(s: Servicio) -> ServicioModel:
         activo=s.activo,
         precio_neto_adulto=s.precio_neto_adulto,
         precio_neto_nino=s.precio_neto_nino,
+        permite_ninos=s.permite_ninos,
         categoria=s.categoria,
         horarios=s.horarios,
     )
@@ -33,6 +34,7 @@ def to_domain(m: ServicioModel) -> Servicio:
         activo=m.activo,
         precio_neto_adulto=m.precio_neto_adulto,
         precio_neto_nino=m.precio_neto_nino,
+        permite_ninos=m.permite_ninos,
         categoria=m.categoria,
         horarios=list(m.horarios) if m.horarios else [],
     )
