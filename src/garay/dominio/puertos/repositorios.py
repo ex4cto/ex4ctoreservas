@@ -9,6 +9,7 @@ from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.conciliacion.auditoria_egreso import AuditoriaEgreso
 from garay.dominio.conciliacion.entidades import (
     CategoriaEgreso,
     Conciliacion,
@@ -90,6 +91,11 @@ class EgresoRepository(ABC):
     @abstractmethod
     def listar_recientes(self, minutos: int) -> list[Egreso]:
         """Return egresos with fecha_recibido within the last *minutos* minutes."""
+        ...
+
+    @abstractmethod
+    def listar_manuales(self, limite: int) -> list[Egreso]:
+        """Return the most recent manual egresos (tipo MANUAL), newest first."""
         ...
 
     @abstractmethod
@@ -306,6 +312,14 @@ class AuditoriaVentaRepository(ABC):
 
     @abstractmethod
     def listar_por_venta_id(self, venta_id: uuid.UUID) -> list[AuditoriaVenta]: ...
+
+
+class AuditoriaEgresoRepository(ABC):
+    @abstractmethod
+    def guardar(self, registro: AuditoriaEgreso) -> None: ...
+
+    @abstractmethod
+    def listar_por_egreso_id(self, egreso_id: uuid.UUID) -> list[AuditoriaEgreso]: ...
 
 
 class CorreoNoParseadoRepository(ABC):

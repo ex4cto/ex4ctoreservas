@@ -21,3 +21,7 @@ class CategoriaEgresoDuplicada(ErrorDeDominio):
 
 class CategoriaEgresoProtegida(ErrorDeDominio):
     """La categoria de egreso esta protegida y no puede desactivarse ni renombrarse."""
+
+
+class EgresoNoEditable(ErrorDeDominio):
+    """Solo los egresos manuales se pueden editar (los automaticos no)."""

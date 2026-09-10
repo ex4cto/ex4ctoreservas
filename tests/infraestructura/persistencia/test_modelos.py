@@ -42,6 +42,7 @@ _EXPECTED_TABLES = {
     "facturas",
     "correos_no_parseados",
     "auditoria_ventas",
+    "auditoria_egresos",
 }
 
 
