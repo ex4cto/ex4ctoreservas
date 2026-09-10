@@ -109,17 +109,23 @@ _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
     ("gestion_ventas.campo_habitacion", CampoCliente.NUMERO_HABITACION),
 )
 
-_ROLLING_DAYS = 30
+# Window for /gestionar_ventas: how many days back to look, by REGISTRATION date
+# (registrado_en), so recently-registered sales surface even if their tour date is
+# in the future. Kept as a named constant — it is a UI window, not a business
+# amount/percentage.
+_VENTANA_DIAS_GESTION = 2
 _MAX_VENTAS = 15
 
 
 def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
-    """Build the newest-first (up to _MAX_VENTAS) inline keyboard for the venta list.
+    """Build the inline keyboard for the venta list (up to _MAX_VENTAS).
 
-    Each button shows vendedor / cerrador · fecha · monto. Shared by the entry
-    point and the "Atrás" navigation so the list is built in exactly one place.
+    Preserves the order given by the repo (registration recency, newest first);
+    it does not re-sort by tour date. Each button shows vendedor / cerrador · fecha
+    · monto. Shared by the entry point and the "Atrás" navigation so the list is
+    built in exactly one place.
     """
-    ventas_sorted = sorted(ventas, key=lambda v: v.fecha, reverse=True)[:_MAX_VENTAS]
+    ventas_sorted = ventas[:_MAX_VENTAS]
     keyboard = [
         [
             InlineKeyboardButton(
@@ -204,15 +210,14 @@ async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYP
     # Clear any stale gv_* keys from a previous conversation run.
     _limpiar(context)
 
-    hasta = datetime.date.today()
-    desde = hasta - datetime.timedelta(days=_ROLLING_DAYS)
+    desde = datetime.date.today() - datetime.timedelta(days=_VENTANA_DIAS_GESTION)
 
     venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
     if venta_repo is None:
         logger.error("venta_repo not found in bot_data")
         return ConversationHandler.END
 
-    ventas = await asyncio.to_thread(venta_repo.listar_por_periodo, desde, hasta)
+    ventas = await asyncio.to_thread(venta_repo.listar_para_gestion, desde)
 
     if not ventas:
         await update.effective_message.reply_text(
@@ -365,9 +370,8 @@ async def _handle_volver_a_lista(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
-    hasta = datetime.date.today()
-    desde = hasta - datetime.timedelta(days=_ROLLING_DAYS)
-    ventas = await asyncio.to_thread(venta_repo.listar_por_periodo, desde, hasta)
+    desde = datetime.date.today() - datetime.timedelta(days=_VENTANA_DIAS_GESTION)
+    ventas = await asyncio.to_thread(venta_repo.listar_para_gestion, desde)
 
     if not ventas:
         await query.edit_message_text(

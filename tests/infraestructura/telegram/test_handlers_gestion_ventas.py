@@ -91,7 +91,9 @@ def _make_context(
     ctx.user_data = {}
 
     venta_repo = MagicMock()
-    venta_repo.listar_por_periodo.return_value = ventas or []
+    ventas_list = ventas or []
+    venta_repo.listar_para_gestion.return_value = ventas_list
+    venta_repo.listar_por_periodo.return_value = ventas_list
 
     freelancer_repo = MagicMock()
     freelancer_repo.buscar_por_telegram_id.return_value = freelancer or _make_admin_freelancer()
@@ -175,6 +177,7 @@ class TestCmdGestionarVentas:
 
         assert result == ConversationHandler.END
         # repo must NOT have been called because auth denied early
+        ctx.bot_data["venta_repo"].listar_para_gestion.assert_not_called()
         ctx.bot_data["venta_repo"].listar_por_periodo.assert_not_called()
 
 
@@ -234,6 +237,53 @@ class TestCmdGestionarVentasBotonLabel:
 
         (button,) = _extract_buttons(update)
         assert "—" in button.text
+
+
+# ---------------------------------------------------------------------------
+# Item D: list by REGISTRATION recency (últimos 2 días), not tour date
+# ---------------------------------------------------------------------------
+
+
+class TestCmdGestionarVentasPorRegistro:
+    @pytest.mark.asyncio
+    async def test_usa_listar_para_gestion_con_ventana_de_2_dias(self) -> None:
+        """Entry point queries by registration recency (últimos 2 días), not tour date."""
+        update = _make_update()
+        ctx = _make_context(ventas=[_make_venta()])
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
+        ):
+            await cmd_gestionar_ventas(update, ctx)
+
+        venta_repo = ctx.bot_data["venta_repo"]
+        esperado_desde = datetime.date.today() - datetime.timedelta(days=2)
+        venta_repo.listar_para_gestion.assert_called_once_with(esperado_desde)
+        venta_repo.listar_por_periodo.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_teclado_preserva_el_orden_del_repo(self) -> None:
+        """Keyboard must keep the repo's registration-recency order, not re-sort by tour fecha.
+
+        The repo returns ventas already ordered by registration recency. Old code
+        re-sorted by tour fecha (v.fecha) desc, which would reorder them. The button
+        order must match the incoming list order.
+        """
+        primera = _make_venta(fecha=datetime.date(2026, 1, 1), vendedor_nombre="Primera")
+        segunda = _make_venta(fecha=datetime.date(2026, 12, 31), vendedor_nombre="Segunda")
+        update = _make_update()
+        ctx = _make_context(ventas=[primera, segunda])
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
+        ):
+            await cmd_gestionar_ventas(update, ctx)
+
+        buttons = _extract_buttons(update)
+        assert "Primera" in buttons[0].text
+        assert "Segunda" in buttons[1].text
 
 
 # ---------------------------------------------------------------------------
