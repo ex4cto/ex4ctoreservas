@@ -6,6 +6,7 @@ import datetime
 import logging
 import uuid
 import zoneinfo
+from contextlib import suppress
 from decimal import Decimal, InvalidOperation
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -21,7 +22,11 @@ from garay.dominio.conciliacion.categorias import (
 )
 from garay.dominio.conciliacion.entidades import CategoriaEgreso, Egreso, GastoRecurrente
 from garay.dominio.conciliacion.errores import CategoriaEgresoProtegida
-from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
+from garay.infraestructura.telegram.auth import (
+    dev_telegram_ids,
+    requiere_admin,
+    requiere_admin_conv,
+)
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -497,6 +502,9 @@ async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAU
         logger.exception("Error registrando egreso manual")
         await _reply(update, obtener_mensaje("error_generico"))
         return ConversationHandler.END
+    await _avisar_dev_egreso(
+        update, context, categoria=categoria, concepto=descripcion, monto=monto, fecha=fecha
+    )
     await _reply(update, obtener_mensaje("egreso.registrado"))
     return ConversationHandler.END
 
@@ -643,6 +651,9 @@ async def handle_egreso_rec_confirmacion(
         logger.exception("Error registrando egreso recurrente")
         await _reply(update, obtener_mensaje("error_generico"))
         return ConversationHandler.END
+    await _avisar_dev_egreso(
+        update, context, categoria=categoria, concepto=nombre, monto=monto, fecha=fecha
+    )
     await _reply(update, obtener_mensaje("egreso.registrado"))
     return ConversationHandler.END
 
@@ -1111,6 +1122,37 @@ def _usuario_audit(
         if fl is not None:
             nombre = fl.nombre
     return user.id, nombre
+
+
+def _nombre_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    _id, nombre = _usuario_audit(update, context)
+    if nombre:
+        return nombre
+    user = update.effective_user
+    return (user.full_name or str(user.id)) if user is not None else "—"
+
+
+async def _avisar_dev_egreso(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    *,
+    categoria: str,
+    concepto: str,
+    monto: Decimal,
+    fecha: datetime.date,
+) -> None:
+    """Avisa a los dev (dev_telegram_ids) que se registró un egreso. Best-effort."""
+    texto = formatear_html(
+        obtener_mensaje("egreso.aviso_dev"),
+        quien=_nombre_usuario(update, context),
+        categoria=categoria,
+        concepto=concepto,
+        monto=_fmt_cop(monto),
+        fecha=fecha.strftime("%d/%m/%Y"),
+    )
+    for dev_id in dev_telegram_ids():
+        with suppress(Exception):
+            await context.bot.send_message(chat_id=dev_id, text=texto, parse_mode="HTML")
 
 
 def _detalle_egreso(egreso: Egreso) -> str:

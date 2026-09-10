@@ -363,6 +363,16 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "egreso.boton_dup_otro": {Idioma.ES: "✅ Sí, es otro"},
     "egreso.registrado": {Idioma.ES: "✅ Egreso registrado correctamente."},
+    "egreso.aviso_dev": {
+        Idioma.ES: (
+            "🔔 <b>Egreso registrado</b>\n"
+            "Por: {quien}\n"
+            "Categoría: {categoria}\n"
+            "Concepto: {concepto}\n"
+            "Monto: {monto}\n"
+            "Fecha: {fecha}"
+        )
+    },
     # ── Categorías de egreso (gestión) ───────────────────────────────────
     "categoria.menu_titulo": {
         Idioma.ES: "🗂️ <b>Categorías de egreso</b>\n✅ activa · 🚫 inactiva · 🔒 protegida"
