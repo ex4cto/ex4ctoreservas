@@ -15,29 +15,24 @@ _MAIN_PY = (
 
 
 def _catalog_build_calls_listar_activos() -> bool:
-    """Parse main.py AST and verify the FSM catalog comprehension calls
-    servicio_repo.listar_activos(), not servicio_repo.listar().
+    """Parse main.py AST and verify it calls servicio_repo.listar_activos().
 
-    Looks for an Attribute node with attr='listar_activos' on value.id containing
-    'servicio_repo' inside the list comprehension that feeds the FSM.
+    Checks the call anywhere (the result may be bound to a variable that feeds
+    both the FSM catalog and the permite_ninos map), not only inline in a
+    comprehension. The invariant is: listar_activos(), never bare listar().
     """
     source = _MAIN_PY.read_text(encoding="utf-8")
     tree = ast.parse(source)
 
     for node in ast.walk(tree):
-        # Find: `for s in servicio_repo.listar_activos()`  inside a list comp
-        if not isinstance(node, ast.ListComp):
-            continue
-        for generator in node.generators:
-            iter_node = generator.iter
-            if (
-                isinstance(iter_node, ast.Call)
-                and isinstance(iter_node.func, ast.Attribute)
-                and iter_node.func.attr == "listar_activos"
-                and isinstance(iter_node.func.value, ast.Name)
-                and "servicio_repo" in iter_node.func.value.id
-            ):
-                return True
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "listar_activos"
+            and isinstance(node.func.value, ast.Name)
+            and "servicio_repo" in node.func.value.id
+        ):
+            return True
     return False
 
 
