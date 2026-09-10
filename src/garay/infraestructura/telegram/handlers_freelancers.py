@@ -75,10 +75,13 @@ async def cmd_listar_freelancers(update: Update, context: ContextTypes.DEFAULT_T
     if repo is None or update.effective_message is None:
         return
     _dev_ids = dev_telegram_ids()
-    freelancers = [
-        f for f in repo.listar_todos()
-        if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
-    ]
+    freelancers = sorted(
+        (
+            f for f in repo.listar_todos()
+            if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
+        ),
+        key=lambda f: not f.activo,
+    )
     if not freelancers:
         await update.effective_message.reply_text(
             obtener_mensaje("freelancer.lista_vacia"), parse_mode="HTML"
@@ -525,10 +528,13 @@ async def cmd_editar_freelancer(
         return ConversationHandler.END
     repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
     _dev_ids = dev_telegram_ids()
-    todos = [
-        f for f in (repo.listar_todos() if repo else [])
-        if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
-    ]
+    todos = sorted(
+        (
+            f for f in (repo.listar_todos() if repo else [])
+            if f.telegram_user_id is None or f.telegram_user_id not in _dev_ids
+        ),
+        key=lambda f: not f.activo,
+    )
     if not todos:
         await update.effective_message.reply_text(
             obtener_mensaje("freelancer.editar_sin_freelancers")
