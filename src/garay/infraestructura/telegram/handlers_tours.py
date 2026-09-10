@@ -173,7 +173,10 @@ def _teclado_horarios(horarios: list[str], prefix: str) -> InlineKeyboardMarkup:
 
 def _teclado_tours(servicios: list[Servicio], familia: str, prefix: str) -> InlineKeyboardMarkup:
     """Build a tour selection keyboard for a given family."""
-    tours = [s for s in servicios if (s.categoria or "") == familia]
+    tours = sorted(
+        (s for s in servicios if (s.categoria or "") == familia),
+        key=lambda s: not s.activo,
+    )
     botones = [
         [
             InlineKeyboardButton(
