@@ -214,15 +214,22 @@ def _contexto_a_comando(
         logger.error("freelancer_repo not found in bot_data")
         return None
     freelancer = freelancer_repo.buscar_por_telegram_id(user.id)
-    if freelancer is None:
-        logger.error("freelancer not found for telegram_id=%s", user.id)
-        return None
 
     vendedor_nombre: str | None
     cerrador_nombre: str | None
     vendedor_id: uuid.UUID | None
     cerrador_id: uuid.UUID | None
-    if ctx.rol_registrante == "ambos":
+    if ctx.rol_registrante == "ninguno":
+        # Registro a nombre de freelancers: el registrante (dev/dueño/admin) no
+        # juega ningún rol; vendedor y cerrador son los freelancers elegidos.
+        vendedor_nombre = ctx.vendedor_nombre
+        cerrador_nombre = ctx.cerrador_nombre
+        vendedor_id = ctx.vendedor_id
+        cerrador_id = ctx.cerrador_id
+    elif freelancer is None:
+        logger.error("freelancer not found for telegram_id=%s", user.id)
+        return None
+    elif ctx.rol_registrante == "ambos":
         vendedor_nombre = freelancer.nombre
         cerrador_nombre = freelancer.nombre
         vendedor_id = freelancer.id
@@ -498,6 +505,9 @@ async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYP
     if context.user_data is not None:
         context.user_data["reservas_registradas"] = 0
     salida = fsm.iniciar()
+    if salida.contexto is not None:
+        tier = await _resolver_tier(update, context)
+        salida.contexto.registrante_privilegiado = tier != TierComando.FREELANCER
     return await _enviar_salida(update, context, salida)
 
 
@@ -683,6 +693,9 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
     lineas.append(obtener_mensaje("completar_datos_faltantes"))
 
+    ctx.registrante_privilegiado = (
+        await _resolver_tier(update, context) != TierComando.FREELANCER
+    )
     ctx.foto_modo = True  # jump to PARTICIPANTE_ROL after PUNTO_DE_VENTA
 
     # Start the FSM at MODALIDAD_VENTA with the pre-filled ctx

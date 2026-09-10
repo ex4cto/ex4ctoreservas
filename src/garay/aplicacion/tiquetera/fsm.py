@@ -707,7 +707,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                 mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                opciones=self._opciones_rol(ctx),
                 contexto=ctx,
             )
         # Non-edit, non-foto: punto was already chosen at PUNTO_DE_VENTA, go to FAMILIA
@@ -741,7 +741,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                 mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                opciones=self._opciones_rol(ctx),
                 contexto=ctx,
             )
         return self._salida_familia(ctx)
@@ -799,7 +799,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                     mensaje=obtener_mensaje("pregunta_rol_venta"),
-                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    opciones=self._opciones_rol(ctx),
                     contexto=ctx,
                 )
             return self._salida_familia(ctx)
@@ -1400,7 +1400,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                 mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                opciones=self._opciones_rol(ctx),
                 contexto=ctx,
             )
         sin_precio = self._tours_sin_precio(ctx)
@@ -1433,7 +1433,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
             mensaje=obtener_mensaje("pregunta_rol_venta"),
-            opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+            opciones=self._opciones_rol(ctx),
             contexto=ctx,
         )
 
@@ -1456,7 +1456,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                     mensaje=obtener_mensaje("tiquetera.sin_freelancers_activos"),
-                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    opciones=self._opciones_rol(ctx),
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -1472,7 +1472,23 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
                     mensaje=obtener_mensaje("tiquetera.sin_freelancers_activos"),
-                    opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+                    opciones=self._opciones_rol(ctx),
+                    contexto=ctx,
+                )
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
+                mensaje=obtener_mensaje("pregunta_participante_otro_vendedor"),
+                opciones_estructuradas=opciones_fl,
+                contexto=ctx,
+            )
+        if opcion == "A nombre de freelancers" and ctx.registrante_privilegiado:
+            ctx.rol_registrante = "ninguno"
+            opciones_fl = self._opciones_freelancers(solo_activos=True)
+            if not opciones_fl:
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
+                    mensaje=obtener_mensaje("tiquetera.sin_freelancers_activos"),
+                    opciones=self._opciones_rol(ctx),
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -1484,7 +1500,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
             mensaje=obtener_mensaje("error_rol_invalido"),
-            opciones=["Ambos", "Solo vendedor", "Solo cerrador"],
+            opciones=self._opciones_rol(ctx),
             contexto=ctx,
         )
 
@@ -1527,6 +1543,25 @@ class FSMTiquetera:
                 contexto=ctx,
             )
 
+        if ctx.rol_registrante == "ninguno":
+            # Registro a nombre de freelancers: primero vendedor, luego cerrador.
+            if ctx.vendedor_id is None:
+                ctx.vendedor_id = fl_id
+                ctx.vendedor_nombre = nombre
+                return SalidaFSM(
+                    nuevo_estado=EstadoFSM.PARTICIPANTE_OTRO,
+                    mensaje=obtener_mensaje("pregunta_participante_otro_cerrador"),
+                    opciones_estructuradas=self._opciones_freelancers(solo_activos=True),
+                    contexto=ctx,
+                )
+            ctx.cerrador_id = fl_id
+            ctx.cerrador_nombre = nombre
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
         if ctx.rol_registrante == "vendedor":
             ctx.cerrador_id = fl_id
             ctx.cerrador_nombre = nombre
@@ -1864,6 +1899,13 @@ class FSMTiquetera:
         }
         return msgs.get(estado, "")
 
+    def _opciones_rol(self, ctx: ContextoVenta) -> list[str]:
+        """Opciones del paso de rol. Añade 'A nombre de freelancers' para dev/dueño/admin."""
+        opciones = ["Ambos", "Solo vendedor", "Solo cerrador"]
+        if ctx.registrante_privilegiado:
+            opciones.append("A nombre de freelancers")
+        return opciones
+
     def _opciones_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> list[str]:
         opts: dict[EstadoFSM, list[str]] = {
             EstadoFSM.MODALIDAD_VENTA: ["Presencial", "Digital"],
@@ -1871,7 +1913,7 @@ class FSMTiquetera:
             EstadoFSM.CANAL_ORIGEN: [c.value for c in CanalOrigen],
             EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
             EstadoFSM.CLIENTE_TIPO_ID: ["CC", "NIT"],
-            EstadoFSM.PARTICIPANTE_ROL: ["Ambos", "Solo vendedor", "Solo cerrador"],
+            EstadoFSM.PARTICIPANTE_ROL: self._opciones_rol(ctx),
         }
         return opts.get(estado, [])
 

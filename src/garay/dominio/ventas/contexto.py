@@ -34,7 +34,10 @@ class ContextoVenta:
     vendedor_id: uuid.UUID | None = None
     cerrador_id: uuid.UUID | None = None
     numero_fisico: str | None = None
-    rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos"
+    rol_registrante: str | None = None  # "vendedor" | "cerrador" | "ambos" | "ninguno"
+    # True cuando el registrante es dev/dueño/admin: habilita registrar a nombre de
+    # freelancers (elegir vendedor Y cerrador, sin asignarse a ningún rol).
+    registrante_privilegiado: bool = False
     modo_edicion: bool = False
     tour_adicional: bool = False
     foto_modo: bool = False
