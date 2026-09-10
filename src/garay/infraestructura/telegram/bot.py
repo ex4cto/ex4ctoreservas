@@ -123,6 +123,9 @@ from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_REC_FECHA,
     EGRESO_REC_MONTO,
     EGRESO_SELECCION,
+    GE_DETALLE,
+    GE_EDIT_VALOR,
+    GE_SELECCIONAR,
     GF_CATEGORIA,
     GF_CONFIRMACION,
     GF_DIA,
@@ -131,6 +134,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     cmd_categorias_egreso,
     cmd_egresos,
     cmd_gastos_fijos,
+    cmd_gestionar_egresos,
     cmd_nuevo_egreso,
     handle_cat_acciones,
     handle_cat_edit_desc,
@@ -150,6 +154,9 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_rec_fecha,
     handle_egreso_rec_monto,
     handle_egreso_seleccion,
+    handle_ge_detalle,
+    handle_ge_edit_valor,
+    handle_ge_seleccionar,
     handle_gf_categoria,
     handle_gf_confirmacion,
     handle_gf_dia,
@@ -869,6 +876,22 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
+    gestionar_egresos_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("gestionar_egresos", cmd_gestionar_egresos)],
+        states={
+            GE_SELECCIONAR: [_CB(handle_ge_seleccionar)],
+            GE_DETALLE: [_CB(handle_ge_detalle)],
+            GE_EDIT_VALOR: [
+                _CB(handle_ge_edit_valor),
+                MessageHandler(_TEXT, handle_ge_edit_valor),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
+    )
+
     nuevo_freelancer_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("nuevo_freelancer", cmd_nuevo_freelancer)],
         states={
@@ -1079,6 +1102,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(categorias_conv_handler, group=4)
+    app.add_handler(gestionar_egresos_conv_handler, group=10)
     app.add_handler(nuevo_freelancer_conv_handler, group=5)
     app.add_handler(eliminar_freelancer_conv_handler, group=5)
     app.add_handler(editar_freelancer_conv_handler, group=6)
