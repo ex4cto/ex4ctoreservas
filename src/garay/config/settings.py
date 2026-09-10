@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     # Secret for Forward Email webhook (distinct from Telegram webhook_secret).
     forward_email_secret: str = Field(default="")
 
+    # --- Base de datos: pool de conexiones SQLAlchemy ---
+    # pool_pre_ping verifica la conexion antes de usarla y reconecta si esta muerta;
+    # pool_recycle (segundos) recicla conexiones viejas antes de que el servidor las
+    # cierre. Evita "SSL SYSCALL error: EOF detected" con Postgres gestionado (Railway).
+    db_pool_pre_ping: bool = Field(default=True)
+    db_pool_recycle: int = Field(default=1800)
+
     # Moneda base del sistema.
     moneda_predeterminada: str = "COP"
 

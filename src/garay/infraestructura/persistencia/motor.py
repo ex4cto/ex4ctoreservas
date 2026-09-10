@@ -14,11 +14,22 @@ from garay.dominio.comun.errores import ErrorDeConfiguracion
 
 
 def crear_engine(url: str | None = None) -> Engine:
-    """Crea el engine. Usa ``url`` o, si falta, ``database_url`` de la configuracion."""
-    destino = url or obtener_settings().database_url
+    """Crea el engine. Usa ``url`` o, si falta, ``database_url`` de la configuracion.
+
+    Configura el pool con ``pool_pre_ping``/``pool_recycle`` (desde settings) para
+    reconectar/reciclar conexiones muertas y evitar "SSL SYSCALL error: EOF detected"
+    cuando Postgres/Railway cierra conexiones ociosas.
+    """
+    settings = obtener_settings()
+    destino = url or settings.database_url
     if not destino:
         raise ErrorDeConfiguracion("Falta la URL de la base de datos (GARAY_DATABASE_URL).")
-    return create_engine(destino, future=True)
+    return create_engine(
+        destino,
+        future=True,
+        pool_pre_ping=settings.db_pool_pre_ping,
+        pool_recycle=settings.db_pool_recycle,
+    )
 
 
 def crear_fabrica_sesiones(engine: Engine) -> sessionmaker[Session]:
