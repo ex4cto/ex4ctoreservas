@@ -13,6 +13,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.comun.texto import normalizar_texto
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.categorias import (
     CATEGORIA_TRANSPORTE,
@@ -357,7 +358,7 @@ async def handle_egreso_monto(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def handle_egreso_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    texto = _input_text(update).strip()
+    texto = normalizar_texto(_input_text(update))
     ud = _ud(context)
     ud["egreso_descripcion"] = texto
     if ud.get("editando"):
@@ -396,7 +397,7 @@ async def handle_egreso_destinatario(update: Update, context: ContextTypes.DEFAU
     if texto == CB_OMITIR:
         ud["egreso_destinatario"] = None
     else:
-        limpio = texto.strip()
+        limpio = normalizar_texto(texto)
         ud["egreso_destinatario"] = limpio or None
     if ud.get("editando"):
         ud["editando"] = False
@@ -1296,12 +1297,12 @@ async def handle_ge_edit_valor(update: Update, context: ContextTypes.DEFAULT_TYP
             return GE_EDIT_VALOR
         editar.editar_categoria(egreso_id, data, por_telegram_id=por_id, por_nombre=por_nombre)
     elif campo == "destinatario":
-        destinatario = None if data == CB_OMITIR else (data.strip() or None)
+        destinatario = None if data == CB_OMITIR else (normalizar_texto(data) or None)
         editar.editar_destinatario(
             egreso_id, destinatario, por_telegram_id=por_id, por_nombre=por_nombre
         )
     elif campo == "concepto":
-        texto = data.strip()
+        texto = normalizar_texto(data)
         if not texto:
             await _reply(update, obtener_mensaje("gestionar_egresos.pedir_concepto"))
             return GE_EDIT_VALOR
