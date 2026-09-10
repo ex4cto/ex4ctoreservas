@@ -153,6 +153,13 @@ class TestHandleEgresoDescripcion:
         assert ctx.user_data["egreso_descripcion"] == "Pago arriendo"
 
     @pytest.mark.asyncio
+    async def test_descripcion_se_normaliza(self) -> None:
+        update = _make_update(text="  pago   arriendo  ")
+        ctx = _make_context()
+        await handle_egreso_descripcion(update, ctx)
+        assert ctx.user_data["egreso_descripcion"] == "Pago arriendo"
+
+    @pytest.mark.asyncio
     async def test_muestra_botones_de_categorias(self) -> None:
         update = _make_update(text="Gasto")
         ctx = _make_context(categorias=["arriendo", "otro"])
