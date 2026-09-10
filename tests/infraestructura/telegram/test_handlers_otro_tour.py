@@ -190,6 +190,31 @@ class TestConfirmacionOtroTourHook:
         assert result == ESTADO_PTB[EstadoFSM.OTRO_TOUR]
 
     @pytest.mark.asyncio
+    async def test_registro_limpia_botones_del_resumen(self) -> None:
+        """Al registrar, se quitan los botones del resumen (no dejar colgados)."""
+        from garay.infraestructura.telegram.handlers import handle_confirmacion
+
+        ctx_venta = _make_ctx_listo()
+        fsm = _make_fsm()
+        svc = _make_registro_service()
+        update = _make_update_cb("✅ Confirmar")
+        context = _make_context(
+            fsm=fsm, ctx=ctx_venta, bot_data_extra={"registrar_venta_service": svc}
+        )
+        salida_listo = SalidaFSM(
+            nuevo_estado=EstadoFSM.TERMINADO,
+            mensaje="ok",
+            listo=True,
+            contexto=ctx_venta,
+        )
+        with patch.object(fsm, "procesar_foto", return_value=salida_listo):
+            await handle_confirmacion(update, context)
+
+        update.callback_query.edit_message_reply_markup.assert_called_once_with(
+            reply_markup=None
+        )
+
+    @pytest.mark.asyncio
     async def test_successful_registration_increments_counter_to_1(self) -> None:
         from garay.infraestructura.telegram.handlers import handle_confirmacion
 

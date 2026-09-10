@@ -825,6 +825,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                 else:
                     logger.error("registrar_venta_service not found in bot_data")
         if registro_exitoso:
+            # Limpia los botones del resumen (Confirmar/Editar/Cancelar) que quedaban
+            # colgados: la confirmación envía mensajes nuevos, no edita el resumen.
+            if update.callback_query is not None:
+                with suppress(TelegramError):
+                    await update.callback_query.edit_message_reply_markup(reply_markup=None)
             context.user_data["reservas_registradas"] = (  # type: ignore[index]
                 context.user_data.get("reservas_registradas", 0) + 1  # type: ignore[union-attr]
             )
