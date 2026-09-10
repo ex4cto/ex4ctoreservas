@@ -132,6 +132,12 @@ def _teclado_campos() -> InlineKeyboardMarkup:
         for campo, label in _CAMPOS_EDITABLES
     ]
     botones.append([InlineKeyboardButton("✅ Listo", callback_data="edt_listo")])
+    botones.append(
+        [
+            InlineKeyboardButton("⬅️ Atrás", callback_data="edt_atras"),
+            InlineKeyboardButton("❌ Cancelar", callback_data="edt_cancelar_flujo"),
+        ]
+    )
     return InlineKeyboardMarkup(botones)
 
 
@@ -355,6 +361,23 @@ async def handle_edt_ficha(
     if data == "edt_listo":
         _limpiar_edt(context)
         return await cerrar_flujo(update, context, GrupoComando.TOURS)
+
+    if data == "edt_cancelar_flujo":
+        _limpiar_edt(context)
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
+
+    if data == "edt_atras":
+        # Volver a la lista de tours de la familia seleccionada.
+        ud_atras = context.user_data if context.user_data is not None else {}
+        servicios_atras: list[Servicio] = list(ud_atras.get("edt_servicios", []))
+        familia_atras = str(ud_atras.get("edt_familia", ""))
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_selecciona_tour"),
+            reply_markup=_teclado_tours(servicios_atras, familia_atras, "edt_tour:"),
+        )
+        return EDF_TOUR
 
     if not data.startswith("edt_campo:"):
         return EDF_FICHA
