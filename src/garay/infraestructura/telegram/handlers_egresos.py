@@ -14,6 +14,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from garay.aplicacion.comun.fechas import parsear_fecha
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.categorias import (
+    CATEGORIA_TRANSPORTE,
     es_categoria_duplicada,
     es_categoria_protegida,
     sugerir_categoria_parecida,
@@ -36,6 +37,7 @@ EGRESO_FECHA: int = 103
 EGRESO_CONFIRMACION: int = 104
 EGRESO_EDIT_MENU: int = 105  # "Otro" edit field menu
 EGRESO_DESTINATARIO: int = 106  # "¿A quién?" (opcional) en la rama Otro
+EGRESO_DUP_CONFIRM: int = 107  # confirmar posible duplicado de transporte
 
 # New states for recurring egreso branch
 EGRESO_SELECCION: int = 120
@@ -61,6 +63,7 @@ CB_EDIT_FECHA: str = "egr_edit_fecha"
 CB_EDIT_DESTINATARIO: str = "egr_edit_dest"
 CB_EDIT_VOLVER: str = "egr_edit_volver"
 CB_OMITIR: str = "egr_omitir"
+CB_DUP_OTRO: str = "egr_dup_otro"  # "Sí, es otro" en la guardia de duplicado
 # (CB_EDIT_MONTO, CB_EDIT_FECHA, CB_EDIT_VOLVER are shared with recurring branch)
 
 GF_NOMBRE: int = 110
@@ -116,6 +119,34 @@ def _teclado_omitir() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [[InlineKeyboardButton(obtener_mensaje("egreso.boton_omitir"), callback_data=CB_OMITIR)]]
     )
+
+
+def _teclado_dup() -> InlineKeyboardMarkup:
+    otro = InlineKeyboardButton(
+        obtener_mensaje("egreso.boton_dup_otro"), callback_data=CB_DUP_OTRO
+    )
+    cancelar = InlineKeyboardButton(
+        obtener_mensaje("egreso.boton_cancelar"), callback_data=CB_CANCELAR
+    )
+    return InlineKeyboardMarkup([[otro], [cancelar]])
+
+
+def _posible_duplicado_transporte(
+    context: ContextTypes.DEFAULT_TYPE, ud: dict[str, object], fecha: datetime.date
+) -> bool:
+    """True si ya existe un egreso de transporte del mismo monto en ventana ±2 días."""
+    if str(ud.get("egreso_categoria", "")) != CATEGORIA_TRANSPORTE:
+        return False
+    monto = ud.get("egreso_monto")
+    if not isinstance(monto, Decimal):
+        return False
+    egreso_repo = context.bot_data.get("egreso_repo")
+    if egreso_repo is None:
+        return False
+    desde = fecha - datetime.timedelta(days=2)
+    hasta = fecha + datetime.timedelta(days=2)
+    existentes = egreso_repo.listar_por_periodo(desde, hasta)
+    return any(e.monto.monto == monto for e in existentes)
 
 
 def _teclado_confirmar_cancelar() -> InlineKeyboardMarkup:
@@ -346,7 +377,10 @@ async def handle_egreso_categoria(update: Update, context: ContextTypes.DEFAULT_
         ud["editando"] = False
         await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
         return EGRESO_CONFIRMACION
-    await _reply(update, obtener_mensaje("egreso.pedir_destinatario"), _teclado_omitir())
+    prompt = obtener_mensaje("egreso.pedir_destinatario")
+    if categoria == CATEGORIA_TRANSPORTE:
+        prompt = obtener_mensaje("egreso.transporte_aviso") + "\n\n" + prompt
+    await _reply(update, prompt, _teclado_omitir())
     return EGRESO_DESTINATARIO
 
 
@@ -379,10 +413,30 @@ async def handle_egreso_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE
         return EGRESO_FECHA
     ud = _ud(context)
     ud["egreso_fecha"] = fecha
-    if ud.get("editando"):
-        ud["editando"] = False
+    editando = bool(ud.get("editando"))
+    ud["editando"] = False
+    if not editando and _posible_duplicado_transporte(context, ud, fecha):
+        monto_val: Decimal = ud.get("egreso_monto", Decimal("0"))  # type: ignore[assignment]
+        aviso = formatear_html(
+            obtener_mensaje("egreso.dup_aviso"),
+            monto=_fmt_cop(monto_val),
+            fecha=fecha.strftime("%d/%m/%Y"),
+        )
+        await _reply(update, aviso, _teclado_dup())
+        return EGRESO_DUP_CONFIRM
     await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
     return EGRESO_CONFIRMACION
+
+
+async def handle_egreso_dup_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Confirmar un posible duplicado de transporte: 'Sí, es otro' o cancelar."""
+    accion = _input_text(update).strip()
+    ud = _ud(context)
+    if accion == CB_DUP_OTRO:
+        await _reply(update, _resumen_otro(ud), _teclado_confirmar_cancelar())
+        return EGRESO_CONFIRMACION
+    await _reply(update, obtener_mensaje("venta_cancelada"))
+    return ConversationHandler.END
 
 
 async def handle_egreso_confirmacion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
