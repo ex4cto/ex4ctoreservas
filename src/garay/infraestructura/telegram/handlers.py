@@ -445,6 +445,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /start — refresh the caller's command dropdown and show the menu."""
     if update.message is None:
         return ConversationHandler.END
+    await _limpiar_teclado_recordado(context)
     tier = await _resolver_tier(update, context)
     await _sincronizar_menu_desplegable(update, context, tier)
     await update.message.reply_text(render_menu(tier), parse_mode="HTML")
@@ -475,11 +476,40 @@ async def cerrar_flujo(
     if query is not None:
         with suppress(TelegramError):
             await query.edit_message_reply_markup(reply_markup=None)
+    # El flujo pudo terminar por comando/texto (sin tocar botón): limpia el
+    # último menú con teclado que quedó registrado, para no dejar botones colgados.
+    await _limpiar_teclado_recordado(context)
     mensaje = update.effective_message
     if mensaje is not None:
         tier = await _resolver_tier(update, context)
         await mensaje.reply_text(render_submenu(grupo, tier), parse_mode="HTML")
     return ConversationHandler.END
+
+
+def recordar_teclado(context: ContextTypes.DEFAULT_TYPE, mensaje: object) -> None:
+    """Recuerda el último mensaje con teclado inline para limpiarlo al cerrar el flujo.
+
+    Usar tras enviar un mensaje con reply_markup en flujos que envían mensajes
+    nuevos (no editan en sitio), para que cerrar_flujo pueda quitarle los botones
+    aunque el usuario termine con un comando en vez de tocar un botón.
+    """
+    chat_id = getattr(mensaje, "chat_id", None)
+    message_id = getattr(mensaje, "message_id", None)
+    if context.user_data is not None and chat_id is not None and message_id is not None:
+        context.user_data["_ultimo_teclado"] = (chat_id, message_id)
+
+
+async def _limpiar_teclado_recordado(context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.user_data is None:
+        return
+    ref = context.user_data.pop("_ultimo_teclado", None)
+    if not isinstance(ref, tuple) or len(ref) != 2:
+        return
+    chat_id, message_id = ref
+    with suppress(TelegramError):
+        await context.bot.edit_message_reply_markup(
+            chat_id=chat_id, message_id=message_id, reply_markup=None
+        )
 
 
 async def finalizar_flujo(
@@ -515,6 +545,7 @@ async def cmd_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     """Handle /cancelar — cancel from any state."""
     if context.user_data is not None:
         context.user_data["_cancelar_handled"] = True
+    await _limpiar_teclado_recordado(context)
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END

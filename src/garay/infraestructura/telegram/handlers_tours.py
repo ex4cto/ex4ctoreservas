@@ -16,7 +16,11 @@ from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
 from garay.dominio.servicios.horarios import agregar_horario, formato_display, quitar_horario
 from garay.infraestructura.telegram.auth import requiere_admin_conv
-from garay.infraestructura.telegram.handlers import cerrar_flujo, finalizar_flujo
+from garay.infraestructura.telegram.handlers import (
+    cerrar_flujo,
+    finalizar_flujo,
+    recordar_teclado,
+)
 from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -31,6 +35,16 @@ async def _limpiar_botones(query: CallbackQuery) -> None:
     """
     with contextlib.suppress(TelegramError):
         await query.edit_message_reply_markup(reply_markup=None)
+
+
+async def _menu_campos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Envía el menú de campos y recuerda su teclado (para limpiarlo al cerrar)."""
+    if update.effective_message is not None:
+        enviado = await update.effective_message.reply_text(
+            obtener_mensaje("tour_editar_campo"), reply_markup=_teclado_campos()
+        )
+        recordar_teclado(context, enviado)
+    return EDF_FICHA
 
 
 # ---------------------------------------------------------------------------
@@ -319,11 +333,7 @@ async def handle_edt_tour(
         s = repo.buscar_por_id(uuid.UUID(tour_id_str)) if repo else None
     if s is not None:
         await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
-    await update.effective_message.reply_text(
-        obtener_mensaje("tour_editar_campo"),
-        reply_markup=_teclado_campos(),
-    )
-    return EDF_FICHA
+    return await _menu_campos(update, context)
 
 
 async def handle_edt_ficha(
@@ -465,10 +475,7 @@ async def handle_edt_valor(
             # Return to ficha without saving
             if s is not None:
                 await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
-            await update.effective_message.reply_text(
-                obtener_mensaje("tour_editar_campo"), reply_markup=_teclado_campos()
-            )
-            return EDF_FICHA
+            return await _menu_campos(update, context)
         anterior = s.nombre if s else "—"
         if context.user_data is not None:
             context.user_data["edt_valor"] = texto
@@ -648,11 +655,7 @@ async def handle_edt_confirma(
         for key in ("edt_campo", "edt_valor", "edt_activo_nuevo"):
             context.user_data.pop(key, None)
 
-    await update.effective_message.reply_text(
-        obtener_mensaje("tour_editar_campo"),
-        reply_markup=_teclado_campos(),
-    )
-    return EDF_FICHA
+    return await _menu_campos(update, context)
 
 
 # ---------------------------------------------------------------------------
@@ -708,10 +711,7 @@ async def handle_edh_lista(
         # Return to field selection screen
         if s is not None:
             await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
-        await update.effective_message.reply_text(
-            obtener_mensaje("tour_editar_campo"), reply_markup=_teclado_campos()
-        )
-        return EDF_FICHA
+        return await _menu_campos(update, context)
 
     return EDH_LISTA
 
