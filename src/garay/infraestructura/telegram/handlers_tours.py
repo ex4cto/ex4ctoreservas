@@ -134,8 +134,12 @@ def _teclado_campos() -> InlineKeyboardMarkup:
     botones.append([InlineKeyboardButton("✅ Listo", callback_data="edt_listo")])
     botones.append(
         [
-            InlineKeyboardButton("⬅️ Atrás", callback_data="edt_atras"),
-            InlineKeyboardButton("❌ Cancelar", callback_data="edt_cancelar_flujo"),
+            InlineKeyboardButton(
+                obtener_mensaje("tour_boton_atras"), callback_data="edt_atras"
+            ),
+            InlineKeyboardButton(
+                obtener_mensaje("tour_boton_cancelar"), callback_data="edt_cancelar_flujo"
+            ),
         ]
     )
     return InlineKeyboardMarkup(botones)

@@ -21,6 +21,17 @@ def test_teclado_campos_incluye_atras_y_cancelar() -> None:
     assert "edt_cancelar_flujo" in datas
 
 
+def test_atras_y_cancelar_usan_mensajes_centralizados() -> None:
+    from garay.mensajes.catalogo import obtener_mensaje
+
+    markup = _teclado_campos()
+    etiqueta_por_data = {
+        b.callback_data: b.text for row in markup.inline_keyboard for b in row
+    }
+    assert etiqueta_por_data["edt_atras"] == obtener_mensaje("tour_boton_atras")
+    assert etiqueta_por_data["edt_cancelar_flujo"] == obtener_mensaje("tour_boton_cancelar")
+
+
 @pytest.mark.asyncio
 async def test_atras_vuelve_a_la_lista_de_tours() -> None:
     srv = MagicMock()
