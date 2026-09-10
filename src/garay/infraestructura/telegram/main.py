@@ -137,10 +137,12 @@ def main() -> None:
         egresos=egreso_repo, auditoria=auditoria_egreso_repo
     )
 
+    servicios_activos = servicio_repo.listar_activos()
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
-        for s in servicio_repo.listar_activos()
+        for s in servicios_activos
     ]
+    permite_ninos = {s.numero: s.permite_ninos for s in servicios_activos}
     puntos_venta = [p.nombre for p in pdv_repo.listar()]
 
     if not servicios:
@@ -155,6 +157,7 @@ def main() -> None:
         puntos_venta=puntos_venta,
         freelancers=[(f.id, f.nombre, f.activo) for f in freelancer_repo.listar_todos()],
         multi_tour_habilitado=settings.multi_tour_habilitado,
+        permite_ninos=permite_ninos,
     )
 
     extractor_ia = ExtractorClaude(

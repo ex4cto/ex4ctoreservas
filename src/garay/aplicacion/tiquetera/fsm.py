@@ -237,6 +237,7 @@ class FSMTiquetera:
         puntos_venta: list[str],
         freelancers: list[tuple[uuid.UUID, str, bool]] | None = None,
         multi_tour_habilitado: bool = False,
+        permite_ninos: dict[int, bool] | None = None,
     ) -> None:
         # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
         # categoria → sorted list of service numeros (only non-empty families).
@@ -248,12 +249,15 @@ class FSMTiquetera:
         # Feature flag: False = one tour per reservation (default).
         # True = legacy multi-tour accumulator (DORMANT by default).
         self._multi_tour_habilitado: bool = multi_tour_habilitado
+        # numero → whether the tour admits children. Absent numero defaults to True.
+        self._permite_ninos: dict[int, bool] = dict(permite_ninos) if permite_ninos else {}
 
     def refrescar_servicios(
         self,
         servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
+        permite_ninos: dict[int, bool] | None = None,
     ) -> None:
-        """Rebuild _servicios, _familias, and _horarios in place from a fresh repo snapshot.
+        """Rebuild _servicios, _familias, _horarios, and _permite_ninos in place.
 
         Safe on the shared singleton instance: per-conversation state lives in
         PTB user_data (ContextoVenta), not here. Any in-flight sale reads the
@@ -266,6 +270,9 @@ class FSMTiquetera:
         self._familias.update(nuevas_familias)
         self._horarios.clear()
         self._horarios.update(nuevos_horarios)
+        self._permite_ninos.clear()
+        if permite_ninos:
+            self._permite_ninos.update(permite_ninos)
 
     def refrescar_freelancers(
         self,
@@ -1285,16 +1292,38 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.adultos = n
-        if ctx.modo_edicion:
-            # Keep modo_edicion=True so PAX_NINOS handler returns to CONFIRMACION
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.PAX_NINOS,
-                mensaje=obtener_mensaje("pregunta_ninos"),
-                contexto=ctx,
-            )
+        # Skip the children prompt entirely when no selected tour admits children.
+        if not self._algun_tour_permite_ninos(ctx):
+            ctx.ninos = 0
+            return self._despues_de_ninos(ctx)
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PAX_NINOS,
             mensaje=obtener_mensaje("pregunta_ninos"),
+            contexto=ctx,
+        )
+
+    def _algun_tour_permite_ninos(self, ctx: ContextoVenta) -> bool:
+        """True if at least one selected tour admits children (unknown numero → True)."""
+        if not ctx.destinos_numeros:
+            return True
+        return any(self._permite_ninos.get(numero, True) for numero in ctx.destinos_numeros)
+
+    def _despues_de_ninos(self, ctx: ContextoVenta) -> SalidaFSM:
+        """Transition after the children count is decided (asked or skipped)."""
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            computed = self._calcular_neto(ctx)
+            if computed is not None:
+                ctx.neto = computed
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                contexto=ctx,
+            )
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.MONTO_VALOR,
+            mensaje=obtener_mensaje("pregunta_valor"),
             contexto=ctx,
         )
 
@@ -1315,22 +1344,7 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.ninos = n
-        if ctx.modo_edicion:
-            ctx.modo_edicion = False
-            computed = self._calcular_neto(ctx)
-            if computed is not None:
-                ctx.neto = computed
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.CONFIRMACION,
-                mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
-                contexto=ctx,
-            )
-        return SalidaFSM(
-            nuevo_estado=EstadoFSM.MONTO_VALOR,
-            mensaje=obtener_mensaje("pregunta_valor"),
-            contexto=ctx,
-        )
+        return self._despues_de_ninos(ctx)
 
     def _handle_monto_valor(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)

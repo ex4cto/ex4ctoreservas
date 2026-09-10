@@ -210,7 +210,8 @@ def _refrescar_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
         for s in activos
     ]
-    fsm.refrescar_servicios(tuples)
+    permite_ninos = {s.numero: s.permite_ninos for s in activos}
+    fsm.refrescar_servicios(tuples, permite_ninos)
 
 
 def _limpiar_edt(context: ContextTypes.DEFAULT_TYPE) -> None:
