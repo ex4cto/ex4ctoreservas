@@ -98,6 +98,24 @@ def test_categoria_persiste(sf: sessionmaker[Session]) -> None:
     assert resultado.categoria == "TOURS BAHIA"
 
 
+def test_permite_ninos_por_defecto_persiste(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Con Ninos")
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.permite_ninos is True
+
+
+def test_permite_ninos_false_persiste(sf: sessionmaker[Session]) -> None:
+    repo = SQLAServicioRepository(sf)
+    s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Sin Ninos", permite_ninos=False)
+    repo.guardar(s)
+    resultado = repo.buscar_por_id(s.id)
+    assert resultado is not None
+    assert resultado.permite_ninos is False
+
+
 def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     s = Servicio(id=uuid.uuid4(), numero=2, nombre="Sin Categoria")

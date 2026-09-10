@@ -72,3 +72,11 @@ class TestServicio:
 
         s2 = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
         assert s2.categoria == ""
+
+    def test_permite_ninos_por_defecto(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour")
+        assert s.permite_ninos is True
+
+    def test_permite_ninos_se_puede_desactivar(self) -> None:
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour", permite_ninos=False)
+        assert s.permite_ninos is False

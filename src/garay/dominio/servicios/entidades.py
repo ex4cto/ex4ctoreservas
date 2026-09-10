@@ -20,6 +20,7 @@ class Servicio:
     activo: bool = field(default=True)
     precio_neto_adulto: Decimal | None = field(default=None)
     precio_neto_nino: Decimal | None = field(default=None)
+    permite_ninos: bool = field(default=True)
     categoria: str = field(default="")
     horarios: list[str] = field(default_factory=list)
 
