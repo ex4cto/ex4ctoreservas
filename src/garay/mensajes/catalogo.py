@@ -840,6 +840,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         )
     },
     "tour_editar_campo": {Idioma.ES: "¿Qué campo deseas editar?"},
+    "tour_boton_atras": {Idioma.ES: "⬅️ Atrás"},
+    "tour_boton_cancelar": {Idioma.ES: "❌ Cancelar"},
     "tour_confirmar_cambio": {
         Idioma.ES: "¿Confirmas el cambio?\n\nAnterior: {anterior}\nNuevo: {nuevo}"
     },

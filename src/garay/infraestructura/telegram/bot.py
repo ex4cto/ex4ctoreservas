@@ -976,6 +976,8 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             EDF_FICHA: [
                 _CB(handle_edt_ficha, pattern="^edt_campo:"),
                 _CB(handle_edt_ficha, pattern="^edt_listo$"),
+                _CB(handle_edt_ficha, pattern="^edt_atras$"),
+                _CB(handle_edt_ficha, pattern="^edt_cancelar_flujo$"),
             ],
             EDF_CAMPO: [
                 MessageHandler(_TEXT, handle_edt_valor),
