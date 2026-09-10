@@ -345,6 +345,23 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "egreso.boton_omitir": {Idioma.ES: "Omitir"},
     "egreso.boton_destinatario_label": {Idioma.ES: "👤 A quién"},
+    "egreso.transporte_aviso": {
+        Idioma.ES: (
+            "🚕 <b>Transporte</b>\n"
+            "Uber y DiDi se registran solos — no los ingreses aquí.\n"
+            "Registra a mano únicamente:\n"
+            "  • inDriver\n"
+            "  • Taxi\n"
+            "  • Moto / mototaxi"
+        )
+    },
+    "egreso.dup_aviso": {
+        Idioma.ES: (
+            "⚠️ Ya hay un egreso de transporte de {monto} cerca del {fecha}.\n"
+            "¿Es un gasto distinto?"
+        )
+    },
+    "egreso.boton_dup_otro": {Idioma.ES: "✅ Sí, es otro"},
     "egreso.registrado": {Idioma.ES: "✅ Egreso registrado correctamente."},
     # ── Categorías de egreso (gestión) ───────────────────────────────────
     "categoria.menu_titulo": {

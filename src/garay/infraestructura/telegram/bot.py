@@ -114,6 +114,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
     EGRESO_DESTINATARIO,
+    EGRESO_DUP_CONFIRM,
     EGRESO_EDIT_MENU,
     EGRESO_FECHA,
     EGRESO_MONTO,
@@ -140,6 +141,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_confirmacion,
     handle_egreso_descripcion,
     handle_egreso_destinatario,
+    handle_egreso_dup_confirm,
     handle_egreso_edit_menu,
     handle_egreso_fecha,
     handle_egreso_monto,
@@ -798,6 +800,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_egreso_fecha),
             ],
             EGRESO_CONFIRMACION: [_CB(handle_egreso_confirmacion)],
+            EGRESO_DUP_CONFIRM: [_CB(handle_egreso_dup_confirm)],
             EGRESO_EDIT_MENU: [
                 _CB(
                     handle_egreso_edit_menu,
