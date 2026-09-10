@@ -55,6 +55,15 @@ class VentaRepository(ABC):
     @abstractmethod
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]: ...
 
+    @abstractmethod
+    def listar_para_gestion(self, desde: date) -> list[Venta]:
+        """Ventas no anuladas para gestionar, por recencia de registro.
+
+        Ordena por la fecha de gestión (registrado_en, o la fecha del tour para
+        ventas legacy sin registrado_en) descendente, desde `desde` en adelante.
+        """
+        ...
+
 
 class IngresoRepository(ABC):
     @abstractmethod

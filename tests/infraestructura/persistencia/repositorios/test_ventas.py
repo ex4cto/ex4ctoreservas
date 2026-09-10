@@ -54,6 +54,78 @@ def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     assert repo.buscar_por_id(uuid.uuid4()) is None
 
 
+def _venta_gestion(
+    cliente_id: uuid.UUID,
+    fecha: datetime.date,
+    registrado_en: datetime.datetime | None = None,
+    anulada: bool = False,
+) -> Venta:
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=fecha,
+        participantes=Participantes(),
+        anulada=anulada,
+        registrado_en=registrado_en,
+    )
+
+
+def test_registrado_en_round_trip(sf: sessionmaker[Session]) -> None:
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    ahora = datetime.datetime.now(datetime.UTC)
+    v = _venta_gestion(cliente_id, datetime.date(2026, 7, 1), registrado_en=ahora)
+    repo.guardar(v)
+    r = repo.buscar_por_id(v.id)
+    assert r is not None
+    assert r.registrado_en is not None
+
+
+def test_listar_para_gestion_incluye_tour_futuro_registrado_hoy(
+    sf: sessionmaker[Session],
+) -> None:
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    hoy = datetime.date.today()
+    v = _venta_gestion(
+        cliente_id,
+        fecha=hoy + datetime.timedelta(days=10),  # tour futuro
+        registrado_en=datetime.datetime.now(datetime.UTC),  # registrado hoy
+    )
+    repo.guardar(v)
+    res = repo.listar_para_gestion(hoy - datetime.timedelta(days=30))
+    assert any(x.id == v.id for x in res)
+
+
+def test_listar_para_gestion_legacy_usa_fecha_del_tour(sf: sessionmaker[Session]) -> None:
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    hoy = datetime.date.today()
+    reciente = _venta_gestion(cliente_id, fecha=hoy - datetime.timedelta(days=5))
+    vieja = _venta_gestion(cliente_id, fecha=hoy - datetime.timedelta(days=40))
+    repo.guardar(reciente)
+    repo.guardar(vieja)
+    ids = {x.id for x in repo.listar_para_gestion(hoy - datetime.timedelta(days=30))}
+    assert reciente.id in ids
+    assert vieja.id not in ids
+
+
+def test_listar_para_gestion_excluye_anuladas(sf: sessionmaker[Session]) -> None:
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    hoy = datetime.date.today()
+    v = _venta_gestion(
+        cliente_id, fecha=hoy, registrado_en=datetime.datetime.now(datetime.UTC), anulada=True
+    )
+    repo.guardar(v)
+    res = repo.listar_para_gestion(hoy - datetime.timedelta(days=30))
+    assert all(x.id != v.id for x in res)
+
+
 def test_servicio_ids_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)

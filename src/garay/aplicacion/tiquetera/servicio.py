@@ -98,6 +98,7 @@ class RegistrarVentaService:
             fechas_por_servicio=cmd.fechas_por_servicio,
             horarios_por_servicio=cmd.horarios_por_servicio,
             factura_idioma=cmd.factura_idioma,
+            registrado_en=datetime.datetime.now(datetime.UTC),
         )
 
         # 2. Resolve punto de venta FIRST — needed to determine if Crespo (design S1).
