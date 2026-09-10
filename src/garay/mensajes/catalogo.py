@@ -412,6 +412,36 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "hub.boton_categorias": {Idioma.ES: "🗂️ Categorías"},
     "hub.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
     "hub.cerrado": {Idioma.ES: "Listo. 💸"},
+    # ── Gestionar / editar egresos ───────────────────────────────────────
+    "gestionar_egresos.titulo": {Idioma.ES: "✏️ <b>Editar egreso</b> — elige uno:"},
+    "gestionar_egresos.vacio": {Idioma.ES: "No hay egresos manuales para editar."},
+    "gestionar_egresos.cerrado": {Idioma.ES: "Listo. ✏️"},
+    "gestionar_egresos.no_encontrado": {Idioma.ES: "No encontré ese egreso."},
+    "gestionar_egresos.detalle": {
+        Idioma.ES: (
+            "✏️ <b>Egreso</b>\n"
+            "Categoría: {categoria}\n"
+            "A quién: {destinatario}\n"
+            "Concepto: {concepto}\n"
+            "Monto: {monto}\n"
+            "Fecha: {fecha}\n\n"
+            "¿Qué quieres editar?"
+        )
+    },
+    "gestionar_egresos.actualizado": {Idioma.ES: "✅ Actualizado."},
+    "gestionar_egresos.pedir_categoria": {Idioma.ES: "¿Nueva categoría?"},
+    "gestionar_egresos.pedir_destinatario": {
+        Idioma.ES: "👤 ¿A quién? (escribe o toca Omitir)"
+    },
+    "gestionar_egresos.pedir_concepto": {Idioma.ES: "📝 ¿Nuevo concepto?"},
+    "gestionar_egresos.pedir_monto": {Idioma.ES: "💵 ¿Nuevo monto?"},
+    "gestionar_egresos.pedir_fecha": {Idioma.ES: "📅 ¿Nueva fecha? (DD/MM o DD/MM/YYYY)"},
+    "gestionar_egresos.boton_categoria": {Idioma.ES: "🗂️ Categoría"},
+    "gestionar_egresos.boton_destinatario": {Idioma.ES: "👤 A quién"},
+    "gestionar_egresos.boton_concepto": {Idioma.ES: "📝 Concepto"},
+    "gestionar_egresos.boton_monto": {Idioma.ES: "💵 Monto"},
+    "gestionar_egresos.boton_fecha": {Idioma.ES: "📅 Fecha"},
+    "gestionar_egresos.boton_cerrar": {Idioma.ES: "❌ Cerrar"},
     "egreso.error_monto": {
         Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."
     },

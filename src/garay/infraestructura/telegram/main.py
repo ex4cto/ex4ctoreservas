@@ -9,6 +9,7 @@ from pathlib import Path
 from telegram import Update
 
 from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
+from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
 from garay.aplicacion.egresos.gestionar_categorias import GestionarCategoriasService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
@@ -51,6 +52,9 @@ from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.auditoria_egresos import (
+    SQLAAuditoriaEgresoRepository,
+)
 from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
     SQLAAuditoriaVentaRepository,
 )
@@ -111,6 +115,7 @@ def main() -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
     egreso_repo = SQLAEgresoRepository(sf)
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
+    auditoria_egreso_repo = SQLAAuditoriaEgresoRepository(sf)
     gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
     factura_repo = SQLAFacturaRepository(sf)
 
@@ -128,6 +133,9 @@ def main() -> None:
         categoria_repo=categoria_egreso_repo,
     )
     gestionar_categorias_service = GestionarCategoriasService(categoria_egreso_repo)
+    editar_egreso_service = EditarEgresoService(
+        egresos=egreso_repo, auditoria=auditoria_egreso_repo
+    )
 
     servicios = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
@@ -354,6 +362,7 @@ def main() -> None:
             "egreso_repo": egreso_repo,
             "egreso_service": egreso_service,
             "categoria_service": gestionar_categorias_service,
+            "editar_egreso_service": editar_egreso_service,
             "recurrente_service": gasto_recurrente_repo,
             "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,

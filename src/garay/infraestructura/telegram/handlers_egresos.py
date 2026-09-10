@@ -19,7 +19,7 @@ from garay.dominio.conciliacion.categorias import (
     es_categoria_protegida,
     sugerir_categoria_parecida,
 )
-from garay.dominio.conciliacion.entidades import CategoriaEgreso, GastoRecurrente
+from garay.dominio.conciliacion.entidades import CategoriaEgreso, Egreso, GastoRecurrente
 from garay.dominio.conciliacion.errores import CategoriaEgresoProtegida
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
@@ -1077,3 +1077,214 @@ async def cmd_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def handle_hub_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Cierra el hub, quitando los botones (no dejar botones colgados)."""
     await _reply(update, obtener_mensaje("hub.cerrado"))
+
+
+# ---------------------------------------------------------------------------
+# /gestionar_egresos — listar egresos manuales y editarlos (solo admin).
+# States 150-152 to avoid collision with the other egreso flows.
+# ---------------------------------------------------------------------------
+
+GE_SELECCIONAR: int = 150
+GE_DETALLE: int = 151
+GE_EDIT_VALOR: int = 152
+
+PREFIJO_GE_SEL: str = "ge_sel:"
+CB_GE_CAT: str = "ge_cat"
+CB_GE_DEST: str = "ge_dest"
+CB_GE_CONCEPTO: str = "ge_concepto"
+CB_GE_MONTO: str = "ge_monto"
+CB_GE_FECHA: str = "ge_fecha"
+CB_GE_CERRAR: str = "ge_cerrar"
+
+
+def _usuario_audit(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> tuple[int, str | None]:
+    """(telegram_id, nombre) del usuario que realiza la edición, para la auditoría."""
+    user = update.effective_user
+    if user is None:
+        return 0, None
+    freelancer_repo = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = freelancer_repo.buscar_por_telegram_id(user.id)
+        if fl is not None:
+            nombre = fl.nombre
+    return user.id, nombre
+
+
+def _detalle_egreso(egreso: Egreso) -> str:
+    return formatear_html(
+        obtener_mensaje("gestionar_egresos.detalle"),
+        categoria=egreso.categoria,
+        destinatario=egreso.destinatario or "—",
+        concepto=egreso.descripcion,
+        monto=_fmt_cop(egreso.monto.monto),
+        fecha=egreso.fecha.strftime("%d/%m/%Y"),
+    )
+
+
+def _menu_editar_egreso() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_categoria"), CB_GE_CAT),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_destinatario"), CB_GE_DEST),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_concepto"), CB_GE_CONCEPTO),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_monto"), CB_GE_MONTO),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_fecha"), CB_GE_FECHA),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_cerrar"), CB_GE_CERRAR),
+        ]
+    )
+
+
+def _buscar_egreso(context: ContextTypes.DEFAULT_TYPE, egreso_id: uuid.UUID) -> Egreso | None:
+    egreso_repo = context.bot_data.get("egreso_repo")
+    return egreso_repo.buscar_por_id(egreso_id) if egreso_repo is not None else None
+
+
+@requiere_admin_conv
+async def cmd_gestionar_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Entry point for /gestionar_egresos: lista egresos manuales recientes."""
+    service = context.bot_data.get("editar_egreso_service")
+    egresos: list[Egreso] = service.listar_editables(10) if service else []
+    if not egresos:
+        await _reply(update, obtener_mensaje("gestionar_egresos.vacio"))
+        return ConversationHandler.END
+    ud = _ud(context)
+    ud["ge_indices"] = [str(e.id) for e in egresos]
+    filas: list[list[InlineKeyboardButton]] = []
+    for i, e in enumerate(egresos):
+        etiqueta = f"{e.fecha.strftime('%d/%m')} · {_fmt_cop(e.monto.monto)} · {e.categoria}"
+        filas.append(_fila_boton(etiqueta, f"{PREFIJO_GE_SEL}{i}"))
+    filas.append(_fila_boton(obtener_mensaje("gestionar_egresos.boton_cerrar"), CB_GE_CERRAR))
+    await _reply(
+        update, obtener_mensaje("gestionar_egresos.titulo"), InlineKeyboardMarkup(filas)
+    )
+    return GE_SELECCIONAR
+
+
+async def handle_ge_seleccionar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    data = _input_text(update)
+    ud = _ud(context)
+    if data == CB_GE_CERRAR:
+        await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
+        return ConversationHandler.END
+    if data.startswith(PREFIJO_GE_SEL):
+        indices: list[str] = ud.get("ge_indices", [])  # type: ignore[assignment]
+        try:
+            egreso_id = uuid.UUID(indices[int(data[len(PREFIJO_GE_SEL):])])
+        except (ValueError, IndexError):
+            await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
+            return ConversationHandler.END
+        egreso = _buscar_egreso(context, egreso_id)
+        if egreso is None:
+            await _reply(update, obtener_mensaje("gestionar_egresos.no_encontrado"))
+            return ConversationHandler.END
+        ud["ge_egreso_id"] = str(egreso_id)
+        await _reply(update, _detalle_egreso(egreso), _menu_editar_egreso())
+        return GE_DETALLE
+    await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
+    return ConversationHandler.END
+
+
+async def handle_ge_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    data = _input_text(update)
+    ud = _ud(context)
+    if data == CB_GE_CERRAR:
+        await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
+        return ConversationHandler.END
+    if data == CB_GE_CAT:
+        ud["ge_campo"] = "categoria"
+        service = context.bot_data.get("egreso_service")
+        categorias: list[str] = service.listar_categorias() if service else []
+        await _reply(
+            update,
+            obtener_mensaje("gestionar_egresos.pedir_categoria"),
+            _teclado_inline(categorias),
+        )
+        return GE_EDIT_VALOR
+    if data == CB_GE_DEST:
+        ud["ge_campo"] = "destinatario"
+        await _reply(
+            update,
+            obtener_mensaje("gestionar_egresos.pedir_destinatario"),
+            _teclado_omitir(),
+        )
+        return GE_EDIT_VALOR
+    if data == CB_GE_CONCEPTO:
+        ud["ge_campo"] = "concepto"
+        await _reply(update, obtener_mensaje("gestionar_egresos.pedir_concepto"))
+        return GE_EDIT_VALOR
+    if data == CB_GE_MONTO:
+        ud["ge_campo"] = "monto"
+        await _reply(update, obtener_mensaje("gestionar_egresos.pedir_monto"))
+        return GE_EDIT_VALOR
+    if data == CB_GE_FECHA:
+        ud["ge_campo"] = "fecha"
+        teclado_hoy = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(obtener_mensaje("egreso.boton_hoy"), callback_data=CB_HOY)]]
+        )
+        await _reply(update, obtener_mensaje("gestionar_egresos.pedir_fecha"), teclado_hoy)
+        return GE_EDIT_VALOR
+    # desconocido
+    egreso = _buscar_egreso(context, uuid.UUID(str(ud.get("ge_egreso_id"))))
+    if egreso is not None:
+        await _reply(update, _detalle_egreso(egreso), _menu_editar_egreso())
+        return GE_DETALLE
+    return ConversationHandler.END
+
+
+async def handle_ge_edit_valor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    campo = str(ud.get("ge_campo", ""))
+    data = _input_text(update)
+    editar = context.bot_data.get("editar_egreso_service")
+    egreso_id = uuid.UUID(str(ud.get("ge_egreso_id")))
+    por_id, por_nombre = _usuario_audit(update, context)
+    if editar is None:
+        return ConversationHandler.END
+
+    if campo == "categoria":
+        service = context.bot_data.get("egreso_service")
+        categorias: list[str] = service.listar_categorias() if service else []
+        if data not in categorias:
+            await _reply(
+                update, obtener_mensaje("egreso.error_categoria"), _teclado_inline(categorias)
+            )
+            return GE_EDIT_VALOR
+        editar.editar_categoria(egreso_id, data, por_telegram_id=por_id, por_nombre=por_nombre)
+    elif campo == "destinatario":
+        destinatario = None if data == CB_OMITIR else (data.strip() or None)
+        editar.editar_destinatario(
+            egreso_id, destinatario, por_telegram_id=por_id, por_nombre=por_nombre
+        )
+    elif campo == "concepto":
+        texto = data.strip()
+        if not texto:
+            await _reply(update, obtener_mensaje("gestionar_egresos.pedir_concepto"))
+            return GE_EDIT_VALOR
+        editar.editar_concepto(egreso_id, texto, por_telegram_id=por_id, por_nombre=por_nombre)
+    elif campo == "monto":
+        monto = _parsear_monto_cop(data)
+        if monto is None:
+            await _reply(update, obtener_mensaje("egreso.error_monto"))
+            return GE_EDIT_VALOR
+        editar.editar_monto(egreso_id, monto, por_telegram_id=por_id, por_nombre=por_nombre)
+    elif campo == "fecha":
+        if data == CB_HOY:
+            fecha: datetime.date | None = _hoy_bogota()
+        else:
+            resultado = parsear_fecha(data)
+            fecha = resultado.date() if resultado is not None else None
+        if fecha is None:
+            await _reply(update, obtener_mensaje("egreso.error_fecha"))
+            return GE_EDIT_VALOR
+        editar.editar_fecha(egreso_id, fecha, por_telegram_id=por_id, por_nombre=por_nombre)
+
+    egreso = _buscar_egreso(context, egreso_id)
+    if egreso is None:
+        await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
+        return ConversationHandler.END
+    actualizado = obtener_mensaje("gestionar_egresos.actualizado")
+    await _reply(update, actualizado + "\n\n" + _detalle_egreso(egreso), _menu_editar_egreso())
+    return GE_DETALLE

@@ -71,6 +71,7 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("pendientes", "Revisar conciliaciones pendientes", _P, _PR),
     ComandoMenu("egresos", "Egresos: registrar, gastos fijos y categorías", _P, _AD),
     ComandoMenu("categorias_egreso", "Gestionar categorías de egreso", _P, _AD),
+    ComandoMenu("gestionar_egresos", "Editar egresos registrados", _P, _AD),
     # ── Reportes ────────────────────────────────────────────────────────────
     ComandoMenu("dashboard_ventas", "Dashboard de ventas", _R, _AD),
     ComandoMenu("flujo_caja", "Flujo de caja mensual", _R, _PR),
