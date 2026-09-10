@@ -97,6 +97,16 @@ class SQLAEgresoRepository(EgresoRepository):
             )
             return [_to_domain(m) for m in session.scalars(stmt).all()]
 
+    def listar_manuales(self, limite: int) -> list[Egreso]:
+        with self._sf.begin() as session:
+            stmt = (
+                select(EgresoModel)
+                .where(EgresoModel.tipo == str(TipoEgreso.MANUAL))
+                .order_by(EgresoModel.fecha.desc())
+                .limit(limite)
+            )
+            return [_to_domain(m) for m in session.scalars(stmt).all()]
+
     def sumar_por_recurrente_en_mes(
         self,
         gasto_recurrente_id: uuid.UUID,

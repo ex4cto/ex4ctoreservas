@@ -164,6 +164,9 @@ class FakeEgresoRepo(EgresoRepository):
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Egreso]:
         return []
 
+    def listar_manuales(self, limite: int) -> list[Egreso]:
+        return []
+
     def sumar_por_recurrente_en_mes(
         self, gasto_recurrente_id: uuid.UUID, año: int, mes: int
     ) -> Dinero:

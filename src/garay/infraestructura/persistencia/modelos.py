@@ -341,3 +341,18 @@ class AuditoriaVentaModel(Base):
     realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     datos_previos: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
+class AuditoriaEgresoModel(Base):
+    __tablename__ = "auditoria_egresos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    egreso_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("egresos.id"), nullable=False
+    )
+    campo: Mapped[str] = mapped_column(String, nullable=False)
+    valor_anterior: Mapped[str] = mapped_column(Text, nullable=False)
+    valor_nuevo: Mapped[str] = mapped_column(Text, nullable=False)
+    realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
