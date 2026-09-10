@@ -13,11 +13,13 @@ from telegram.ext import ConversationHandler
 from garay.infraestructura.telegram.handlers_egresos import (
     CB_CANCELAR_SEL,
     CB_HOY,
+    CB_OMITIR,
     CB_OTRO_EGRESO,
     CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
+    EGRESO_DESTINATARIO,
     EGRESO_FECHA,
     EGRESO_MONTO,
     EGRESO_REC_CONFIRM,
@@ -25,10 +27,12 @@ from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_REC_MONTO,
     EGRESO_SELECCION,
     PREFIJO_REC,
+    _hoy_bogota,
     cmd_nuevo_egreso,
     handle_egreso_categoria,
     handle_egreso_confirmacion,
     handle_egreso_descripcion,
+    handle_egreso_destinatario,
     handle_egreso_fecha,
     handle_egreso_monto,
     handle_egreso_rec_confirmacion,
@@ -112,7 +116,7 @@ class TestHandleEgresoMonto:
         update = _make_update(text="50")  # 50 → 50000
         ctx = _make_context()
         result = await handle_egreso_monto(update, ctx)
-        assert result == EGRESO_DESCRIPCION
+        assert result == EGRESO_FECHA
         assert ctx.user_data["egreso_monto"] == Decimal("50000")
 
     @pytest.mark.asyncio
@@ -127,7 +131,7 @@ class TestHandleEgresoMonto:
         update = _make_update(text="500000")
         ctx = _make_context()
         result = await handle_egreso_monto(update, ctx)
-        assert result == EGRESO_DESCRIPCION
+        assert result == EGRESO_FECHA
         assert ctx.user_data["egreso_monto"] == Decimal("500000")
 
     @pytest.mark.asyncio
@@ -135,7 +139,7 @@ class TestHandleEgresoMonto:
         update = _make_update(text="500.000")
         ctx = _make_context()
         result = await handle_egreso_monto(update, ctx)
-        assert result == EGRESO_DESCRIPCION
+        assert result == EGRESO_FECHA
         assert ctx.user_data["egreso_monto"] == Decimal("500000")
 
 
@@ -145,7 +149,7 @@ class TestHandleEgresoDescripcion:
         update = _make_update(text="Pago arriendo")
         ctx = _make_context()
         result = await handle_egreso_descripcion(update, ctx)
-        assert result == EGRESO_CATEGORIA
+        assert result == EGRESO_MONTO
         assert ctx.user_data["egreso_descripcion"] == "Pago arriendo"
 
     @pytest.mark.asyncio
@@ -162,7 +166,7 @@ class TestHandleEgresoCategoria:
         update = _make_update(callback_data="arriendo")
         ctx = _make_context()
         result = await handle_egreso_categoria(update, ctx)
-        assert result == EGRESO_FECHA
+        assert result == EGRESO_DESTINATARIO
         assert ctx.user_data["egreso_categoria"] == "arriendo"
 
     @pytest.mark.asyncio
@@ -171,6 +175,42 @@ class TestHandleEgresoCategoria:
         ctx = _make_context(categorias=["arriendo"])
         result = await handle_egreso_categoria(update, ctx)
         assert result == EGRESO_CATEGORIA
+
+
+class TestHandleEgresoDestinatario:
+    @pytest.mark.asyncio
+    async def test_texto_guarda_y_avanza_a_descripcion(self) -> None:
+        update = _make_update(text="Juan Lancha")
+        ctx = _make_context()
+        result = await handle_egreso_destinatario(update, ctx)
+        assert result == EGRESO_DESCRIPCION
+        assert ctx.user_data["egreso_destinatario"] == "Juan Lancha"
+
+    @pytest.mark.asyncio
+    async def test_omitir_guarda_none_y_avanza(self) -> None:
+        update = _make_update(callback_data=CB_OMITIR)
+        ctx = _make_context()
+        result = await handle_egreso_destinatario(update, ctx)
+        assert result == EGRESO_DESCRIPCION
+        assert ctx.user_data["egreso_destinatario"] is None
+
+    @pytest.mark.asyncio
+    async def test_editando_vuelve_a_confirmacion(self) -> None:
+        update = _make_update(text="Proveedor X")
+        ctx = _make_context()
+        ctx.user_data.update(
+            {
+                "egreso_monto": Decimal("50000"),
+                "egreso_descripcion": "Test",
+                "egreso_categoria": "otro",
+                "egreso_fecha": datetime.date(2026, 7, 1),
+                "editando": True,
+            }
+        )
+        result = await handle_egreso_destinatario(update, ctx)
+        assert result == EGRESO_CONFIRMACION
+        assert ctx.user_data["egreso_destinatario"] == "Proveedor X"
+        assert not ctx.user_data.get("editando")
 
 
 class TestHandleEgresoFecha:
@@ -187,7 +227,7 @@ class TestHandleEgresoFecha:
         ctx = _make_context()
         result = await handle_egreso_fecha(update, ctx)
         assert result == EGRESO_CONFIRMACION
-        assert ctx.user_data["egreso_fecha"] == datetime.date.today()
+        assert ctx.user_data["egreso_fecha"] == _hoy_bogota()
 
     @pytest.mark.asyncio
     async def test_fecha_ddmm(self) -> None:
@@ -273,11 +313,11 @@ class TestCmdNuevoEgresoSeleccion:
         assert result == ConversationHandler.END
 
     @pytest.mark.asyncio
-    async def test_seleccion_otro_egreso_va_a_monto(self) -> None:
+    async def test_seleccion_otro_egreso_va_a_categoria(self) -> None:
         ctx = _make_context()
         update = _make_update(callback_data=CB_OTRO_EGRESO)
         result = await handle_egreso_seleccion(update, ctx)
-        assert result == EGRESO_MONTO
+        assert result == EGRESO_CATEGORIA
 
     @pytest.mark.asyncio
     async def test_seleccion_recurrente_guarda_datos_y_pide_monto(self) -> None:

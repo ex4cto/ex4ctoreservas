@@ -99,6 +99,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CAT_NUEVA_PARECIDO,
     CB_EDIT_CATEGORIA,
     CB_EDIT_DESCRIPCION,
+    CB_EDIT_DESTINATARIO,
     CB_EDIT_FECHA,
     CB_EDIT_MONTO,
     CB_EDIT_VOLVER,
@@ -107,10 +108,12 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CB_HUB_CATEGORIAS,
     CB_HUB_FIJOS,
     CB_HUB_NUEVO,
+    CB_OMITIR,
     CB_USAR_SUGERIDO,
     EGRESO_CATEGORIA,
     EGRESO_CONFIRMACION,
     EGRESO_DESCRIPCION,
+    EGRESO_DESTINATARIO,
     EGRESO_EDIT_MENU,
     EGRESO_FECHA,
     EGRESO_MONTO,
@@ -136,6 +139,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_categoria,
     handle_egreso_confirmacion,
     handle_egreso_descripcion,
+    handle_egreso_destinatario,
     handle_egreso_edit_menu,
     handle_egreso_fecha,
     handle_egreso_monto,
@@ -785,6 +789,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_egreso_categoria),
                 MessageHandler(_TEXT, handle_egreso_categoria),
             ],
+            EGRESO_DESTINATARIO: [
+                _CB(handle_egreso_destinatario, pattern=f"^{CB_OMITIR}$"),
+                MessageHandler(_TEXT, handle_egreso_destinatario),
+            ],
             EGRESO_FECHA: [
                 _CB(handle_egreso_fecha, pattern=f"^{CB_HOY}$"),
                 MessageHandler(_TEXT, handle_egreso_fecha),
@@ -793,7 +801,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             EGRESO_EDIT_MENU: [
                 _CB(
                     handle_egreso_edit_menu,
-                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_DESCRIPCION}|{CB_EDIT_CATEGORIA}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
+                    pattern=f"^({CB_EDIT_MONTO}|{CB_EDIT_DESCRIPCION}|{CB_EDIT_CATEGORIA}|{CB_EDIT_DESTINATARIO}|{CB_EDIT_FECHA}|{CB_EDIT_VOLVER})$",
                 ),
             ],
             EGRESO_REC_MONTO: [

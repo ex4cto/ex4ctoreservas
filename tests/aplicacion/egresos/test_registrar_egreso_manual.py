@@ -139,3 +139,28 @@ class TestRegistrarEgresoManual:
                 fecha=datetime.date(2026, 7, 1),
                 moneda="COP",
             )
+
+    def test_registrar_con_destinatario_asigna_campo(self) -> None:
+        """destinatario (a quién se le pagó) se persiste en el Egreso."""
+        service = _make_service()
+        egreso = service.registrar(
+            monto=Decimal("50000"),
+            descripcion="Lancha Islas del Rosario",
+            categoria="otro",
+            fecha=datetime.date(2026, 7, 1),
+            moneda="COP",
+            destinatario="Juan Lancha",
+        )
+        assert egreso.destinatario == "Juan Lancha"
+
+    def test_registrar_sin_destinatario_queda_none(self) -> None:
+        """destinatario es opcional: por defecto None."""
+        service = _make_service()
+        egreso = service.registrar(
+            monto=Decimal("50000"),
+            descripcion="Gasto varios",
+            categoria="otro",
+            fecha=datetime.date(2026, 7, 1),
+            moneda="COP",
+        )
+        assert egreso.destinatario is None
