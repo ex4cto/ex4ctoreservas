@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import html
 import uuid
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
@@ -27,6 +28,16 @@ from garay.dominio.ventas.valor_objetos import Participantes
 
 def _fmt_cop(d: Dinero) -> str:
     return "$" + f"{int(d.monto):,}".replace(",", ".")
+
+
+def _esc(v: object) -> str:
+    """Escape a dynamic value for the group message (parse_mode=HTML).
+
+    Telegram rejects malformed HTML with HTTP 400, so any user-provided text
+    ('&', '<', '>' in client/tour/hotel/name) must be escaped before it goes
+    into the message; the intentional <b> title tags stay literal.
+    """
+    return html.escape(str(v), quote=False)
 
 
 def _render_fecha(cmd: RegistrarVentaComando) -> str:
@@ -151,13 +162,13 @@ class RegistrarVentaService:
             self._tiqueteras.guardar(tiquetera)
 
         # 8. Notify the group
-        vendedor = cmd.participantes.vendedor_nombre or "—"
-        cerrador = cmd.participantes.cerrador_nombre or "—"
+        vendedor = _esc(cmd.participantes.vendedor_nombre or "—")
+        cerrador = _esc(cmd.participantes.cerrador_nombre or "—")
 
         lineas: list[str] = ["🎉 <b>Nueva venta registrada</b>", "Agencia Garay Tours", ""]
 
         if cmd.servicio_nombres:
-            lineas.append(f"📍 Destino: {', '.join(cmd.servicio_nombres)}")
+            lineas.append(f"📍 Destino: {_esc(', '.join(cmd.servicio_nombres))}")
 
         lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
 
@@ -173,18 +184,18 @@ class RegistrarVentaService:
             lineas.append(f"⏰ Horario: {horario_grupo}")
 
         if cmd.cliente_nombre:
-            lineas.append(f"👤 Cliente: {cmd.cliente_nombre}")
+            lineas.append(f"👤 Cliente: {_esc(cmd.cliente_nombre)}")
 
         if cmd.cliente_telefono:
-            lineas.append(f"📞 Teléfono: {cmd.cliente_telefono}")
+            lineas.append(f"📞 Teléfono: {_esc(cmd.cliente_telefono)}")
 
         if cmd.cliente_email:
-            lineas.append(f"📧 Correo: {cmd.cliente_email}")
+            lineas.append(f"📧 Correo: {_esc(cmd.cliente_email)}")
 
         if cmd.hotel:
-            hotel_line = f"🏨 Hotel: {cmd.hotel}"
+            hotel_line = f"🏨 Hotel: {_esc(cmd.hotel)}"
             if cmd.habitacion:
-                hotel_line += f" | Hab: {cmd.habitacion}"
+                hotel_line += f" | Hab: {_esc(cmd.habitacion)}"
             lineas.append(hotel_line)
 
         if cmd.ninos > 0:
@@ -204,11 +215,11 @@ class RegistrarVentaService:
         lineas.append(f"🧾 Saldo pendiente: {_fmt_cop(saldo_pendiente)}")
 
         if cmd.numero_fisico:
-            lineas.append(f"🎫 Ticket: {cmd.numero_fisico}")
+            lineas.append(f"🎫 Ticket: {_esc(cmd.numero_fisico)}")
 
         lineas.append(f"🏷 Tipo: {cmd.tipo_cliente.value}")
         if cmd.canal_origen:
-            lineas.append(f"📲 Canal: {cmd.canal_origen}")
+            lineas.append(f"📲 Canal: {_esc(cmd.canal_origen)}")
         lineas.append("")
         lineas.append("Comisiones:")
         lineas.append(f"  Agencia: {_fmt_cop(desglose.agencia)}")
