@@ -7,12 +7,13 @@ import logging
 import uuid
 import zoneinfo
 from contextlib import suppress
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.comun.texto import normalizar_texto
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.categorias import (
@@ -96,20 +97,16 @@ def _hoy_bogota() -> datetime.date:
 
 
 def _parsear_monto_cop(texto: str) -> Decimal | None:
-    """Parse Colombian peso amount.
+    """Parse a Colombian peso amount for egresos.
 
-    Plain numbers < 1000 are treated as miles de pesos.
+    Delegates the miles convention to the canonical ``parsear_monto``; egresos
+    additionally reject 0 (a $0 egreso makes no sense), so 0/negative/invalid
+    all return None. Callers rely on the None signal to show an error.
     """
-    limpio = texto.strip().replace(".", "").replace(",", "")
-    try:
-        valor = Decimal(limpio)
-        if valor <= Decimal("0"):
-            return None
-        if Decimal("0") < valor < Decimal("1000"):
-            valor = valor * 1000
-        return valor
-    except InvalidOperation:
+    valor = parsear_monto(texto)
+    if valor is None or valor <= Decimal("0"):
         return None
+    return valor
 
 
 def _fmt_cop(valor: Decimal) -> str:

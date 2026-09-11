@@ -38,6 +38,12 @@ SEED_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 
 # ---------------------------------------------------------------------------
 # Neto string parser
+#
+# Intentionally NOT deduped to garay.aplicacion.comun.montos.parsear_monto:
+# this is a *dirty CSV* parser with extra rules the canonical one does not have
+# (e.g. "no pagan/no ingresan" -> 0, "50 MIL" -> 50000, ignores single-digit age
+# noise, accepts int/float). Only the "< 1000 means miles" scaling overlaps.
+# Forcing the shared parser here would break seeding.
 # ---------------------------------------------------------------------------
 
 _MIL_RE = re.compile(r"(\d[\d.,]*)\s*MIL", re.IGNORECASE)
