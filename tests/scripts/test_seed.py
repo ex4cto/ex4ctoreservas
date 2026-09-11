@@ -239,3 +239,30 @@ def test_seed_playa_linda_tiene_precio_neto() -> None:
     )
     # neto_nino intentionally stays null (no children price in the catalog)
     assert row.precio_neto_nino is None
+
+
+def test_seed_permite_ninos_true_por_defecto() -> None:
+    """A regular tour (#1) admits children (permite_ninos=True)."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_servicios(session)
+    with sf.begin() as session:
+        row = session.execute(
+            sa.select(ServicioModel).where(ServicioModel.numero == 1)
+        ).scalar_one()
+    assert row.permite_ninos is True
+
+
+def test_seed_permite_ninos_false_para_tours_sin_ninos() -> None:
+    """Tours flagged 'NO INGRESAN NIÑOS'/'NO SE ACEPTAN' must seed permite_ninos=False."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_servicios(session)
+    with sf.begin() as session:
+        filas = session.execute(
+            sa.select(ServicioModel.numero, ServicioModel.permite_ninos).where(
+                ServicioModel.numero.in_([54, 73, 75, 114, 136])
+            )
+        ).all()
+    assert filas, "no se encontraron los tours sin niños esperados"
+    assert all(permite is False for _numero, permite in filas)

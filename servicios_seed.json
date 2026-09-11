@@ -9,7 +9,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 100
+    "precio_sugerido": 100,
+    "permite_ninos": true
   },
   {
     "numero": 2,
@@ -21,7 +22,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 3,
@@ -33,7 +35,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 120
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 4,
@@ -45,7 +48,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 140
+    "precio_sugerido": 140,
+    "permite_ninos": true
   },
   {
     "numero": 5,
@@ -57,7 +61,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 120
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 6,
@@ -69,7 +74,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 130
+    "precio_sugerido": 130,
+    "permite_ninos": true
   },
   {
     "numero": 7,
@@ -81,7 +87,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 175
+    "precio_sugerido": 175,
+    "permite_ninos": true
   },
   {
     "numero": 8,
@@ -93,7 +100,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 205
+    "precio_sugerido": 205,
+    "permite_ninos": true
   },
   {
     "numero": 9,
@@ -104,7 +112,9 @@
     "precio_sugerido_adulto": "180",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 180,
+    "permite_ninos": true
   },
   {
     "numero": 10,
@@ -116,18 +126,21 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 200
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 11,
     "nombre": "BARÚ PLAYA TRANQUILA BASICO (BUS Y LANCHA)",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
-    "neto_adulto": "100",
+    "neto_adulto": "85",
     "precio_sugerido_adulto": "150",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 12,
@@ -138,7 +151,9 @@
     "precio_sugerido_adulto": "200",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 13,
@@ -149,7 +164,9 @@
     "precio_sugerido_adulto": "190",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 190,
+    "permite_ninos": true
   },
   {
     "numero": 14,
@@ -160,7 +177,9 @@
     "precio_sugerido_adulto": "240",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 240,
+    "permite_ninos": true
   },
   {
     "numero": 15,
@@ -171,7 +190,9 @@
     "precio_sugerido_adulto": "220",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 220,
+    "permite_ninos": true
   },
   {
     "numero": 16,
@@ -182,7 +203,9 @@
     "precio_sugerido_adulto": "250",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 250,
+    "permite_ninos": true
   },
   {
     "numero": 17,
@@ -193,7 +216,9 @@
     "precio_sugerido_adulto": "220",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 220,
+    "permite_ninos": true
   },
   {
     "numero": 18,
@@ -204,7 +229,9 @@
     "precio_sugerido_adulto": "270",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 270,
+    "permite_ninos": true
   },
   {
     "numero": 19,
@@ -215,7 +242,9 @@
     "precio_sugerido_adulto": "200",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 20,
@@ -227,7 +256,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 170
+    "precio_sugerido": 170,
+    "permite_ninos": true
   },
   {
     "numero": 21,
@@ -239,7 +269,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 22,
@@ -251,7 +282,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 23,
@@ -263,7 +295,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 24,
@@ -275,7 +308,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 25,
@@ -287,7 +321,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 375,
+    "permite_ninos": true
   },
   {
     "numero": 26,
@@ -298,7 +333,9 @@
     "precio_sugerido_adulto": "430",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 430,
+    "permite_ninos": true
   },
   {
     "numero": 27,
@@ -309,7 +346,9 @@
     "precio_sugerido_adulto": "380",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 380,
+    "permite_ninos": true
   },
   {
     "numero": 28,
@@ -320,7 +359,9 @@
     "precio_sugerido_adulto": "400",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 400,
+    "permite_ninos": true
   },
   {
     "numero": 29,
@@ -332,7 +373,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 380
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 30,
@@ -343,7 +385,9 @@
     "precio_sugerido_adulto": "410",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 410,
+    "permite_ninos": true
   },
   {
     "numero": 31,
@@ -355,7 +399,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 390
+    "precio_sugerido": 430,
+    "permite_ninos": true
   },
   {
     "numero": 32,
@@ -367,19 +412,21 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 330
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 33,
     "nombre": "5 ISLAS PREMIUM (OPEN BAR)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
-    "neto_adulto": 260,
+    "neto_adulto": "250",
     "precio_sugerido_adulto": "360",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 360
+    "precio_sugerido": 360,
+    "permite_ninos": true
   },
   {
     "numero": 34,
@@ -390,7 +437,9 @@
     "precio_sugerido_adulto": "370",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 370,
+    "permite_ninos": true
   },
   {
     "numero": 35,
@@ -401,19 +450,22 @@
     "precio_sugerido_adulto": "370",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 370,
+    "permite_ninos": true
   },
   {
     "numero": 36,
     "nombre": "5 ISLAS PREMIUM (PLANKTON)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
-    "neto_adulto": 250,
+    "neto_adulto": "260",
     "precio_sugerido_adulto": "360",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 360,
+    "permite_ninos": true
   },
   {
     "numero": 37,
@@ -424,7 +476,9 @@
     "precio_sugerido_adulto": "390",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 38,
@@ -436,7 +490,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 370
+    "precio_sugerido": 370,
+    "permite_ninos": true
   },
   {
     "numero": 39,
@@ -448,7 +503,8 @@
     "neto_nino": "240",
     "precio_sugerido_nino": "320",
     "activo": true,
-    "precio_sugerido": 400
+    "precio_sugerido": 400,
+    "permite_ninos": true
   },
   {
     "numero": 40,
@@ -460,7 +516,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 300
+    "precio_sugerido": 300,
+    "permite_ninos": true
   },
   {
     "numero": 41,
@@ -472,7 +529,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 42,
@@ -484,7 +542,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 43,
@@ -496,7 +555,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 44,
@@ -508,7 +568,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 200
+    "precio_sugerido": 230,
+    "permite_ninos": true
   },
   {
     "numero": 45,
@@ -520,7 +581,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 190
+    "precio_sugerido": 260,
+    "permite_ninos": true
   },
   {
     "numero": 46,
@@ -532,7 +594,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 250
+    "precio_sugerido": 250,
+    "permite_ninos": true
   },
   {
     "numero": 47,
@@ -544,7 +607,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 250
+    "precio_sugerido": 260,
+    "permite_ninos": true
   },
   {
     "numero": 48,
@@ -556,7 +620,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 230
+    "precio_sugerido": 230,
+    "permite_ninos": true
   },
   {
     "numero": 49,
@@ -567,7 +632,9 @@
     "precio_sugerido_adulto": "270",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 270,
+    "permite_ninos": true
   },
   {
     "numero": 50,
@@ -579,7 +646,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 250
+    "precio_sugerido": 250,
+    "permite_ninos": true
   },
   {
     "numero": 51,
@@ -590,7 +658,9 @@
     "precio_sugerido_adulto": "270",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 270,
+    "permite_ninos": true
   },
   {
     "numero": 52,
@@ -602,7 +672,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 320
+    "precio_sugerido": 320,
+    "permite_ninos": true
   },
   {
     "numero": 53,
@@ -614,7 +685,8 @@
     "neto_nino": "80.000 ( 2-3 años)",
     "precio_sugerido_nino": "150",
     "activo": true,
-    "precio_sugerido": 270
+    "precio_sugerido": 290,
+    "permite_ninos": true
   },
   {
     "numero": 54,
@@ -623,10 +695,11 @@
     "operador": "E- TRIPS",
     "neto_adulto": "250",
     "precio_sugerido_adulto": "370",
-    "neto_nino": "NO INGRESAN NIÑOS",
+    "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 370
+    "precio_sugerido": 370,
+    "permite_ninos": false
   },
   {
     "numero": 55,
@@ -638,7 +711,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 320
+    "precio_sugerido": 320,
+    "permite_ninos": true
   },
   {
     "numero": 56,
@@ -650,7 +724,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 320
+    "precio_sugerido": 320,
+    "permite_ninos": true
   },
   {
     "numero": 57,
@@ -662,7 +737,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 300
+    "precio_sugerido": 330,
+    "permite_ninos": true
   },
   {
     "numero": 58,
@@ -674,7 +750,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 270
+    "precio_sugerido": 300,
+    "permite_ninos": true
   },
   {
     "numero": 59,
@@ -686,7 +763,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 230
+    "precio_sugerido": 230,
+    "permite_ninos": true
   },
   {
     "numero": 60,
@@ -698,7 +776,8 @@
     "neto_nino": "195 (3-8AÑOS )",
     "precio_sugerido_nino": "320 (3-8 AÑOS )",
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 61,
@@ -710,7 +789,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 330
+    "precio_sugerido": 330,
+    "permite_ninos": true
   },
   {
     "numero": 62,
@@ -722,7 +802,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 520
+    "precio_sugerido": 520,
+    "permite_ninos": true
   },
   {
     "numero": 63,
@@ -734,7 +815,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 470
+    "precio_sugerido": 470,
+    "permite_ninos": true
   },
   {
     "numero": 64,
@@ -746,7 +828,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 250
+    "precio_sugerido": 280,
+    "permite_ninos": true
   },
   {
     "numero": 65,
@@ -758,7 +841,8 @@
     "neto_nino": "200 (4-6)",
     "precio_sugerido_nino": "260",
     "activo": true,
-    "precio_sugerido": 320
+    "precio_sugerido": 320,
+    "permite_ninos": true
   },
   {
     "numero": 66,
@@ -770,7 +854,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 500
+    "precio_sugerido": 500,
+    "permite_ninos": true
   },
   {
     "numero": 67,
@@ -782,7 +867,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 500
+    "precio_sugerido": 500,
+    "permite_ninos": true
   },
   {
     "numero": 68,
@@ -794,7 +880,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 69,
@@ -805,7 +892,9 @@
     "precio_sugerido_adulto": "360",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 360,
+    "permite_ninos": true
   },
   {
     "numero": 70,
@@ -817,7 +906,8 @@
     "neto_nino": "230",
     "precio_sugerido_nino": "280",
     "activo": true,
-    "precio_sugerido": 390
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 71,
@@ -829,7 +919,8 @@
     "neto_nino": "280",
     "precio_sugerido_nino": "340",
     "activo": true,
-    "precio_sugerido": 480
+    "precio_sugerido": 480,
+    "permite_ninos": true
   },
   {
     "numero": 72,
@@ -841,7 +932,8 @@
     "neto_nino": "150 (3-9 AÑOS)",
     "precio_sugerido_nino": "250   (3-9 AÑOS)",
     "activo": true,
-    "precio_sugerido": 280
+    "precio_sugerido": 280,
+    "permite_ninos": true
   },
   {
     "numero": 73,
@@ -850,10 +942,11 @@
     "operador": "SOL Y PAPAYA",
     "neto_adulto": "250",
     "precio_sugerido_adulto": "350",
-    "neto_nino": "NO INGRESAN NIÑOS",
+    "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": false
   },
   {
     "numero": 74,
@@ -864,7 +957,9 @@
     "precio_sugerido_adulto": "350",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 350,
+    "permite_ninos": true
   },
   {
     "numero": 75,
@@ -873,9 +968,10 @@
     "operador": "COCOTERA",
     "neto_adulto": null,
     "precio_sugerido_adulto": null,
-    "neto_nino": "NO INGRESAN NIÑOS",
+    "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "permite_ninos": false
   },
   {
     "numero": 76,
@@ -887,7 +983,8 @@
     "neto_nino": "250 (4-7 AÑOS)",
     "precio_sugerido_nino": "350",
     "activo": true,
-    "precio_sugerido": 470
+    "precio_sugerido": 470,
+    "permite_ninos": true
   },
   {
     "numero": 77,
@@ -899,7 +996,8 @@
     "neto_nino": "250",
     "precio_sugerido_nino": "350",
     "activo": true,
-    "precio_sugerido": 385
+    "precio_sugerido": 385,
+    "permite_ninos": true
   },
   {
     "numero": 78,
@@ -911,7 +1009,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 480
+    "precio_sugerido": 480,
+    "permite_ninos": true
   },
   {
     "numero": 79,
@@ -923,31 +1022,34 @@
     "neto_nino": "250 (4-8 años)",
     "precio_sugerido_nino": "280",
     "activo": true,
-    "precio_sugerido": 430
+    "precio_sugerido": 430,
+    "permite_ninos": true
   },
   {
     "numero": 80,
     "nombre": "BORA BORA AREA VIP",
     "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "BORA BORA BEACH CLUB",
-    "neto_adulto": "380",
-    "precio_sugerido_adulto": "490",
+    "neto_adulto": "400",
+    "precio_sugerido_adulto": "550",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 490
+    "precio_sugerido": 550,
+    "permite_ninos": true
   },
   {
     "numero": 81,
     "nombre": "BORA BORA AREA CLUB",
     "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "BORA BORA BEACH CLUB",
-    "neto_adulto": "290",
-    "precio_sugerido_adulto": "390",
+    "neto_adulto": "310",
+    "precio_sugerido_adulto": "450",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 390
+    "precio_sugerido": 450,
+    "permite_ninos": true
   },
   {
     "numero": 82,
@@ -959,19 +1061,21 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 390
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 83,
     "nombre": "IBBIZA",
     "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "IBBIZA",
-    "neto_adulto": "280",
-    "precio_sugerido_adulto": "380",
+    "neto_adulto": "300",
+    "precio_sugerido_adulto": "440",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 380
+    "precio_sugerido": 440,
+    "permite_ninos": true
   },
   {
     "numero": 84,
@@ -983,7 +1087,8 @@
     "neto_nino": "205 (4-10 AÑOS)",
     "precio_sugerido_nino": "250",
     "activo": true,
-    "precio_sugerido": 390
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 85,
@@ -995,7 +1100,8 @@
     "neto_nino": "220 (4-11 AÑOS)",
     "precio_sugerido_nino": "280",
     "activo": true,
-    "precio_sugerido": 430
+    "precio_sugerido": 430,
+    "permite_ninos": true
   },
   {
     "numero": 86,
@@ -1007,7 +1113,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 450
+    "precio_sugerido": 450,
+    "permite_ninos": true
   },
   {
     "numero": 87,
@@ -1019,7 +1126,8 @@
     "neto_nino": "250 (4 -8 AÑOS) 168 (5-10 AÑOS)",
     "precio_sugerido_nino": "280",
     "activo": true,
-    "precio_sugerido": 420
+    "precio_sugerido": 420,
+    "permite_ninos": true
   },
   {
     "numero": 88,
@@ -1031,7 +1139,8 @@
     "neto_nino": "170 (4-8 AÑOS)",
     "precio_sugerido_nino": "200",
     "activo": true,
-    "precio_sugerido": 320
+    "precio_sugerido": 320,
+    "permite_ninos": true
   },
   {
     "numero": 89,
@@ -1043,7 +1152,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 399
+    "precio_sugerido": 399,
+    "permite_ninos": true
   },
   {
     "numero": 90,
@@ -1055,7 +1165,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 550
+    "precio_sugerido": 550,
+    "permite_ninos": true
   },
   {
     "numero": 91,
@@ -1067,7 +1178,8 @@
     "neto_nino": "250 (5-9años)",
     "precio_sugerido_nino": "300",
     "activo": true,
-    "precio_sugerido": 460
+    "precio_sugerido": 460,
+    "permite_ninos": true
   },
   {
     "numero": 92,
@@ -1079,7 +1191,8 @@
     "neto_nino": "175 (3-8 años)",
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 305
+    "precio_sugerido": 305,
+    "permite_ninos": true
   },
   {
     "numero": 93,
@@ -1091,7 +1204,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 420
+    "precio_sugerido": 420,
+    "permite_ninos": true
   },
   {
     "numero": 94,
@@ -1103,7 +1217,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 460
+    "precio_sugerido": 460,
+    "permite_ninos": true
   },
   {
     "numero": 95,
@@ -1115,7 +1230,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 400
+    "precio_sugerido": 400,
+    "permite_ninos": true
   },
   {
     "numero": 96,
@@ -1127,7 +1243,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 430
+    "precio_sugerido": 430,
+    "permite_ninos": true
   },
   {
     "numero": 97,
@@ -1139,7 +1256,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 440
+    "precio_sugerido": 440,
+    "permite_ninos": true
   },
   {
     "numero": 98,
@@ -1151,7 +1269,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 470
+    "precio_sugerido": 470,
+    "permite_ninos": true
   },
   {
     "numero": 99,
@@ -1162,7 +1281,9 @@
     "precio_sugerido_adulto": "80",
     "neto_nino": "30 (4-11 AÑOS)",
     "precio_sugerido_nino": "40 (4-11 AÑOS)",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 80,
+    "permite_ninos": true
   },
   {
     "numero": 100,
@@ -1173,7 +1294,9 @@
     "precio_sugerido_adulto": "150",
     "neto_nino": "55 (4-11 AÑOS)",
     "precio_sugerido_nino": "75 (4-11 AÑOS)",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 101,
@@ -1184,7 +1307,9 @@
     "precio_sugerido_adulto": "220",
     "neto_nino": "83 (4-11 AÑOS)",
     "precio_sugerido_nino": "110 (4-11 AÑOS)",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 220,
+    "permite_ninos": true
   },
   {
     "numero": 102,
@@ -1195,7 +1320,9 @@
     "precio_sugerido_adulto": "300",
     "neto_nino": "123( 4-11 AÑOS)",
     "precio_sugerido_nino": "150 (4-11 AÑOS)",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 300,
+    "permite_ninos": true
   },
   {
     "numero": 103,
@@ -1206,7 +1333,8 @@
     "precio_sugerido_adulto": null,
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "permite_ninos": true
   },
   {
     "numero": 104,
@@ -1217,7 +1345,9 @@
     "precio_sugerido_adulto": "165",
     "neto_nino": "65( 4-11 AÑOS)",
     "precio_sugerido_nino": "83 (4-11 AÑOS)",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 165,
+    "permite_ninos": true
   },
   {
     "numero": 105,
@@ -1228,7 +1358,8 @@
     "precio_sugerido_adulto": null,
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "permite_ninos": true
   },
   {
     "numero": 106,
@@ -1239,7 +1370,9 @@
     "precio_sugerido_adulto": "200",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 107,
@@ -1250,7 +1383,9 @@
     "precio_sugerido_adulto": "140",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 140,
+    "permite_ninos": true
   },
   {
     "numero": 108,
@@ -1262,7 +1397,8 @@
     "neto_nino": "15 (10-15 AÑOS)",
     "precio_sugerido_nino": "15",
     "activo": true,
-    "precio_sugerido": 70
+    "precio_sugerido": 70,
+    "permite_ninos": true
   },
   {
     "numero": 109,
@@ -1273,7 +1409,9 @@
     "precio_sugerido_adulto": "100",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 100,
+    "permite_ninos": true
   },
   {
     "numero": 110,
@@ -1285,7 +1423,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 80
+    "precio_sugerido": 80,
+    "permite_ninos": true
   },
   {
     "numero": 111,
@@ -1297,19 +1436,21 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 100
+    "precio_sugerido": 100,
+    "permite_ninos": true
   },
   {
     "numero": 112,
     "nombre": "TOUR BAHIA CATAMARAN",
     "categoria": "TOURS BAHIA",
     "operador": "ISABELLA T.CATAMARAN",
-    "neto_adulto": 70,
+    "neto_adulto": "80",
     "precio_sugerido_adulto": "150",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 113,
@@ -1320,7 +1461,9 @@
     "precio_sugerido_adulto": "180",
     "neto_nino": "105 (5-12 AÑOS)",
     "precio_sugerido_nino": "160",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 180,
+    "permite_ninos": true
   },
   {
     "numero": 114,
@@ -1329,9 +1472,11 @@
     "operador": "FLAMANTE",
     "neto_adulto": "220",
     "precio_sugerido_adulto": "260",
-    "neto_nino": "NO INGRESAN NIÑOS",
+    "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 260,
+    "permite_ninos": false
   },
   {
     "numero": 115,
@@ -1342,7 +1487,9 @@
     "precio_sugerido_adulto": "390",
     "neto_nino": "215",
     "precio_sugerido_nino": "315",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 390,
+    "permite_ninos": true
   },
   {
     "numero": 116,
@@ -1354,7 +1501,8 @@
     "neto_nino": "(0-12 AÑOS) No pagan",
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 120
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 117,
@@ -1366,7 +1514,8 @@
     "neto_nino": "(0-12 AÑOS) No pagan",
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 118,
@@ -1378,7 +1527,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 110
+    "precio_sugerido": 110,
+    "permite_ninos": true
   },
   {
     "numero": 119,
@@ -1390,7 +1540,8 @@
     "neto_nino": "50 MIL",
     "precio_sugerido_nino": "50 MIL",
     "activo": true,
-    "precio_sugerido": 300
+    "precio_sugerido": 300,
+    "permite_ninos": true
   },
   {
     "numero": 120,
@@ -1402,7 +1553,8 @@
     "neto_nino": "50 MIL",
     "precio_sugerido_nino": "50 MIL",
     "activo": true,
-    "precio_sugerido": 300
+    "precio_sugerido": 300,
+    "permite_ninos": true
   },
   {
     "numero": 121,
@@ -1414,7 +1566,8 @@
     "neto_nino": "145 (4-10 AÑOS)",
     "precio_sugerido_nino": "180",
     "activo": true,
-    "precio_sugerido": 230
+    "precio_sugerido": 260,
+    "permite_ninos": true
   },
   {
     "numero": 122,
@@ -1426,7 +1579,8 @@
     "neto_nino": "120(4-9 años)",
     "precio_sugerido_nino": "150",
     "activo": true,
-    "precio_sugerido": 200
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 123,
@@ -1437,7 +1591,9 @@
     "precio_sugerido_adulto": "180",
     "neto_nino": "40 (4-9 años)",
     "precio_sugerido_nino": "90",
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 180,
+    "permite_ninos": true
   },
   {
     "numero": 124,
@@ -1448,7 +1604,9 @@
     "precio_sugerido_adulto": "160",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 160,
+    "permite_ninos": true
   },
   {
     "numero": 125,
@@ -1460,7 +1618,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 200
+    "precio_sugerido": 200,
+    "permite_ninos": true
   },
   {
     "numero": 126,
@@ -1472,7 +1631,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 120
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 127,
@@ -1484,7 +1644,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 60
+    "precio_sugerido": 110,
+    "permite_ninos": true
   },
   {
     "numero": 128,
@@ -1496,19 +1657,21 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 105
+    "precio_sugerido": 90,
+    "permite_ninos": true
   },
   {
     "numero": 129,
     "nombre": "CITY TOUR EN CHIVA",
     "categoria": "CITY TOUR CHIVA RUMBERA Y BUS PARTY",
     "operador": "CHOCOLATE TOURS",
-    "neto_adulto": 40,
+    "neto_adulto": "45",
     "precio_sugerido_adulto": "120",
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 90
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 130,
@@ -1519,18 +1682,22 @@
     "precio_sugerido_adulto": "120 AM / 110 PM",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 131,
     "nombre": "CHIVA RUMBERA",
     "categoria": "CITY TOUR CHIVA RUMBERA Y BUS PARTY",
     "operador": "FERCHO",
-    "neto_adulto": "20",
+    "neto_adulto": "15",
     "precio_sugerido_adulto": "40",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 40,
+    "permite_ninos": true
   },
   {
     "numero": 132,
@@ -1542,7 +1709,8 @@
     "neto_nino": "4 años en adelante pagán",
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 120
+    "precio_sugerido": 120,
+    "permite_ninos": true
   },
   {
     "numero": 133,
@@ -1554,7 +1722,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 134,
@@ -1565,7 +1734,9 @@
     "precio_sugerido_adulto": "150",
     "neto_nino": null,
     "precio_sugerido_nino": null,
-    "activo": true
+    "activo": true,
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 135,
@@ -1577,7 +1748,8 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 150
+    "precio_sugerido": 150,
+    "permite_ninos": true
   },
   {
     "numero": 136,
@@ -1586,10 +1758,11 @@
     "operador": "WALA BEACH CLUB",
     "neto_adulto": "290",
     "precio_sugerido_adulto": "350",
-    "neto_nino": "NO SE ACEPTAN",
+    "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 350
+    "precio_sugerido": 350,
+    "permite_ninos": false
   },
   {
     "numero": 137,
@@ -1601,6 +1774,7 @@
     "neto_nino": null,
     "precio_sugerido_nino": null,
     "activo": true,
-    "precio_sugerido": 500
+    "precio_sugerido": 500,
+    "permite_ninos": true
   }
 ]
