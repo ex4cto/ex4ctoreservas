@@ -297,6 +297,25 @@ class TestHandleEdtCampoNeto:
         ctx.bot_data["servicio_repo"].guardar.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_editar_neto_adulto_miles_escala_x1000(self) -> None:
+        """Plain number < 1000 is miles de pesos: '300' -> 300.000 (bug x1000)."""
+        s1 = _servicio()
+        update = _make_update(text="300")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "neto_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CONFIRMA
+        assert ctx.user_data["edt_valor"] == Decimal("300000")
+
+    @pytest.mark.asyncio
     async def test_editar_neto_adulto_vacio_acepta(self) -> None:
         """Empty input → confirmation shown (clears field)."""
         s1 = _servicio()

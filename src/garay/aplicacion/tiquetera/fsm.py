@@ -8,7 +8,7 @@ from __future__ import annotations
 import copy
 import uuid
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from enum import StrEnum
 
 from rapidfuzz import fuzz
@@ -18,6 +18,9 @@ from garay.aplicacion.comun.fechas import (
 )
 from garay.aplicacion.comun.fechas import (
     parsear_fecha as _parsear_fecha,
+)
+from garay.aplicacion.comun.montos import (
+    parsear_monto as _parsear_monto,
 )
 from garay.dominio.comun.email import es_email_valido, normalizar_email
 from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
@@ -162,24 +165,6 @@ def _tú_si(rol: str | None, *roles: str) -> str:
     """Return '(tú)' when `rol` is in `roles`, otherwise '—'."""
     # i18n debt: "(tú)" and "—" are user-visible strings bypassing the catalog
     return "(tú)" if rol in roles else "—"
-
-
-def _parsear_monto(texto: str) -> Decimal | None:
-    """Parse a Colombian peso amount string.
-
-    Accepts full notation ('500000', '500.000') and miles shorthand ('500' → 500,000).
-    Plain numbers < 1000 are treated as miles de pesos (Colombian everyday convention).
-    """
-    limpio = texto.strip().replace(".", "").replace(",", "")
-    try:
-        valor = Decimal(limpio)
-        if valor < Decimal("0"):
-            return None
-        if Decimal("0") < valor < Decimal("1000"):
-            valor = valor * 1000
-        return valor
-    except InvalidOperation:
-        return None
 
 
 def _siguiente_tour_sin_fecha(ctx: ContextoVenta) -> int | None:

@@ -8,12 +8,12 @@ from decimal import Decimal
 
 import pytest
 
+from garay.aplicacion.comun.montos import parsear_monto as _parsear_monto
 from garay.aplicacion.tiquetera.fsm import (
     EstadoFSM,
     FSMTiquetera,
     _es_sin_hotel,
     _formatear_monto,
-    _parsear_monto,
 )
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
