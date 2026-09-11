@@ -167,7 +167,10 @@ def main() -> None:
     _logger.info("Using Claude vision extractor (model: %s)", settings.claude_modelo)
     extractor_reserva = ExtractorReservaFoto(extractor_ia)
 
-    notificador = NotificadorGrupoTelegram(settings.telegram_bot_token)
+    dev_ids = [
+        int(x.strip()) for x in settings.dev_telegram_ids.split(",") if x.strip()
+    ]
+    notificador = NotificadorGrupoTelegram(settings.telegram_bot_token, dev_ids=dev_ids)
     servicio = RegistrarVentaService(
         ventas=ventas_repo,
         reglas_repo=reglas_repo,

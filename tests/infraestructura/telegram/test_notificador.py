@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import urllib.error
 from unittest.mock import MagicMock, patch
@@ -34,6 +35,25 @@ def _make_http_error(code: int) -> urllib.error.HTTPError:
         hdrs=None,  # type: ignore[arg-type]
         fp=None,
     )
+
+
+def _make_http_error_body(code: int, body: dict[str, object]) -> urllib.error.HTTPError:
+    """HTTPError whose .read() returns the given JSON body (e.g. migrate_to_chat_id)."""
+    raw = json.dumps(body).encode("utf-8")
+    return urllib.error.HTTPError(
+        url="https://api.telegram.org",
+        code=code,
+        msg="Bad Request",
+        hdrs=None,  # type: ignore[arg-type]
+        fp=io.BytesIO(raw),
+    )
+
+
+def _chat_ids_enviados(mock_open: MagicMock) -> list[str]:
+    ids: list[str] = []
+    for call in mock_open.call_args_list:
+        ids.append(json.loads(call[0][0].data.decode("utf-8"))["chat_id"])
+    return ids
 
 
 class TestNotificadorGrupoTelegram:
@@ -98,6 +118,52 @@ class TestNotificadorGrupoTelegram:
         req = mock_open.call_args[0][0]
         body = json.loads(req.data.decode("utf-8"))
         assert body["text"] == ""
+
+    def test_migracion_reintenta_al_id_nuevo_y_no_lanza(self) -> None:
+        """400 con migrate_to_chat_id → reintenta al ID nuevo y NO lanza excepción."""
+        notificador = NotificadorGrupoTelegram(token=_TOKEN)
+        mig = _make_http_error_body(400, {"parameters": {"migrate_to_chat_id": -1009999}})
+        ok = _make_response()
+
+        # sin dev_ids: envío al viejo (mig) → reintento al nuevo (ok)
+        with patch("urllib.request.urlopen", side_effect=[mig, ok]) as mock_open:
+            notificador.notificar(_MENSAJE, _GRUPO)  # no debe lanzar
+
+        assert _chat_ids_enviados(mock_open)[-1] == "-1009999"
+
+    def test_migracion_alerta_a_devs_con_id_nuevo(self) -> None:
+        """En migración, se alerta a cada dev con el ID nuevo y GARAY_GRUPO_ID."""
+        notificador = NotificadorGrupoTelegram(token=_TOKEN, dev_ids=[555])
+        mig = _make_http_error_body(400, {"parameters": {"migrate_to_chat_id": -1009999}})
+        ok_dev = _make_response()
+        ok_retry = _make_response()
+
+        with patch("urllib.request.urlopen", side_effect=[mig, ok_dev, ok_retry]) as mock_open:
+            notificador.notificar(_MENSAJE, _GRUPO)
+
+        # se envió un mensaje al dev (555) mencionando el ID nuevo y la variable
+        textos = {
+            json.loads(c[0][0].data.decode("utf-8"))["chat_id"]: json.loads(
+                c[0][0].data.decode("utf-8")
+            )["text"]
+            for c in mock_open.call_args_list
+        }
+        assert "555" in textos
+        assert "-1009999" in textos["555"]
+        assert "GARAY_GRUPO_ID" in textos["555"]
+
+    def test_migracion_se_recuerda_en_memoria(self) -> None:
+        """Tras una migración, los envíos siguientes van directo al ID nuevo."""
+        notificador = NotificadorGrupoTelegram(token=_TOKEN)
+        mig = _make_http_error_body(400, {"parameters": {"migrate_to_chat_id": -1009999}})
+
+        with patch("urllib.request.urlopen", side_effect=[mig, _make_response()]):
+            notificador.notificar(_MENSAJE, _GRUPO)
+
+        with patch("urllib.request.urlopen", return_value=_make_response()) as mock_open2:
+            notificador.notificar(_MENSAJE, _GRUPO)
+
+        assert _chat_ids_enviados(mock_open2) == ["-1009999"]
 
     def test_notificar_error_inesperado_se_envuelve(self) -> None:
         """Any unexpected error (e.g. ValueError from a malformed URL) is wrapped as a

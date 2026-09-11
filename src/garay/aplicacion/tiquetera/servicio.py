@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import html
+import logging
 import uuid
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
@@ -24,6 +25,8 @@ from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
+
+logger = logging.getLogger(__name__)
 
 
 def _fmt_cop(d: Dinero) -> str:
@@ -232,6 +235,14 @@ class RegistrarVentaService:
             lineas.append(f"  Cerrador ({cerrador}): {_fmt_cop(desglose.cerrador)}")
 
         mensaje = "\n".join(lineas)
-        self._notificador.notificar(mensaje, self._grupo_id)
+        # Best-effort: la notificación al grupo NUNCA debe tumbar la venta (ya se
+        # commiteó arriba). Si el grupo falla, se registra y se sigue con la factura.
+        try:
+            self._notificador.notificar(mensaje, self._grupo_id)
+        except Exception:
+            logger.exception(
+                "No se pudo notificar la venta %s al grupo (la venta ya quedó registrada)",
+                venta.id,
+            )
 
         return ResultadoRegistrarVenta(venta_id=venta.id, desglose=desglose)

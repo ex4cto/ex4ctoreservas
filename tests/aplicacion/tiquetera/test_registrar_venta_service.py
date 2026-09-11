@@ -268,6 +268,18 @@ class TestMensajeNotificacion:
         mensaje = notificador.notificar.call_args.args[0]
         assert "Playa Blanca" in mensaje
 
+    def test_venta_se_registra_aunque_falle_la_notificacion(self) -> None:
+        """Best-effort: si la notificación al grupo falla, la venta igual se registra
+        (no se lanza excepción; el registro ya se commiteó antes de notificar)."""
+        from garay.infraestructura.telegram.errores import NotificadorError
+
+        service, notificador = self._capturar_mensaje()
+        notificador.notificar.side_effect = NotificadorError("grupo caído")
+
+        resultado = service.ejecutar(_cmd())  # NO debe lanzar
+
+        assert resultado.venta_id is not None
+
     def test_mensaje_escapa_html_en_valores_dinamicos(self) -> None:
         """El mensaje va con parse_mode=HTML: los valores dinámicos deben ir
         escapados para que un '&'/'<'/'>' en cliente/destino/nombre no rompa el
