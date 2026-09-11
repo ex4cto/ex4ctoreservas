@@ -19,7 +19,6 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     EF_SELECCIONAR,
     FL_CEDULA,
     FL_CONFIRMACION,
-    FL_DISPLAY_OVERRIDE,
     FL_EMAIL,
     FL_NOMBRE_COMPLETO,
     FL_NOMBRE_CORTO,
@@ -38,7 +37,6 @@ from garay.infraestructura.telegram.handlers_freelancers import (
     handle_ef_seleccionar,
     handle_fl_cedula,
     handle_fl_confirmacion,
-    handle_fl_display_override,
     handle_fl_email,
     handle_fl_nombre_completo,
     handle_fl_nombre_corto,
@@ -222,8 +220,8 @@ class TestHandleFlNombreCorto:
 
         result = await handle_fl_nombre_corto(update, ctx)
 
-        # empty text → keep prefill → advance (FL_DISPLAY_OVERRIDE)
-        assert result == FL_DISPLAY_OVERRIDE
+        # empty text → keep prefill → skips display step → FL_TELEGRAM_ID
+        assert result == FL_TELEGRAM_ID
         assert ctx.user_data["fl_nombre"] == "Bryan"
 
     @pytest.mark.asyncio
@@ -239,44 +237,26 @@ class TestHandleFlNombreCorto:
 
         result = await handle_fl_nombre_corto(update, ctx)
 
-        assert result == FL_DISPLAY_OVERRIDE
+        assert result == FL_TELEGRAM_ID
         assert ctx.user_data["fl_nombre"] == "Bry"
 
-
-class TestHandleFlDisplayOverride:
     @pytest.mark.asyncio
-    async def test_vacio_usa_display_auto(self) -> None:
+    async def test_fl_nombre_corto_sets_display_to_nombre_completo(self) -> None:
+        """display must equal nombre_completo exactly — no derivar_display shortening."""
         update = _make_update(text="")
         ctx = _make_context(
             user_data={
-                "fl_nombre_completo": "Bryan Castro",
+                "fl_nombre_completo": "Bryan Castro Gomez",
                 "fl_nombre": "Bryan",
                 "fl_cedula": "12345678",
-                "fl_display": "Bryan C.",
             }
         )
 
-        result = await handle_fl_display_override(update, ctx)
+        result = await handle_fl_nombre_corto(update, ctx)
 
         assert result == FL_TELEGRAM_ID
-        assert ctx.user_data["fl_display"] == "Bryan C."
-
-    @pytest.mark.asyncio
-    async def test_texto_provisto_sobreescribe_display(self) -> None:
-        update = _make_update(text="B. Castro")
-        ctx = _make_context(
-            user_data={
-                "fl_nombre_completo": "Bryan Castro",
-                "fl_nombre": "Bryan",
-                "fl_cedula": "12345678",
-                "fl_display": "Bryan C.",
-            }
-        )
-
-        result = await handle_fl_display_override(update, ctx)
-
-        assert result == FL_TELEGRAM_ID
-        assert ctx.user_data["fl_display"] == "B. Castro"
+        assert ctx.user_data["fl_display"] == ctx.user_data["fl_nombre_completo"]
+        assert ctx.user_data["fl_display"] == "Bryan Castro Gomez"
 
 
 class TestHandleFlTelegramId:
@@ -522,7 +502,7 @@ class TestEditorFreelancerStateConstants:
         assert EDITAR_CONFIRMAR == 213
 
     def test_no_collision_with_a1_constants(self) -> None:
-        a1 = {FL_TELEGRAM_ID, FL_CONFIRMACION, FL_NOMBRE_CORTO, FL_DISPLAY_OVERRIDE,
+        a1 = {FL_TELEGRAM_ID, FL_CONFIRMACION, FL_NOMBRE_CORTO,
                EF_SELECCIONAR, EF_CONFIRMAR, FL_NOMBRE_COMPLETO, FL_CEDULA, FL_EMAIL}
         a2 = {EDITAR_SELECCIONAR, EDITAR_CAMPO, EDITAR_VALOR, EDITAR_CONFIRMAR}
         assert a1.isdisjoint(a2), f"Collision: {a1 & a2}"
@@ -1028,10 +1008,31 @@ class TestHandleEdfConfirmar:
         ctx.bot_data["freelancer_repo"].guardar.assert_called_once()
         saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
         assert saved.nombre_completo == "Bryan Castro Gomez"
-        # display re-derived
-        assert saved.display is not None
+        # display = nuevo_nc exactly (no derivar_display shortening)
+        assert saved.display == "Bryan Castro Gomez"
         # edf_target_id persists for next loop
         assert ctx.user_data.get("edf_target_id") == target_id
+
+    @pytest.mark.asyncio
+    async def test_edt_nombre_completo_updates_display_to_nuevo_nc(self) -> None:
+        """Editing nombre_completo must set display = nuevo_nc, not derivar_display(nuevo_nc)."""
+        f = _make_freelancer(nombre_completo="Ana Garcia")
+        f.display = "Ana G."
+        target_id = str(f.id)
+        update = _make_update(callback_data="edf_confirmar")
+        ctx = _make_context_edf(
+            buscar_por_id_result=f,
+            user_data={
+                "edf_target_id": target_id,
+                "edf_campo": "nombre_completo",
+                "edf_valor": "Ana Maria Garcia Lopez",
+            },
+        )
+
+        await handle_edf_confirmar(update, ctx)
+
+        saved: Freelancer = ctx.bot_data["freelancer_repo"].guardar.call_args[0][0]
+        assert saved.display == "Ana Maria Garcia Lopez"
 
     @pytest.mark.asyncio
     async def test_confirmar_activo_modifica_y_retorna_campo(self) -> None:

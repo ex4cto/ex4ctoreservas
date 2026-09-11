@@ -13,7 +13,6 @@ from telegram.ext import ContextTypes, ConversationHandler
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.freelancers.errores import CedulaInvalida, EmailInvalido
 from garay.dominio.freelancers.validaciones import (
-    derivar_display,
     validar_cedula,
     validar_email,
 )
@@ -49,7 +48,6 @@ def _refrescar_freelancers_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
 FL_TELEGRAM_ID: int = 201
 FL_CONFIRMACION: int = 202
 FL_NOMBRE_CORTO: int = 203
-FL_DISPLAY_OVERRIDE: int = 204
 
 EF_SELECCIONAR: int = 205
 EF_CONFIRMAR: int = 206
@@ -166,25 +164,7 @@ async def handle_fl_nombre_corto(update: Update, context: ContextTypes.DEFAULT_T
         if texto:
             context.user_data["fl_nombre"] = texto
         nombre_completo = str(context.user_data.get("fl_nombre_completo", ""))
-        auto_display = derivar_display(nombre_completo)
-        context.user_data["fl_display"] = auto_display
-    else:
-        auto_display = ""
-    await update.effective_message.reply_text(
-        obtener_mensaje("freelancer.pedir_display_override").format(display=auto_display)
-    )
-    return FL_DISPLAY_OVERRIDE
-
-
-async def handle_fl_display_override(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
-    if update.effective_message is None:
-        return FL_DISPLAY_OVERRIDE
-    texto = (update.effective_message.text or "").strip()
-    if context.user_data is not None and texto:
-        context.user_data["fl_display"] = texto
-    # Show telegram step with Omitir button
+        context.user_data["fl_display"] = nombre_completo
     teclado = InlineKeyboardMarkup(
         [[InlineKeyboardButton("Omitir", callback_data="fl_skip_tg")]]
     )
@@ -874,7 +854,7 @@ async def handle_edf_confirmar(
     if campo == "nombre_completo":
         nuevo_nc: str = str(ud.get("edf_valor", ""))
         f.nombre_completo = nuevo_nc
-        f.display = derivar_display(nuevo_nc)
+        f.display = nuevo_nc
     elif campo == "cedula":
         f.cedula = str(ud.get("edf_valor", "")) or None
     elif campo == "email":
