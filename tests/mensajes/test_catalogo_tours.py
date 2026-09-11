@@ -74,6 +74,7 @@ class TestClavesNuevoTourFormato:
             familia="PLAYERO",
             neto_adulto="100.000",
             neto_nino="—",
+            permite_ninos="Sí",
             estado="Activo",
             horarios="7:00 AM",
         )

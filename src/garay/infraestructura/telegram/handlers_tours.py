@@ -101,6 +101,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("nombre", "Nombre"),
     ("neto_adulto", "Neto adulto"),
     ("neto_nino", "Neto niño"),
+    ("permite_ninos", "Permite niños"),
     ("familia", "Familia"),
     ("horarios", "Horarios"),
     ("activo", "Activar / Desactivar"),
@@ -112,6 +113,7 @@ def _render_ficha(s: Servicio) -> str:
     neto_adulto = str(s.precio_neto_adulto) if s.precio_neto_adulto is not None else "—"
     neto_nino = str(s.precio_neto_nino) if s.precio_neto_nino is not None else "—"
     estado = "Activo" if s.activo else "Inactivo"
+    permite_ninos = "Sí" if s.permite_ninos else "No"
     horarios_str = (
         ", ".join(formato_display(h) for h in s.horarios) if s.horarios else "—"
     )
@@ -120,6 +122,7 @@ def _render_ficha(s: Servicio) -> str:
         familia=s.categoria or "—",
         neto_adulto=neto_adulto,
         neto_nino=neto_nino,
+        permite_ninos=permite_ninos,
         estado=estado,
         horarios=horarios_str,
     )
@@ -224,6 +227,7 @@ def _limpiar_edt(context: ContextTypes.DEFAULT_TYPE) -> None:
             "edt_campo",
             "edt_valor",
             "edt_activo_nuevo",
+            "edt_permite_ninos_nuevo",
         ):
             context.user_data.pop(key, None)
 
@@ -403,6 +407,33 @@ async def handle_edt_ficha(
         actual_str = "Activo" if (s and s.activo) else "Inactivo"
         if context.user_data is not None:
             context.user_data["edt_activo_nuevo"] = nuevo_activo
+        teclado = InlineKeyboardMarkup(
+            [[
+                InlineKeyboardButton("✅ Confirmar", callback_data="edt_confirmar"),
+                InlineKeyboardButton("❌ Cancelar", callback_data="edt_cancelar"),
+            ]]
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_confirmar_cambio").format(
+                anterior=actual_str, nuevo=nuevo_str
+            ),
+            reply_markup=teclado,
+            parse_mode="HTML",
+        )
+        return EDF_CONFIRMA
+
+    if campo == "permite_ninos":
+        ud = context.user_data if context.user_data is not None else {}
+        target_id_str = str(ud.get("edt_target_id", ""))
+        repo = context.bot_data.get("servicio_repo")
+        s = None
+        with contextlib.suppress(ValueError, AttributeError):
+            s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+        nuevo_permite = not (s.permite_ninos if s else True)
+        nuevo_str = "Sí" if nuevo_permite else "No"
+        actual_str = "Sí" if (s and s.permite_ninos) else "No"
+        if context.user_data is not None:
+            context.user_data["edt_permite_ninos_nuevo"] = nuevo_permite
         teclado = InlineKeyboardMarkup(
             [[
                 InlineKeyboardButton("✅ Confirmar", callback_data="edt_confirmar"),
@@ -672,6 +703,10 @@ async def handle_edt_confirma(
         new_val = ud.get("edt_activo_nuevo")
         if new_val is not None:
             s.activo = bool(new_val)
+    elif campo == "permite_ninos":
+        new_permite = ud.get("edt_permite_ninos_nuevo")
+        if new_permite is not None:
+            s.permite_ninos = bool(new_permite)
 
     if repo:
         repo.guardar(s)
@@ -683,7 +718,7 @@ async def handle_edt_confirma(
 
     # Clear field/value but KEEP target_id for multi-edit loop
     if context.user_data is not None:
-        for key in ("edt_campo", "edt_valor", "edt_activo_nuevo"):
+        for key in ("edt_campo", "edt_valor", "edt_activo_nuevo", "edt_permite_ninos_nuevo"):
             context.user_data.pop(key, None)
 
     return await _menu_campos(update, context)
