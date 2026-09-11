@@ -28,6 +28,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     EGRESO_SELECCION,
     PREFIJO_REC,
     _hoy_bogota,
+    _parsear_monto_cop,
     cmd_nuevo_egreso,
     handle_egreso_categoria,
     handle_egreso_confirmacion,
@@ -40,6 +41,28 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_egreso_rec_monto,
     handle_egreso_seleccion,
 )
+
+
+class TestParsearMontoCop:
+    """_parsear_monto_cop: convención de miles + 0/negativo/inválido → None."""
+
+    def test_miles_shorthand_escala_x1000(self) -> None:
+        assert _parsear_monto_cop("800") == Decimal("800000")
+
+    def test_notacion_completa_no_escala(self) -> None:
+        assert _parsear_monto_cop("500.000") == Decimal("500000")
+        assert _parsear_monto_cop("50000") == Decimal("50000")
+
+    def test_cero_es_none(self) -> None:
+        # Load-bearing: los callers solo chequean `is None`; un egreso de $0 es inválido.
+        assert _parsear_monto_cop("0") is None
+
+    def test_negativo_es_none(self) -> None:
+        assert _parsear_monto_cop("-5000") is None
+
+    def test_invalido_es_none(self) -> None:
+        assert _parsear_monto_cop("abc") is None
+        assert _parsear_monto_cop("") is None
 
 
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
