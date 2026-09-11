@@ -972,7 +972,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_edt_familia, pattern="^edt_familia_nueva:"),
                 _CB(handle_edt_familia, pattern="^edt_familia_nueva_libre$"),
             ],
-            EDF_TOUR: [_CB(handle_edt_tour, pattern="^edt_tour:")],
+            EDF_TOUR: [
+                _CB(handle_edt_tour, pattern="^edt_tour:"),
+                _CB(handle_edt_tour, pattern="^edt_volver_familias$"),
+            ],
             EDF_FICHA: [
                 _CB(handle_edt_ficha, pattern="^edt_campo:"),
                 _CB(handle_edt_ficha, pattern="^edt_listo$"),

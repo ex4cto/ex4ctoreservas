@@ -185,8 +185,17 @@ def _teclado_horarios(horarios: list[str], prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(botones)
 
 
-def _teclado_tours(servicios: list[Servicio], familia: str, prefix: str) -> InlineKeyboardMarkup:
-    """Build a tour selection keyboard for a given family."""
+def _teclado_tours(
+    servicios: list[Servicio],
+    familia: str,
+    prefix: str,
+    back_callback: str | None = None,
+) -> InlineKeyboardMarkup:
+    """Build a tour selection keyboard for a given family.
+
+    When ``back_callback`` is given, append an "Atrás" row so the user can go
+    back (e.g. to the family list in /editar_tour).
+    """
     tours = sorted(
         (s for s in servicios if (s.categoria or "") == familia),
         key=lambda s: not s.activo,
@@ -200,6 +209,14 @@ def _teclado_tours(servicios: list[Servicio], familia: str, prefix: str) -> Inli
         ]
         for s in tours
     ]
+    if back_callback is not None:
+        botones.append(
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("tour_boton_atras"), callback_data=back_callback
+                )
+            ]
+        )
     return InlineKeyboardMarkup(botones)
 
 
@@ -326,7 +343,7 @@ async def handle_edt_familia(
         context.user_data["edt_familia"] = familia
     ud = context.user_data if context.user_data is not None else {}
     todos: list[Servicio] = list(ud.get("edt_servicios", []))
-    teclado = _teclado_tours(todos, familia, "edt_tour:")
+    teclado = _teclado_tours(todos, familia, "edt_tour:", back_callback="edt_volver_familias")
     await update.effective_message.reply_text(
         obtener_mensaje("tour_selecciona_tour"), reply_markup=teclado
     )
@@ -336,13 +353,22 @@ async def handle_edt_familia(
 async def handle_edt_tour(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Handle tour selection in /editar_tour — show detail card."""
+    """Handle tour selection in /editar_tour — show detail card, or go back to families."""
     query = update.callback_query
     if query:
         await query.answer()
         await _limpiar_botones(query)
     if update.effective_message is None or query is None or query.data is None:
         return EDF_TOUR
+    if query.data == "edt_volver_familias":
+        # Atrás: volver a la selección de familia.
+        ud = context.user_data if context.user_data is not None else {}
+        todos: list[Servicio] = list(ud.get("edt_servicios", []))
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_selecciona_familia"),
+            reply_markup=_teclado_familias(todos, "edt_familia:"),
+        )
+        return EDF_FAMILIA
     tour_id_str = query.data.removeprefix("edt_tour:")
     if context.user_data is not None:
         context.user_data["edt_target_id"] = tour_id_str
@@ -385,7 +411,9 @@ async def handle_edt_ficha(
         familia_atras = str(ud_atras.get("edt_familia", ""))
         await update.effective_message.reply_text(
             obtener_mensaje("tour_selecciona_tour"),
-            reply_markup=_teclado_tours(servicios_atras, familia_atras, "edt_tour:"),
+            reply_markup=_teclado_tours(
+                servicios_atras, familia_atras, "edt_tour:", back_callback="edt_volver_familias"
+            ),
         )
         return EDF_TOUR
 
