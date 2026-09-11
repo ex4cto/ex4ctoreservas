@@ -268,6 +268,26 @@ class TestMensajeNotificacion:
         mensaje = notificador.notificar.call_args.args[0]
         assert "Playa Blanca" in mensaje
 
+    def test_mensaje_escapa_html_en_valores_dinamicos(self) -> None:
+        """El mensaje va con parse_mode=HTML: los valores dinámicos deben ir
+        escapados para que un '&'/'<'/'>' en cliente/destino/nombre no rompa el
+        parser HTML de Telegram (causaría HTTP 400 y fallaría la venta)."""
+        service, notificador = self._capturar_mensaje()
+        service.ejecutar(
+            _cmd(
+                cliente_nombre="Juan & Ana",
+                servicio_nombres=["Isla <Barú>"],
+                vendedor_nombre="A & B",
+            )
+        )
+        mensaje = notificador.notificar.call_args.args[0]
+        assert "Juan &amp; Ana" in mensaje
+        assert "Isla &lt;Barú&gt;" in mensaje
+        assert "A &amp; B" in mensaje
+        # Ningún valor especial provisto por el usuario se filtra sin escapar:
+        assert "Juan & Ana" not in mensaje
+        assert "Isla <Barú>" not in mensaje
+
     def test_mensaje_contiene_telefono_si_presente(self) -> None:
         service, notificador = self._capturar_mensaje()
         service.ejecutar(_cmd(cliente_telefono="3001234567"))
