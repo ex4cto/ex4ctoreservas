@@ -835,6 +835,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Familia: {familia}\n"
             "• Neto adulto: {neto_adulto}\n"
             "• Neto niño: {neto_nino}\n"
+            "• Permite niños: {permite_ninos}\n"
             "• Horarios: {horarios}\n"
             "• Estado: {estado}"
         )

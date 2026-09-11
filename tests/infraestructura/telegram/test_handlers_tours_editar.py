@@ -22,6 +22,7 @@ def _servicio(
     activo: bool = True,
     neto_adulto: Decimal | None = Decimal("30000"),
     neto_nino: Decimal | None = None,
+    permite_ninos: bool = True,
 ) -> Servicio:
     return Servicio(
         id=uuid.uuid4(),
@@ -31,6 +32,7 @@ def _servicio(
         activo=activo,
         precio_neto_adulto=neto_adulto,
         precio_neto_nino=neto_nino,
+        permite_ninos=permite_ninos,
     )
 
 
@@ -79,9 +81,11 @@ from garay.infraestructura.telegram.handlers_tours import (  # noqa: E402
     EDF_FICHA,
     EDF_NUEVA_FAMILIA,
     EDF_TOUR,
+    _render_ficha,
     cmd_editar_tour,
     handle_edt_confirma,
     handle_edt_familia,
+    handle_edt_ficha,
     handle_edt_nueva_familia_texto,
     handle_edt_tour,
     handle_edt_valor,
@@ -418,6 +422,74 @@ class TestHandleEdtToggleActivo:
         repo.guardar.assert_called_once()
         saved = repo.guardar.call_args[0][0]
         assert saved.activo is True
+
+
+class TestHandleEdtTogglePermiteNinos:
+    @pytest.mark.asyncio
+    async def test_seleccionar_permite_ninos_muestra_confirmacion(self) -> None:
+        """campo='permite_ninos' → propone el valor invertido y pide confirmación."""
+        s1 = _servicio(permite_ninos=True)
+        update = _make_update(callback_data="edt_campo:permite_ninos")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={"edt_target_id": str(s1.id)},
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_ficha(update, ctx)
+
+        assert result == EDF_CONFIRMA
+        assert ctx.user_data["edt_permite_ninos_nuevo"] is False
+
+    @pytest.mark.asyncio
+    async def test_toggle_permite_ninos_desactiva(self) -> None:
+        """permite_ninos=True, nuevo=False → save sets permite_ninos=False."""
+        s1 = _servicio(permite_ninos=True)
+        update = _make_update(callback_data="edt_confirmar")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "permite_ninos",
+                "edt_permite_ninos_nuevo": False,
+            },
+        )
+        repo = ctx.bot_data["servicio_repo"]
+        repo.buscar_por_id.return_value = s1
+
+        result = await handle_edt_confirma(update, ctx)
+
+        assert result == EDF_FICHA
+        repo.guardar.assert_called_once()
+        saved = repo.guardar.call_args[0][0]
+        assert saved.permite_ninos is False
+
+    @pytest.mark.asyncio
+    async def test_toggle_permite_ninos_activa(self) -> None:
+        """permite_ninos=False, nuevo=True → save sets permite_ninos=True."""
+        s1 = _servicio(permite_ninos=False)
+        update = _make_update(callback_data="edt_confirmar")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "permite_ninos",
+                "edt_permite_ninos_nuevo": True,
+            },
+        )
+        repo = ctx.bot_data["servicio_repo"]
+        repo.buscar_por_id.return_value = s1
+
+        result = await handle_edt_confirma(update, ctx)
+
+        assert result == EDF_FICHA
+        repo.guardar.assert_called_once()
+        saved = repo.guardar.call_args[0][0]
+        assert saved.permite_ninos is True
+
+    def test_ficha_muestra_permite_ninos(self) -> None:
+        assert "Permite niños: No" in _render_ficha(_servicio(permite_ninos=False))
+        assert "Permite niños: Sí" in _render_ficha(_servicio(permite_ninos=True))
 
 
 class TestHandleEdtCancelar:
