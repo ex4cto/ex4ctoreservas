@@ -5,12 +5,13 @@ from __future__ import annotations
 import contextlib
 import logging
 import uuid
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.comun.montos import parsear_monto
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
@@ -579,14 +580,8 @@ async def handle_edt_valor(
                 parse_mode="HTML",
             )
             return EDF_CONFIRMA
-        try:
-            valor = Decimal(texto.replace(".", "").replace(",", "."))
-        except InvalidOperation:
-            await update.effective_message.reply_text(
-                obtener_mensaje("tour_neto_invalido")
-            )
-            return EDF_CAMPO
-        if valor <= Decimal("0"):
+        valor = parsear_monto(texto)
+        if valor is None or valor <= Decimal("0"):
             await update.effective_message.reply_text(
                 obtener_mensaje("tour_neto_invalido")
             )
@@ -1260,11 +1255,12 @@ async def handle_nvt_dup(
 
 
 def _parse_neto(texto: str) -> Decimal | None:
-    """Parse a neto text input. Returns Decimal if valid and > 0, else None (signals error)."""
-    try:
-        return Decimal(texto.replace(".", "").replace(",", "."))
-    except InvalidOperation:
-        return None
+    """Parse a neto text input using the canonical miles convention.
+
+    Returns a Decimal (plain numbers < 1000 scaled x1000), or None for empty,
+    negative or non-numeric input. Callers reject values <= 0 as errors.
+    """
+    return parsear_monto(texto)
 
 
 async def handle_nvt_neto_adulto(

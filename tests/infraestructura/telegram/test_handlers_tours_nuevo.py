@@ -698,6 +698,22 @@ class TestHandleNvtNetoAdulto:
         assert ctx.user_data.get("nvt_neto_adulto") == Decimal("120000")
 
     @pytest.mark.asyncio
+    async def test_miles_shorthand_escala_x1000(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import (
+            NVT_NETO_NINO,
+            handle_nvt_neto_adulto,
+        )
+
+        # Plain number < 1000 is miles de pesos: "300" -> 300.000 (bug x1000)
+        update = _make_update(text="300")
+        ctx = _make_context()
+
+        result = await handle_nvt_neto_adulto(update, ctx)
+
+        assert result == NVT_NETO_NINO
+        assert ctx.user_data.get("nvt_neto_adulto") == Decimal("300000")
+
+    @pytest.mark.asyncio
     async def test_cero_rechazado(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import (
             NVT_NETO_ADULTO,
