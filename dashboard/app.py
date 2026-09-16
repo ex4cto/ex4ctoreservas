@@ -48,6 +48,8 @@ from garay.aplicacion.reportes.resumen_ventas import (
     ResumenVentasService,
 )
 from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas, WaterfallVentasService
+from garay.aplicacion.socios.servicio_split import SplitSociosService
+from garay.aplicacion.socios.split import ResumenSplitSocios
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
@@ -65,6 +67,10 @@ from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
+from garay.infraestructura.persistencia.repositorios.socios import (
+    SQLAPagoSocioRepository,
+    SQLASocioConfigRepository,
+)
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -1009,10 +1015,70 @@ def _tab_facturas() -> None:
     _descargas("facturas", columnas, export)
 
 
+@st.cache_data(ttl=30)
+def cargar_split_socios() -> ResumenSplitSocios:
+    sf = _get_session_factory()
+    servicio = SplitSociosService(
+        ventas=SQLAVentaRepository(sf),
+        comisiones=SQLAComisionRegistradaRepository(sf),
+        socios_config=SQLASocioConfigRepository(sf),
+        pagos_socio=SQLAPagoSocioRepository(sf),
+    )
+    return servicio.calcular_acumulado()
+
+
+def _tab_socios() -> None:
+    st.caption("Cálculo histórico — incluye todas las ventas registradas, sin filtro de fecha.")
+
+    resumen = cargar_split_socios()
+
+    total_agencia = resumen.total_agencia.monto
+    total_pagado = sum((s.pagado.monto for s in resumen.por_socio), Decimal("0"))
+    total_pendiente = sum((s.pendiente.monto for s in resumen.por_socio), Decimal("0"))
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total agencia acumulado", _cop(total_agencia))
+    col2.metric("Total pagado a socios", _cop(total_pagado))
+    col3.metric("Total pendiente", _cop(total_pendiente))
+
+    st.divider()
+
+    if not resumen.por_socio:
+        st.info("No hay socios configurados.")
+        return
+
+    filas = []
+    for s in resumen.por_socio:
+        filas.append(
+            {
+                "Socio": s.nombre.capitalize(),
+                "Porcentaje": f"{s.porcentaje:.0f}%",
+                "Acumulado": _cop(s.acumulado.monto),
+                "Pagado": _cop(s.pagado.monto),
+                "Pendiente": _cop(s.pendiente.monto),
+            }
+        )
+
+    st.dataframe(filas, use_container_width=True, hide_index=True)
+
+    columnas_exp = ["Socio", "Porcentaje", "Acumulado", "Pagado", "Pendiente"]
+    export = [
+        [
+            s.nombre.capitalize(),
+            f"{s.porcentaje:.0f}%",
+            s.acumulado.monto,
+            s.pagado.monto,
+            s.pendiente.monto,
+        ]
+        for s in resumen.por_socio
+    ]
+    _descargas("socios", columnas_exp, export)
+
+
 def pagina_consultas() -> None:
     st.title("🔎 Consultas")
-    tab_v, tab_i, tab_e, tab_c, tab_f = st.tabs(
-        ["Ventas", "Ingresos", "Egresos", "Clientes", "Facturas"]
+    tab_v, tab_i, tab_e, tab_c, tab_f, tab_s = st.tabs(
+        ["Ventas", "Ingresos", "Egresos", "Clientes", "Facturas", "Socios"]
     )
     with tab_v:
         _tab_ventas()
@@ -1024,6 +1090,8 @@ def pagina_consultas() -> None:
         _tab_clientes()
     with tab_f:
         _tab_facturas()
+    with tab_s:
+        _tab_socios()
 
 
 # ── Router ────────────────────────────────────────────────────────────────────

@@ -84,7 +84,7 @@ def _make_context(
     context.bot_data = {"fsm": fsm_inst, "freelancer_repo": fl_repo}
     context.bot = AsyncMock()
 
-    user_data: dict = {}
+    user_data: dict[str, object] = {}
     if ctx:
         user_data["contexto"] = ctx
     if user_data_extra:
