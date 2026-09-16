@@ -113,7 +113,7 @@ _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
 # (registrado_en), so recently-registered sales surface even if their tour date is
 # in the future. Kept as a named constant — it is a UI window, not a business
 # amount/percentage.
-_VENTANA_DIAS_GESTION = 2
+_VENTANA_DIAS_GESTION = 180
 _MAX_VENTAS = 15
 
 
