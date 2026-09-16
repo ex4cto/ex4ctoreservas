@@ -152,17 +152,18 @@ class SQLAVentaRepository(VentaRepository):
             return [to_domain(r) for r in rows]
 
     def listar_para_gestion(self, desde: date) -> list[Venta]:
-        # Gestiona por recencia de REGISTRO: usa registrado_en; para ventas viejas
-        # (registrado_en NULL) cae a la fecha del tour. Excluye anuladas.
-        fecha_gestion = func.coalesce(
+        # Filter by business date (fecha) so sales with old registrado_en but a
+        # recent service date are still reachable. Sort by registrado_en DESC so
+        # recently-entered sales surface first; NULL registrado_en falls last.
+        orden = func.coalesce(
             func.date(VentaModel.registrado_en), VentaModel.fecha
         )
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
                 .where(VentaModel.anulada == False)  # noqa: E712
-                .where(fecha_gestion >= desde)
-                .order_by(fecha_gestion.desc())
+                .where(VentaModel.fecha >= desde)
+                .order_by(orden.desc())
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]
