@@ -135,6 +135,9 @@ def _make_context(
 class TestCmdGestionarVentas:
     @pytest.mark.asyncio
     async def test_sin_ventas_reply_y_end(self) -> None:
+        # Entry now shows the filter screen regardless of ventas — END only after
+        # the user selects a filter and the list is empty. Here we just check that
+        # the entry returns GV_FILTRO and shows the filter keyboard.
         update = _make_update()
         ctx = _make_context(ventas=[])
 
@@ -144,11 +147,14 @@ class TestCmdGestionarVentas:
         ):
             result = await cmd_gestionar_ventas(update, ctx)
 
-        assert result == ConversationHandler.END
+        from garay.infraestructura.telegram.handlers_gestion_ventas import GV_FILTRO
+
+        assert result == GV_FILTRO
         update.effective_message.reply_text.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_con_ventas_muestra_botones_y_retorna_gv_seleccionar(self) -> None:
+        # Entry now shows the filter screen, not the venta list directly.
         ventas = [_make_venta(), _make_venta()]
         update = _make_update()
         ctx = _make_context(ventas=ventas)
@@ -159,7 +165,9 @@ class TestCmdGestionarVentas:
         ):
             result = await cmd_gestionar_ventas(update, ctx)
 
-        assert result == GV_SELECCIONAR
+        from garay.infraestructura.telegram.handlers_gestion_ventas import GV_FILTRO
+
+        assert result == GV_FILTRO
         update.effective_message.reply_text.assert_called_once()
 
     @pytest.mark.asyncio
@@ -201,6 +209,8 @@ def _extract_buttons_from_edit(update: MagicMock) -> list:  # type: ignore[type-
 class TestCmdGestionarVentasBotonLabel:
     @pytest.mark.asyncio
     async def test_boton_incluye_vendedor_cerrador_fecha_y_monto(self) -> None:
+        # Entry now shows the filter screen; venta buttons appear after filter selection.
+        # This test now verifies the filter keyboard is shown at entry.
         venta = _make_venta(
             fecha=datetime.date(2026, 8, 15),
             valor_monto=750_000,
@@ -216,26 +226,25 @@ class TestCmdGestionarVentasBotonLabel:
         ):
             await cmd_gestionar_ventas(update, ctx)
 
-        (button,) = _extract_buttons(update)
-        assert "Ana" in button.text
-        assert "Luis" in button.text
-        assert "15/08" in button.text
-        assert "750" in button.text
+        buttons = _extract_buttons(update)
+        callback_datas = [b.callback_data for b in buttons]
+        # Filter screen shown at entry — at least the 4 filter + 1 cancel buttons
+        assert "gv_f_7d" in callback_datas
+        assert "gv_f_mes" in callback_datas
+        assert "gv_f_mes_ant" in callback_datas
+        assert "gv_f_rango" in callback_datas
 
     @pytest.mark.asyncio
     async def test_boton_sin_participantes_usa_guion(self) -> None:
-        """A venta with no vendedor/cerrador snapshot must fall back to '—'."""
+        """A venta with no vendedor/cerrador snapshot must fall back to '—'.
+        Now checked via the _construir_teclado_ventas helper directly.
+        """
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_ventas
+
         venta = _make_venta(vendedor_nombre=None, cerrador_nombre=None)
-        update = _make_update()
-        ctx = _make_context(ventas=[venta])
-
-        with patch(
-            "garay.infraestructura.telegram.auth.obtener_settings",
-            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
-        ):
-            await cmd_gestionar_ventas(update, ctx)
-
-        (button,) = _extract_buttons(update)
+        markup = _construir_teclado_ventas([venta])
+        # First button is the venta; last row has Atrás/Cancelar
+        (button,) = markup.inline_keyboard[0]
         assert "—" in button.text
 
 
@@ -247,18 +256,18 @@ class TestCmdGestionarVentasBotonLabel:
 class TestCmdGestionarVentasPorRegistro:
     @pytest.mark.asyncio
     async def test_usa_listar_para_gestion_con_ventana_de_2_dias(self) -> None:
-        """Entry point queries by registration recency (últimos 2 días), not tour date."""
-        update = _make_update()
+        """Entry point now shows the filter screen; repo is called after filter selection.
+        After choosing gv_f_7d, the repo is called with hoy - 7 days.
+        """
+        from garay.infraestructura.telegram.handlers_gestion_ventas import handle_gv_filtro
+
+        update = _make_update(callback_data="gv_f_7d")
         ctx = _make_context(ventas=[_make_venta()])
 
-        with patch(
-            "garay.infraestructura.telegram.auth.obtener_settings",
-            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
-        ):
-            await cmd_gestionar_ventas(update, ctx)
+        await handle_gv_filtro(update, ctx)
 
         venta_repo = ctx.bot_data["venta_repo"]
-        esperado_desde = datetime.date.today() - datetime.timedelta(days=2)
+        esperado_desde = datetime.date.today() - datetime.timedelta(days=7)
         venta_repo.listar_para_gestion.assert_called_once_with(esperado_desde)
         venta_repo.listar_por_periodo.assert_not_called()
 
@@ -266,22 +275,16 @@ class TestCmdGestionarVentasPorRegistro:
     async def test_teclado_preserva_el_orden_del_repo(self) -> None:
         """Keyboard must keep the repo's registration-recency order, not re-sort by tour fecha.
 
-        The repo returns ventas already ordered by registration recency. Old code
-        re-sorted by tour fecha (v.fecha) desc, which would reorder them. The button
-        order must match the incoming list order.
+        After filter selection, the button order must match the incoming list order.
+        The last row (Atrás/Cancelar) is excluded from the order check.
         """
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_ventas
+
         primera = _make_venta(fecha=datetime.date(2026, 1, 1), vendedor_nombre="Primera")
         segunda = _make_venta(fecha=datetime.date(2026, 12, 31), vendedor_nombre="Segunda")
-        update = _make_update()
-        ctx = _make_context(ventas=[primera, segunda])
-
-        with patch(
-            "garay.infraestructura.telegram.auth.obtener_settings",
-            return_value=MagicMock(dev_telegram_ids="", propietario_telegram_ids=""),
-        ):
-            await cmd_gestionar_ventas(update, ctx)
-
-        buttons = _extract_buttons(update)
+        markup = _construir_teclado_ventas([primera, segunda])
+        # First two rows are ventas; last row is Atrás/Cancelar
+        buttons = [markup.inline_keyboard[0][0], markup.inline_keyboard[1][0]]
         assert "Primera" in buttons[0].text
         assert "Segunda" in buttons[1].text
 
@@ -384,7 +387,10 @@ class TestHandleGvAtras:
 
     @pytest.mark.asyncio
     async def test_atras_muestra_lista_de_ventas(self) -> None:
-        """Atrás must edit the message back to the ventas list (gv_sel buttons)."""
+        """Atrás must edit the message back to the ventas list (gv_sel buttons).
+
+        The list now also includes gv_atras and gv_cancelar navigation buttons at the end.
+        """
         ventas = [_make_venta(), _make_venta()]
         update = _make_update(callback_data="gv_atras")
         ctx = _make_context(ventas=ventas)
@@ -392,8 +398,11 @@ class TestHandleGvAtras:
         await handle_gv_detalle(update, ctx)
 
         callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
-        assert all(cb.startswith("gv_sel:") for cb in callbacks)
-        assert len(callbacks) == 2
+        # Venta buttons + navigation buttons (gv_atras + gv_cancelar)
+        venta_callbacks = [cb for cb in callbacks if cb.startswith("gv_sel:")]
+        assert len(venta_callbacks) == 2
+        assert "gv_atras" in callbacks
+        assert "gv_cancelar" in callbacks
 
 
 # ---------------------------------------------------------------------------

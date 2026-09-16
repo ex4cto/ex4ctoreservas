@@ -1,10 +1,11 @@
-"""PTB handlers for /gestionar_ventas — anular and editar fecha flow (Slice B2 + B3)."""
+"""PTB handlers for /gestionar_ventas — anular and editar fecha flow (Slice B2 + B3 + filtros)."""
 
 from __future__ import annotations
 
 import asyncio
 import datetime
 import logging
+import re
 import uuid
 from html import escape
 
@@ -59,6 +60,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_campo", None)
         context.user_data.pop("gv_nuevo_valor", None)
         context.user_data.pop("gv_valor_anterior", None)
+        context.user_data.pop("gv_desde", None)
+        context.user_data.pop("gv_hasta", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -79,7 +82,7 @@ async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> 
 
 
 # ---------------------------------------------------------------------------
-# State constants — range 220-224 (freelancers: 200-213)
+# State constants — range 220-228 (freelancers: 200-213)
 # ---------------------------------------------------------------------------
 
 GV_SELECCIONAR: int = 220
@@ -89,6 +92,8 @@ GV_CONFIRMAR: int = 223
 GV_EDIT_FECHA: int = 224
 GV_EDIT_CAMPO: int = 225
 GV_EDIT_VALOR: int = 226
+GV_FILTRO: int = 227
+GV_RANGO_INPUT: int = 228
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
@@ -117,13 +122,25 @@ _VENTANA_DIAS_GESTION = 180
 _MAX_VENTAS = 15
 
 
+def _construir_teclado_filtros() -> InlineKeyboardMarkup:
+    """Build the filter selection keyboard shown at the entry point."""
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📅 Últimos 7 días", callback_data="gv_f_7d")],
+            [InlineKeyboardButton("📅 Este mes", callback_data="gv_f_mes")],
+            [InlineKeyboardButton("📅 Mes anterior", callback_data="gv_f_mes_ant")],
+            [InlineKeyboardButton("📅 Rango personalizado", callback_data="gv_f_rango")],
+            [InlineKeyboardButton("❌ Cancelar", callback_data="gv_cancelar")],
+        ]
+    )
+
+
 def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
     """Build the inline keyboard for the venta list (up to _MAX_VENTAS).
 
     Preserves the order given by the repo (registration recency, newest first);
     it does not re-sort by tour date. Each button shows vendedor / cerrador · fecha
-    · monto. Shared by the entry point and the "Atrás" navigation so the list is
-    built in exactly one place.
+    · monto. Includes Atrás and Cancelar buttons at the end.
     """
     ventas_sorted = ventas[:_MAX_VENTAS]
     keyboard = [
@@ -140,6 +157,12 @@ def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
         ]
         for v in ventas_sorted
     ]
+    keyboard.append(
+        [
+            InlineKeyboardButton("← Atrás", callback_data="gv_atras"),
+            InlineKeyboardButton("❌ Cancelar", callback_data="gv_cancelar"),
+        ]
+    )
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -210,7 +233,45 @@ async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYP
     # Clear any stale gv_* keys from a previous conversation run.
     _limpiar(context)
 
-    desde = datetime.date.today() - datetime.timedelta(days=_VENTANA_DIAS_GESTION)
+    await update.effective_message.reply_text(
+        "Selecciona el período de ventas a gestionar:",
+        reply_markup=_construir_teclado_filtros(),
+        parse_mode="HTML",
+    )
+    return GV_FILTRO
+
+
+# ---------------------------------------------------------------------------
+# Shared helper: apply client-side "hasta" filter on a venta list
+# ---------------------------------------------------------------------------
+
+
+def _filtrar_por_hasta(ventas: list[Venta], hasta: datetime.date) -> list[Venta]:
+    """Keep ventas whose registrado_en.date() <= hasta.
+
+    If registrado_en is None or not a datetime (uncertain), the venta is kept.
+    """
+    result = []
+    for v in ventas:
+        reg = v.registrado_en
+        if not isinstance(reg, datetime.datetime):
+            # None or unexpected type — keep (uncertain registration time)
+            result.append(v)
+        elif reg.date() <= hasta:
+            result.append(v)
+    return result
+
+
+async def _cargar_y_mostrar_lista(
+    query: CallbackQuery,
+    context: ContextTypes.DEFAULT_TYPE,
+    desde: datetime.date,
+    hasta: datetime.date,
+) -> int:
+    """Load ventas from repo, apply client-side hasta filter, and show the list."""
+    if context.user_data is not None:
+        context.user_data["gv_desde"] = desde.isoformat()
+        context.user_data["gv_hasta"] = hasta.isoformat()
 
     venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
     if venta_repo is None:
@@ -218,20 +279,171 @@ async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYP
         return ConversationHandler.END
 
     ventas = await asyncio.to_thread(venta_repo.listar_para_gestion, desde)
+    ventas = _filtrar_por_hasta(ventas, hasta)
+
+    if not ventas:
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.sin_ventas"),
+            parse_mode="HTML",
+        )
+        _limpiar(context)
+        return ConversationHandler.END
+
+    await query.edit_message_text(
+        obtener_mensaje("gestion_ventas.seleccionar"),
+        reply_markup=_construir_teclado_ventas(ventas),
+        parse_mode="HTML",
+    )
+    return GV_SELECCIONAR
+
+
+# ---------------------------------------------------------------------------
+# GV_FILTRO state — user picks a date filter
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_filtro(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle filter selection callbacks (gv_f_7d, gv_f_mes, gv_f_mes_ant, gv_f_rango)."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+    today = datetime.date.today()
+
+    if data == "gv_f_7d":
+        desde = today - datetime.timedelta(days=7)
+        hasta = today
+        return await _cargar_y_mostrar_lista(query, context, desde, hasta)
+
+    if data == "gv_f_mes":
+        desde = datetime.date(today.year, today.month, 1)
+        hasta = today
+        return await _cargar_y_mostrar_lista(query, context, desde, hasta)
+
+    if data == "gv_f_mes_ant":
+        primer_dia_mes_actual = datetime.date(today.year, today.month, 1)
+        ultimo_dia_mes_ant = primer_dia_mes_actual - datetime.timedelta(days=1)
+        desde = datetime.date(ultimo_dia_mes_ant.year, ultimo_dia_mes_ant.month, 1)
+        hasta = ultimo_dia_mes_ant
+        return await _cargar_y_mostrar_lista(query, context, desde, hasta)
+
+    if data == "gv_f_rango":
+        await query.edit_message_text(
+            "Ingresa el rango (DD/MM/YYYY - DD/MM/YYYY):",
+            parse_mode="HTML",
+        )
+        return GV_RANGO_INPUT
+
+    if data == "gv_cancelar":
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    return ConversationHandler.END
+
+
+# ---------------------------------------------------------------------------
+# GV_RANGO_INPUT state — user types a custom date range
+# ---------------------------------------------------------------------------
+
+_RANGO_PATTERN = re.compile(
+    r"^(\d{2}/\d{2}/\d{4})\s*[-]\s*(\d{2}/\d{2}/\d{4})$"
+)
+
+
+def _parsear_rango(text: str) -> tuple[datetime.date, datetime.date] | None:
+    """Parse 'DD/MM/YYYY - DD/MM/YYYY' and return (desde, hasta) or None if invalid."""
+    m = _RANGO_PATTERN.match(text.strip())
+    if not m:
+        return None
+    try:
+        desde_str, hasta_str = m.group(1), m.group(2)
+        desde = datetime.datetime.strptime(desde_str, "%d/%m/%Y").date()
+        hasta = datetime.datetime.strptime(hasta_str, "%d/%m/%Y").date()
+    except ValueError:
+        return None
+    if desde > hasta:
+        return None
+    return desde, hasta
+
+
+async def handle_gv_rango_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Receive and parse the custom date range typed by the user."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = update.message.text if update.message else ""
+    parsed = _parsear_rango(text or "")
+
+    if parsed is None:
+        await update.effective_message.reply_text(
+            "Formato inválido. Ingresa el rango así: DD/MM/YYYY - DD/MM/YYYY",
+            parse_mode="HTML",
+        )
+        return GV_RANGO_INPUT
+
+    desde, hasta = parsed
+
+    # Reuse the callback-query path: we need a CallbackQuery to edit_message_text.
+    # For text messages we build a synthetic flow via the update's callback_query.
+    # Since a text message has no callback_query, we reply with a new message instead.
+    if context.user_data is not None:
+        context.user_data["gv_desde"] = desde.isoformat()
+        context.user_data["gv_hasta"] = hasta.isoformat()
+
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    if venta_repo is None:
+        logger.error("venta_repo not found in bot_data")
+        return ConversationHandler.END
+
+    ventas = await asyncio.to_thread(venta_repo.listar_para_gestion, desde)
+    ventas = _filtrar_por_hasta(ventas, hasta)
 
     if not ventas:
         await update.effective_message.reply_text(
             obtener_mensaje("gestion_ventas.sin_ventas"),
             parse_mode="HTML",
         )
+        _limpiar(context)
         return ConversationHandler.END
 
-    await update.effective_message.reply_text(
-        obtener_mensaje("gestion_ventas.seleccionar"),
-        reply_markup=_construir_teclado_ventas(ventas),
+    # Use callback_query.edit_message_text if available; otherwise reply_text.
+    query = update.callback_query
+    if query is not None:
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar"),
+            reply_markup=_construir_teclado_ventas(ventas),
+            parse_mode="HTML",
+        )
+    else:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.seleccionar"),
+            reply_markup=_construir_teclado_ventas(ventas),
+            parse_mode="HTML",
+        )
+    return GV_SELECCIONAR
+
+
+# ---------------------------------------------------------------------------
+# GV_SELECCIONAR — gv_atras navigation back to filter screen
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_seleccionar_atras(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle the Atrás button from the ventas list → go back to the filter screen."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    await query.edit_message_text(
+        "Selecciona el período de ventas a gestionar:",
+        reply_markup=_construir_teclado_filtros(),
         parse_mode="HTML",
     )
-    return GV_SELECCIONAR
+    return GV_FILTRO
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +572,11 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def _handle_volver_a_lista(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Rebuild the venta list and edit the message back to it (Atrás navigation)."""
+    """Rebuild the venta list and edit the message back to it (Atrás navigation).
+
+    Uses the stored gv_desde/gv_hasta filter from user_data when available;
+    falls back to the default 180-day window.
+    """
     query = update.callback_query
     if query is None:
         return ConversationHandler.END
@@ -370,8 +586,20 @@ async def _handle_volver_a_lista(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
-    desde = datetime.date.today() - datetime.timedelta(days=_VENTANA_DIAS_GESTION)
+    user_data = context.user_data or {}
+    desde_str: str | None = user_data.get("gv_desde")
+    hasta_str: str | None = user_data.get("gv_hasta")
+
+    if desde_str:
+        desde = datetime.date.fromisoformat(desde_str)
+    else:
+        desde = datetime.date.today() - datetime.timedelta(days=_VENTANA_DIAS_GESTION)
+
     ventas = await asyncio.to_thread(venta_repo.listar_para_gestion, desde)
+
+    if hasta_str:
+        hasta = datetime.date.fromisoformat(hasta_str)
+        ventas = _filtrar_por_hasta(ventas, hasta)
 
     if not ventas:
         await query.edit_message_text(
