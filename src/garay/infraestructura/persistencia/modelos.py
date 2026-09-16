@@ -362,3 +362,23 @@ class AuditoriaEgresoModel(Base):
     realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SocioConfigModel(Base):
+    __tablename__ = "socios_config"
+
+    nombre: Mapped[str] = mapped_column(String, primary_key=True)
+    porcentaje: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class PagoSocioModel(Base):
+    __tablename__ = "pagos_socios"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    nombre_socio: Mapped[str] = mapped_column(String, nullable=False)
+    monto: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
+    fecha: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    tipo: Mapped[str] = mapped_column(String, nullable=False)  # "total" | "parcial"
+    nota: Mapped[str | None] = mapped_column(Text, nullable=True)
+    registrado_en: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
