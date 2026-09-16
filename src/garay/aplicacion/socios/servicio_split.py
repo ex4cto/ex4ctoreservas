@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 from garay.aplicacion.socios.split import ResumenSocio, ResumenSplitSocios
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
@@ -26,9 +28,14 @@ class SplitSociosService:
         self._socios_config = socios_config
         self._pagos_socio = pagos_socio
 
-    def calcular_acumulado(self) -> ResumenSplitSocios:
-        """Calculate the full historical split across all non-annulled sales."""
-        ventas = self._ventas.listar()
+    def calcular_acumulado(
+        self, desde: datetime.date | None = None
+    ) -> ResumenSplitSocios:
+        """Calculate the split across all non-annulled sales, optionally from *desde*."""
+        if desde is not None:
+            ventas = self._ventas.listar_por_periodo(desde, datetime.date.today())
+        else:
+            ventas = self._ventas.listar()
         configs = self._socios_config.listar()
 
         venta_ids = [v.id for v in ventas]
