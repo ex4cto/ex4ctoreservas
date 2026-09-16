@@ -273,6 +273,16 @@ def requiere_admin_o_propietario(
     return wrapper
 
 
+def es_propietario(telegram_user_id: int) -> bool:
+    """Return True when the user is a developer or an owner."""
+    if _es_dev(telegram_user_id):
+        return True
+    ids_str = obtener_settings().propietario_telegram_ids.strip()
+    if not ids_str:
+        return False
+    return telegram_user_id in {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+
+
 def requiere_propietario(
     handler: Callable[..., Coroutine[Any, Any, Any]],
 ) -> Callable[..., Coroutine[Any, Any, Any]]:

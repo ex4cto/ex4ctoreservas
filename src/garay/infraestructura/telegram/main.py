@@ -35,6 +35,7 @@ from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
 )
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentasService
+from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
@@ -82,7 +83,10 @@ from garay.infraestructura.persistencia.repositorios.reglas_comision import (
     SQLAReglasComisionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
-from garay.infraestructura.persistencia.repositorios.socios import SQLASocioConfigRepository
+from garay.infraestructura.persistencia.repositorios.socios import (
+    SQLAPagoSocioRepository,
+    SQLASocioConfigRepository,
+)
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
@@ -173,6 +177,13 @@ def main() -> None:
     ]
     notificador = NotificadorGrupoTelegram(settings.telegram_bot_token, dev_ids=dev_ids)
     socios_config_repo = SQLASocioConfigRepository(sf)
+    pago_socio_repo = SQLAPagoSocioRepository(sf)
+    split_socios_service = SplitSociosService(
+        ventas=ventas_repo,
+        comisiones=comisiones_repo,
+        socios_config=socios_config_repo,
+        pagos_socio=pago_socio_repo,
+    )
     servicio = RegistrarVentaService(
         ventas=ventas_repo,
         reglas_repo=reglas_repo,
@@ -381,6 +392,7 @@ def main() -> None:
             "waterfall_service": waterfall_service,
             "ranking_tour_service": ranking_tour_service,
             "reconciliacion_service": reconciliacion_service,
+            "split_socios_service": split_socios_service,
             "conciliar_service": conciliar_service,
             "factura_service": factura_service,
             "propuesta_audiovisual_service": propuesta_audiovisual_service,
