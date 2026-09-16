@@ -31,12 +31,13 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
 def _make_venta(
     venta_id: uuid.UUID | None = None,
     registrado_en: datetime.datetime | None = None,
+    fecha: datetime.date | None = None,
 ) -> MagicMock:
     v = MagicMock()
     v.id = venta_id or uuid.uuid4()
     v.cliente_id = uuid.uuid4()
     v.servicio_ids = [uuid.uuid4()]
-    v.fecha = datetime.date(2026, 8, 1)
+    v.fecha = fecha or datetime.date(2026, 8, 1)
     v.registrado_en = registrado_en
     v.valor_venta = MagicMock()
     v.valor_venta.monto = 500_000
@@ -356,9 +357,9 @@ class TestRangoInputValido:
 
     @pytest.mark.asyncio
     async def test_rango_valido_filtra_client_side_por_hasta(self) -> None:
-        """ventas whose registrado_en > hasta must be excluded (client-side filter)."""
-        dentro = _make_venta(registrado_en=datetime.datetime(2026, 9, 10))
-        fuera = _make_venta(registrado_en=datetime.datetime(2026, 9, 20))  # beyond hasta
+        """ventas whose fecha > hasta must be excluded (client-side filter)."""
+        dentro = _make_venta(fecha=datetime.date(2026, 9, 10))
+        fuera = _make_venta(fecha=datetime.date(2026, 9, 20))  # beyond hasta=15/09
 
         update = _make_update(text="01/08/2026 - 15/09/2026")
         ctx = _make_context(ventas=[dentro, fuera])
@@ -503,13 +504,13 @@ class TestFiltroMesAnterior:
 class TestClienteSideHastaFilter:
     @pytest.mark.asyncio
     async def test_filtro_7d_excluye_ventas_fuera_del_rango(self) -> None:
-        """ventas with registrado_en beyond 'hasta' must be filtered out client-side."""
+        """ventas with fecha beyond 'hasta' must be filtered out client-side."""
         import garay.infraestructura.telegram.handlers_gestion_ventas as _mod
 
         today = datetime.date(2026, 9, 15)
 
-        dentro = _make_venta(registrado_en=datetime.datetime(2026, 9, 14))
-        fuera = _make_venta(registrado_en=datetime.datetime(2026, 9, 20))  # beyond today
+        dentro = _make_venta(fecha=datetime.date(2026, 9, 14))
+        fuera = _make_venta(fecha=datetime.date(2026, 9, 20))  # beyond today
 
         update = _make_update(callback_data="gv_f_7d")
         ctx = _make_context(ventas=[dentro, fuera])
@@ -525,7 +526,7 @@ class TestClienteSideHastaFilter:
 
     @pytest.mark.asyncio
     async def test_venta_sin_registrado_en_no_se_filtra(self) -> None:
-        """ventas with registrado_en=None must NOT be filtered out (uncertain, keep them)."""
+        """ventas with registrado_en=None must NOT be filtered out (fecha is used)."""
         venta = _make_venta(registrado_en=None)
 
         update = _make_update(callback_data="gv_f_7d")

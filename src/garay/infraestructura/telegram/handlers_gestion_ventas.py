@@ -247,18 +247,8 @@ async def cmd_gestionar_ventas(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 def _filtrar_por_hasta(ventas: list[Venta], hasta: datetime.date) -> list[Venta]:
-    """Keep ventas whose effective date <= hasta.
-
-    Mirrors the SQL COALESCE(date(registrado_en), fecha) used in the repo:
-    use registrado_en when available, fall back to tour date.
-    """
-    result = []
-    for v in ventas:
-        reg = v.registrado_en
-        fecha_ref = reg.date() if isinstance(reg, datetime.datetime) else v.fecha
-        if fecha_ref <= hasta:
-            result.append(v)
-    return result
+    """Keep ventas whose business date (fecha) <= hasta."""
+    return [v for v in ventas if v.fecha <= hasta]
 
 
 async def _cargar_y_mostrar_lista(
