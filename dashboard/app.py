@@ -1028,7 +1028,7 @@ def cargar_split_socios() -> ResumenSplitSocios:
 
 
 def _tab_socios() -> None:
-    st.caption("Acumulado desde septiembre 2026 — incluye todas las ventas no anuladas del período.")
+    st.caption("Acumulado desde septiembre 2026 — ventas no anuladas del período.")
 
     resumen = cargar_split_socios()
 
