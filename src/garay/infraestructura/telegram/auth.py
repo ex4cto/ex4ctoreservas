@@ -273,6 +273,48 @@ def requiere_admin_o_propietario(
     return wrapper
 
 
+def requiere_propietario_conv(
+    handler: Callable[..., Coroutine[Any, Any, int | None]],
+) -> Callable[..., Coroutine[Any, Any, int | None]]:
+    """Guard for ConversationHandler entry points — owners only.
+
+    Reads ``propietario_telegram_ids`` from settings (comma-separated integers).
+    An empty list is a fail-safe: access is denied to everyone.
+    Returns ``ConversationHandler.END`` on deny so the conversation never
+    opens for unauthorized users.
+    """
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        user = update.effective_user
+        if user is None:
+            return ConversationHandler.END
+
+        if _es_dev(user.id):
+            return await handler(update, context)
+
+        settings = obtener_settings()
+        ids_str = settings.propietario_telegram_ids.strip()
+        if not ids_str:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    obtener_mensaje("conciliacion.sin_acceso")
+                )
+            return ConversationHandler.END
+
+        ids_permitidos = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+        if user.id not in ids_permitidos:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    obtener_mensaje("conciliacion.sin_acceso")
+                )
+            return ConversationHandler.END
+
+        return await handler(update, context)
+
+    return wrapper
+
+
 def es_propietario(telegram_user_id: int) -> bool:
     """Return True when the user is a developer or an owner."""
     if _es_dev(telegram_user_id):
