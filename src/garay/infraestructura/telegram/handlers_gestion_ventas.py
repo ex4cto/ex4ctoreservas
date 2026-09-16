@@ -119,7 +119,7 @@ _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
 # in the future. Kept as a named constant — it is a UI window, not a business
 # amount/percentage.
 _VENTANA_DIAS_GESTION = 180
-_MAX_VENTAS = 15
+_MAX_VENTAS = 40
 
 
 def _construir_teclado_filtros() -> InlineKeyboardMarkup:
