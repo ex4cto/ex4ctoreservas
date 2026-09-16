@@ -11,6 +11,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 
 from garay.infraestructura.telegram.auth import (
+    es_propietario,
     requiere_admin,
     requiere_admin_o_propietario,
     requiere_propietario,
@@ -186,6 +187,38 @@ def _formatear_tours(waterfall: object, ranking: object, reconciliacion: object,
     return "\n".join(lineas)
 
 
+_EMOJI_SOCIO: dict[str, str] = {
+    "empresa": "🏢",
+    "garay": "🧑",
+    "ryan": "🧑",
+}
+_EMOJI_SOCIO_DEFAULT = "👤"
+
+
+def _formatear_split_socios(resumen: object) -> str:
+    """Format the partner split section for propietarios."""
+    from garay.aplicacion.socios.split import ResumenSplitSocios
+
+    assert isinstance(resumen, ResumenSplitSocios)
+
+    lineas = [
+        "💼 <b>Divisiones de socios (histórico)</b>",
+        "",
+        f"Agencia total: {_fmt_cop(resumen.total_agencia.monto)}",
+    ]
+    for socio in resumen.por_socio:
+        emoji = _EMOJI_SOCIO.get(socio.nombre.lower(), _EMOJI_SOCIO_DEFAULT)
+        nombre_cap = socio.nombre.capitalize()
+        pct = int(socio.porcentaje)
+        lineas.append(
+            f"{emoji} {nombre_cap} ({pct}%): "
+            f"acum. {_fmt_cop(socio.acumulado.monto)} | "
+            f"pagado {_fmt_cop(socio.pagado.monto)} | "
+            f"pendiente {_fmt_cop(socio.pendiente.monto)}"
+        )
+    return "\n".join(lineas)
+
+
 def _tours_para(context: ContextTypes.DEFAULT_TYPE, mes: int, año: int) -> str:
     waterfall = context.bot_data["waterfall_service"].ejecutar(mes, año)
     ranking = context.bot_data["ranking_tour_service"].ejecutar(mes, año)
@@ -198,6 +231,7 @@ async def cmd_dashboard_ventas(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
+    from garay.aplicacion.socios.servicio_split import SplitSociosService
     from garay.config.settings import obtener_settings
 
     hoy = date.today()
@@ -206,6 +240,12 @@ async def cmd_dashboard_ventas(
     texto = _formatear_resumen_ventas(resumen, hoy.month, hoy.year)
     url = obtener_settings().dashboard_url
     texto += f"\n\n📊 [Ver dashboard completo]({url})"
+    user = update.effective_user
+    if user is not None and es_propietario(user.id):
+        split_service: SplitSociosService = context.bot_data["split_socios_service"]
+        split_resumen = split_service.calcular_acumulado()
+        if split_resumen.por_socio:
+            texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
     if update.effective_message:
         await update.effective_message.reply_text(
@@ -234,6 +274,7 @@ async def cb_dashboard_ventas(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
+    from garay.aplicacion.socios.servicio_split import SplitSociosService
 
     query = update.callback_query
     if query is None:
@@ -246,6 +287,12 @@ async def cb_dashboard_ventas(
     servicio: ResumenVentasService = context.bot_data["resumen_ventas_service"]
     resumen = servicio.ejecutar(mes, año)
     texto = _formatear_resumen_ventas(resumen, mes, año)
+    user = update.effective_user
+    if user is not None and es_propietario(user.id):
+        split_service: SplitSociosService = context.bot_data["split_socios_service"]
+        split_resumen = split_service.calcular_acumulado()
+        if split_resumen.por_socio:
+            texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(mes, año, "rep_v")
     if query.message:
         await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
