@@ -451,6 +451,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestionar_egresos.boton_concepto": {Idioma.ES: "📝 Concepto"},
     "gestionar_egresos.boton_monto": {Idioma.ES: "💵 Monto"},
     "gestionar_egresos.boton_fecha": {Idioma.ES: "📅 Fecha"},
+    "gestionar_egresos.boton_atras": {Idioma.ES: "⬅️ Atrás"},
     "gestionar_egresos.boton_cerrar": {Idioma.ES: "❌ Cerrar"},
     "egreso.error_monto": {
         Idioma.ES: "Monto inválido. Ingresa un valor positivo (ej: 50000 o 50.000)."

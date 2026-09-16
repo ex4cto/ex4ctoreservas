@@ -14,6 +14,7 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso
 from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.infraestructura.telegram.handlers_egresos import (
+    CB_GE_ATRAS,
     CB_GE_CERRAR,
     CB_GE_MONTO,
     CB_HOY,
@@ -145,6 +146,18 @@ class TestDetalle:
         result = await handle_ge_detalle(update, ctx)
         assert result == GE_EDIT_VALOR
         assert ctx.user_data["ge_campo"] == "monto"
+
+    @pytest.mark.asyncio
+    async def test_atras_vuelve_a_lista(self) -> None:
+        e = _egreso()
+        ctx = _make_context(egresos=[e], egreso=e)
+        ctx.user_data["ge_egreso_id"] = str(e.id)
+        update = _make_update(callback_data=CB_GE_ATRAS)
+        result = await handle_ge_detalle(update, ctx)
+        assert result == GE_SELECCIONAR
+        markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+        datas = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert f"{PREFIJO_GE_SEL}0" in datas
 
     @pytest.mark.asyncio
     async def test_cerrar_termina(self) -> None:

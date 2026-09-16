@@ -1109,6 +1109,7 @@ CB_GE_DEST: str = "ge_dest"
 CB_GE_CONCEPTO: str = "ge_concepto"
 CB_GE_MONTO: str = "ge_monto"
 CB_GE_FECHA: str = "ge_fecha"
+CB_GE_ATRAS: str = "ge_atras"
 CB_GE_CERRAR: str = "ge_cerrar"
 
 
@@ -1178,6 +1179,7 @@ def _menu_editar_egreso() -> InlineKeyboardMarkup:
             _fila_boton(obtener_mensaje("gestionar_egresos.boton_concepto"), CB_GE_CONCEPTO),
             _fila_boton(obtener_mensaje("gestionar_egresos.boton_monto"), CB_GE_MONTO),
             _fila_boton(obtener_mensaje("gestionar_egresos.boton_fecha"), CB_GE_FECHA),
+            _fila_boton(obtener_mensaje("gestionar_egresos.boton_atras"), CB_GE_ATRAS),
             _fila_boton(obtener_mensaje("gestionar_egresos.boton_cerrar"), CB_GE_CERRAR),
         ]
     )
@@ -1188,9 +1190,8 @@ def _buscar_egreso(context: ContextTypes.DEFAULT_TYPE, egreso_id: uuid.UUID) -> 
     return egreso_repo.buscar_por_id(egreso_id) if egreso_repo is not None else None
 
 
-@requiere_admin_conv
-async def cmd_gestionar_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Entry point for /gestionar_egresos: lista egresos manuales recientes."""
+async def _mostrar_lista_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Render the editable-egresos list and return the appropriate state."""
     service = context.bot_data.get("editar_egreso_service")
     egresos: list[Egreso] = service.listar_editables(10) if service else []
     if not egresos:
@@ -1207,6 +1208,12 @@ async def cmd_gestionar_egresos(update: Update, context: ContextTypes.DEFAULT_TY
         update, obtener_mensaje("gestionar_egresos.titulo"), InlineKeyboardMarkup(filas)
     )
     return GE_SELECCIONAR
+
+
+@requiere_admin_conv
+async def cmd_gestionar_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Entry point for /gestionar_egresos: lista egresos manuales recientes."""
+    return await _mostrar_lista_egresos(update, context)
 
 
 async def handle_ge_seleccionar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1239,6 +1246,8 @@ async def handle_ge_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data == CB_GE_CERRAR:
         await _reply(update, obtener_mensaje("gestionar_egresos.cerrado"))
         return ConversationHandler.END
+    if data == CB_GE_ATRAS:
+        return await _mostrar_lista_egresos(update, context)
     if data == CB_GE_CAT:
         ud["ge_campo"] = "categoria"
         service = context.bot_data.get("egreso_service")
