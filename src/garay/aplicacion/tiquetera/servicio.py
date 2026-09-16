@@ -17,11 +17,14 @@ from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     PuntoDeVentaRepository,
     ReglasComisionRepository,
+    SocioConfigRepository,
     TiqueteraRepository,
     VentaRepository,
 )
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
 from garay.dominio.servicios.horarios import render_horarios
+from garay.dominio.socios.entidades import SocioConfig
+from garay.dominio.socios.servicio import calcular_split_venta
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -70,6 +73,26 @@ def _derivar_numero_personas(participantes: Participantes) -> int | None:
     return 1 if vid == cid else 2
 
 
+def _construir_mensaje_privado(
+    socio: SocioConfig,
+    monto: Dinero,
+    agencia: Dinero,
+    cmd: RegistrarVentaComando,
+) -> str:
+    """Build the private HTML split message for a socio."""
+    lineas: list[str] = ["💰 <b>Tu parte — nueva venta</b>", ""]
+
+    if cmd.servicio_nombres:
+        lineas.append(f"📍 Destino: {_esc(', '.join(cmd.servicio_nombres))}")
+
+    lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
+    lineas.append(f"💵 Valor: {_fmt_cop(cmd.valor_venta)}")
+    lineas.append(f"🏢 Agencia: {_fmt_cop(agencia)}")
+    lineas.append(f"📊 Tu split ({socio.porcentaje}%): {_fmt_cop(monto)}")
+
+    return "\n".join(lineas)
+
+
 class RegistrarVentaService:
     """Orchestrates sale registration: creates the aggregate, calculates
     commissions, persists, optionally creates a tiquetera, and notifies."""
@@ -84,6 +107,7 @@ class RegistrarVentaService:
         notificador: NotificadorGrupo,
         grupo_id: str,
         comisiones_repo: ComisionRegistradaRepository,
+        socios_config: SocioConfigRepository,
     ) -> None:
         self._ventas = ventas
         self._reglas_repo = reglas_repo
@@ -93,6 +117,7 @@ class RegistrarVentaService:
         self._notificador = notificador
         self._grupo_id = grupo_id
         self._comisiones_repo = comisiones_repo
+        self._socios_config = socios_config
 
     def ejecutar(self, cmd: RegistrarVentaComando) -> ResultadoRegistrarVenta:
         # 1. Create the Venta aggregate
@@ -244,5 +269,28 @@ class RegistrarVentaService:
                 "No se pudo notificar la venta %s al grupo (la venta ya quedó registrada)",
                 venta.id,
             )
+
+        # 9. Send private split message to each socio with telegram_id (best-effort)
+        socios = self._socios_config.listar()
+        if socios:
+            split = calcular_split_venta(desglose.agencia, socios)
+            for socio in socios:
+                if socio.telegram_id is None:
+                    continue
+                monto_socio = split.get(socio.nombre, Dinero(0))
+                msg_privado = _construir_mensaje_privado(
+                    socio=socio,
+                    monto=monto_socio,
+                    agencia=desglose.agencia,
+                    cmd=cmd,
+                )
+                try:
+                    self._notificador.notificar(msg_privado, str(socio.telegram_id))
+                except Exception:
+                    logger.exception(
+                        "No se pudo enviar DM de split al socio %s (venta %s ya registrada)",
+                        socio.nombre,
+                        venta.id,
+                    )
 
         return ResultadoRegistrarVenta(venta_id=venta.id, desglose=desglose)

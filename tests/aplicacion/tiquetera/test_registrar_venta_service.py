@@ -15,6 +15,7 @@ from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.socios.entidades import SocioConfig
 from garay.dominio.ventas.valor_objetos import Participantes
 
 _GRUPO_ID = "grupo-test-123"
@@ -35,6 +36,7 @@ def _build_service(
     motor: MagicMock | None = None,
     notificador: MagicMock | None = None,
     comisiones_repo: MagicMock | None = None,
+    socios_config: MagicMock | None = None,
 ) -> RegistrarVentaService:
     return RegistrarVentaService(
         ventas=ventas or MagicMock(),
@@ -45,6 +47,7 @@ def _build_service(
         notificador=notificador or MagicMock(),
         grupo_id=_GRUPO_ID,
         comisiones_repo=comisiones_repo or MagicMock(),
+        socios_config=socios_config or MagicMock(),
     )
 
 
@@ -596,3 +599,143 @@ class TestServiceUsasBuscarRegla:
         assert call.args[0] == TipoCliente.EXTERNO
         assert call.args[1] is None  # no point-specific lookup for non-Crespo
         assert call.args[2] is None
+
+
+# ---------------------------------------------------------------------------
+# E3: private split DM to socios with telegram_id
+# ---------------------------------------------------------------------------
+
+_AGENCIA = Dinero(150_000)
+
+
+def _make_socio(nombre: str, porcentaje: Decimal, telegram_id: int | None) -> SocioConfig:
+    return SocioConfig(nombre=nombre, porcentaje=porcentaje, telegram_id=telegram_id)
+
+
+def _build_service_con_socios(
+    socios: list[SocioConfig],
+    notificador: MagicMock,
+) -> RegistrarVentaService:
+    """Helper: service with a real-looking desglose.agencia = _AGENCIA."""
+    motor = MagicMock()
+    fake_desglose = MagicMock()
+    fake_desglose.agencia = _AGENCIA
+    motor.calcular.return_value = fake_desglose
+
+    socios_config = MagicMock()
+    socios_config.listar.return_value = socios
+
+    return _build_service(motor=motor, notificador=notificador, socios_config=socios_config)
+
+
+class TestMensajePrivadoSocios:
+    """E3: send private split DM to each socio that has telegram_id configured."""
+
+    def test_envia_dm_a_socio_con_telegram_id(self) -> None:
+        """When a socio has telegram_id, notificador.notificar is called with that chat_id."""
+        notificador = MagicMock()
+        socios = [
+            _make_socio("garay", Decimal("75"), 111111),
+            _make_socio("ryan", Decimal("25"), 222222),
+        ]
+        service = _build_service_con_socios(socios, notificador)
+        service.ejecutar(_cmd())
+
+        # notificador called: 1x grupo + 2x socios
+        assert notificador.notificar.call_count == 3
+        chat_ids = [call.args[1] for call in notificador.notificar.call_args_list]
+        assert "111111" in chat_ids
+        assert "222222" in chat_ids
+
+    def test_no_envia_dm_a_socio_sin_telegram_id(self) -> None:
+        """A socio with telegram_id=None does not receive a DM."""
+        notificador = MagicMock()
+        socios = [
+            _make_socio("empresa", Decimal("50"), None),  # no DM
+            _make_socio("ryan", Decimal("50"), 333333),
+        ]
+        service = _build_service_con_socios(socios, notificador)
+        service.ejecutar(_cmd())
+
+        # 1x grupo + 1x ryan only
+        assert notificador.notificar.call_count == 2
+        chat_ids = [call.args[1] for call in notificador.notificar.call_args_list]
+        assert "333333" in chat_ids
+        assert _GRUPO_ID in chat_ids
+
+    def test_fallo_dm_no_tumba_venta(self) -> None:
+        """If the DM send fails, the sale is already registered — service returns OK."""
+        from garay.infraestructura.telegram.errores import NotificadorError
+
+        notificador = MagicMock()
+        notificador.notificar.side_effect = NotificadorError("DM fallido")
+
+        socios = [_make_socio("ryan", Decimal("100"), 999999)]
+        service = _build_service_con_socios(socios, notificador)
+
+        resultado = service.ejecutar(_cmd())  # must NOT raise
+
+        assert resultado.venta_id is not None
+
+    def test_sin_socios_configurados_no_envia_dm(self) -> None:
+        """If socios_config.listar() returns [], no extra notificar calls are made."""
+        notificador = MagicMock()
+        socios_config = MagicMock()
+        socios_config.listar.return_value = []
+
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+
+        service = _build_service(motor=motor, notificador=notificador, socios_config=socios_config)
+        service.ejecutar(_cmd())
+
+        # only the group notification
+        assert notificador.notificar.call_count == 1
+        assert notificador.notificar.call_args.args[1] == _GRUPO_ID
+
+    def test_split_correcto_en_mensaje(self) -> None:
+        """The DM amount reflects the socio's correct percentage of agencia."""
+        notificador = MagicMock()
+        # ryan gets 25% of 150.000 = 37.500
+        socios = [
+            _make_socio("garay", Decimal("75"), None),
+            _make_socio("ryan", Decimal("25"), 444444),
+        ]
+        service = _build_service_con_socios(socios, notificador)
+        service.ejecutar(_cmd(servicio_nombres=["Playa Blanca"]))
+
+        ryan_calls = [
+            c for c in notificador.notificar.call_args_list if c.args[1] == "444444"
+        ]
+        assert len(ryan_calls) == 1
+        mensaje = ryan_calls[0].args[0]
+        # 25% of 150.000 = 37.500
+        assert "37.500" in mensaje
+        # Must show the agencia total too
+        assert "150.000" in mensaje
+
+    def test_mensaje_privado_omite_destino_si_no_hay_servicios(self) -> None:
+        """If servicio_nombres is empty, the 'Destino' line is omitted from the DM."""
+        notificador = MagicMock()
+        socios = [_make_socio("ryan", Decimal("100"), 555555)]
+        service = _build_service_con_socios(socios, notificador)
+        service.ejecutar(_cmd(servicio_nombres=[]))
+
+        ryan_calls = [
+            c for c in notificador.notificar.call_args_list if c.args[1] == "555555"
+        ]
+        assert len(ryan_calls) == 1
+        assert "Destino" not in ryan_calls[0].args[0]
+
+    def test_mensaje_privado_contiene_porcentaje_del_socio(self) -> None:
+        """The DM message includes the socio's percentage."""
+        notificador = MagicMock()
+        socios = [_make_socio("ryan", Decimal("25"), 666666)]
+        service = _build_service_con_socios(socios, notificador)
+        service.ejecutar(_cmd())
+
+        ryan_calls = [
+            c for c in notificador.notificar.call_args_list if c.args[1] == "666666"
+        ]
+        assert len(ryan_calls) == 1
+        assert "25" in ryan_calls[0].args[0]

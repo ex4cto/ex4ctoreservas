@@ -40,6 +40,7 @@ def _build_service(notificador: MagicMock) -> RegistrarVentaService:
         notificador=notificador,
         grupo_id=_GRUPO_ID,
         comisiones_repo=MagicMock(),
+        socios_config=MagicMock(),
     )
 
 
