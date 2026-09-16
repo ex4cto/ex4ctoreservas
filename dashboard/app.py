@@ -1024,11 +1024,11 @@ def cargar_split_socios() -> ResumenSplitSocios:
         socios_config=SQLASocioConfigRepository(sf),
         pagos_socio=SQLAPagoSocioRepository(sf),
     )
-    return servicio.calcular_acumulado()
+    return servicio.calcular_acumulado(desde=date(2026, 9, 1))
 
 
 def _tab_socios() -> None:
-    st.caption("Cálculo histórico — incluye todas las ventas registradas, sin filtro de fecha.")
+    st.caption("Acumulado desde septiembre 2026 — incluye todas las ventas no anuladas del período.")
 
     resumen = cargar_split_socios()
 
@@ -1115,6 +1115,26 @@ def _tab_socios() -> None:
         ]
 
     st.dataframe(tabla, use_container_width=True, hide_index=True)
+
+    totales: dict[str, list] = {
+        "Fecha": ["TOTAL"],
+        "Factura N°": ["—"],
+        "Saldo": ["—"],
+        "Neto": [_cop(sum(v.neto.monto for v in ventas_detalle))],
+        "Ganancia": [_cop(sum(v.ganancia.monto for v in ventas_detalle))],
+        "Com. vendedor": [_cop(sum(
+            v.comision_vendedor.monto for v in ventas_detalle if v.comision_vendedor
+        ))],
+        "Com. cerrador": [_cop(sum(
+            v.comision_cerrador.monto for v in ventas_detalle if v.comision_cerrador
+        ))],
+    }
+    for nombre, porcentaje in socios_info:
+        totales[nombre] = [_cop(sum(
+            v.comision_agencia.monto * porcentaje / Decimal("100")
+            for v in ventas_detalle if v.comision_agencia
+        ))]
+    st.dataframe(totales, use_container_width=True, hide_index=True)
 
     columnas_det = [
         "Fecha", "Factura N°", "Saldo", "Neto", "Ganancia",
