@@ -22,6 +22,7 @@ from garay.dominio.facturas.entidades import Factura
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
+from garay.dominio.socios.entidades import PagoSocio, SocioConfig
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.auditoria import AuditoriaVenta
 from garay.dominio.ventas.entidades import Venta
@@ -350,3 +351,25 @@ class CorreoNoParseadoRepository(ABC):
     def registrar_intento_fallido(self, id: uuid.UUID, error: str) -> None:
         """Increment intentos and set error_ultimo."""
         ...
+
+
+class SocioConfigRepository(ABC):
+    @abstractmethod
+    def listar(self) -> list[SocioConfig]: ...
+
+    @abstractmethod
+    def guardar(self, socio: SocioConfig) -> None: ...
+
+    @abstractmethod
+    def buscar_por_nombre(self, nombre: str) -> SocioConfig | None: ...
+
+
+class PagoSocioRepository(ABC):
+    @abstractmethod
+    def guardar(self, pago: PagoSocio) -> None: ...
+
+    @abstractmethod
+    def listar(self) -> list[PagoSocio]: ...
+
+    @abstractmethod
+    def listar_por_socio(self, nombre_socio: str) -> list[PagoSocio]: ...

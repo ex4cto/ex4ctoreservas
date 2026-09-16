@@ -18,9 +18,11 @@ from garay.infraestructura.persistencia.modelos import (  # noqa: F401
     FreelancerModel,
     GastoRecurrenteModel,
     IngresoModel,
+    PagoSocioModel,
     PuntoDeVentaModel,
     ReglasComisionModel,
     ServicioModel,
+    SocioConfigModel,
     TiqueteraModel,
     VentaModel,
 )
@@ -43,6 +45,8 @@ _EXPECTED_TABLES = {
     "correos_no_parseados",
     "auditoria_ventas",
     "auditoria_egresos",
+    "socios_config",
+    "pagos_socios",
 }
 
 
