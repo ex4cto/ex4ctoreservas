@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import calendar
 import datetime
 import logging
 import re
@@ -308,7 +309,8 @@ async def handle_gv_filtro(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if data == "gv_f_mes":
         desde = datetime.date(today.year, today.month, 1)
-        hasta = today
+        ultimo_dia = calendar.monthrange(today.year, today.month)[1]
+        hasta = datetime.date(today.year, today.month, ultimo_dia)
         return await _cargar_y_mostrar_lista(query, context, desde, hasta)
 
     if data == "gv_f_mes_ant":
