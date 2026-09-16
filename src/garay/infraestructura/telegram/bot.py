@@ -141,6 +141,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     cmd_gastos_fijos,
     cmd_gestionar_egresos,
     cmd_nuevo_egreso,
+    cmd_nuevo_gasto_fijo,
     handle_cat_acciones,
     handle_cat_edit_desc,
     handle_cat_menu,
@@ -874,7 +875,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     # /gastos_fijos (new gasto fijo) conversation handler
     gastos_fijos_conv_handler = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(handle_gf_nombre, pattern="^nuevo_gasto_fijo$"),
+            CallbackQueryHandler(cmd_nuevo_gasto_fijo, pattern="^nuevo_gasto_fijo$"),
         ],
         states={
             GF_NOMBRE: [MessageHandler(_TEXT, handle_gf_nombre)],

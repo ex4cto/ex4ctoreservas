@@ -16,7 +16,9 @@ from garay.infraestructura.telegram.handlers_egresos import (
     GF_CONFIRMACION,
     GF_DIA,
     GF_MONTO,
+    GF_NOMBRE,
     cmd_gastos_fijos,
+    cmd_nuevo_gasto_fijo,
     handle_gf_categoria,
     handle_gf_confirmacion,
     handle_gf_dia,
@@ -118,21 +120,30 @@ class TestCmdGastosFijos:
 
 class TestCrearGastoFijo:
     @pytest.mark.asyncio
+    async def test_cmd_nuevo_gasto_fijo_muestra_prompt(self) -> None:
+        """Entry point shows the name prompt and returns GF_NOMBRE."""
+        update = _make_update()
+        ctx = _make_context()
+        result = await cmd_nuevo_gasto_fijo(update, ctx)
+        assert result == GF_NOMBRE
+        update.effective_message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cmd_nuevo_gasto_fijo_no_admin_es_denegado(self) -> None:
+        """Non-admin → requiere_admin_conv ends the create-flow at the entry point."""
+        update = _make_update()
+        ctx = _make_context()
+        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
+        result = await cmd_nuevo_gasto_fijo(update, ctx)
+        assert result == ConversationHandler.END
+
+    @pytest.mark.asyncio
     async def test_handle_gf_nombre_avanza(self) -> None:
         update = _make_update(text="Arriendo oficina")
         ctx = _make_context()
         result = await handle_gf_nombre(update, ctx)
         assert result == GF_MONTO
         assert ctx.user_data["gf_nombre"] == "Arriendo oficina"
-
-    @pytest.mark.asyncio
-    async def test_handle_gf_nombre_no_admin_es_denegado(self) -> None:
-        """Non-admin → requiere_admin_conv ends the create-flow at its real entry point."""
-        update = _make_update(text="Arriendo oficina")
-        ctx = _make_context()
-        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
-        result = await handle_gf_nombre(update, ctx)
-        assert result == ConversationHandler.END
 
     @pytest.mark.asyncio
     async def test_handle_gf_monto_valido(self) -> None:

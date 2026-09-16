@@ -729,6 +729,12 @@ async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 @requiere_admin_conv
+async def cmd_nuevo_gasto_fijo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Entry point for creating a new recurring expense — prompts for name."""
+    await _reply(update, obtener_mensaje("gastos_fijos.pedir_nombre"))
+    return GF_NOMBRE
+
+
 async def handle_gf_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     nombre = _input_text(update).strip()
     _ud(context)["gf_nombre"] = nombre
