@@ -912,6 +912,7 @@ class TestDParidadLiveVsExcel:
             notificador=MagicMock(),
             grupo_id="test",
             comisiones_repo=live_comisiones,
+            socios_config=MagicMock(),
         )
         live_cmd = RegistrarVentaComando(
             valor_venta=valor,

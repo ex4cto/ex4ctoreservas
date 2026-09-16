@@ -90,7 +90,7 @@ class TestConfigSociosFlujo:
             "garay.config.settings.obtener_settings",
             return_value=_fake_settings(propietario_ids="999"),
         ):
-            result = await cmd_config_socios.__wrapped__(update, ctx)
+            result = await cmd_config_socios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         assert result == CS_MENU
         assert update.effective_message.reply_text.call_count == 1
@@ -115,7 +115,7 @@ class TestConfigSociosFlujo:
             "garay.config.settings.obtener_settings",
             return_value=_fake_settings(propietario_ids="999"),
         ):
-            result = await cmd_config_socios.__wrapped__(update, ctx)
+            result = await cmd_config_socios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         assert result == CS_MENU
         sent_text: str = update.effective_message.reply_text.call_args[0][0]

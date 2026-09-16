@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -135,13 +134,10 @@ class TestLiquidarSocioFlujo:
             "garay.config.settings.obtener_settings",
             return_value=_fake_settings(propietario_ids="999"),
         ):
-            result = await cmd_liquidar_socio.__wrapped__(update, ctx)
+            result = await cmd_liquidar_socio.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         assert result == LQ_SELECCION
         assert update.effective_message.reply_text.called
-        sent_kwargs = update.effective_message.reply_text.call_args
-        # The reply_markup should contain buttons for each socio
-        markup = sent_kwargs[1]["reply_markup"] if sent_kwargs[1] else sent_kwargs[0][0]
         # Just verify the handler replied with some markup
         assert update.effective_message.reply_text.call_count == 1
 

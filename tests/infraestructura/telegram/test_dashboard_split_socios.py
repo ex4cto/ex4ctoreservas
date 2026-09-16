@@ -10,7 +10,6 @@ import pytest
 from garay.aplicacion.socios.split import ResumenSocio, ResumenSplitSocios
 from garay.dominio.comun.dinero import Dinero
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -132,7 +131,10 @@ async def test_admin_no_propietario_no_ve_split() -> None:
     )
 
     with (
-        patch("garay.infraestructura.telegram.handlers_reportes.es_propietario", return_value=False),
+        patch(
+            "garay.infraestructura.telegram.handlers_reportes.es_propietario",
+            return_value=False,
+        ),
         patch("garay.config.settings.obtener_settings", return_value=_fake_settings()),
     ):
         await cmd_dashboard_ventas.__wrapped__(update, context)  # type: ignore[attr-defined]

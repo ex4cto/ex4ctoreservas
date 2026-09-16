@@ -6,13 +6,12 @@ New entry flow: /gestionar_ventas → filter screen → GV_FILTRO.
 
 from __future__ import annotations
 
-import calendar
 import datetime
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram.ext import ConversationHandler
 
 from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_FILTRO,
@@ -100,13 +99,13 @@ def _make_context(
     return ctx
 
 
-def _extract_buttons_from_reply(update: MagicMock) -> list:
+def _extract_buttons_from_reply(update: MagicMock) -> list[Any]:
     """Flatten InlineKeyboardMarkup from reply_text call."""
     markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
 
 
-def _extract_buttons_from_edit(update: MagicMock) -> list:
+def _extract_buttons_from_edit(update: MagicMock) -> list[Any]:
     """Flatten InlineKeyboardMarkup from edit_message_text call."""
     markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
@@ -199,7 +198,7 @@ class TestFiltro7Dias:
         update = _make_update(callback_data="gv_f_7d")
         ctx = _make_context()
 
-        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:
+        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:  # type: ignore[attr-defined]
             mock_date.today.return_value = today
             result = await handle_gv_filtro(update, ctx)
 
@@ -235,7 +234,7 @@ class TestFiltroMesActual:
         update = _make_update(callback_data="gv_f_mes")
         ctx = _make_context()
 
-        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:
+        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:  # type: ignore[attr-defined]
             mock_date.today.return_value = today
             result = await handle_gv_filtro(update, ctx)
 
@@ -463,13 +462,13 @@ class TestFiltroMesAnterior:
         import garay.infraestructura.telegram.handlers_gestion_ventas as _mod
 
         today = datetime.date(2026, 9, 15)
-        # Previous month: August 2026 → 01/08/2026 – 31/08/2026
+        # Previous month: August 2026 -> 01/08/2026 - 31/08/2026
         expected_desde = datetime.date(2026, 8, 1)
 
         update = _make_update(callback_data="gv_f_mes_ant")
         ctx = _make_context()
 
-        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:
+        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:  # type: ignore[attr-defined]
             mock_date.today.return_value = today
             result = await handle_gv_filtro(update, ctx)
 
@@ -488,7 +487,7 @@ class TestFiltroMesAnterior:
         update = _make_update(callback_data="gv_f_mes_ant")
         ctx = _make_context()
 
-        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:
+        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:  # type: ignore[attr-defined]
             mock_date.today.return_value = today
             await handle_gv_filtro(update, ctx)
 
@@ -515,7 +514,7 @@ class TestClienteSideHastaFilter:
         update = _make_update(callback_data="gv_f_7d")
         ctx = _make_context(ventas=[dentro, fuera])
 
-        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:
+        with patch.object(_mod.datetime, "date", wraps=datetime.date) as mock_date:  # type: ignore[attr-defined]
             mock_date.today.return_value = today
             await handle_gv_filtro(update, ctx)
 
