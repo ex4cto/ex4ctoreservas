@@ -82,6 +82,7 @@ from garay.infraestructura.persistencia.repositorios.reglas_comision import (
     SQLAReglasComisionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
+from garay.infraestructura.persistencia.repositorios.socios import SQLASocioConfigRepository
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
@@ -171,6 +172,7 @@ def main() -> None:
         int(x.strip()) for x in settings.dev_telegram_ids.split(",") if x.strip()
     ]
     notificador = NotificadorGrupoTelegram(settings.telegram_bot_token, dev_ids=dev_ids)
+    socios_config_repo = SQLASocioConfigRepository(sf)
     servicio = RegistrarVentaService(
         ventas=ventas_repo,
         reglas_repo=reglas_repo,
@@ -180,6 +182,7 @@ def main() -> None:
         notificador=notificador,
         grupo_id=settings.grupo_id,
         comisiones_repo=comisiones_repo,
+        socios_config=socios_config_repo,
     )
 
     logo_url = settings.factura_logo_url
