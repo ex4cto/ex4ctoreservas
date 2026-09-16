@@ -209,7 +209,9 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_CAMPO_PATTERN,
     GV_EDIT_FECHA,
     GV_EDIT_VALOR,
+    GV_FILTRO,
     GV_MOTIVO,
+    GV_RANGO_INPUT,
     GV_SELECCIONAR,
     cmd_gestionar_ventas,
     handle_gv_confirmar,
@@ -217,8 +219,11 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_edit_campo,
     handle_gv_edit_fecha,
     handle_gv_edit_valor,
+    handle_gv_filtro,
     handle_gv_motivo,
+    handle_gv_rango_input,
     handle_gv_seleccionar,
+    handle_gv_seleccionar_atras,
 )
 from garay.infraestructura.telegram.handlers_inicio_venta import (
     FECHA_RETROACTIVA,
@@ -979,7 +984,16 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     gestionar_ventas_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("gestionar_ventas", cmd_gestionar_ventas)],
         states={
-            GV_SELECCIONAR: [_CB(handle_gv_seleccionar, pattern="^gv_sel:")],
+            GV_FILTRO: [
+                _CB(handle_gv_filtro, pattern="^gv_f_(7d|mes|mes_ant|rango)$"),
+                _CB(handle_gv_filtro, pattern="^gv_cancelar$"),
+            ],
+            GV_RANGO_INPUT: [MessageHandler(_TEXT, handle_gv_rango_input)],
+            GV_SELECCIONAR: [
+                _CB(handle_gv_seleccionar, pattern="^gv_sel:"),
+                _CB(handle_gv_seleccionar_atras, pattern="^gv_atras$"),
+                _CB(handle_gv_filtro, pattern="^gv_cancelar$"),
+            ],
             GV_DETALLE: [_CB(handle_gv_detalle, pattern=GV_DETALLE_PATTERN)],
             GV_MOTIVO: [MessageHandler(_TEXT, handle_gv_motivo)],
             GV_CONFIRMAR: [_CB(handle_gv_confirmar, pattern="^gv_(confirmar|cancelar)$")],
