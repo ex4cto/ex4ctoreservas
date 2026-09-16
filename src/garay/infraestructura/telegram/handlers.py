@@ -526,14 +526,31 @@ async def finalizar_flujo(
 
 
 async def handle_iniciar_venta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Start the tiquetera FSM — entry point from button or /nueva_venta."""
+    """Entry point from /nueva_venta or iniciar_venta button.
+
+    Shows the date-choice screen (today vs. another date) instead of jumping
+    straight to METODO_INPUT.  The actual FSM start is deferred to
+    handle_inicio_hoy (no date override) or handle_fecha_ayer/etc. (with override).
+    """
     if update.callback_query is not None:
         await update.callback_query.answer()
+    if context.user_data is not None:
+        context.user_data["reservas_registradas"] = 0
+    # Import here to avoid circular dependency at module level.
+    from garay.infraestructura.telegram.handlers_inicio_venta import (
+        _mostrar_selector_inicio,
+    )
+    return await _mostrar_selector_inicio(update, context)
+
+
+async def _lanzar_flujo_venta(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> int:
+    """Start the FSM at METODO_INPUT after the date screen is resolved."""
     fsm = _get_fsm(context)
     if fsm is None:
         return ConversationHandler.END
-    if context.user_data is not None:
-        context.user_data["reservas_registradas"] = 0
     salida = fsm.iniciar()
     if salida.contexto is not None:
         tier = await _resolver_tier(update, context)
@@ -876,7 +893,41 @@ handle_cliente_tipo_id = _make_handler(EstadoFSM.CLIENTE_TIPO_ID)
 handle_cliente_identificacion = _make_handler(EstadoFSM.CLIENTE_IDENTIFICACION)
 handle_cliente_hotel = _make_handler(EstadoFSM.CLIENTE_HOTEL)
 handle_cliente_habitacion = _make_handler(EstadoFSM.CLIENTE_HABITACION)
-handle_fecha_salida = _make_handler(EstadoFSM.FECHA_SALIDA)
+
+
+async def handle_fecha_salida(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle the FECHA_SALIDA state.
+
+    When a ``fecha_venta_override`` is present in user_data (set by the date-picker
+    handlers in handlers_inicio_venta), the override is consumed and fed into the FSM
+    as if the user had typed the date string — the flow advances without showing the
+    date prompt to the user.
+    """
+    import datetime as _dt
+
+    if context.user_data is not None:
+        override: object = context.user_data.pop("fecha_venta_override", None)
+        if isinstance(override, _dt.datetime):
+            # Feed the pre-selected date into the FSM exactly as a text entry would.
+            fsm = _get_fsm(context)
+            if fsm is None:
+                return ConversationHandler.END
+            ctx = _get_contexto(context)
+            entrada = override.strftime("%d/%m/%Y")
+            salida = fsm.procesar_foto(EstadoFSM.FECHA_SALIDA, entrada, ctx)
+            logger.info(
+                "[FSM %s] override=%r listo=%s nuevo_estado=%s",
+                EstadoFSM.FECHA_SALIDA.value,
+                entrada,
+                salida.listo,
+                salida.nuevo_estado,
+            )
+            return await _enviar_salida(update, context, salida)
+
+    # No override — delegate to the generic factory handler.
+    return int(await _make_handler(EstadoFSM.FECHA_SALIDA)(update, context))
+
+
 handle_pax_adultos = _make_handler(EstadoFSM.PAX_ADULTOS)
 handle_pax_ninos = _make_handler(EstadoFSM.PAX_NINOS)
 handle_monto_valor = _make_handler(EstadoFSM.MONTO_VALOR)
