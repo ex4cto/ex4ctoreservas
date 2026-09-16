@@ -42,7 +42,7 @@ from garay.aplicacion.infraestructura_monitor.servicio import (
 from garay.aplicacion.tiquetera.fsm import EstadoFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
-from garay.infraestructura.telegram import handlers_conciliacion, handlers_reportes
+from garay.infraestructura.telegram import handlers_conciliacion, handlers_reportes, handlers_socios
 from garay.infraestructura.telegram.alertas_monitor import (
     construir_alerta_costo_railway,
     construir_alerta_cuota,
@@ -1155,5 +1155,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
     handlers_conciliacion.registrar_handlers(app)
+    handlers_socios.registrar_handlers(app)
     app.add_error_handler(_manejar_error)
     return app

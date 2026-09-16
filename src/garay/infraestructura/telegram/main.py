@@ -393,6 +393,8 @@ def main() -> None:
             "ranking_tour_service": ranking_tour_service,
             "reconciliacion_service": reconciliacion_service,
             "split_socios_service": split_socios_service,
+            "pagos_socio_repo": pago_socio_repo,
+            "socios_config_repo": socios_config_repo,
             "conciliar_service": conciliar_service,
             "factura_service": factura_service,
             "propuesta_audiovisual_service": propuesta_audiovisual_service,
