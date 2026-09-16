@@ -1074,6 +1074,72 @@ def _tab_socios() -> None:
     ]
     _descargas("socios", columnas_exp, export)
 
+    # ── Detalle por venta ──────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("Detalle por venta")
+
+    rango = _rango_fechas("socios_detalle")
+    if rango is None:
+        return
+
+    ventas_detalle = [v for v in cargar_consulta_ventas(*rango) if not v.anulada]
+    if not ventas_detalle:
+        st.info("No hay ventas en el período seleccionado.")
+        return
+
+    socios_info = [(s.nombre.capitalize(), s.porcentaje) for s in resumen.por_socio]
+
+    tabla: dict[str, list] = {
+        "Fecha": [v.fecha for v in ventas_detalle],
+        "Factura N°": [v.factura_numero or "—" for v in ventas_detalle],
+        "Saldo": [
+            _cop(v.saldo_pendiente.monto) if v.saldo_pendiente is not None else "—"
+            for v in ventas_detalle
+        ],
+        "Neto": [_cop(v.neto.monto) for v in ventas_detalle],
+        "Ganancia": [_cop(v.ganancia.monto) for v in ventas_detalle],
+        "Com. vendedor": [
+            _cop(v.comision_vendedor.monto) if v.comision_vendedor else "—"
+            for v in ventas_detalle
+        ],
+        "Com. cerrador": [
+            _cop(v.comision_cerrador.monto) if v.comision_cerrador else "—"
+            for v in ventas_detalle
+        ],
+    }
+    for nombre, porcentaje in socios_info:
+        tabla[nombre] = [
+            _cop(v.comision_agencia.monto * porcentaje / Decimal("100"))
+            if v.comision_agencia else "—"
+            for v in ventas_detalle
+        ]
+
+    st.dataframe(tabla, use_container_width=True, hide_index=True)
+
+    columnas_det = [
+        "Fecha", "Factura N°", "Saldo", "Neto", "Ganancia",
+        "Com. vendedor", "Com. cerrador",
+        *[nombre for nombre, _ in socios_info],
+    ]
+    export_det = [
+        [
+            v.fecha.isoformat(),
+            v.factura_numero or "",
+            v.saldo_pendiente.monto if v.saldo_pendiente is not None else "",
+            v.neto.monto,
+            v.ganancia.monto,
+            v.comision_vendedor.monto if v.comision_vendedor else "",
+            v.comision_cerrador.monto if v.comision_cerrador else "",
+            *(
+                v.comision_agencia.monto * p / Decimal("100")
+                if v.comision_agencia else ""
+                for _, p in socios_info
+            ),
+        ]
+        for v in ventas_detalle
+    ]
+    _descargas("socios_detalle", columnas_det, export_det)
+
 
 def pagina_consultas() -> None:
     st.title("🔎 Consultas")
