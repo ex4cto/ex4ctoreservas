@@ -215,6 +215,18 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_motivo,
     handle_gv_seleccionar,
 )
+from garay.infraestructura.telegram.handlers_inicio_venta import (
+    FECHA_RETROACTIVA,
+    FECHA_RETROACTIVA_TEXTO,
+    INICIO_VENTA,
+    handle_fecha_antes_ayer,
+    handle_fecha_ayer,
+    handle_fecha_retroactiva_otra,
+    handle_fecha_retroactiva_texto,
+    handle_inicio_hoy,
+    handle_inicio_otra_fecha,
+    handle_inicio_volver,
+)
 from garay.infraestructura.telegram.handlers_propuestas import (
     GEN_CIUDAD,
     GEN_DIRECCION,
@@ -662,9 +674,24 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CallbackQueryHandler(handle_iniciar_venta, pattern="^iniciar_venta$"),
         ],
         states={
+            INICIO_VENTA: [
+                _CB(handle_inicio_hoy, pattern="^inicio_hoy$"),
+                _CB(handle_inicio_otra_fecha, pattern="^inicio_otra_fecha$"),
+            ],
+            FECHA_RETROACTIVA: [
+                _CB(handle_fecha_ayer, pattern="^fecha_ayer$"),
+                _CB(handle_fecha_antes_ayer, pattern="^fecha_antes_ayer$"),
+                _CB(handle_fecha_retroactiva_otra, pattern="^fecha_otra$"),
+                _CB(handle_inicio_volver, pattern="^inicio_volver$"),
+            ],
+            FECHA_RETROACTIVA_TEXTO: [
+                MessageHandler(_TEXT, handle_fecha_retroactiva_texto),
+                _CB(handle_inicio_volver, pattern="^inicio_volver$"),
+            ],
             estados[EstadoFSM.METODO_INPUT]: [
                 _CB(handle_metodo_input),
                 MessageHandler(_TEXT, handle_metodo_input),
+                _CB(handle_inicio_volver, pattern="^inicio_volver$"),
             ],
             estados[EstadoFSM.ESPERANDO_FOTO]: [
                 MessageHandler(filters.PHOTO, cmd_foto),
