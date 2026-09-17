@@ -911,7 +911,7 @@ async def handle_cat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     ud = _ud(context)
     data = _input_text(update)
     if data == CB_CAT_CERRAR:
-        await _reply(update, obtener_mensaje("categoria.cerrado"))
+        await _mostrar_hub(update, context)
         return ConversationHandler.END
     if data == CB_CAT_NUEVA:
         await _reply(update, obtener_mensaje("categoria.pedir_nombre"))
@@ -1075,9 +1075,8 @@ CB_HUB_CATEGORIAS: str = "hub_categorias"
 CB_HUB_CANCELAR: str = "hub_cancelar"
 
 
-@requiere_admin
-async def cmd_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Hub de egresos: registrar, gastos fijos y categorías."""
+async def _mostrar_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Render the egresos hub menu. Auth-free — callers must have already verified access."""
     teclado = InlineKeyboardMarkup(
         [
             _fila_boton(obtener_mensaje("hub.boton_nuevo"), CB_HUB_NUEVO),
@@ -1087,6 +1086,12 @@ async def cmd_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         ]
     )
     await _reply(update, obtener_mensaje("hub.titulo"), teclado)
+
+
+@requiere_admin
+async def cmd_egresos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Hub de egresos: registrar, gastos fijos y categorías."""
+    await _mostrar_hub(update, context)
 
 
 async def handle_hub_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

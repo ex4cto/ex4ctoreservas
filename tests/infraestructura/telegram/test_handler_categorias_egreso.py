@@ -23,6 +23,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CB_CAT_NUEVA,
     CB_CAT_TOGGLE,
     CB_CAT_USAR_EXISTENTE,
+    CB_HUB_NUEVO,
     PREFIJO_CATSEL,
     cmd_categorias_egreso,
     handle_cat_acciones,
@@ -111,11 +112,14 @@ class TestMenu:
         assert result == CAT_NUEVA_NOMBRE
 
     @pytest.mark.asyncio
-    async def test_cerrar_termina(self) -> None:
+    async def test_cerrar_muestra_hub_y_termina(self) -> None:
         update = _make_update(callback_data=CB_CAT_CERRAR)
         ctx = _make_context()
         result = await handle_cat_menu(update, ctx)
         assert result == ConversationHandler.END
+        markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+        datas = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert CB_HUB_NUEVO in datas
 
     @pytest.mark.asyncio
     async def test_seleccionar_categoria_abre_acciones(self) -> None:
