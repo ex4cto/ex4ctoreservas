@@ -89,10 +89,13 @@ def _make_context(**bot_data: object) -> MagicMock:
 
 
 def _fake_settings(*, dashboard_url: str = "http://example.com") -> MagicMock:
+    import datetime
+
     s = MagicMock()
     s.dashboard_url = dashboard_url
     s.propietario_telegram_ids = "999"
     s.dev_telegram_ids = ""
+    s.socios_desde = datetime.date(2026, 9, 1)
     return s
 
 
@@ -252,7 +255,10 @@ async def test_cb_dashboard_filtra_desde_sep_2026() -> None:
         split_socios_service=split_service,
     )
 
-    with patch("garay.infraestructura.telegram.handlers_reportes.es_propietario", return_value=True):
+    with (
+        patch("garay.infraestructura.telegram.handlers_reportes.es_propietario", return_value=True),
+        patch("garay.config.settings.obtener_settings", return_value=_fake_settings()),
+    ):
         await cb_dashboard_ventas(update, context)
 
     split_service.calcular_acumulado.assert_called_once_with(desde=datetime.date(2026, 9, 1))

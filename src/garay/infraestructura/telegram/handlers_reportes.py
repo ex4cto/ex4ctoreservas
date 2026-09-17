@@ -195,9 +195,6 @@ _EMOJI_SOCIO: dict[str, str] = {
 _EMOJI_SOCIO_DEFAULT = "👤"
 
 
-_DESDE_SOCIOS = date(2026, 9, 1)
-
-
 def _formatear_split_socios(resumen: object) -> str:
     """Format the partner split section for propietarios."""
     from garay.aplicacion.socios.split import ResumenSplitSocios
@@ -254,7 +251,7 @@ async def cmd_dashboard_ventas(
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]
-        split_resumen = split_service.calcular_acumulado(desde=_DESDE_SOCIOS)
+        split_resumen = split_service.calcular_acumulado(desde=obtener_settings().socios_desde)
         if split_resumen.por_socio:
             texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
@@ -286,6 +283,7 @@ async def cb_dashboard_ventas(
 ) -> None:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
     from garay.aplicacion.socios.servicio_split import SplitSociosService
+    from garay.config.settings import obtener_settings
 
     query = update.callback_query
     if query is None:
@@ -301,7 +299,7 @@ async def cb_dashboard_ventas(
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]
-        split_resumen = split_service.calcular_acumulado(desde=_DESDE_SOCIOS)
+        split_resumen = split_service.calcular_acumulado(desde=obtener_settings().socios_desde)
         if split_resumen.por_socio:
             texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(mes, año, "rep_v")

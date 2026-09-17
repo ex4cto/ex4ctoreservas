@@ -109,6 +109,11 @@ class Settings(BaseSettings):
     # Monthly base fee for the Railway Hobby plan (the bill is max(plan_fee, usage)).
     railway_plan_fee: float = Field(default=5.0)
 
+    # --- Socios: split start date (GARAY_SOCIOS_DESDE=2026-09-01) ---
+    # Only sales on or after this date count toward the partner split.
+    # Set to None to include all-time sales.
+    socios_desde: datetime.date | None = Field(default=datetime.date(2026, 9, 1))
+
     # --- Monitor de cuota Resend (Slice 2: email quota) ---
     # Monthly email cap for the Resend free tier.
     resend_cap_mensual: int = Field(default=3000)
