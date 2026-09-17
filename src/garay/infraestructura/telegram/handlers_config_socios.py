@@ -23,6 +23,7 @@ from telegram.ext import (
 from garay.dominio.socios.entidades import SocioConfig
 from garay.infraestructura.telegram.auth import requiere_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -67,25 +68,33 @@ def _emoji_socio(nombre: str) -> str:
 
 def _fmt_tg(telegram_id: int | None) -> str:
     if telegram_id is None:
-        return "no configurado"
+        return obtener_mensaje("config_socios.telegram_no_config")
     return f"@{telegram_id}"
 
 
 def _construir_texto_config(socios: list[SocioConfig]) -> str:
     if not socios:
-        return "⚙️ <b>Configuración de socios</b>\n\n⚠️ No hay socios configurados."
+        return obtener_mensaje("config_socios.sin_socios")
 
-    lineas = ["⚙️ <b>Configuración de socios</b>\n"]
+    lineas = [obtener_mensaje("config_socios.titulo") + "\n"]
     for socio in socios:
         emoji = _emoji_socio(socio.nombre)
         nombre_cap = socio.nombre.capitalize()
-        porc = (
+        porc: int | Decimal = (
             int(socio.porcentaje)
             if socio.porcentaje == int(socio.porcentaje)
             else socio.porcentaje
         )
         tg = _fmt_tg(socio.telegram_id)
-        lineas.append(f"{emoji} {nombre_cap}: {porc}% | Telegram: {tg}")
+        lineas.append(
+            formatear_html(
+                obtener_mensaje("config_socios.linea_socio"),
+                emoji=emoji,
+                nombre=nombre_cap,
+                porcentaje=porc,
+                telegram=tg,
+            )
+        )
 
     return "\n".join(lineas)
 
@@ -94,13 +103,22 @@ def _teclado_menu(tiene_socios: bool) -> InlineKeyboardMarkup:
     botones: list[list[InlineKeyboardButton]] = []
     if tiene_socios:
         botones.append(
-            [InlineKeyboardButton("🔢 Editar porcentajes", callback_data=_CB_EDITAR_PORC)]
+            [InlineKeyboardButton(
+                obtener_mensaje("config_socios.boton_editar_porcentajes"),
+                callback_data=_CB_EDITAR_PORC,
+            )]
         )
         botones.append(
-            [InlineKeyboardButton("📱 Editar Telegram ID", callback_data=_CB_EDITAR_TG)]
+            [InlineKeyboardButton(
+                obtener_mensaje("config_socios.boton_editar_telegram"),
+                callback_data=_CB_EDITAR_TG,
+            )]
         )
     botones.append(
-        [InlineKeyboardButton("❌ Cancelar", callback_data=_CB_CANCELAR)]
+        [InlineKeyboardButton(
+            obtener_mensaje("config_socios.boton_cancelar"),
+            callback_data=_CB_CANCELAR,
+        )]
     )
     return InlineKeyboardMarkup(botones)
 
@@ -123,7 +141,7 @@ async def cmd_config_socios(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         logger.error("socios_config_repo not found in bot_data — wiring error")
         if update.effective_message:
             await update.effective_message.reply_text(
-                "Error de configuración. Contacta al administrador.",
+                obtener_mensaje("config_socios.error_config"),
                 parse_mode="HTML",
             )
         return ConversationHandler.END
@@ -152,8 +170,7 @@ async def handle_cs_editar_porc(update: Update, context: ContextTypes.DEFAULT_TY
     if query is not None:
         await query.answer()
         await query.edit_message_text(
-            "Ingresa los porcentajes en orden empresa,garay,ryan separados por coma.\n"
-            "Deben sumar 100. Ejemplo: <code>50,25,25</code>",
+            obtener_mensaje("config_socios.pedir_porcentajes"),
             parse_mode="HTML",
         )
     return CS_PORC_INPUT
@@ -174,12 +191,14 @@ async def handle_cs_editar_tg(update: Update, context: ContextTypes.DEFAULT_TYPE
         botones.append(
             [InlineKeyboardButton(nombre_cap, callback_data=f"{_CB_TG_PREFIX}{socio.nombre}")]
         )
-    botones.append([InlineKeyboardButton("❌ Cancelar", callback_data=_CB_CANCELAR)])
+    botones.append(
+        [InlineKeyboardButton(obtener_mensaje("config_socios.boton_cancelar"), callback_data=_CB_CANCELAR)]
+    )
     markup = InlineKeyboardMarkup(botones)
 
     if query is not None:
         await query.edit_message_text(
-            "Selecciona el socio para editar su Telegram ID:",
+            obtener_mensaje("config_socios.seleccionar_socio_telegram"),
             reply_markup=markup,
             parse_mode="HTML",
         )
@@ -194,7 +213,9 @@ async def handle_cs_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     _limpiar(context)
     if update.effective_message:
-        await update.effective_message.reply_text("❌ Cancelado.", parse_mode="HTML")
+        await update.effective_message.reply_text(
+            obtener_mensaje("config_socios.cancelado"), parse_mode="HTML"
+        )
     return ConversationHandler.END
 
 
@@ -215,7 +236,7 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
     partes = [p.strip() for p in texto.split(",")]
     if len(partes) != 3:
         await update.effective_message.reply_text(
-            "⚠️ Formato inválido o suma ≠ 100. Intenta de nuevo:",
+            obtener_mensaje("config_socios.error_porcentajes"),
             parse_mode="HTML",
         )
         return CS_PORC_INPUT
@@ -240,7 +261,7 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if sum(decimals) != Decimal("100"):
         await update.effective_message.reply_text(
-            "⚠️ Formato inválido o suma ≠ 100. Intenta de nuevo:",
+            obtener_mensaje("config_socios.error_porcentajes"),
             parse_mode="HTML",
         )
         return CS_PORC_INPUT
@@ -248,7 +269,7 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
     socios_config_repo = context.bot_data.get("socios_config_repo")
     if socios_config_repo is None:
         await update.effective_message.reply_text(
-            "Error de configuración. Contacta al administrador.",
+            obtener_mensaje("config_socios.error_config"),
             parse_mode="HTML",
         )
         return ConversationHandler.END
@@ -273,7 +294,7 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
         if i < len(decimals)
     )
     await update.effective_message.reply_text(
-        f"✅ Porcentajes actualizados: {partes_fmt}",
+        formatear_html(obtener_mensaje("config_socios.porcentajes_actualizados"), resumen=partes_fmt),
         parse_mode="HTML",
     )
     return ConversationHandler.END
@@ -305,7 +326,7 @@ async def handle_cs_tg_seleccion(update: Update, context: ContextTypes.DEFAULT_T
     nombre_cap = nombre.capitalize()
     if update.effective_message:
         await update.effective_message.reply_text(
-            f"Ingresa el Telegram ID de {nombre_cap} (número entero, o 'none' para eliminar):",
+            formatear_html(obtener_mensaje("config_socios.pedir_telegram_id"), nombre=nombre_cap),
             parse_mode="HTML",
         )
     return CS_TG_INPUT
@@ -334,7 +355,7 @@ async def handle_cs_tg_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             telegram_id = int(texto)
         except ValueError:
             await update.effective_message.reply_text(
-                "⚠️ Ingresa un número entero o 'none':",
+                obtener_mensaje("config_socios.error_telegram_invalido"),
                 parse_mode="HTML",
             )
             return CS_TG_INPUT
@@ -345,7 +366,7 @@ async def handle_cs_tg_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     socios_config_repo = context.bot_data.get("socios_config_repo")
     if socios_config_repo is None:
         await update.effective_message.reply_text(
-            "Error de configuración. Contacta al administrador.",
+            obtener_mensaje("config_socios.error_config"),
             parse_mode="HTML",
         )
         _limpiar(context)
@@ -354,7 +375,7 @@ async def handle_cs_tg_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     socio: SocioConfig | None = socios_config_repo.buscar_por_nombre(nombre)
     if socio is None:
         await update.effective_message.reply_text(
-            f"⚠️ Socio '{nombre}' no encontrado.",
+            formatear_html(obtener_mensaje("config_socios.socio_no_encontrado"), nombre=nombre),
             parse_mode="HTML",
         )
         _limpiar(context)
@@ -370,9 +391,9 @@ async def handle_cs_tg_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     nombre_cap = nombre.capitalize()
     if telegram_id is None:
-        msg = f"✅ Telegram ID de {nombre_cap} eliminado."
+        msg = formatear_html(obtener_mensaje("config_socios.telegram_eliminado"), nombre=nombre_cap)
     else:
-        msg = f"✅ Telegram ID de {nombre_cap} actualizado."
+        msg = formatear_html(obtener_mensaje("config_socios.telegram_actualizado"), nombre=nombre_cap)
 
     await update.effective_message.reply_text(msg, parse_mode="HTML")
     return ConversationHandler.END

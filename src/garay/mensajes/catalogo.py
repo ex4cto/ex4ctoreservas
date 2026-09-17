@@ -485,6 +485,27 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gastos_fijos.creado": {
         Idioma.ES: "✅ Gasto fijo creado: <b>{nombre}</b> — {monto} el día {dia} de cada mes."
     },
+    "gastos_fijos.titulo": {Idioma.ES: "📋 <b>Gastos fijos activos:</b>"},
+    "gastos_fijos.boton_nuevo": {Idioma.ES: "➕ Nuevo gasto fijo"},
+    "gastos_fijos.boton_cerrar": {Idioma.ES: "❌ Cerrar"},
+    "gastos_fijos.boton_atras": {Idioma.ES: "⬅️ Atrás"},
+    "gastos_fijos.boton_editar_monto": {Idioma.ES: "✏️ Editar monto"},
+    "gastos_fijos.boton_liquidar": {Idioma.ES: "💰 Liquidar"},
+    "gastos_fijos.detalle": {
+        Idioma.ES: (
+            "💳 <b>{nombre}</b>\n"
+            "Monto: {monto} al mes\n"
+            "Día: {dia} de cada mes\n"
+            "Categoría: {categoria}"
+        )
+    },
+    "gastos_fijos.pedir_monto_nuevo": {
+        Idioma.ES: "¿Nuevo monto mensual para <b>{nombre}</b>? (escribe el monto en miles, ej: 500)"
+    },
+    "gastos_fijos.monto_actualizado": {Idioma.ES: "✅ Monto actualizado: <b>{monto}</b> al mes."},
+    "gastos_fijos.liquidado": {
+        Idioma.ES: "✅ <b>{nombre}</b> registrado como egreso de {monto}."
+    },
     "gastos_fijos.desactivado": {Idioma.ES: "✅ <b>{nombre}</b> desactivado."},
     "gastos_fijos.confirmacion": {
         Idioma.ES: (
@@ -988,6 +1009,78 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "generar.plan_medio": {Idioma.ES: "Alcance Esencial (14 videos)"},
     "generar.contrato_software_enviado": {Idioma.ES: "Contrato de software — {empresa}"},
     "generar.contrato_audiovisual_enviado": {Idioma.ES: "Contrato audiovisual — {empresa}"},
+    # --- Liquidar socio (pago de socios) ---
+    "liquidar_socio.error_config": {Idioma.ES: "Error de configuración. Contacta al administrador."},
+    "liquidar_socio.sin_socios": {Idioma.ES: "No hay socios configurados."},
+    "liquidar_socio.seleccionar_socio": {Idioma.ES: "👤 Selecciona el socio a liquidar:"},
+    "liquidar_socio.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
+    "liquidar_socio.seleccionar_tipo": {Idioma.ES: "💰 <b>{nombre}</b> — ¿cómo registrar el pago?"},
+    "liquidar_socio.boton_total": {Idioma.ES: "✅ Total ({pendiente} pendiente)"},
+    "liquidar_socio.boton_parcial": {Idioma.ES: "💵 Parcial"},
+    "liquidar_socio.pedir_monto": {Idioma.ES: "💵 Ingresa el monto a pagar (ej: 500000):"},
+    "liquidar_socio.error_monto": {
+        Idioma.ES: "❌ Monto inválido. Ingresa un número, por ejemplo: <code>500000</code>"
+    },
+    "liquidar_socio.cancelado": {Idioma.ES: "❌ Cancelado."},
+    "liquidar_socio.estado_incompleto": {Idioma.ES: "❌ Estado incompleto. Inicia el flujo de nuevo."},
+    "liquidar_socio.tipo_total": {Idioma.ES: "Total"},
+    "liquidar_socio.tipo_parcial": {Idioma.ES: "Parcial"},
+    "liquidar_socio.confirmacion": {
+        Idioma.ES: (
+            "💰 <b>Confirmación de pago</b>\n"
+            "\n"
+            "👤 Socio: {nombre}\n"
+            "📝 Tipo: {tipo}\n"
+            "💵 Monto: {monto}\n"
+            "📅 Fecha: {fecha}\n"
+            "\n"
+            "¿Confirmar el registro de este pago?"
+        )
+    },
+    "liquidar_socio.boton_confirmar": {Idioma.ES: "✅ Confirmar"},
+    "liquidar_socio.registrado": {
+        Idioma.ES: (
+            "✅ Pago registrado.\n\n"
+            "👤 Socio: {nombre}\n"
+            "📝 Tipo: {tipo}\n"
+            "💵 Monto: {monto}\n"
+            "📅 Fecha: {fecha}"
+        )
+    },
+    # --- Config socios (configuración de socios) ---
+    "config_socios.error_config": {Idioma.ES: "Error de configuración. Contacta al administrador."},
+    "config_socios.sin_socios": {
+        Idioma.ES: "⚙️ <b>Configuración de socios</b>\n\n⚠️ No hay socios configurados."
+    },
+    "config_socios.titulo": {Idioma.ES: "⚙️ <b>Configuración de socios</b>"},
+    "config_socios.linea_socio": {
+        Idioma.ES: "{emoji} {nombre}: {porcentaje}% | Telegram: {telegram}"
+    },
+    "config_socios.telegram_no_config": {Idioma.ES: "no configurado"},
+    "config_socios.boton_editar_porcentajes": {Idioma.ES: "🔢 Editar porcentajes"},
+    "config_socios.boton_editar_telegram": {Idioma.ES: "📱 Editar Telegram ID"},
+    "config_socios.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
+    "config_socios.pedir_porcentajes": {
+        Idioma.ES: (
+            "Ingresa los porcentajes en orden empresa,garay,ryan separados por coma.\n"
+            "Deben sumar 100. Ejemplo: <code>50,25,25</code>"
+        )
+    },
+    "config_socios.seleccionar_socio_telegram": {
+        Idioma.ES: "Selecciona el socio para editar su Telegram ID:"
+    },
+    "config_socios.error_porcentajes": {
+        Idioma.ES: "⚠️ Formato inválido o suma ≠ 100. Intenta de nuevo:"
+    },
+    "config_socios.porcentajes_actualizados": {Idioma.ES: "✅ Porcentajes actualizados: {resumen}"},
+    "config_socios.cancelado": {Idioma.ES: "❌ Cancelado."},
+    "config_socios.pedir_telegram_id": {
+        Idioma.ES: "Ingresa el Telegram ID de {nombre} (número entero, o 'none' para eliminar):"
+    },
+    "config_socios.error_telegram_invalido": {Idioma.ES: "⚠️ Ingresa un número entero o 'none':"},
+    "config_socios.socio_no_encontrado": {Idioma.ES: "⚠️ Socio '{nombre}' no encontrado."},
+    "config_socios.telegram_eliminado": {Idioma.ES: "✅ Telegram ID de {nombre} eliminado."},
+    "config_socios.telegram_actualizado": {Idioma.ES: "✅ Telegram ID de {nombre} actualizado."},
 }
 
 

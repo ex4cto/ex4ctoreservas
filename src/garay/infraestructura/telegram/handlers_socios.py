@@ -24,6 +24,7 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.socios.entidades import PagoSocio
 from garay.infraestructura.telegram.auth import requiere_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
+from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
 
@@ -80,18 +81,19 @@ def _pantalla_confirmacion(
     nombre_socio: str, tipo: str, monto: Dinero
 ) -> str:
     fecha_str = datetime.date.today().strftime("%d/%m/%Y")
-    tipo_label = "Total" if tipo == "total" else "Parcial"
+    tipo_label = (
+        obtener_mensaje("liquidar_socio.tipo_total")
+        if tipo == "total"
+        else obtener_mensaje("liquidar_socio.tipo_parcial")
+    )
     monto_fmt = _fmt_cop(monto.monto)
     nombre_cap = nombre_socio.capitalize()
-    return (
-        "💰 <b>Confirmación de pago</b>\n"
-        "\n"
-        f"👤 Socio: {nombre_cap}\n"
-        f"📝 Tipo: {tipo_label}\n"
-        f"💵 Monto: {monto_fmt}\n"
-        f"📅 Fecha: {fecha_str}\n"
-        "\n"
-        "¿Confirmar el registro de este pago?"
+    return formatear_html(
+        obtener_mensaje("liquidar_socio.confirmacion"),
+        nombre=nombre_cap,
+        tipo=tipo_label,
+        monto=monto_fmt,
+        fecha=fecha_str,
     )
 
 
@@ -99,8 +101,14 @@ def _teclado_confirmacion() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("✅ Confirmar", callback_data=_CB_CONFIRMAR),
-                InlineKeyboardButton("❌ Cancelar", callback_data=_CB_CANCELAR),
+                InlineKeyboardButton(
+                    obtener_mensaje("liquidar_socio.boton_confirmar"),
+                    callback_data=_CB_CONFIRMAR,
+                ),
+                InlineKeyboardButton(
+                    obtener_mensaje("liquidar_socio.boton_cancelar"),
+                    callback_data=_CB_CANCELAR,
+                ),
             ]
         ]
     )
@@ -119,7 +127,7 @@ async def cmd_liquidar_socio(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.error("socios_config_repo not found in bot_data — wiring error")
         if update.effective_message:
             await update.effective_message.reply_text(
-                "Error de configuración. Contacta al administrador.",
+                obtener_mensaje("liquidar_socio.error_config"),
                 parse_mode="HTML",
             )
         return ConversationHandler.END
@@ -128,7 +136,7 @@ async def cmd_liquidar_socio(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not socios:
         if update.effective_message:
             await update.effective_message.reply_text(
-                "No hay socios configurados.",
+                obtener_mensaje("liquidar_socio.sin_socios"),
                 parse_mode="HTML",
             )
         return ConversationHandler.END
@@ -139,12 +147,14 @@ async def cmd_liquidar_socio(update: Update, context: ContextTypes.DEFAULT_TYPE)
         botones.append(
             [InlineKeyboardButton(nombre.capitalize(), callback_data=f"{_CB_SOCIO_PREFIX}{nombre}")]
         )
-    botones.append([InlineKeyboardButton("❌ Cancelar", callback_data=_CB_CANCELAR)])
+    botones.append(
+        [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR)]
+    )
 
     markup = InlineKeyboardMarkup(botones)
     if update.effective_message:
         await update.effective_message.reply_text(
-            "👤 Selecciona el socio a liquidar:",
+            obtener_mensaje("liquidar_socio.seleccionar_socio"),
             reply_markup=markup,
             parse_mode="HTML",
         )
@@ -187,16 +197,17 @@ async def handle_lq_seleccion(update: Update, context: ContextTypes.DEFAULT_TYPE
         [
             [
                 InlineKeyboardButton(
-                    f"✅ Total ({pendiente_fmt} pendiente)", callback_data=_CB_TOTAL
+                    obtener_mensaje("liquidar_socio.boton_total").format(pendiente=pendiente_fmt),
+                    callback_data=_CB_TOTAL,
                 )
             ],
-            [InlineKeyboardButton("💵 Parcial", callback_data=_CB_PARCIAL)],
-            [InlineKeyboardButton("❌ Cancelar", callback_data=_CB_CANCELAR)],
+            [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_parcial"), callback_data=_CB_PARCIAL)],
+            [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR)],
         ]
     )
     if update.effective_message:
         await update.effective_message.reply_text(
-            f"💰 <b>{nombre.capitalize()}</b> — ¿cómo registrar el pago?",
+            formatear_html(obtener_mensaje("liquidar_socio.seleccionar_tipo"), nombre=nombre.capitalize()),
             reply_markup=markup,
             parse_mode="HTML",
         )
@@ -247,7 +258,7 @@ async def handle_lq_tipo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if data == _CB_PARCIAL:
         if update.effective_message:
             await update.effective_message.reply_text(
-                "💵 Ingresa el monto a pagar (ej: 500000):",
+                obtener_mensaje("liquidar_socio.pedir_monto"),
                 parse_mode="HTML",
             )
         return LQ_MONTO
@@ -255,7 +266,9 @@ async def handle_lq_tipo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if data == _CB_CANCELAR:
         _limpiar(context)
         if update.effective_message:
-            await update.effective_message.reply_text("❌ Cancelado.", parse_mode="HTML")
+            await update.effective_message.reply_text(
+                obtener_mensaje("liquidar_socio.cancelado"), parse_mode="HTML"
+            )
         return ConversationHandler.END
 
     _limpiar(context)
@@ -280,7 +293,7 @@ async def handle_lq_monto(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     monto_decimal: Decimal | None = parsear_monto(texto)
     if monto_decimal is None:
         await update.effective_message.reply_text(
-            "❌ Monto inválido. Ingresa un número, por ejemplo: <code>500000</code>",
+            obtener_mensaje("liquidar_socio.error_monto"),
             parse_mode="HTML",
         )
         return LQ_MONTO
@@ -323,7 +336,7 @@ async def handle_lq_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         _limpiar(context)
         if update.effective_message:
             await update.effective_message.reply_text(
-                "❌ Estado incompleto. Inicia el flujo de nuevo.",
+                obtener_mensaje("liquidar_socio.estado_incompleto"),
                 parse_mode="HTML",
             )
         return ConversationHandler.END
@@ -334,7 +347,7 @@ async def handle_lq_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         _limpiar(context)
         if update.effective_message:
             await update.effective_message.reply_text(
-                "Error de configuración. Contacta al administrador.",
+                obtener_mensaje("liquidar_socio.error_config"),
                 parse_mode="HTML",
             )
         return ConversationHandler.END
@@ -352,15 +365,22 @@ async def handle_lq_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     _limpiar(context)
 
-    tipo_label = "Total" if tipo == "total" else "Parcial"
+    tipo_label = (
+        obtener_mensaje("liquidar_socio.tipo_total")
+        if tipo == "total"
+        else obtener_mensaje("liquidar_socio.tipo_parcial")
+    )
     monto_fmt = _fmt_cop(monto.monto)
+    fecha_str = datetime.date.today().strftime("%d/%m/%Y")
     if update.effective_message:
         await update.effective_message.reply_text(
-            f"✅ Pago registrado.\n\n"
-            f"👤 Socio: {nombre_socio.capitalize()}\n"
-            f"📝 Tipo: {tipo_label}\n"
-            f"💵 Monto: {monto_fmt}\n"
-            f"📅 Fecha: {datetime.date.today().strftime('%d/%m/%Y')}",
+            formatear_html(
+                obtener_mensaje("liquidar_socio.registrado"),
+                nombre=nombre_socio.capitalize(),
+                tipo=tipo_label,
+                monto=monto_fmt,
+                fecha=fecha_str,
+            ),
             parse_mode="HTML",
         )
     return ConversationHandler.END
@@ -379,7 +399,9 @@ async def handle_lq_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     _limpiar(context)
     if update.effective_message:
-        await update.effective_message.reply_text("❌ Cancelado.", parse_mode="HTML")
+        await update.effective_message.reply_text(
+            obtener_mensaje("liquidar_socio.cancelado"), parse_mode="HTML"
+        )
     return ConversationHandler.END
 
 
