@@ -282,7 +282,7 @@ async def cmd_nuevo_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def handle_egreso_seleccion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = _input_text(update)
     if texto == CB_CANCELAR_SEL:
-        await _reply(update, obtener_mensaje("venta_cancelada"))
+        await _mostrar_hub(update, context)
         return ConversationHandler.END
     if texto == CB_OTRO_EGRESO:
         service = context.bot_data.get("egreso_service")
@@ -757,6 +757,7 @@ async def handle_gf_lista(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     ud = _ud(context)
     data = _input_text(update)
     if data == CB_GF_CERRAR:
+        await _mostrar_hub(update, context)
         return ConversationHandler.END
     if data == CB_GF_NUEVO:
         await _reply(update, obtener_mensaje("gastos_fijos.pedir_nombre"))
