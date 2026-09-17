@@ -195,6 +195,9 @@ _EMOJI_SOCIO: dict[str, str] = {
 _EMOJI_SOCIO_DEFAULT = "👤"
 
 
+_DESDE_SOCIOS = date(2026, 9, 1)
+
+
 def _formatear_split_socios(resumen: object) -> str:
     """Format the partner split section for propietarios."""
     from garay.aplicacion.socios.split import ResumenSplitSocios
@@ -202,19 +205,27 @@ def _formatear_split_socios(resumen: object) -> str:
     assert isinstance(resumen, ResumenSplitSocios)
 
     lineas = [
-        "💼 <b>Divisiones de socios (histórico)</b>",
+        obtener_mensaje("reporte.socios.titulo"),
         "",
-        f"Agencia total: {_fmt_cop(resumen.total_agencia.monto)}",
+        formatear_html(
+            obtener_mensaje("reporte.socios.agencia_total"),
+            monto=_fmt_cop(resumen.total_agencia.monto),
+        ),
     ]
     for socio in resumen.por_socio:
         emoji = _EMOJI_SOCIO.get(socio.nombre.lower(), _EMOJI_SOCIO_DEFAULT)
         nombre_cap = socio.nombre.capitalize()
         pct = int(socio.porcentaje)
         lineas.append(
-            f"{emoji} {nombre_cap} ({pct}%): "
-            f"acum. {_fmt_cop(socio.acumulado.monto)} | "
-            f"pagado {_fmt_cop(socio.pagado.monto)} | "
-            f"pendiente {_fmt_cop(socio.pendiente.monto)}"
+            formatear_html(
+                obtener_mensaje("reporte.socios.linea_socio"),
+                emoji=emoji,
+                nombre=nombre_cap,
+                porcentaje=pct,
+                acumulado=_fmt_cop(socio.acumulado.monto),
+                pagado=_fmt_cop(socio.pagado.monto),
+                pendiente=_fmt_cop(socio.pendiente.monto),
+            )
         )
     return "\n".join(lineas)
 
@@ -243,7 +254,7 @@ async def cmd_dashboard_ventas(
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]
-        split_resumen = split_service.calcular_acumulado()
+        split_resumen = split_service.calcular_acumulado(desde=_DESDE_SOCIOS)
         if split_resumen.por_socio:
             texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
@@ -290,7 +301,7 @@ async def cb_dashboard_ventas(
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]
-        split_resumen = split_service.calcular_acumulado()
+        split_resumen = split_service.calcular_acumulado(desde=_DESDE_SOCIOS)
         if split_resumen.por_socio:
             texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(mes, año, "rep_v")

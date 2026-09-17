@@ -208,3 +208,51 @@ def test_formatear_split_socios_estructura() -> None:
     assert "acum." in resultado
     assert "pagado" in resultado
     assert "pendiente" in resultado
+
+
+@pytest.mark.asyncio
+async def test_calcular_acumulado_filtra_desde_sep_2026() -> None:
+    """calcular_acumulado is called with desde=date(2026, 9, 1), not all-time."""
+    import datetime
+
+    from garay.infraestructura.telegram.handlers_reportes import cmd_dashboard_ventas
+
+    update = _make_update(user_id=999)
+    split_service = _make_split_service()
+    context = _make_context(
+        resumen_ventas_service=_make_resumen_ventas_service(),
+        split_socios_service=split_service,
+    )
+
+    with (
+        patch("garay.infraestructura.telegram.handlers_reportes.es_propietario", return_value=True),
+        patch("garay.config.settings.obtener_settings", return_value=_fake_settings()),
+    ):
+        await cmd_dashboard_ventas.__wrapped__(update, context)  # type: ignore[attr-defined]
+
+    split_service.calcular_acumulado.assert_called_once_with(desde=datetime.date(2026, 9, 1))
+
+
+@pytest.mark.asyncio
+async def test_cb_dashboard_filtra_desde_sep_2026() -> None:
+    """cb_dashboard_ventas also passes desde=date(2026, 9, 1) to calcular_acumulado."""
+    import datetime
+
+    from garay.infraestructura.telegram.handlers_reportes import cb_dashboard_ventas
+
+    query = AsyncMock()
+    query.data = "rep_v:2026-9"
+    query.message = AsyncMock()
+    update = _make_update(user_id=999)
+    update.callback_query = query
+
+    split_service = _make_split_service()
+    context = _make_context(
+        resumen_ventas_service=_make_resumen_ventas_service(),
+        split_socios_service=split_service,
+    )
+
+    with patch("garay.infraestructura.telegram.handlers_reportes.es_propietario", return_value=True):
+        await cb_dashboard_ventas(update, context)
+
+    split_service.calcular_acumulado.assert_called_once_with(desde=datetime.date(2026, 9, 1))

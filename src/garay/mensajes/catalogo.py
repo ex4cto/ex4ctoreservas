@@ -577,6 +577,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "reporte.nav_anterior": {Idioma.ES: "◀ {label}"},
     "reporte.nav_siguiente": {Idioma.ES: "{label} ▶"},
+    "reporte.socios.titulo": {Idioma.ES: "💼 <b>Divisiones de socios (histórico)</b>"},
+    "reporte.socios.agencia_total": {Idioma.ES: "Agencia total: {monto}"},
+    "reporte.socios.linea_socio": {
+        Idioma.ES: (
+            "{emoji} {nombre} ({porcentaje}%): "
+            "acum. {acumulado} | pagado {pagado} | pendiente {pendiente}"
+        )
+    },
     # --- Freelancers ---
     "freelancer.pedir_nombre": {Idioma.ES: "¿Cuál es el nombre del freelancer?"},
     "freelancer.error_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresá el nombre:"},  # noqa: E501
