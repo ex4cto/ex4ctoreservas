@@ -247,13 +247,13 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
             val = Decimal(parte)
         except InvalidOperation:
             await update.effective_message.reply_text(
-                "⚠️ Formato inválido o suma ≠ 100. Intenta de nuevo:",
+                obtener_mensaje("config_socios.error_porcentajes"),
                 parse_mode="HTML",
             )
             return CS_PORC_INPUT
         if val < 0:
             await update.effective_message.reply_text(
-                "⚠️ Formato inválido o suma ≠ 100. Intenta de nuevo:",
+                obtener_mensaje("config_socios.error_porcentajes"),
                 parse_mode="HTML",
             )
             return CS_PORC_INPUT
