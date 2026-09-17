@@ -178,7 +178,7 @@ _TEXTOS: dict[str, dict[str, str]] = {
             "emitida conforme a la ley colombiana."
         ),
         "titulo_politicas": "POLÍTICAS DE CANCELACIÓN Y CONDICIONES",
-        "politicas_sub": "GARAY TOURS — AGENCIA TURÍSTICA · NIT: 1128049588-6",
+        "politicas_sub": "GARAY TOURS — AGENCIA TURÍSTICA · NIT: {nit}",
         "footer_politicas_1": "Documento correspondiente a la factura",
         "footer_politicas_2": "emitido el",
     },
@@ -215,7 +215,7 @@ _TEXTOS: dict[str, dict[str, str]] = {
             "under Colombian law."
         ),
         "titulo_politicas": "CANCELLATION POLICIES AND CONDITIONS",
-        "politicas_sub": "GARAY TOURS — TRAVEL AGENCY · NIT: 1128049588-6",
+        "politicas_sub": "GARAY TOURS — TRAVEL AGENCY · NIT: {nit}",
         "footer_politicas_1": "Document corresponding to invoice",
         "footer_politicas_2": "issued on",
     },
@@ -289,8 +289,21 @@ def _numero_factura(venta_id: uuid.UUID) -> str:
 class GenerarFacturaService:
     """Generates a 2-page HTML invoice: page 1 = invoice, page 2 = cancellation policies."""
 
-    def __init__(self, logo_url: str = "") -> None:
+    def __init__(
+        self,
+        logo_url: str = "",
+        nit: str = "1128049588-6",
+        rnt: str = "157745",
+        direccion: str = "Hotel Marie Real, Calle del Boquete #7-156, Cartagena de Indias",
+        telefono: str = "+573223789349",
+        contacto_email: str = "agenciagaraytour1@gmail.com",
+    ) -> None:
         self._logo_url = logo_url
+        self._nit = nit
+        self._rnt = rnt
+        self._direccion = direccion
+        self._telefono = telefono
+        self._contacto_email = contacto_email
 
     def generar(self, ctx: ContextoVenta, venta_id: uuid.UUID, numero: str | None = None) -> str:
         idioma = ctx.factura_idioma if ctx.factura_idioma in ("es", "en") else "es"
@@ -367,9 +380,9 @@ class GenerarFacturaService:
         <tr>
           <td style="padding:10px 14px;color:#fff;font-size:11px;line-height:1.7;">
             <strong>{t["empresa_encabezado"]}</strong><br>
-            NIT: 1128049588-6 &nbsp;|&nbsp; RNT: 157745<br>
-            Hotel Marie Real, Calle del Boquete #7-156, Cartagena de Indias<br>
-            Tel: +573223789349 &nbsp;|&nbsp; agenciagaraytour1@gmail.com
+            NIT: {self._nit} &nbsp;|&nbsp; RNT: {self._rnt}<br>
+            {self._direccion}<br>
+            Tel: {self._telefono} &nbsp;|&nbsp; {self._contacto_email}
           </td>
         </tr>
       </table>
@@ -450,7 +463,7 @@ class GenerarFacturaService:
     <td style="padding:24px;">
       <div style="background:#1B3B6B;color:#fff;padding:14px 18px;border-radius:4px;margin-bottom:18px;">
         <div style="font-size:16px;font-weight:bold;">{t["titulo_politicas"]}</div>
-        <div style="font-size:11px;margin-top:4px;color:#b0c4de;">{t["politicas_sub"]}</div>
+        <div style="font-size:11px;margin-top:4px;color:#b0c4de;">{t["politicas_sub"].format(nit=self._nit)}</div>
       </div>
 
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;line-height:1.7;color:#333;">

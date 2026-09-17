@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     dashboard_url: str = Field(default="http://localhost:8501")
 
     factura_logo_url: str = Field(default="")
+    factura_nit: str = Field(default="1128049588-6")
+    factura_rnt: str = Field(default="157745")
+    factura_direccion: str = Field(default="Hotel Marie Real, Calle del Boquete #7-156, Cartagena de Indias")
+    factura_telefono: str = Field(default="+573223789349")
+    factura_contacto_email: str = Field(default="agenciagaraytour1@gmail.com")
 
     # Resend HTTP API for invoice delivery.
     resend_api_key: str = Field(default="")

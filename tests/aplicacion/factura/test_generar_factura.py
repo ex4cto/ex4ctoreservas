@@ -318,6 +318,40 @@ class TestFacturaAsesor:
         assert "Asesor" in html
         assert html.count("Carlos López") == 1
 
+
+class TestDatosEmpresa:
+    """Company contact data (NIT, RNT, address, phone, email) is injectable."""
+
+    def test_nit_por_defecto_aparece_en_html(self) -> None:
+        html = GenerarFacturaService().generar(_ctx_completo(), _venta_id())
+        assert "1128049588-6" in html
+
+    def test_nit_personalizado_aparece_en_html(self) -> None:
+        html = GenerarFacturaService(nit="9999999999-9").generar(_ctx_completo(), _venta_id())
+        assert "9999999999-9" in html
+        assert "1128049588-6" not in html
+
+    def test_rnt_por_defecto_aparece_en_html(self) -> None:
+        html = GenerarFacturaService().generar(_ctx_completo(), _venta_id())
+        assert "157745" in html
+
+    def test_rnt_personalizado_aparece_en_html(self) -> None:
+        html = GenerarFacturaService(rnt="999999").generar(_ctx_completo(), _venta_id())
+        assert "999999" in html
+        assert "157745" not in html
+
+    def test_direccion_personalizada_aparece_en_html(self) -> None:
+        html = GenerarFacturaService(direccion="Calle Test #1-23").generar(_ctx_completo(), _venta_id())
+        assert "Calle Test #1-23" in html
+
+    def test_telefono_personalizado_aparece_en_html(self) -> None:
+        html = GenerarFacturaService(telefono="+570000000000").generar(_ctx_completo(), _venta_id())
+        assert "+570000000000" in html
+
+    def test_contacto_email_personalizado_aparece_en_html(self) -> None:
+        html = GenerarFacturaService(contacto_email="test@example.com").generar(_ctx_completo(), _venta_id())
+        assert "test@example.com" in html
+
     def test_en_traduce_etiquetas(self) -> None:
         ctx = _ctx_completo()
         ctx.factura_idioma = "en"

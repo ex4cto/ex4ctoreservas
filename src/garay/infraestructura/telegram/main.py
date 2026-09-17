@@ -250,7 +250,14 @@ def main() -> None:
         firma_data_uri=_firma_uri,
     )
 
-    generar_factura_service = GenerarFacturaService(logo_url=logo_url)
+    generar_factura_service = GenerarFacturaService(
+        logo_url=logo_url,
+        nit=settings.factura_nit,
+        rnt=settings.factura_rnt,
+        direccion=settings.factura_direccion,
+        telefono=settings.factura_telefono,
+        contacto_email=settings.factura_contacto_email,
+    )
     notificador_email: NotificadorEmail | None = None
     if settings.resend_api_key and settings.resend_from:
         notificador_email = ResendAdapter(
