@@ -102,6 +102,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CAT_MENU,
     CAT_NUEVA_NOMBRE,
     CAT_NUEVA_PARECIDO,
+    CB_CAT_ATRAS,
     CB_EDIT_CATEGORIA,
     CB_EDIT_DESCRIPCION,
     CB_EDIT_DESTINATARIO,
@@ -131,17 +132,25 @@ from garay.infraestructura.telegram.handlers_egresos import (
     GE_DETALLE,
     GE_EDIT_VALOR,
     GE_SELECCIONAR,
+    CB_GF_ATRAS,
+    CB_GF_CERRAR,
+    CB_GF_EDITAR_MONTO,
+    CB_GF_LIQUIDAR,
+    CB_GF_NUEVO,
     GF_CATEGORIA,
     GF_CONFIRMACION,
     GF_DIA,
+    GF_DETALLE,
+    GF_EDITAR_MONTO,
+    GF_LISTA,
     GF_MONTO,
     GF_NOMBRE,
+    PREFIJO_GF_SEL,
     cmd_categorias_egreso,
     cmd_egresos,
     cmd_gastos_fijos,
     cmd_gestionar_egresos,
     cmd_nuevo_egreso,
-    cmd_nuevo_gasto_fijo,
     handle_cat_acciones,
     handle_cat_edit_desc,
     handle_cat_menu,
@@ -165,7 +174,10 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_ge_seleccionar,
     handle_gf_categoria,
     handle_gf_confirmacion,
+    handle_gf_detalle,
     handle_gf_dia,
+    handle_gf_editar_monto,
+    handle_gf_lista,
     handle_gf_monto,
     handle_gf_nombre,
     handle_hub_cancelar,
@@ -872,12 +884,16 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
-    # /gastos_fijos (new gasto fijo) conversation handler
+    # /gastos_fijos — unified conversation handler (list, detail, edit, liquidar, create)
     gastos_fijos_conv_handler = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(cmd_nuevo_gasto_fijo, pattern="^nuevo_gasto_fijo$"),
+            CommandHandler("gastos_fijos", cmd_gastos_fijos),
+            CallbackQueryHandler(cmd_gastos_fijos, pattern=f"^{CB_HUB_FIJOS}$"),
         ],
         states={
+            GF_LISTA: [_CB(handle_gf_lista)],
+            GF_DETALLE: [_CB(handle_gf_detalle)],
+            GF_EDITAR_MONTO: [MessageHandler(_TEXT, handle_gf_editar_monto)],
             GF_NOMBRE: [MessageHandler(_TEXT, handle_gf_nombre)],
             GF_MONTO: [MessageHandler(_TEXT, handle_gf_monto)],
             GF_CATEGORIA: [
@@ -902,7 +918,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         states={
             CAT_MENU: [_CB(handle_cat_menu)],
             CAT_ACCIONES: [_CB(handle_cat_acciones)],
-            CAT_NUEVA_NOMBRE: [MessageHandler(_TEXT, handle_cat_nueva_nombre)],
+            CAT_NUEVA_NOMBRE: [
+                MessageHandler(_TEXT, handle_cat_nueva_nombre),
+                _CB(handle_cat_menu, pattern=f"^{CB_CAT_ATRAS}$"),
+            ],
             CAT_NUEVA_PARECIDO: [_CB(handle_cat_nueva_parecido)],
             CAT_EDIT_DESC: [MessageHandler(_TEXT, handle_cat_edit_desc)],
         },
@@ -1163,11 +1182,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
-    app.add_handler(CommandHandler("gastos_fijos", cmd_gastos_fijos), group=1)
     app.add_handler(CommandHandler("egresos", cmd_egresos), group=1)
-    app.add_handler(
-        CallbackQueryHandler(cmd_gastos_fijos, pattern=f"^{CB_HUB_FIJOS}$"), group=1
-    )
     app.add_handler(
         CallbackQueryHandler(handle_hub_cancelar, pattern=f"^{CB_HUB_CANCELAR}$"), group=1
     )

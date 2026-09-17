@@ -112,6 +112,15 @@ class TestMenu:
         assert result == CAT_NUEVA_NOMBRE
 
     @pytest.mark.asyncio
+    async def test_boton_nueva_incluye_boton_atras(self) -> None:
+        update = _make_update(callback_data=CB_CAT_NUEVA)
+        ctx = _make_context()
+        await handle_cat_menu(update, ctx)
+        markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+        datas = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert CB_CAT_ATRAS in datas
+
+    @pytest.mark.asyncio
     async def test_cerrar_muestra_hub_y_termina(self) -> None:
         update = _make_update(callback_data=CB_CAT_CERRAR)
         ctx = _make_context()
@@ -133,6 +142,15 @@ class TestMenu:
 
 
 class TestNuevaCategoria:
+    @pytest.mark.asyncio
+    async def test_atras_desde_nueva_vuelve_al_menu(self) -> None:
+        update = _make_update(callback_data=CB_CAT_ATRAS)
+        ctx = _make_context()
+        result = await handle_cat_menu(update, ctx)
+        assert result == CAT_MENU
+        markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+        assert markup is not None
+
     @pytest.mark.asyncio
     async def test_nombre_unico_crea_y_vuelve_al_menu(self) -> None:
         update = _make_update(text="Papelería")

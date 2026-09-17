@@ -78,6 +78,9 @@ GF_MONTO: int = 111
 GF_CATEGORIA: int = 112
 GF_DIA: int = 113
 GF_CONFIRMACION: int = 114
+GF_LISTA: int = 115
+GF_DETALLE: int = 116
+GF_EDITAR_MONTO: int = 117
 
 # ---------------------------------------------------------------------------
 # Bogota timezone helper (local — avoids circular import with bot.py)
@@ -701,36 +704,188 @@ async def handle_egreso_rec_edit_menu(update: Update, context: ContextTypes.DEFA
 
 
 # ---------------------------------------------------------------------------
-# /gastos_fijos — list and create recurring expenses
+# /gastos_fijos — list, detail, edit monto, liquidar, and create recurring expenses
 # ---------------------------------------------------------------------------
 
+CB_GF_CERRAR: str = "gf_cerrar"
+CB_GF_NUEVO: str = "gf_nuevo"
+CB_GF_ATRAS: str = "gf_atras"
+CB_GF_EDITAR_MONTO: str = "gf_editar_monto"
+CB_GF_LIQUIDAR: str = "gf_liquidar"
+PREFIJO_GF_SEL: str = "gf_sel:"
 
-@requiere_admin
-async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /gastos_fijos — list active recurring expenses."""
-    service = context.bot_data.get("recurrente_service")
-    gastos: list[GastoRecurrente] = service.listar_activos() if service else []
-    if not gastos:
-        await _reply(update, obtener_mensaje("gastos_fijos.vacio"))
-    else:
-        lineas = [f"• {g.nombre} — {_fmt_cop(g.monto.monto)} (dia {g.dia_mes})" for g in gastos]
-        texto = formatear_html(
-            obtener_mensaje("gastos_fijos.lista"), lista="\n".join(lineas)
-        )
-        botones = [
-            [InlineKeyboardButton(f"Desactivar {g.nombre}", callback_data=f"desactivar:{g.id}")]
-            for g in gastos
+
+def _menu_gastos_fijos(
+    gastos: list[GastoRecurrente], ud: dict[str, object]
+) -> tuple[str, InlineKeyboardMarkup]:
+    ud["gf_ids"] = [str(g.id) for g in gastos]
+    filas: list[list[InlineKeyboardButton]] = []
+    for i, g in enumerate(gastos):
+        label = f"{g.nombre} — {_fmt_cop(g.monto.monto)}"
+        filas.append([InlineKeyboardButton(label, callback_data=f"{PREFIJO_GF_SEL}{i}")])
+    filas.append(_fila_boton(obtener_mensaje("gastos_fijos.boton_nuevo"), CB_GF_NUEVO))
+    filas.append(_fila_boton(obtener_mensaje("gastos_fijos.boton_cerrar"), CB_GF_CERRAR))
+    texto = (
+        obtener_mensaje("gastos_fijos.titulo")
+        if gastos
+        else obtener_mensaje("gastos_fijos.vacio")
+    )
+    return texto, InlineKeyboardMarkup(filas)
+
+
+def _detalle_gasto_teclado() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            _fila_boton(obtener_mensaje("gastos_fijos.boton_editar_monto"), CB_GF_EDITAR_MONTO),
+            _fila_boton(obtener_mensaje("gastos_fijos.boton_liquidar"), CB_GF_LIQUIDAR),
+            _fila_boton(obtener_mensaje("gastos_fijos.boton_atras"), CB_GF_ATRAS),
         ]
-        botones.append(
-            [InlineKeyboardButton("+ Nuevo gasto fijo", callback_data="nuevo_gasto_fijo")]
-        )
-        await _reply(update, texto, InlineKeyboardMarkup(botones))
-    return ConversationHandler.END
+    )
 
 
 @requiere_admin_conv
+async def cmd_gastos_fijos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Entry point for /gastos_fijos — shows list of active recurring expenses."""
+    service = context.bot_data.get("recurrente_service")
+    gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+    texto, teclado = _menu_gastos_fijos(gastos, _ud(context))
+    await _reply(update, texto, teclado)
+    return GF_LISTA
+
+
+async def handle_gf_lista(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    data = _input_text(update)
+    if data == CB_GF_CERRAR:
+        return ConversationHandler.END
+    if data == CB_GF_NUEVO:
+        await _reply(update, obtener_mensaje("gastos_fijos.pedir_nombre"))
+        return GF_NOMBRE
+    if data.startswith(PREFIJO_GF_SEL):
+        ids: list[str] = ud.get("gf_ids", [])  # type: ignore[assignment]
+        service = context.bot_data.get("recurrente_service")
+        try:
+            gasto_id = uuid.UUID(ids[int(data[len(PREFIJO_GF_SEL):])])
+        except (ValueError, IndexError):
+            gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+            texto, teclado = _menu_gastos_fijos(gastos, ud)
+            await _reply(update, texto, teclado)
+            return GF_LISTA
+        gasto = service.buscar_por_id(gasto_id) if service else None
+        if gasto is None:
+            gastos2: list[GastoRecurrente] = service.listar_activos() if service else []
+            texto2, teclado2 = _menu_gastos_fijos(gastos2, ud)
+            await _reply(update, texto2, teclado2)
+            return GF_LISTA
+        ud["gf_sel_id"] = str(gasto.id)
+        texto3 = formatear_html(
+            obtener_mensaje("gastos_fijos.detalle"),
+            nombre=gasto.nombre,
+            monto=_fmt_cop(gasto.monto.monto),
+            dia=gasto.dia_mes,
+            categoria=gasto.categoria,
+        )
+        await _reply(update, texto3, _detalle_gasto_teclado())
+        return GF_DETALLE
+    service2 = context.bot_data.get("recurrente_service")
+    gastos3: list[GastoRecurrente] = service2.listar_activos() if service2 else []
+    texto4, teclado4 = _menu_gastos_fijos(gastos3, ud)
+    await _reply(update, texto4, teclado4)
+    return GF_LISTA
+
+
+async def handle_gf_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ud = _ud(context)
+    data = _input_text(update)
+    service = context.bot_data.get("recurrente_service")
+    if data == CB_GF_ATRAS:
+        gastos: list[GastoRecurrente] = service.listar_activos() if service else []
+        texto, teclado = _menu_gastos_fijos(gastos, ud)
+        await _reply(update, texto, teclado)
+        return GF_LISTA
+    gasto_id = uuid.UUID(str(ud.get("gf_sel_id", "")))
+    gasto = service.buscar_por_id(gasto_id) if service else None
+    if gasto is None:
+        return ConversationHandler.END
+    if data == CB_GF_EDITAR_MONTO:
+        await _reply(
+            update,
+            formatear_html(
+                obtener_mensaje("gastos_fijos.pedir_monto_nuevo"), nombre=gasto.nombre
+            ),
+        )
+        return GF_EDITAR_MONTO
+    if data == CB_GF_LIQUIDAR:
+        egreso_svc = context.bot_data.get("egreso_service")
+        if egreso_svc is None:
+            logger.error("egreso_service not found in bot_data")
+            return ConversationHandler.END
+        from garay.config.settings import obtener_settings
+
+        moneda = obtener_settings().moneda_predeterminada
+        egreso_svc.registrar(
+            monto=gasto.monto.monto,
+            descripcion=gasto.nombre,
+            categoria=gasto.categoria,
+            fecha=_hoy_bogota(),
+            moneda=moneda,
+            gasto_recurrente_id=gasto.id,
+        )
+        gastos2: list[GastoRecurrente] = service.listar_activos() if service else []
+        texto2, teclado2 = _menu_gastos_fijos(gastos2, ud)
+        liquidado = formatear_html(
+            obtener_mensaje("gastos_fijos.liquidado"),
+            nombre=gasto.nombre,
+            monto=_fmt_cop(gasto.monto.monto),
+        )
+        await _reply(update, liquidado + "\n\n" + texto2, teclado2)
+        return GF_LISTA
+    texto3 = formatear_html(
+        obtener_mensaje("gastos_fijos.detalle"),
+        nombre=gasto.nombre,
+        monto=_fmt_cop(gasto.monto.monto),
+        dia=gasto.dia_mes,
+        categoria=gasto.categoria,
+    )
+    await _reply(update, texto3, _detalle_gasto_teclado())
+    return GF_DETALLE
+
+
+async def handle_gf_editar_monto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    texto = _input_text(update)
+    monto = _parsear_monto_cop(texto)
+    if monto is None:
+        await _reply(update, obtener_mensaje("egreso.error_monto"))
+        return GF_EDITAR_MONTO
+    ud = _ud(context)
+    service = context.bot_data.get("recurrente_service")
+    if service is None:
+        return ConversationHandler.END
+    gasto_id = uuid.UUID(str(ud.get("gf_sel_id", "")))
+    gasto = service.buscar_por_id(gasto_id)
+    if gasto is None:
+        return ConversationHandler.END
+    from garay.config.settings import obtener_settings
+
+    moneda = obtener_settings().moneda_predeterminada
+    gasto.monto = Dinero(monto, moneda)
+    service.guardar(gasto)
+    confirmacion = formatear_html(
+        obtener_mensaje("gastos_fijos.monto_actualizado"), monto=_fmt_cop(monto)
+    )
+    texto_det = formatear_html(
+        obtener_mensaje("gastos_fijos.detalle"),
+        nombre=gasto.nombre,
+        monto=_fmt_cop(gasto.monto.monto),
+        dia=gasto.dia_mes,
+        categoria=gasto.categoria,
+    )
+    await _reply(update, confirmacion + "\n\n" + texto_det, _detalle_gasto_teclado())
+    return GF_DETALLE
+
+
 async def cmd_nuevo_gasto_fijo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Entry point for creating a new recurring expense — prompts for name."""
+    """Prompt for name when creating a new recurring expense."""
     await _reply(update, obtener_mensaje("gastos_fijos.pedir_nombre"))
     return GF_NOMBRE
 
@@ -914,7 +1069,10 @@ async def handle_cat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await _mostrar_hub(update, context)
         return ConversationHandler.END
     if data == CB_CAT_NUEVA:
-        await _reply(update, obtener_mensaje("categoria.pedir_nombre"))
+        teclado = InlineKeyboardMarkup(
+            [_fila_boton(obtener_mensaje("categoria.boton_atras"), CB_CAT_ATRAS)]
+        )
+        await _reply(update, obtener_mensaje("categoria.pedir_nombre"), teclado)
         return CAT_NUEVA_NOMBRE
     if data.startswith(PREFIJO_CATSEL):
         indices: list[str] = ud.get("cat_indices", [])  # type: ignore[assignment]

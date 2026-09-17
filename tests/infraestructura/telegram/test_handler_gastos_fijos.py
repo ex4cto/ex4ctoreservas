@@ -12,16 +12,28 @@ from telegram.ext import ConversationHandler
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import GastoRecurrente
 from garay.infraestructura.telegram.handlers_egresos import (
+    CB_GF_ATRAS,
+    CB_GF_CERRAR,
+    CB_GF_EDITAR_MONTO,
+    CB_GF_LIQUIDAR,
+    CB_GF_NUEVO,
     GF_CATEGORIA,
     GF_CONFIRMACION,
+    GF_DETALLE,
     GF_DIA,
+    GF_EDITAR_MONTO,
+    GF_LISTA,
     GF_MONTO,
     GF_NOMBRE,
+    PREFIJO_GF_SEL,
     cmd_gastos_fijos,
     cmd_nuevo_gasto_fijo,
     handle_gf_categoria,
     handle_gf_confirmacion,
+    handle_gf_detalle,
     handle_gf_dia,
+    handle_gf_editar_monto,
+    handle_gf_lista,
     handle_gf_monto,
     handle_gf_nombre,
 )
@@ -46,9 +58,9 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
     return update
 
 
-def _gasto_recurrente(nombre: str = "Arriendo") -> GastoRecurrente:
+def _gasto_recurrente(nombre: str = "Arriendo", gasto_id: uuid.UUID | None = None) -> GastoRecurrente:
     return GastoRecurrente(
-        id=uuid.uuid4(),
+        id=gasto_id or uuid.uuid4(),
         nombre=nombre,
         monto=Dinero("500000"),
         categoria="arriendo",
@@ -58,7 +70,6 @@ def _gasto_recurrente(nombre: str = "Arriendo") -> GastoRecurrente:
 
 
 def _make_admin_repo() -> MagicMock:
-    """Freelancer repo whose lookup returns an admin — satisfies requiere_admin(_conv)."""
     repo = MagicMock()
     freelancer = MagicMock()
     freelancer.es_admin = True
@@ -89,53 +100,142 @@ def _make_context(
 
 class TestCmdGastosFijos:
     @pytest.mark.asyncio
-    async def test_lista_gastos_activos(self) -> None:
+    async def test_lista_gastos_activos_muestra_botones(self) -> None:
+        g = _gasto_recurrente("Arriendo")
+        ctx = _make_context(gastos=[g])
         update = _make_update()
-        ctx = _make_context(gastos=[_gasto_recurrente("Arriendo"), _gasto_recurrente("Nomina")])
-        await cmd_gastos_fijos(update, ctx)
-        update.effective_message.reply_text.assert_called_once()
-        msg = update.effective_message.reply_text.call_args[0][0]
-        assert "Arriendo" in msg
+        result = await cmd_gastos_fijos(update, ctx)
+        assert result == GF_LISTA
+        markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
+        labels = [btn.text for row in markup.inline_keyboard for btn in row]
+        assert any("Arriendo" in lbl for lbl in labels)
 
     @pytest.mark.asyncio
-    async def test_mensaje_vacio_cuando_no_hay_gastos(self) -> None:
-        update = _make_update()
+    async def test_lista_vacia_muestra_botones_nuevo_y_cerrar(self) -> None:
         ctx = _make_context(gastos=[])
-        await cmd_gastos_fijos(update, ctx)
-        update.effective_message.reply_text.assert_called_once()
-        msg = update.effective_message.reply_text.call_args[0][0]
-        # Should show the "empty" message
-        assert msg  # non-empty response
+        update = _make_update()
+        result = await cmd_gastos_fijos(update, ctx)
+        assert result == GF_LISTA
+        markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
+        datas = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert CB_GF_NUEVO in datas
+        assert CB_GF_CERRAR in datas
 
     @pytest.mark.asyncio
     async def test_no_admin_es_denegado(self) -> None:
-        """Non-admin user → requiere_admin returns None, no gastos list shown."""
-        update = _make_update()
-        ctx = _make_context(gastos=[_gasto_recurrente("Arriendo")])
+        ctx = _make_context(gastos=[_gasto_recurrente()])
         ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
+        update = _make_update()
         result = await cmd_gastos_fijos(update, ctx)
-        assert result is None
+        assert result == ConversationHandler.END
         ctx.bot_data["recurrente_service"].listar_activos.assert_not_called()
+
+
+class TestLista:
+    @pytest.mark.asyncio
+    async def test_cerrar_termina(self) -> None:
+        ctx = _make_context()
+        update = _make_update(callback_data=CB_GF_CERRAR)
+        result = await handle_gf_lista(update, ctx)
+        assert result == ConversationHandler.END
+
+    @pytest.mark.asyncio
+    async def test_nuevo_pide_nombre(self) -> None:
+        ctx = _make_context()
+        update = _make_update(callback_data=CB_GF_NUEVO)
+        result = await handle_gf_lista(update, ctx)
+        assert result == GF_NOMBRE
+
+    @pytest.mark.asyncio
+    async def test_seleccionar_gasto_abre_detalle(self) -> None:
+        g = _gasto_recurrente("Arriendo")
+        ctx = _make_context(gastos=[g])
+        await cmd_gastos_fijos(_make_update(), ctx)
+        ctx.bot_data["recurrente_service"].buscar_por_id.return_value = g
+        update = _make_update(callback_data=f"{PREFIJO_GF_SEL}0")
+        result = await handle_gf_lista(update, ctx)
+        assert result == GF_DETALLE
+        assert ctx.user_data["gf_sel_id"] == str(g.id)
+
+    @pytest.mark.asyncio
+    async def test_seleccionar_gasto_muestra_botones_detalle(self) -> None:
+        g = _gasto_recurrente("Arriendo")
+        ctx = _make_context(gastos=[g])
+        await cmd_gastos_fijos(_make_update(), ctx)
+        ctx.bot_data["recurrente_service"].buscar_por_id.return_value = g
+        update = _make_update(callback_data=f"{PREFIJO_GF_SEL}0")
+        await handle_gf_lista(update, ctx)
+        markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
+        datas = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert CB_GF_EDITAR_MONTO in datas
+        assert CB_GF_LIQUIDAR in datas
+        assert CB_GF_ATRAS in datas
+
+
+class TestDetalle:
+    def _ctx_with_gasto(self, g: GastoRecurrente) -> MagicMock:
+        ctx = _make_context(gastos=[g])
+        ctx.user_data["gf_sel_id"] = str(g.id)
+        ctx.bot_data["recurrente_service"].buscar_por_id.return_value = g
+        return ctx
+
+    @pytest.mark.asyncio
+    async def test_atras_vuelve_a_lista(self) -> None:
+        g = _gasto_recurrente()
+        ctx = self._ctx_with_gasto(g)
+        update = _make_update(callback_data=CB_GF_ATRAS)
+        result = await handle_gf_detalle(update, ctx)
+        assert result == GF_LISTA
+
+    @pytest.mark.asyncio
+    async def test_editar_monto_pide_nuevo_valor(self) -> None:
+        g = _gasto_recurrente()
+        ctx = self._ctx_with_gasto(g)
+        update = _make_update(callback_data=CB_GF_EDITAR_MONTO)
+        result = await handle_gf_detalle(update, ctx)
+        assert result == GF_EDITAR_MONTO
+
+    @pytest.mark.asyncio
+    async def test_liquidar_registra_egreso_y_vuelve_lista(self) -> None:
+        g = _gasto_recurrente()
+        ctx = self._ctx_with_gasto(g)
+        update = _make_update(callback_data=CB_GF_LIQUIDAR)
+        result = await handle_gf_detalle(update, ctx)
+        assert result == GF_LISTA
+        ctx.bot_data["egreso_service"].registrar.assert_called_once()
+        call_kwargs = ctx.bot_data["egreso_service"].registrar.call_args
+        assert call_kwargs.kwargs["gasto_recurrente_id"] == g.id
+
+
+class TestEditarMonto:
+    @pytest.mark.asyncio
+    async def test_monto_valido_actualiza_y_vuelve_detalle(self) -> None:
+        g = _gasto_recurrente()
+        ctx = _make_context(gastos=[g])
+        ctx.user_data["gf_sel_id"] = str(g.id)
+        ctx.bot_data["recurrente_service"].buscar_por_id.return_value = g
+        update = _make_update(text="300")
+        result = await handle_gf_editar_monto(update, ctx)
+        assert result == GF_DETALLE
+        ctx.bot_data["recurrente_service"].guardar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_monto_invalido_repite(self) -> None:
+        ctx = _make_context()
+        update = _make_update(text="abc")
+        result = await handle_gf_editar_monto(update, ctx)
+        assert result == GF_EDITAR_MONTO
+        ctx.bot_data["recurrente_service"].guardar.assert_not_called()
 
 
 class TestCrearGastoFijo:
     @pytest.mark.asyncio
     async def test_cmd_nuevo_gasto_fijo_muestra_prompt(self) -> None:
-        """Entry point shows the name prompt and returns GF_NOMBRE."""
         update = _make_update()
         ctx = _make_context()
         result = await cmd_nuevo_gasto_fijo(update, ctx)
         assert result == GF_NOMBRE
         update.effective_message.reply_text.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_cmd_nuevo_gasto_fijo_no_admin_es_denegado(self) -> None:
-        """Non-admin → requiere_admin_conv ends the create-flow at the entry point."""
-        update = _make_update()
-        ctx = _make_context()
-        ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
-        result = await cmd_nuevo_gasto_fijo(update, ctx)
-        assert result == ConversationHandler.END
 
     @pytest.mark.asyncio
     async def test_handle_gf_nombre_avanza(self) -> None:
@@ -178,7 +278,7 @@ class TestCrearGastoFijo:
 
     @pytest.mark.asyncio
     async def test_handle_gf_dia_invalido_repite(self) -> None:
-        update = _make_update(text="31")  # > 28
+        update = _make_update(text="31")
         ctx = _make_context()
         result = await handle_gf_dia(update, ctx)
         assert result == GF_DIA
@@ -215,5 +315,3 @@ class TestCrearGastoFijo:
         assert result == ConversationHandler.END
         service = ctx.bot_data["recurrente_service"]
         service.guardar.assert_not_called()
-
-
