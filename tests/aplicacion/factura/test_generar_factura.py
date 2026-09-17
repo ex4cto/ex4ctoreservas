@@ -256,3 +256,74 @@ class TestFacturaFechasPorTour:
         html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "15/08/2026" in html
         assert "00:00" not in html
+
+
+class TestFacturaAsesor:
+    """Vendor/closer attribution rows in the service-detail table."""
+
+    def test_sin_asesor_no_agrega_filas(self) -> None:
+        ctx = _ctx_completo()
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Asesor" not in html
+        assert "Vendedor" not in html
+        assert "Cerrador" not in html
+
+    def test_ambos_muestra_asesor(self) -> None:
+        ctx = _ctx_completo()
+        ctx.rol_registrante = "ambos"
+        ctx.vendedor_nombre = "Carlos López"
+        ctx.cerrador_nombre = "Carlos López"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Asesor" in html
+        assert "Carlos López" in html
+        assert "Vendedor" not in html
+        assert "Cerrador" not in html
+
+    def test_roles_distintos_muestra_ambos(self) -> None:
+        ctx = _ctx_completo()
+        ctx.rol_registrante = "vendedor"
+        ctx.vendedor_nombre = "Ana Torres"
+        ctx.cerrador_nombre = "Pedro Ruiz"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Vendedor" in html
+        assert "Ana Torres" in html
+        assert "Cerrador" in html
+        assert "Pedro Ruiz" in html
+
+    def test_solo_vendedor_muestra_vendedor(self) -> None:
+        ctx = _ctx_completo()
+        ctx.rol_registrante = "vendedor"
+        ctx.vendedor_nombre = "Ana Torres"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Vendedor" in html
+        assert "Ana Torres" in html
+        assert "Cerrador" not in html
+
+    def test_solo_cerrador_muestra_cerrador(self) -> None:
+        ctx = _ctx_completo()
+        ctx.rol_registrante = "cerrador"
+        ctx.cerrador_nombre = "Pedro Ruiz"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Cerrador" in html
+        assert "Pedro Ruiz" in html
+        assert "Vendedor" not in html
+
+    def test_nombres_iguales_sin_rol_ambos_muestra_asesor(self) -> None:
+        """Same name in both fields (no rol_registrante) → one 'Asesor' row."""
+        ctx = _ctx_completo()
+        ctx.rol_registrante = None
+        ctx.vendedor_nombre = "Carlos López"
+        ctx.cerrador_nombre = "Carlos López"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Asesor" in html
+        assert html.count("Carlos López") == 1
+
+    def test_en_traduce_etiquetas(self) -> None:
+        ctx = _ctx_completo()
+        ctx.factura_idioma = "en"
+        ctx.rol_registrante = "vendedor"
+        ctx.vendedor_nombre = "Ana Torres"
+        ctx.cerrador_nombre = "Pedro Ruiz"
+        html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+        assert "Sales rep" in html
+        assert "Closer" in html

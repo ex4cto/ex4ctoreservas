@@ -161,6 +161,9 @@ _TEXTOS: dict[str, dict[str, str]] = {
         "label_ninos": "Niños",
         "label_hotel": "Hotel",
         "sin_hotel": "Sin hotel",
+        "label_asesor": "Asesor",
+        "label_vendedor": "Vendedor",
+        "label_cerrador": "Cerrador",
         "label_concepto": "Concepto",
         "label_monto": "Monto",
         "concepto_valor": "Valor total del servicio",
@@ -195,6 +198,9 @@ _TEXTOS: dict[str, dict[str, str]] = {
         "label_ninos": "Children",
         "label_hotel": "Hotel",
         "sin_hotel": "No hotel",
+        "label_asesor": "Advisor",
+        "label_vendedor": "Sales rep",
+        "label_cerrador": "Closer",
         "label_concepto": "Description",
         "label_monto": "Amount",
         "concepto_valor": "Total service value",
@@ -240,6 +246,37 @@ def _render_fecha_tour(ctx: ContextoVenta) -> str:
         ]
         return formatear_fechas_compactas(pares)
     return ctx.fecha_salida.strftime("%d/%m/%Y")
+
+
+def _render_filas_asesor(ctx: ContextoVenta, t: dict[str, str]) -> str:
+    """Return zero, one or two HTML <tr> rows for vendor/closer attribution.
+
+    - rol_registrante == "ambos": one row labelled "Asesor".
+    - Both names set and identical: one row labelled "Asesor".
+    - Both names set and different: two rows, "Vendedor" then "Cerrador".
+    - Only one name set: one row with the applicable label.
+    - Neither set: empty string (row omitted).
+    """
+    vendedor = ctx.vendedor_nombre
+    cerrador = ctx.cerrador_nombre
+    if not vendedor and not cerrador:
+        return ""
+
+    def _fila(label: str, nombre: str) -> str:
+        return (
+            f'<tr><td style="color:#777;padding-bottom:3px;">{label}</td>'
+            f'<td style="text-align:right;">{nombre}</td></tr>'
+        )
+
+    if ctx.rol_registrante == "ambos" or (vendedor and cerrador and vendedor == cerrador):
+        return _fila(t["label_asesor"], vendedor or cerrador or "")
+
+    filas = ""
+    if vendedor:
+        filas += _fila(t["label_vendedor"], vendedor)
+    if cerrador:
+        filas += _fila(t["label_cerrador"], cerrador)
+    return filas
 
 
 def _numero_factura(venta_id: uuid.UUID) -> str:
@@ -294,6 +331,8 @@ class GenerarFacturaService:
             f"</td></tr>"
             for encabezado, cuerpo in politicas
         )
+
+        filas_asesor = _render_filas_asesor(ctx, t)
 
         return f"""<!DOCTYPE html>
 <html lang="{idioma}">
@@ -358,7 +397,8 @@ class GenerarFacturaService:
                 {fila_horario}
                 <tr><td style="color:#777;padding-bottom:3px;">{t["label_adultos"]}</td><td style="text-align:right;">{ctx.adultos or 0}</td></tr>
                 <tr><td style="color:#777;padding-bottom:3px;">{t["label_ninos"]}</td><td style="text-align:right;">{ctx.ninos or 0}</td></tr>
-                <tr><td style="color:#777;">{t["label_hotel"]}</td><td style="text-align:right;">{t["sin_hotel"] if ctx.sin_hotel else (ctx.cliente_hotel or "—")}</td></tr>
+                <tr><td style="color:#777;padding-bottom:3px;">{t["label_hotel"]}</td><td style="text-align:right;">{t["sin_hotel"] if ctx.sin_hotel else (ctx.cliente_hotel or "—")}</td></tr>
+                {filas_asesor}
               </table>
             </div>
           </td>
