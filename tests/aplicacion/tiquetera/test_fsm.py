@@ -347,7 +347,7 @@ class TestMonto:
         """MONTO_NETO fallback state still works when neto_adulto is None."""
         ctx_con_valor = ContextoVenta(valor=Decimal("100000"))
         salida = fsm.procesar(EstadoFSM.MONTO_NETO, "50000", ctx_con_valor)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_monto_neto_supera_valor_devuelve_error(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -420,14 +420,14 @@ class TestNetoAutoCalculo:
         # Service 1: neto_adulto=100000, neto_nino=50000; 2 adultos, 1 nino
         ctx = ContextoVenta(destinos_numeros=[1], adultos=2, ninos=1)
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.neto == Decimal("250000")  # 100000*2 + 50000*1
 
     def test_neto_auto_calcula_multi_servicio(self, fsm: FSMTiquetera) -> None:
         # Services 1+2: (100000+150000)*2 adultos = 500000
         ctx = ContextoVenta(destinos_numeros=[1, 2], adultos=2, ninos=0)
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.neto == Decimal("500000")
 
     def test_neto_sin_precio_pide_manual(self, fsm: FSMTiquetera) -> None:
@@ -441,18 +441,18 @@ class TestNetoAutoCalculo:
         # Business rule: neto_nino=None → use neto_adulto as proxy
         ctx = ContextoVenta(destinos_numeros=[2], adultos=1, ninos=1)
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.neto == Decimal("300000")  # 150000*1 + 150000*1 (proxy)
 
     def test_abono_mayor_que_neto_pero_menor_que_valor_avanza(
         self, fsm: FSMTiquetera
     ) -> None:
         # Bug 2b fix: guard is now against valor, not neto.
-        # valor=None → abono guard skips; neto=100000 is set; advances to PARTICIPANTE_ROL.
+        # valor=None → abono guard skips; neto=100000 is set; advances to METODO_PAGO.
         ctx = ContextoVenta(destinos_numeros=[1], adultos=1, ninos=0)
         # neto calculado = 100000; abono = 200000; valor = None → guard does not fire
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "200000", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_neto_supera_valor_venta_vuelve_a_monto_valor(self, fsm: FSMTiquetera) -> None:
         # neto auto-calculated (100000) > valor_venta (50000) → MONTO_VALOR with error
@@ -735,6 +735,11 @@ class TestFlujoCompleto:
 
         # MONTO_NETO
         s = fsm.procesar(EstadoFSM.MONTO_NETO, "450000", ctx)
+        assert s.nuevo_estado == EstadoFSM.METODO_PAGO
+        ctx = s.contexto
+
+        # METODO_PAGO
+        s = fsm.procesar(EstadoFSM.METODO_PAGO, "Transferencia", ctx)
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         ctx = s.contexto
 
@@ -1052,7 +1057,7 @@ class TestFotoModo:
         assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
         assert s1.contexto.foto_modo is True  # kept for TIPO_RESERVA handler
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_foto_modo_false_after_punto_de_venta(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -1078,7 +1083,7 @@ class TestFotoModo:
         s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
         assert s2.contexto.neto == Decimal("200000")  # 100000 * 2 adultos
 
     def test_handle_destino_recomputa_neto_en_modo_edicion(
@@ -1467,16 +1472,17 @@ class TestFotoModoSaltaParticipanteRol:
         s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
 
-    def test_foto_modo_opciones_participante_rol(
+    def test_foto_modo_opciones_metodo_pago(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
     ) -> None:
-        """La salida de TIPO_RESERVA en foto_modo tiene las opciones de rol."""
+        """La salida de TIPO_RESERVA en foto_modo ahora muestra opciones de método de pago."""
         ctx.foto_modo = True
         s1 = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
-        assert "Ambos" in s2.opciones
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
+        assert "Transferencia" in s2.opciones
 
     def test_foto_modo_false_se_resetea(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -1774,12 +1780,12 @@ class TestPickerModoFotoRegresion:
         # TIPO_RESERVA is NOT in _ESTADOS_FOTO_AVANZAR, so procesar_foto stops here
         assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_foto_modo_canal_origen_salta_picker(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)
         salida = fsm.procesar_foto(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
 
 class TestCallbackDataLimite:
@@ -1891,7 +1897,7 @@ class TestFlujoCompletoSoloParticipante:
     def _drive_to_participante_rol(
         self, fsm: FSMTiquetera
     ) -> ContextoVenta:
-        """Drive the FSM from start through MONTO_NETO, returning context at PARTICIPANTE_ROL."""
+        """Drive the FSM from start through METODO_PAGO, returning context at PARTICIPANTE_ROL."""
         ctx = ContextoVenta()
 
         s = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Presencial", ctx)
@@ -1950,6 +1956,10 @@ class TestFlujoCompletoSoloParticipante:
         ctx = s.contexto
 
         s = fsm.procesar(EstadoFSM.MONTO_NETO, "450000", ctx)
+        assert s.nuevo_estado == EstadoFSM.METODO_PAGO
+        ctx = s.contexto
+
+        s = fsm.procesar(EstadoFSM.METODO_PAGO, "Transferencia", ctx)
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
         return s.contexto
 

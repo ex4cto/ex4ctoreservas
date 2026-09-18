@@ -424,6 +424,7 @@ class TestConfirmacionResumenEspecialE:
             abono="$100.000",
             saldo_pendiente="$100.000",
             neto="$150.000",
+            metodo_pago="Efectivo",
             vendedor="(tú)",
             cerrador="María García",
         )

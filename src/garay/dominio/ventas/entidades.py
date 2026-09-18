@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
+from garay.dominio.comun.tipos import EstadoVenta, MetodoPago, TipoCliente
 from garay.dominio.ventas.errores import (
     AbonoSuperaValorVenta,
     CantidadInvalida,
@@ -53,6 +53,7 @@ class Venta:
     # recencia de registro (no por fecha del tour). Nullable: las ventas anteriores
     # a esta funcionalidad quedan en None.
     registrado_en: datetime.datetime | None = None
+    metodo_pago: MetodoPago | None = None
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:

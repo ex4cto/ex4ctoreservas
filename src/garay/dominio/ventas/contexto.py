@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.comun.tipos import MetodoPago, TipoCliente
 
 
 @dataclass
@@ -50,3 +50,4 @@ class ContextoVenta:
     # Invoice language chosen by the freelancer after the client email step.
     # "es" (Spanish, default) | "en" (English).
     factura_idioma: str = "es"
+    metodo_pago: MetodoPago | None = None

@@ -222,7 +222,7 @@ class TestFotoModoDigitalConCanal:
         salida = fsm.procesar_foto(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
         assert salida.contexto.canal_origen == "Instagram"
         assert salida.contexto.foto_modo is False
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
 
 class TestValidacionConfirmacionCanal:

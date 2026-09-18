@@ -23,7 +23,7 @@ from garay.aplicacion.comun.montos import (
     parsear_monto as _parsear_monto,
 )
 from garay.dominio.comun.email import es_email_valido, normalizar_email
-from garay.dominio.comun.tipos import CanalOrigen, TipoCliente
+from garay.dominio.comun.tipos import CanalOrigen, MetodoPago, TipoCliente
 from garay.dominio.servicios.horarios import formato_display, render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
@@ -45,6 +45,14 @@ _OP_EDITAR = obtener_mensaje("fsm.editar")
 _OP_CANCELAR = obtener_mensaje("fsm.cancelar")
 _DISPLAY_TU = obtener_mensaje("fsm.display_tu")
 _DISPLAY_VACIO = obtener_mensaje("fsm.display_vacio")
+_OP_METODO_TRANSFERENCIA: str = obtener_mensaje("metodo_pago.transferencia")
+_OP_METODO_EFECTIVO: str = obtener_mensaje("metodo_pago.efectivo")
+_OP_METODO_TARJETA: str = obtener_mensaje("metodo_pago.tarjeta")
+_OPCIONES_METODO_PAGO: list[str] = [
+    _OP_METODO_TRANSFERENCIA,
+    _OP_METODO_EFECTIVO,
+    _OP_METODO_TARJETA,
+]
 
 
 class EstadoFSM(StrEnum):
@@ -72,6 +80,7 @@ class EstadoFSM(StrEnum):
     MONTO_VALOR = "monto_valor"
     MONTO_ABONO = "monto_abono"
     MONTO_NETO = "monto_neto"
+    METODO_PAGO = "metodo_pago"
     PARTICIPANTE_ROL = "participante_rol"
     PARTICIPANTE_OTRO = "participante_otro"
     CONFIRMACION = "confirmacion"
@@ -164,6 +173,7 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Adultos/Niños", EstadoFSM.PAX_ADULTOS),
     ("Valor de venta", EstadoFSM.MONTO_VALOR),
     ("Abono", EstadoFSM.MONTO_ABONO),
+    ("Método de pago", EstadoFSM.METODO_PAGO),
     ("Vendedor/Cerrador", EstadoFSM.EDITAR_VENDEDOR),
 ]
 
@@ -361,6 +371,7 @@ class FSMTiquetera:
             EstadoFSM.MONTO_VALOR: self._handle_monto_valor,
             EstadoFSM.MONTO_ABONO: self._handle_monto_abono,
             EstadoFSM.MONTO_NETO: self._handle_monto_neto,
+            EstadoFSM.METODO_PAGO: self._handle_metodo_pago,
             EstadoFSM.PARTICIPANTE_ROL: self._handle_participante_rol,
             EstadoFSM.PARTICIPANTE_OTRO: self._handle_participante_otro,
             EstadoFSM.CONFIRMACION: self._handle_confirmacion,
@@ -708,15 +719,15 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         if ctx.foto_modo:
-            # Photo presencial non-Crespo: consume foto_modo and jump to PARTICIPANTE_ROL
+            # Photo presencial non-Crespo: consume foto_modo and jump to METODO_PAGO
             ctx.foto_modo = False
             computed = self._calcular_neto(ctx)
             if computed is not None:
                 ctx.neto = computed
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=self._opciones_rol(ctx),
+                nuevo_estado=EstadoFSM.METODO_PAGO,
+                mensaje=obtener_mensaje("pregunta_metodo_pago"),
+                opciones=_OPCIONES_METODO_PAGO,
                 contexto=ctx,
             )
         # Non-edit, non-foto: punto was already chosen at PUNTO_DE_VENTA, go to FAMILIA
@@ -748,9 +759,9 @@ class FSMTiquetera:
             if computed is not None:
                 ctx.neto = computed
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=self._opciones_rol(ctx),
+                nuevo_estado=EstadoFSM.METODO_PAGO,
+                mensaje=obtener_mensaje("pregunta_metodo_pago"),
+                opciones=_OPCIONES_METODO_PAGO,
                 contexto=ctx,
             )
         return self._salida_familia(ctx)
@@ -797,7 +808,7 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         # Crespo: skip TIPO_RESERVA, set sentinel EXTERNO.
-        # In foto mode, jump to PARTICIPANTE_ROL; otherwise go to FAMILIA.
+        # In foto mode, jump to METODO_PAGO; otherwise go to FAMILIA.
         if ctx.punto_de_venta_nombre == "Crespo":
             ctx.tipo_cliente = TipoCliente.EXTERNO
             if ctx.foto_modo:
@@ -806,9 +817,9 @@ class FSMTiquetera:
                 if computed is not None:
                     ctx.neto = computed
                 return SalidaFSM(
-                    nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                    mensaje=obtener_mensaje("pregunta_rol_venta"),
-                    opciones=self._opciones_rol(ctx),
+                    nuevo_estado=EstadoFSM.METODO_PAGO,
+                    mensaje=obtener_mensaje("pregunta_metodo_pago"),
+                    opciones=_OPCIONES_METODO_PAGO,
                     contexto=ctx,
                 )
             return self._salida_familia(ctx)
@@ -1414,9 +1425,9 @@ class FSMTiquetera:
                     contexto=ctx,
                 )
             return SalidaFSM(
-                nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
-                mensaje=obtener_mensaje("pregunta_rol_venta"),
-                opciones=self._opciones_rol(ctx),
+                nuevo_estado=EstadoFSM.METODO_PAGO,
+                mensaje=obtener_mensaje("pregunta_metodo_pago"),
+                opciones=_OPCIONES_METODO_PAGO,
                 contexto=ctx,
             )
         sin_precio = self._tours_sin_precio(ctx)
@@ -1446,6 +1457,37 @@ class FSMTiquetera:
                 contexto=ctx,
             )
         ctx.neto = monto
+        return SalidaFSM(
+            nuevo_estado=EstadoFSM.METODO_PAGO,
+            mensaje=obtener_mensaje("pregunta_metodo_pago"),
+            opciones=_OPCIONES_METODO_PAGO,
+            contexto=ctx,
+        )
+
+    def _handle_metodo_pago(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
+        ctx = _clonar(contexto)
+        opcion = entrada.strip()
+        metodo_map: dict[str, MetodoPago] = {
+            _OP_METODO_TRANSFERENCIA: MetodoPago.TRANSFERENCIA,
+            _OP_METODO_EFECTIVO: MetodoPago.EFECTIVO,
+            _OP_METODO_TARJETA: MetodoPago.TARJETA,
+        }
+        if opcion not in metodo_map:
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.METODO_PAGO,
+                mensaje=obtener_mensaje("error_metodo_pago_invalido"),
+                opciones=_OPCIONES_METODO_PAGO,
+                contexto=ctx,
+            )
+        ctx.metodo_pago = metodo_map[opcion]
+        if ctx.modo_edicion:
+            ctx.modo_edicion = False
+            return SalidaFSM(
+                nuevo_estado=EstadoFSM.CONFIRMACION,
+                mensaje=self._construir_resumen(ctx),
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
+                contexto=ctx,
+            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.PARTICIPANTE_ROL,
             mensaje=obtener_mensaje("pregunta_rol_venta"),
@@ -1905,6 +1947,10 @@ class FSMTiquetera:
                 obtener_mensaje("pregunta_editar_monto_abono"),
                 actual=_formatear_monto(ctx.abono),
             ),
+            EstadoFSM.METODO_PAGO: formatear_html(
+                obtener_mensaje("pregunta_editar_metodo_pago"),
+                actual=ctx.metodo_pago.value if ctx.metodo_pago is not None else _DISPLAY_VACIO,
+            ),
             EstadoFSM.PARTICIPANTE_ROL: obtener_mensaje("pregunta_rol_venta"),
             EstadoFSM.EDITAR_VENDEDOR: formatear_html(
                 obtener_mensaje("pregunta_editar_vendedor"), actual=ctx.vendedor_nombre or "—"
@@ -2032,6 +2078,7 @@ class FSMTiquetera:
             abono=_formatear_monto(ctx.abono),
             saldo_pendiente=_formatear_monto(saldo_pendiente),
             neto=_formatear_monto(ctx.neto),
+            metodo_pago=ctx.metodo_pago.value if ctx.metodo_pago is not None else "—",
             vendedor=vendedor_str,
             cerrador=cerrador_str,
         )

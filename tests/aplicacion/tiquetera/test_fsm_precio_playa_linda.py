@@ -120,7 +120,7 @@ class TestPlayaLindaConPrecioAutoCalcula:
             valor=Decimal("320000"),
         )
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_playa_linda_neto_calculado_correctamente(self, fsm: FSMTiquetera) -> None:
         # 3 adults x 55000 = 165000 (neto_nino=None -> child price treated as adult)
@@ -131,5 +131,5 @@ class TestPlayaLindaConPrecioAutoCalcula:
             valor=Decimal("500000"),
         )
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.neto == Decimal("165000")

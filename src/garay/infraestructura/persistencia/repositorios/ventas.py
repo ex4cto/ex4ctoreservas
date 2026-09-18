@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
+from garay.dominio.comun.tipos import EstadoVenta, MetodoPago, TipoCliente
 from garay.dominio.puertos.repositorios import VentaRepository
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -47,6 +47,7 @@ def to_orm(v: Venta) -> VentaModel:
         anulada=v.anulada,
         factura_idioma=v.factura_idioma,
         registrado_en=v.registrado_en,
+        metodo_pago=v.metodo_pago.value if v.metodo_pago is not None else None,
     )
 
 
@@ -88,6 +89,7 @@ def to_domain(m: VentaModel) -> Venta:
         anulada=m.anulada,
         factura_idioma=m.factura_idioma,
         registrado_en=m.registrado_en,
+        metodo_pago=MetodoPago(m.metodo_pago) if m.metodo_pago is not None else None,
     )
 
 

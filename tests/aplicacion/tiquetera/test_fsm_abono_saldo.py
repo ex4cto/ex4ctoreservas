@@ -137,8 +137,8 @@ class TestAbonoGuardaContraValor:
             valor=Decimal("300000"),
         )
         salida = fsm.procesar(EstadoFSM.MONTO_ABONO, "200000", ctx)
-        # Must advance past MONTO_ABONO (to PARTICIPANTE_ROL)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        # Must advance past MONTO_ABONO (to METODO_PAGO)
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_abono_igual_a_valor_es_valido(self, fsm: FSMTiquetera) -> None:
         # abono == valor → valid (full payment, zero balance) → advances

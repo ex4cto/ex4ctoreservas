@@ -150,6 +150,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Abono: {abono}\n"
             "Saldo pendiente: {saldo_pendiente}\n"
             "Neto: {neto}\n"
+            "Método de pago: {metodo_pago}\n"
             "Vendedor: {vendedor}\n"
             "Cerrador: {cerrador}\n\n"
             "¿Confirmamos?"
@@ -186,6 +187,15 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "error_ninos_invalido": {Idioma.ES: "Número inválido. Ingresá un entero >= 0."},
     "error_ninos_negativo": {Idioma.ES: "El número de niños no puede ser negativo."},
     "error_abono_invalido": {Idioma.ES: "Monto inválido. Ingresá 0 si no hubo abono."},
+    "pregunta_metodo_pago": {Idioma.ES: "¿Cuál fue el método de pago del cliente?"},
+    "pregunta_editar_metodo_pago": {
+        Idioma.ES: "Método actual: {actual}\n¿Nuevo método de pago?"
+    },
+    "error_metodo_pago_invalido": {Idioma.ES: "Opción no válida. Selecciona una de las opciones."},
+    "campo_metodo_pago": {Idioma.ES: "Método de pago"},
+    "metodo_pago.transferencia": {Idioma.ES: "Transferencia"},
+    "metodo_pago.efectivo": {Idioma.ES: "Efectivo"},
+    "metodo_pago.tarjeta": {Idioma.ES: "Tarjeta"},
     "pregunta_rol_venta": {Idioma.ES: "¿Cuál fue tu rol en esta venta?"},
     "pregunta_neto_sin_precio": {
         Idioma.ES: (

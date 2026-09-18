@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.comun.tipos import MetodoPago, TipoCliente
 from garay.dominio.ventas.valor_objetos import Participantes
 
 
@@ -38,6 +38,7 @@ class RegistrarVentaComando:
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None = None
     horarios_por_servicio: dict[uuid.UUID, str] | None = None
     factura_idioma: str = "es"
+    metodo_pago: MetodoPago | None = None
 
 
 @dataclass(frozen=True)

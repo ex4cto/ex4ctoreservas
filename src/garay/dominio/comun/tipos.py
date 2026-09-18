@@ -24,3 +24,9 @@ class CanalOrigen(StrEnum):
     FACEBOOK = "Facebook"
     GOOGLE = "Google"
     PAGINA_WEB = "Página web"
+
+
+class MetodoPago(StrEnum):
+    TRANSFERENCIA = "TRANSFERENCIA"
+    EFECTIVO = "EFECTIVO"
+    TARJETA = "TARJETA"

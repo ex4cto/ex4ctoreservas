@@ -26,6 +26,7 @@ ESTADO_PTB: dict[EstadoFSM, int] = {
     EstadoFSM.MONTO_VALOR: 11,
     EstadoFSM.MONTO_ABONO: 12,
     EstadoFSM.MONTO_NETO: 13,
+    EstadoFSM.METODO_PAGO: 33,
     EstadoFSM.PARTICIPANTE_ROL: 15,
     EstadoFSM.PARTICIPANTE_OTRO: 16,
     EstadoFSM.CONFIRMACION: 17,

@@ -491,7 +491,7 @@ class TestPhotoFlow:
         # simulate photo-extracted punto
         ctx.punto_de_venta_nombre = "Crespo"
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Crespo", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.tipo_cliente == TipoCliente.EXTERNO
         assert not salida.contexto.foto_modo  # consumed
 
@@ -517,7 +517,7 @@ class TestPhotoFlow:
         assert s1.nuevo_estado == EstadoFSM.TIPO_RESERVA
         assert s1.contexto.foto_modo
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", s1.contexto)
-        assert s2.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert s2.nuevo_estado == EstadoFSM.METODO_PAGO
         assert s2.contexto.tipo_cliente == TipoCliente.EXTERNO
         assert not s2.contexto.foto_modo  # consumed
 
@@ -530,7 +530,7 @@ class TestPhotoFlow:
         ctx.tipo_cliente = TipoCliente.DIGITAL
         # canal_origen not yet set — simulate what photo-auto-advance leaves
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "WhatsApp", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
         assert salida.contexto.tipo_cliente == TipoCliente.DIGITAL
         assert not salida.contexto.foto_modo
 

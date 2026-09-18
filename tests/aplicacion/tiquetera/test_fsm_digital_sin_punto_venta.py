@@ -68,8 +68,8 @@ class TestCanalOrigenNormalVaAFamilia:
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
 
-class TestCanalOrigenFotoModoVaAParticipanteRol:
-    """Cambio 2: when foto_modo=True, _handle_canal_origen must go to PARTICIPANTE_ROL."""
+class TestCanalOrigenFotoModoVaAMetodoPago:
+    """Cambio 2: when foto_modo=True, _handle_canal_origen must go to METODO_PAGO."""
 
     def test_canal_origen_foto_modo_va_a_participante_rol(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta()
@@ -79,7 +79,7 @@ class TestCanalOrigenFotoModoVaAParticipanteRol:
         ctx.adultos = 2
         ctx.ninos = 0
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "WhatsApp", ctx)
-        assert salida.nuevo_estado == EstadoFSM.PARTICIPANTE_ROL
+        assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
 
     def test_canal_origen_foto_modo_desactiva_foto_modo(self, fsm: FSMTiquetera) -> None:
         """Triangulation: foto_modo flag is cleared after the transition."""

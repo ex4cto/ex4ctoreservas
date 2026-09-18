@@ -363,6 +363,7 @@ def _contexto_a_comando(
         canal_origen=ctx.canal_origen,
         fechas_por_servicio=fechas_id if fechas_id else None,
         horarios_por_servicio=horarios_id if horarios_id else None,
+        metodo_pago=ctx.metodo_pago,
     )
 
 
@@ -935,6 +936,7 @@ handle_pax_ninos = _make_handler(EstadoFSM.PAX_NINOS)
 handle_monto_valor = _make_handler(EstadoFSM.MONTO_VALOR)
 handle_monto_abono = _make_handler(EstadoFSM.MONTO_ABONO)
 handle_monto_neto = _make_handler(EstadoFSM.MONTO_NETO)
+handle_metodo_pago = _make_handler(EstadoFSM.METODO_PAGO)
 handle_participante_rol = _make_handler(EstadoFSM.PARTICIPANTE_ROL)
 handle_participante_otro = _make_handler(EstadoFSM.PARTICIPANTE_OTRO)
 handle_canal_origen = _make_handler(EstadoFSM.CANAL_ORIGEN)

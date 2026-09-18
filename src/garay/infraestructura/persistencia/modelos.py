@@ -156,6 +156,7 @@ class VentaModel(Base):
     factura_idioma: Mapped[str] = mapped_column(
         String, nullable=False, server_default="es", default="es"
     )
+    metodo_pago: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class TiqueteraModel(Base):

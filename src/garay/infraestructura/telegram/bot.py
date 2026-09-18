@@ -83,6 +83,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_horario_salida,
     handle_iniciar_venta,
     handle_metodo_input,
+    handle_metodo_pago,
     handle_modalidad_venta,
     handle_monto_abono,
     handle_monto_neto,
@@ -796,6 +797,9 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             estados[EstadoFSM.MONTO_NETO]: [
                 MessageHandler(_TEXT, handle_monto_neto),
+            ],
+            estados[EstadoFSM.METODO_PAGO]: [
+                MessageHandler(_TEXT, handle_metodo_pago),
             ],
             estados[EstadoFSM.PARTICIPANTE_ROL]: [
                 _CB(handle_participante_rol),
