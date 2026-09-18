@@ -181,6 +181,14 @@ class FakeEgresoRepo(EgresoRepository):
             start=Dinero(0),
         )
 
+    def listar_por_obligacion(
+        self, obligacion_id: uuid.UUID, limite: int
+    ) -> list[Egreso]:
+        return []
+
+    def sumar_por_obligacion(self, obligacion_id: uuid.UUID) -> Dinero:
+        return Dinero(0)
+
 
 # ---------------------------------------------------------------------------
 # Import target (will fail until reproceso.py exists — RED)

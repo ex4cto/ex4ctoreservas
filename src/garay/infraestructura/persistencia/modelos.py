@@ -219,6 +219,25 @@ class IngresoModel(Base):
     )
 
 
+class ObligacionHotelModel(Base):
+    __tablename__ = "obligaciones_hotel"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    punto_de_venta_nombre: Mapped[str] = mapped_column(String, nullable=False)
+    receptor_nombre: Mapped[str] = mapped_column(String, nullable=False)
+    monto_cuota_dia_1: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    monto_cuota_dia_2: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    dia_pago_1: Mapped[int] = mapped_column(Integer, nullable=False)
+    dia_pago_2: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deuda_inicial: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), nullable=False, server_default=sa.text("0")
+    )
+    fecha_deuda_inicial: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    activa: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa.true()
+    )
+
+
 class EgresoModel(Base):
     __tablename__ = "egresos"
 
@@ -248,6 +267,12 @@ class EgresoModel(Base):
     )
     # Payee extracted from the bank notification. Null for manual/legacy rows and non-payee formats.
     destinatario: Mapped[str | None] = mapped_column(String, nullable=True)
+    # FK to obligaciones_hotel; set when this egreso is a hotel payment.
+    obligacion_hotel_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("obligaciones_hotel.id"),
+        nullable=True,
+    )
 
 
 class CategoriaEgresoModel(Base):

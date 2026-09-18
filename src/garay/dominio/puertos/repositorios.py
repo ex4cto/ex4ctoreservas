@@ -17,6 +17,7 @@ from garay.dominio.conciliacion.entidades import (
     Egreso,
     GastoRecurrente,
     Ingreso,
+    ObligacionHotel,
 )
 from garay.dominio.facturas.entidades import Factura
 from garay.dominio.freelancers.entidades import Freelancer
@@ -120,6 +121,29 @@ class EgresoRepository(ABC):
     ) -> Dinero:
         """Sum all egreso amounts linked to *gasto_recurrente_id* in the given calendar month."""
         ...
+
+    @abstractmethod
+    def listar_por_obligacion(
+        self, obligacion_id: uuid.UUID, limite: int
+    ) -> list[Egreso]:
+        """Return the most recent egresos linked to *obligacion_id*, newest first."""
+        ...
+
+    @abstractmethod
+    def sumar_por_obligacion(self, obligacion_id: uuid.UUID) -> Dinero:
+        """Sum all egreso amounts linked to *obligacion_id*."""
+        ...
+
+
+class ObligacionHotelRepository(ABC):
+    @abstractmethod
+    def listar_activas(self) -> list[ObligacionHotel]: ...
+
+    @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> ObligacionHotel | None: ...
+
+    @abstractmethod
+    def guardar(self, obligacion: ObligacionHotel) -> None: ...
 
 
 class CategoriaEgresoRepository(ABC):

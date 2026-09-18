@@ -1147,6 +1147,69 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "📅 Fecha: {fecha}"
         )
     },
+    # ── Hoteles / obligaciones de pago ──────────────────────────────────────
+    "hub.boton_hoteles": {Idioma.ES: "🏨 Hoteles"},
+    "hoteles.lista_titulo": {
+        Idioma.ES: (
+            "🏨 <b>Hoteles — saldos actuales</b>"
+        )
+    },
+    "hoteles.detalle": {
+        Idioma.ES: (
+            "🏨 <b>{nombre}</b>\n"
+            "Receptor: {receptor}\n"
+            "Cuota día {dia_1}: {cuota_1}\n"
+            "{linea_dia_2}"
+            "Saldo actual: <b>{saldo}</b>\n\n"
+            "¿Qué quieres hacer?"
+        )
+    },
+    "hoteles.pagar_pedir_monto": {
+        Idioma.ES: (
+            "💰 <b>{nombre}</b>\n"
+            "Saldo actual: {saldo}\n\n"
+            "¿Cuánto vas a pagar?\n"
+            "Escribe el monto o usa el sugerido:"
+        )
+    },
+    "hoteles.pagar_pedir_fecha": {
+        Idioma.ES: "📅 ¿En qué fecha fue el pago? (DD/MM o DD/MM/YYYY)"
+    },
+    "hoteles.pagar_pedir_concepto": {
+        Idioma.ES: "📝 ¿Concepto del pago? (o toca Omitir)"
+    },
+    "hoteles.pagar_confirmar": {
+        Idioma.ES: (
+            "✅ <b>Confirmación de pago</b>\n\n"
+            "Hotel: {nombre}\n"
+            "Receptor: {receptor}\n"
+            "Monto: {monto}\n"
+            "Fecha: {fecha}\n"
+            "Concepto: {concepto}\n"
+            "Saldo tras el pago: {saldo_tras_pago}\n\n"
+            "¿Confirmamos?"
+        )
+    },
+    "hoteles.pago_registrado": {
+        Idioma.ES: (
+            "✅ Pago registrado.\n"
+            "Hotel: {nombre} — {monto}\n"
+            "Saldo actual: {saldo}"
+        )
+    },
+    "hoteles.historial_titulo": {
+        Idioma.ES: "📋 <b>Historial de pagos — {nombre}</b>"
+    },
+    "hoteles.historial_vacio": {
+        Idioma.ES: "No hay pagos registrados para {nombre}."
+    },
+    "deudas.resumen": {
+        Idioma.ES: (
+            "🏨 <b>Deudas hoteles</b>\n\n"
+            "{filas}"
+            "\n<b>Total: {total}</b>"
+        )
+    },
     # --- Config socios (configuración de socios) ---
     "config_socios.error_config": {Idioma.ES: "Error de configuración. Contacta al administrador."},
     "config_socios.sin_socios": {

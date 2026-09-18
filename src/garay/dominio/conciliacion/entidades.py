@@ -58,6 +58,28 @@ class Ingreso:
 
 
 @dataclass(eq=False)
+class ObligacionHotel:
+    """Obligacion de pago periodico asociada a un hotel/hostal."""
+
+    id: uuid.UUID
+    punto_de_venta_nombre: str
+    receptor_nombre: str
+    monto_cuota_dia_1: Dinero
+    monto_cuota_dia_2: Dinero | None
+    dia_pago_1: int
+    dia_pago_2: int | None
+    deuda_inicial: Dinero
+    fecha_deuda_inicial: datetime.date
+    activa: bool = field(default=True)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, ObligacionHotel) and self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
+@dataclass(eq=False)
 class Egreso:
     id: uuid.UUID
     descripcion: str
@@ -78,6 +100,8 @@ class Egreso:
     # Payee/recipient extracted from the bank notification (name, masked account,
     # or merchant). None for manual egresos and non-payee formats (Uber/DiDi, "Pago factura Nequi").
     destinatario: str | None = field(default=None)
+    # FK to ObligacionHotel; set when this egreso is a hotel payment.
+    obligacion_hotel_id: uuid.UUID | None = field(default=None)
 
     def __post_init__(self) -> None:
         if not self.descripcion.strip():

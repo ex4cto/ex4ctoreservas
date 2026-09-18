@@ -18,6 +18,7 @@ from garay.infraestructura.persistencia.modelos import (  # noqa: F401
     FreelancerModel,
     GastoRecurrenteModel,
     IngresoModel,
+    ObligacionHotelModel,
     PagoSocioModel,
     PuntoDeVentaModel,
     ReglasComisionModel,
@@ -47,6 +48,7 @@ _EXPECTED_TABLES = {
     "auditoria_egresos",
     "socios_config",
     "pagos_socios",
+    "obligaciones_hotel",
 }
 
 

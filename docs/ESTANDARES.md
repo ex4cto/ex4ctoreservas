@@ -43,3 +43,8 @@ Estos estandares son obligatorios. Se definieron antes de escribir codigo, a pro
 ## Commits
 
 - Atomicos. Conventional commits.
+
+## SDD (Spec-Driven Development)
+
+- Modo de ejecucion predeterminado: **interactivo**.
+- Artifact store predeterminado: **engram**.

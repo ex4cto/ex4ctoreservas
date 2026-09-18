@@ -32,6 +32,7 @@ def _to_orm(egreso: Egreso) -> EgresoModel:
         reenviado=egreso.reenviado,
         gasto_recurrente_id=egreso.gasto_recurrente_id,
         destinatario=egreso.destinatario,
+        obligacion_hotel_id=egreso.obligacion_hotel_id,
     )
 
 
@@ -49,6 +50,7 @@ def _to_domain(m: EgresoModel) -> Egreso:
         reenviado=m.reenviado,
         gasto_recurrente_id=m.gasto_recurrente_id,
         destinatario=m.destinatario,
+        obligacion_hotel_id=m.obligacion_hotel_id,
     )
 
 
@@ -123,6 +125,28 @@ class SQLAEgresoRepository(EgresoRepository):
                     EgresoModel.fecha >= inicio,
                     EgresoModel.fecha <= fin,
                 )
+            )
+            rows = session.scalars(stmt).all()
+            return sum((r.monto for r in rows), start=Dinero(0))
+
+    def listar_por_obligacion(
+        self, obligacion_id: uuid.UUID, limite: int
+    ) -> list[Egreso]:
+        """Return the most recent egresos linked to *obligacion_id*, newest first."""
+        with self._sf.begin() as session:
+            stmt = (
+                select(EgresoModel)
+                .where(EgresoModel.obligacion_hotel_id == obligacion_id)
+                .order_by(EgresoModel.fecha.desc())
+                .limit(limite)
+            )
+            return [_to_domain(m) for m in session.scalars(stmt).all()]
+
+    def sumar_por_obligacion(self, obligacion_id: uuid.UUID) -> Dinero:
+        """Sum all egreso amounts linked to *obligacion_id*."""
+        with self._sf.begin() as session:
+            stmt = select(EgresoModel).where(
+                EgresoModel.obligacion_hotel_id == obligacion_id
             )
             rows = session.scalars(stmt).all()
             return sum((r.monto for r in rows), start=Dinero(0))
