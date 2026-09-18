@@ -492,10 +492,15 @@ async def handle_gv_seleccionar(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def _render_detalle(
-    query: CallbackQuery, context: ContextTypes.DEFAULT_TYPE, venta: Venta
+    query: CallbackQuery,
+    context: ContextTypes.DEFAULT_TYPE,
+    venta: Venta,
+    *,
+    modo_edicion: bool = False,
 ) -> int:
     """Resolve client + tour names, stash them, and edit the message into the
-    detail view (hides list / submenu). Shared by seleccionar and volver-al-detalle."""
+    detail view.  When modo_edicion=True the campo-edit keyboard is shown instead
+    of the default detail keyboard, and GV_EDIT_CAMPO is returned."""
     cliente_repo: ClienteRepository | None = context.bot_data.get("cliente_repo")
     cliente_nombre = "—"
     if cliente_repo is not None:
@@ -540,12 +545,13 @@ async def _render_detalle(
         valor=venta.valor_venta.monto,
     )
 
+    keyboard = _construir_teclado_campos() if modo_edicion else _construir_teclado_detalle()
     await query.edit_message_text(
         detail_text,
-        reply_markup=_construir_teclado_detalle(),
+        reply_markup=keyboard,
         parse_mode="HTML",
     )
-    return GV_DETALLE
+    return GV_EDIT_CAMPO if modo_edicion else GV_DETALLE
 
 
 # ---------------------------------------------------------------------------
@@ -572,12 +578,9 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return GV_MOTIVO
 
     if data == "gv_editar":
-        # Edit the detail message in place into the field submenu (no lingering buttons).
-        await query.edit_message_text(
-            obtener_mensaje("gestion_ventas.seleccionar_campo"),
-            reply_markup=_construir_teclado_campos(),
-            parse_mode="HTML",
-        )
+        # Swap only the keyboard — keep the detail text visible so the user can
+        # see current values while choosing which field to edit.
+        await query.edit_message_reply_markup(reply_markup=_construir_teclado_campos())
         return GV_EDIT_CAMPO
 
     if data == "gv_atras":
@@ -843,12 +846,7 @@ async def handle_gv_edit_canal_tipo(
         if venta is None:
             _limpiar(context)
             return await cerrar_flujo(update, context, GrupoComando.VENTAS)
-        await query.edit_message_text(
-            obtener_mensaje("gestion_ventas.seleccionar_campo"),
-            reply_markup=_construir_teclado_campos(),
-            parse_mode="HTML",
-        )
-        return GV_EDIT_CAMPO
+        return await _render_detalle(query, context, venta, modo_edicion=True)
 
     tipo_str = data.removeprefix("gv_canal:")
 

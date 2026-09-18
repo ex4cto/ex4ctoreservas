@@ -647,14 +647,18 @@ class TestCmdGestionarVentasClearsStaleKeys:
 class TestHandleGvDetalleEditar:
     @pytest.mark.asyncio
     async def test_gv_editar_muestra_submenu_de_campos(self) -> None:
-        """gv_editar now opens the field submenu (edit in place) and returns GV_EDIT_CAMPO."""
+        """gv_editar swaps only the keyboard (detail text stays) and returns GV_EDIT_CAMPO."""
         update = _make_update(callback_data="gv_editar")
         ctx = _make_context()
 
         result = await handle_gv_detalle(update, ctx)
 
         assert result == GV_EDIT_CAMPO
-        callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
+        # edit_message_reply_markup is used (not edit_message_text) to keep detail visible
+        markup = update.callback_query.edit_message_reply_markup.call_args.kwargs[
+            "reply_markup"
+        ]
+        callbacks = [b.callback_data for row in markup.inline_keyboard for b in row]
         assert "gv_campo:fecha" in callbacks
         assert "gv_campo:telefono" in callbacks
         assert "gv_volver_detalle" in callbacks
