@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import calendar
+import contextlib
 import datetime
 import logging
 import re
@@ -21,13 +22,16 @@ from garay.aplicacion.factura.regenerar_factura import (
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.comandos import (
     AnularVentaComando,
+    EditarCanalVentaComando,
     EditarClienteVentaComando,
     EditarFechaVentaComando,
 )
+from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.clientes.errores import ClienteNoEncontrado
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     FreelancerRepository,
@@ -36,8 +40,11 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import (
+    DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
+    MismoCanal,
     MotivoRequerido,
+    PuntoDeVentaRequerido,
     VentaNoEncontrada,
     VentaYaAnulada,
 )
@@ -63,6 +70,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_valor_anterior", None)
         context.user_data.pop("gv_desde", None)
         context.user_data.pop("gv_hasta", None)
+        context.user_data.pop("gv_nuevo_tipo", None)
+        context.user_data.pop("gv_punto_id", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -83,7 +92,7 @@ async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> 
 
 
 # ---------------------------------------------------------------------------
-# State constants — range 220-228 (freelancers: 200-213)
+# State constants — range 220-230 (freelancers: 200-213)
 # ---------------------------------------------------------------------------
 
 GV_SELECCIONAR: int = 220
@@ -95,6 +104,8 @@ GV_EDIT_CAMPO: int = 225
 GV_EDIT_VALOR: int = 226
 GV_FILTRO: int = 227
 GV_RANGO_INPUT: int = 228
+GV_EDIT_CANAL_TIPO: int = 229
+GV_EDIT_CANAL_PUNTO: int = 230
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
@@ -195,7 +206,7 @@ def _construir_teclado_detalle() -> InlineKeyboardMarkup:
 
 
 def _construir_teclado_campos() -> InlineKeyboardMarkup:
-    """Build the edit-field submenu: fecha + client fields, plus back-to-detail.
+    """Build the edit-field submenu: fecha + canal + client fields, plus back-to-detail.
 
     Every callback_data here MUST be covered by GV_EDIT_CAMPO_PATTERN (test-guarded).
     """
@@ -203,6 +214,10 @@ def _construir_teclado_campos() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(
             obtener_mensaje("gestion_ventas.campo_fecha"),
             callback_data="gv_campo:fecha",
+        )],
+        [InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.campo_canal"),
+            callback_data="gv_campo:tipo_cliente",
         )],
     ]
     filas += [
@@ -652,6 +667,30 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return GV_EDIT_FECHA
 
+    if campo_str == "tipo_cliente":
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_canal"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.canal_interno"),
+                callback_data="gv_canal:INTERNO",
+            )],
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.canal_externo"),
+                callback_data="gv_canal:EXTERNO",
+            )],
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.canal_digital"),
+                callback_data="gv_canal:DIGITAL",
+            )],
+        ])
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_canal"),
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+        return GV_EDIT_CANAL_TIPO
+
     try:
         campo = CampoCliente(campo_str)
     except ValueError:
@@ -750,6 +789,84 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 # ---------------------------------------------------------------------------
+# GV_EDIT_CANAL_TIPO state — user picks new TipoCliente
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_canal_tipo(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle gv_canal:<TIPO> callback. INTERNO goes to punto selector; others go to motivo."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+    tipo_str = data.removeprefix("gv_canal:")
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_tipo"] = tipo_str
+
+    if tipo_str == "INTERNO":
+        # Load puntos de venta and show selector
+        puntos_repo = context.bot_data.get("pdv_repo")
+        puntos = []
+        if puntos_repo is not None:
+            puntos = await asyncio.to_thread(puntos_repo.listar)
+
+        keyboard_rows = [
+            [InlineKeyboardButton(p.nombre, callback_data=f"gv_punto:{p.id}")]
+            for p in puntos
+        ]
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_punto"),
+            reply_markup=InlineKeyboardMarkup(keyboard_rows),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_CANAL_PUNTO
+
+    # EXTERNO / DIGITAL: clear any stored punto_id and go directly to motivo
+    if context.user_data is not None:
+        context.user_data.pop("gv_punto_id", None)
+        context.user_data["gv_punto_id"] = None
+
+    await query.edit_message_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_CANAL_PUNTO state — user picks a punto de venta (INTERNO only)
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_canal_punto(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle gv_punto:<uuid> callback. Stores punto_id and prompts for motivo."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+    punto_id_str = data.removeprefix("gv_punto:")
+
+    if context.user_data is not None:
+        context.user_data["gv_punto_id"] = punto_id_str
+
+    if update.effective_message is not None:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+            parse_mode="HTML",
+        )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
 # GV_MOTIVO state — text input for justification
 # ---------------------------------------------------------------------------
 
@@ -798,6 +915,14 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             valor=user_data.get("gv_nuevo_valor") or "—",
             motivo=motivo,
         )
+    elif gv_accion == "editar_canal":
+        nuevo_tipo_str: str | None = user_data.get("gv_nuevo_tipo")
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
+        if nuevo_tipo_str:
+            confirm_text = (
+                f"¿Confirmas cambiar el canal a <b>{nuevo_tipo_str}</b>?\n"
+                f"Motivo: {motivo}"
+            )
     else:
         confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
 
@@ -855,6 +980,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_cliente":
         return await _handle_confirmar_editar_cliente(update, context, user_data, user)
+
+    if gv_accion == "editar_canal":
+        return await _handle_confirmar_editar_canal(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -1074,6 +1202,128 @@ async def _handle_confirmar_editar_cliente(
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     if update.effective_message:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_canal(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-canal action."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_tipo_str: str | None = user_data.get("gv_nuevo_tipo")
+    punto_id_str: str | None = user_data.get("gv_punto_id")
+
+    if not venta_id_str or not motivo or not nuevo_tipo_str:
+        logger.error("editar_canal confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    try:
+        nuevo_tipo = TipoCliente(nuevo_tipo_str)
+    except ValueError:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    punto_id: uuid.UUID | None = None
+    if punto_id_str and punto_id_str != "None":
+        with contextlib.suppress(ValueError):
+            punto_id = uuid.UUID(punto_id_str)
+
+    cmd = EditarCanalVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_tipo=nuevo_tipo,
+        punto_id=punto_id,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarCanalVentaService | None = context.bot_data.get(
+        "editar_canal_venta_service"
+    )
+    if service is None:
+        logger.error("editar_canal_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoCanal:
+        canal_label = nuevo_tipo_str
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.canal_igual").format(canal=canal_label),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+    except PuntoDeVentaRequerido:
+        mensaje_key = "gestion_ventas.punto_requerido"
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except DigitalConPuntoDeVenta:
+        mensaje_key = "gestion_ventas.error_generico"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_canal")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        # Success
+        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_canal").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            canal=escape(nuevo_tipo_str, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        await _notificar_grupo(context, mensaje_grupo)
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.canal_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
         await update.effective_message.reply_text(
             obtener_mensaje(mensaje_key),
             parse_mode="HTML",

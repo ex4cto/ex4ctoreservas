@@ -856,6 +856,34 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "gestion_ventas.factura_error": {
         Idioma.ES: "⚠️ La venta se editó pero no se pudo reenviar la factura."
     },
+    # --- Gestión de ventas: editar canal ---
+    "gestion_ventas.campo_canal": {Idioma.ES: "🏷 Canal"},
+    "gestion_ventas.seleccionar_canal": {
+        Idioma.ES: "¿A qué canal deseas cambiar esta venta?"
+    },
+    "gestion_ventas.canal_interno": {Idioma.ES: "🏨 Presencial (punto de venta)"},
+    "gestion_ventas.canal_externo": {Idioma.ES: "🤝 Externo"},
+    "gestion_ventas.canal_digital": {Idioma.ES: "💻 Digital (agencia)"},
+    "gestion_ventas.seleccionar_punto": {Idioma.ES: "Selecciona el punto de venta:"},
+    "gestion_ventas.canal_editado": {Idioma.ES: "✅ Canal actualizado correctamente."},
+    "gestion_ventas.canal_igual": {
+        Idioma.ES: (
+            "i El canal de esta venta ya es {canal}. No se realizó ningún cambio."
+        )
+    },
+    "gestion_ventas.punto_requerido": {
+        Idioma.ES: (
+            "⚠️ Debes seleccionar un punto de venta para el canal presencial."
+        )
+    },
+    "gestion_ventas.correccion_edicion_canal": {
+        Idioma.ES: (
+            "🔄 Corrección de canal — Cliente: {cliente} | Tours: {tours}\n"
+            "Nuevo canal: {canal}\n"
+            "Motivo: {motivo}\n"
+            "Por: {actor}"
+        )
+    },
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},

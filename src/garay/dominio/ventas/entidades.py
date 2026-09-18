@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import uuid
 from dataclasses import dataclass, field
@@ -13,7 +14,9 @@ from garay.dominio.ventas.errores import (
     CantidadInvalida,
     DigitalConPuntoDeVenta,
     GananciaNegativa,
+    MismoCanal,
     MonedaIncompatible,
+    PuntoDeVentaRequerido,
     ValorVentaInvalido,
     VentaYaAnulada,
 )
@@ -100,6 +103,40 @@ class Venta:
         if self.fechas_por_servicio is not None and len(self.fechas_por_servicio) == 1:
             (sid,) = tuple(self.fechas_por_servicio)
             self.fechas_por_servicio[sid] = nueva_fecha
+
+    def cambiar_tipo_cliente(
+        self, nuevo_tipo: TipoCliente, punto_id: uuid.UUID | None = None
+    ) -> None:
+        """Change tipo_cliente and update punto_de_venta_id atomically.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises MismoCanal if nuevo_tipo equals the current tipo_cliente.
+        - Raises PuntoDeVentaRequerido if nuevo_tipo is INTERNO and punto_id is None.
+        - Raises DigitalConPuntoDeVenta if nuevo_tipo is DIGITAL and punto_id is not None.
+        - For EXTERNO and DIGITAL, clears punto_de_venta_id to None.
+        - For INTERNO, sets punto_de_venta_id to punto_id.
+        - canal_origen is intentionally NOT changed.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el canal de una venta ya anulada.")
+        if nuevo_tipo == self.tipo_cliente:
+            raise MismoCanal(
+                f"El canal de esta venta ya es {self.tipo_cliente.value}."
+            )
+        if nuevo_tipo == TipoCliente.INTERNO and punto_id is None:
+            raise PuntoDeVentaRequerido(
+                "El canal INTERNO requiere seleccionar un punto de venta."
+            )
+        if nuevo_tipo == TipoCliente.DIGITAL and punto_id is not None:
+            raise DigitalConPuntoDeVenta(
+                "Una venta DIGITAL no puede tener un punto de venta asociado."
+            )
+        target_punto_id = punto_id if nuevo_tipo == TipoCliente.INTERNO else None
+        self.participantes = dataclasses.replace(
+            self.participantes, punto_de_venta_id=target_punto_id
+        )
+        self.tipo_cliente = nuevo_tipo
 
     @property
     def ganancia(self) -> Dinero:

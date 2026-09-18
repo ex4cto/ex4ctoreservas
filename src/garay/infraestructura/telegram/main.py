@@ -39,6 +39,7 @@ from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
+from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.config.settings import obtener_settings
@@ -131,6 +132,14 @@ def main() -> None:
     )
     editar_cliente_venta_service = EditarClienteVentaService(
         ventas=ventas_repo, clientes=cliente_repo, auditoria=auditoria_venta_repo
+    )
+    editar_canal_venta_service = EditarCanalVentaService(
+        ventas=ventas_repo,
+        auditoria=auditoria_venta_repo,
+        reglas_repo=reglas_repo,
+        puntos_repo=pdv_repo,
+        comisiones_repo=comisiones_repo,
+        motor=MotorComisiones(),
     )
 
     egreso_service = RegistrarEgresoManualService(
@@ -413,6 +422,7 @@ def main() -> None:
             "anular_venta_service": anular_venta_service,
             "editar_fecha_venta_service": editar_fecha_venta_service,
             "editar_cliente_venta_service": editar_cliente_venta_service,
+            "editar_canal_venta_service": editar_canal_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
             "notificador": notificador,
             "grupo_id": settings.grupo_id,

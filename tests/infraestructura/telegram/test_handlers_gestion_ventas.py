@@ -1496,3 +1496,394 @@ class TestHandleGvConfirmarEditarCliente:
         assert result == ConversationHandler.END
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.limite_ediciones") in calls
+
+
+# ---------------------------------------------------------------------------
+# Task-15 RED: GV_EDIT_CANAL_TIPO, GV_EDIT_CANAL_PUNTO constants and routing
+# ---------------------------------------------------------------------------
+
+
+class TestEditarCanalConstants:
+    """GV_EDIT_CANAL_TIPO = 229 and GV_EDIT_CANAL_PUNTO = 230 must exist."""
+
+    def test_gv_edit_canal_tipo_constant(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import GV_EDIT_CANAL_TIPO
+
+        assert GV_EDIT_CANAL_TIPO == 229
+
+    def test_gv_edit_canal_punto_constant(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import GV_EDIT_CANAL_PUNTO
+
+        assert GV_EDIT_CANAL_PUNTO == 230
+
+
+class TestTecladoCamposIncludeCanal:
+    """_construir_teclado_campos must include canal button with gv_campo:tipo_cliente."""
+
+    def test_teclado_campos_has_canal_button(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_campos
+
+        markup = _construir_teclado_campos()
+        all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert "gv_campo:tipo_cliente" in all_data
+
+
+class TestRoutingGvCampoTipoCliente:
+    """handle_gv_edit_campo routing: gv_campo:tipo_cliente sets gv_accion=editar_canal."""
+
+    @pytest.mark.asyncio
+    async def test_tipo_cliente_sets_accion_editar_canal(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_CANAL_TIPO,
+            handle_gv_edit_campo,
+        )
+
+        venta = _make_venta()
+        update = _make_update(callback_data="gv_campo:tipo_cliente")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_EDIT_CANAL_TIPO
+        assert ctx.user_data.get("gv_accion") == "editar_canal"
+
+    @pytest.mark.asyncio
+    async def test_tipo_cliente_shows_canal_keyboard(self) -> None:
+        """When routing to editar_canal, a keyboard with canal type options is shown."""
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_campo,
+        )
+
+        venta = _make_venta()
+        update = _make_update(callback_data="gv_campo:tipo_cliente")
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        await handle_gv_edit_campo(update, ctx)
+
+        update.callback_query.edit_message_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Task-17 RED: handle_gv_edit_canal_tipo and handle_gv_edit_canal_punto
+# ---------------------------------------------------------------------------
+
+
+def _make_context_canal(
+    ventas: list[MagicMock] | None = None,
+) -> MagicMock:
+    """Context with pdv_repo (puntos de venta) wired for canal tests."""
+    ctx = _make_context(ventas=ventas)
+    # puntos stored as "pdv_repo" in bot_data
+    punto1 = MagicMock()
+    punto1.id = uuid.uuid4()
+    punto1.nombre = "Punto A"
+    punto2 = MagicMock()
+    punto2.id = uuid.uuid4()
+    punto2.nombre = "Crespo"
+    pdv_repo = MagicMock()
+    pdv_repo.listar.return_value = [punto1, punto2]
+    ctx.bot_data["pdv_repo"] = pdv_repo
+    editar_canal_service = MagicMock()
+    ctx.bot_data["editar_canal_venta_service"] = editar_canal_service
+    return ctx
+
+
+class TestHandleGvEditCanalTipo:
+    """handle_gv_edit_canal_tipo state handler."""
+
+    @pytest.mark.asyncio
+    async def test_interno_stores_tipo_and_returns_canal_punto(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_CANAL_PUNTO,
+            handle_gv_edit_canal_tipo,
+        )
+
+        update = _make_update(callback_data="gv_canal:INTERNO")
+        ctx = _make_context_canal()
+
+        result = await handle_gv_edit_canal_tipo(update, ctx)
+
+        assert result == GV_EDIT_CANAL_PUNTO
+        assert ctx.user_data.get("gv_nuevo_tipo") == "INTERNO"
+
+    @pytest.mark.asyncio
+    async def test_interno_shows_punto_selector(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_canal_tipo,
+        )
+
+        update = _make_update(callback_data="gv_canal:INTERNO")
+        ctx = _make_context_canal()
+
+        await handle_gv_edit_canal_tipo(update, ctx)
+
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_externo_clears_punto_prompts_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_canal_tipo,
+        )
+
+        update = _make_update(callback_data="gv_canal:EXTERNO")
+        ctx = _make_context_canal()
+        ctx.user_data["gv_punto_id"] = str(uuid.uuid4())  # pre-existing, must be cleared
+
+        result = await handle_gv_edit_canal_tipo(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_punto_id") is None
+
+    @pytest.mark.asyncio
+    async def test_digital_clears_punto_returns_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_canal_tipo,
+        )
+
+        update = _make_update(callback_data="gv_canal:DIGITAL")
+        ctx = _make_context_canal()
+
+        result = await handle_gv_edit_canal_tipo(update, ctx)
+
+        assert result == GV_MOTIVO
+
+
+class TestHandleGvEditCanalPunto:
+    """handle_gv_edit_canal_punto state handler."""
+
+    @pytest.mark.asyncio
+    async def test_stores_punto_id_returns_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_canal_punto,
+        )
+
+        pid = uuid.uuid4()
+        update = _make_update(callback_data=f"gv_punto:{pid}")
+        ctx = _make_context_canal()
+
+        result = await handle_gv_edit_canal_punto(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_punto_id") == str(pid)
+
+    @pytest.mark.asyncio
+    async def test_prompts_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_canal_punto,
+        )
+
+        pid = uuid.uuid4()
+        update = _make_update(callback_data=f"gv_punto:{pid}")
+        ctx = _make_context_canal()
+
+        await handle_gv_edit_canal_punto(update, ctx)
+
+        update.effective_message.reply_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Task-19 RED: _handle_confirmar_editar_canal dispatch and exception mapping
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGvConfirmarEditarCanal:
+    """handle_gv_confirmar with gv_accion="editar_canal"."""
+
+    @pytest.mark.asyncio
+    async def test_dispatches_to_editar_canal(self) -> None:
+        """With gv_accion=editar_canal, the service must be called."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "EXTERNO"
+        ctx.user_data["gv_punto_id"] = None
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_success_shows_canal_editado(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.canal_editado") in calls
+
+    @pytest.mark.asyncio
+    async def test_success_calls_notificar_grupo(self) -> None:
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+
+        await handle_gv_confirmar(update, ctx)
+
+        notificador = ctx.bot_data["notificador"]
+        notificador.notificar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_mismo_canal_shows_canal_igual(self) -> None:
+        from garay.dominio.ventas.errores import MismoCanal
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "EXTERNO"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = MismoCanal("mismo")
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert any("canal" in str(c).lower() or "ya es" in str(c) for c in calls) or any(
+            obtener_mensaje("gestion_ventas.canal_igual").format(canal="EXTERNO") in str(c)
+            or "canal" in str(c).lower()
+            for c in calls
+        )
+
+    @pytest.mark.asyncio
+    async def test_punto_requerido_shows_message(self) -> None:
+        from garay.dominio.ventas.errores import PuntoDeVentaRequerido
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "INTERNO"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = (
+            PuntoDeVentaRequerido("requerido")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        expected = obtener_mensaje("gestion_ventas.punto_requerido")
+        assert expected in calls
+
+    @pytest.mark.asyncio
+    async def test_venta_ya_anulada_shows_ya_anulada(self) -> None:
+        from garay.dominio.ventas.errores import VentaYaAnulada
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = (
+            VentaYaAnulada("anulada")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.ya_anulada") in calls
+
+    @pytest.mark.asyncio
+    async def test_limite_ediciones_shows_limite(self) -> None:
+        from garay.dominio.ventas.errores import LimiteEdicionesAlcanzado
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = (
+            LimiteEdicionesAlcanzado("limite")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.limite_ediciones") in calls
+
+    @pytest.mark.asyncio
+    async def test_venta_no_encontrada_shows_no_encontrada(self) -> None:
+        from garay.dominio.ventas.errores import VentaNoEncontrada
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = (
+            VentaNoEncontrada("no found")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.no_encontrada") in calls
+
+    @pytest.mark.asyncio
+    async def test_motivo_requerido_shows_motivo_vacio(self) -> None:
+        from garay.dominio.ventas.errores import MotivoRequerido
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_canal()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_canal"
+        ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
+        ctx.user_data["gv_punto_id"] = None
+        ctx.bot_data["editar_canal_venta_service"].ejecutar.side_effect = (
+            MotivoRequerido("vacio")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.motivo_vacio") in calls

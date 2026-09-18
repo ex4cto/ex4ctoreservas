@@ -40,3 +40,11 @@ class VentaNoEncontrada(ErrorDeDominio):
 
 class LimiteEdicionesAlcanzado(ErrorDeDominio):
     """La venta alcanzó el máximo de ediciones permitidas y no puede editarse más."""
+
+
+class MismoCanal(ErrorDeDominio):
+    """El nuevo tipo_cliente es igual al tipo_cliente actual de la venta."""
+
+
+class PuntoDeVentaRequerido(ErrorDeDominio):
+    """El canal INTERNO requiere un punto_de_venta_id no nulo."""

@@ -13,6 +13,7 @@ from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import (
     AbonoSuperaValorVenta,
     CantidadInvalida,
+    DigitalConPuntoDeVenta,
     GananciaNegativa,
     MonedaIncompatible,
     ValorVentaInvalido,
@@ -286,3 +287,186 @@ class TestFacturaIdioma:
             factura_idioma="en",
         )
         assert venta.factura_idioma == "en"
+
+
+# ---------------------------------------------------------------------------
+# Task-1 RED: MismoCanal and PuntoDeVentaRequerido error classes
+# ---------------------------------------------------------------------------
+
+
+class TestDomainErrorsCanal:
+    """editar-canal-venta: new domain error classes must exist and be ErrorDeDominio."""
+
+    def test_mismo_canal_is_subclass_of_error_de_dominio(self) -> None:
+        from garay.dominio.comun.errores import ErrorDeDominio
+        from garay.dominio.ventas.errores import MismoCanal
+
+        assert issubclass(MismoCanal, ErrorDeDominio)
+
+    def test_punto_de_venta_requerido_is_subclass_of_error_de_dominio(self) -> None:
+        from garay.dominio.comun.errores import ErrorDeDominio
+        from garay.dominio.ventas.errores import PuntoDeVentaRequerido
+
+        assert issubclass(PuntoDeVentaRequerido, ErrorDeDominio)
+
+    def test_mismo_canal_is_instantiable(self) -> None:
+        from garay.dominio.ventas.errores import MismoCanal
+
+        err = MismoCanal("already the same")
+        assert "already the same" in str(err)
+
+    def test_punto_de_venta_requerido_is_instantiable(self) -> None:
+        from garay.dominio.ventas.errores import PuntoDeVentaRequerido
+
+        err = PuntoDeVentaRequerido("punto required")
+        assert "punto required" in str(err)
+
+
+# ---------------------------------------------------------------------------
+# Task-3 RED: AccionAuditoria.EDITAR_CANAL enum member
+# ---------------------------------------------------------------------------
+
+
+class TestAccionAuditoriaEditarCanal:
+    """editar-canal-venta: AccionAuditoria.EDITAR_CANAL must exist."""
+
+    def test_editar_canal_value(self) -> None:
+        from garay.dominio.ventas.auditoria import AccionAuditoria
+
+        assert AccionAuditoria.EDITAR_CANAL == "EDITAR_CANAL"
+
+    def test_editar_canal_is_str_enum_member(self) -> None:
+        from garay.dominio.ventas.auditoria import AccionAuditoria
+
+        assert "EDITAR_CANAL" in [a.value for a in AccionAuditoria]
+
+
+# ---------------------------------------------------------------------------
+# Task-5 RED: Venta.cambiar_tipo_cliente — all 7 branches
+# ---------------------------------------------------------------------------
+
+
+def _venta_externo(punto_id: uuid.UUID | None = None) -> Venta:
+    """EXTERNO venta with optional punto_de_venta_id (for INTERNO tests)."""
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero(1_000_000),
+        neto=Dinero(900_000),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2024, 1, 15),
+        participantes=Participantes(punto_de_venta_id=punto_id),
+    )
+
+
+def _venta_interno(punto_id: uuid.UUID | None = None) -> Venta:
+    """INTERNO venta with a punto_de_venta_id set."""
+    pid = punto_id or uuid.uuid4()
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero(1_000_000),
+        neto=Dinero(900_000),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.INTERNO,
+        fecha=datetime.date(2024, 1, 15),
+        participantes=Participantes(punto_de_venta_id=pid),
+    )
+
+
+def _venta_digital() -> Venta:
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero(1_000_000),
+        neto=Dinero(900_000),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.DIGITAL,
+        fecha=datetime.date(2024, 1, 15),
+        participantes=Participantes(punto_de_venta_id=None),
+    )
+
+
+class TestCambiarTipoCliente:
+    """editar-canal-venta: Venta.cambiar_tipo_cliente — all 7 branches."""
+
+    # Branch 1: anulada venta → raises VentaYaAnulada
+    def test_anulada_venta_raises_venta_ya_anulada(self) -> None:
+        venta = _venta_externo()
+        venta.anular()
+        with pytest.raises(VentaYaAnulada):
+            venta.cambiar_tipo_cliente(TipoCliente.INTERNO, uuid.uuid4())
+
+    # Branch 2: mismo tipo_cliente → raises MismoCanal
+    def test_mismo_tipo_raises_mismo_canal(self) -> None:
+        from garay.dominio.ventas.errores import MismoCanal
+
+        venta = _venta_externo()
+        with pytest.raises(MismoCanal):
+            venta.cambiar_tipo_cliente(TipoCliente.EXTERNO)
+
+    # Branch 3: INTERNO with punto_id=None → raises PuntoDeVentaRequerido
+    def test_interno_sin_punto_raises_punto_de_venta_requerido(self) -> None:
+        from garay.dominio.ventas.errores import PuntoDeVentaRequerido
+
+        venta = _venta_externo()
+        with pytest.raises(PuntoDeVentaRequerido):
+            venta.cambiar_tipo_cliente(TipoCliente.INTERNO, None)
+
+    # Branch 4: EXTERNO → clears participantes.punto_de_venta_id to None
+    def test_externo_clears_punto_de_venta_id(self) -> None:
+        pid = uuid.uuid4()
+        venta = _venta_interno(punto_id=pid)
+        venta.cambiar_tipo_cliente(TipoCliente.EXTERNO)
+        assert venta.participantes.punto_de_venta_id is None
+        assert venta.tipo_cliente == TipoCliente.EXTERNO
+
+    # Branch 5: DIGITAL → clears participantes.punto_de_venta_id to None
+    def test_digital_clears_punto_de_venta_id(self) -> None:
+        pid = uuid.uuid4()
+        venta = _venta_interno(punto_id=pid)
+        venta.cambiar_tipo_cliente(TipoCliente.DIGITAL)
+        assert venta.participantes.punto_de_venta_id is None
+        assert venta.tipo_cliente == TipoCliente.DIGITAL
+
+    # Branch 6: DIGITAL with non-null punto_id → raises DigitalConPuntoDeVenta
+    # (This tests passing punto_id explicitly when target is DIGITAL — not a
+    # real use-case but the guard must fire if implementation accidentally leaves
+    # a non-null punto_de_venta_id with DIGITAL type.)
+    def test_digital_with_punto_id_arg_raises_digital_con_punto(self) -> None:
+        venta = _venta_externo()
+        with pytest.raises(DigitalConPuntoDeVenta):
+            venta.cambiar_tipo_cliente(TipoCliente.DIGITAL, uuid.uuid4())
+
+    # Branch 7: INTERNO with valid punto_id → sets participantes.punto_de_venta_id
+    # and tipo_cliente atomically; canal_origen is NOT changed
+    def test_interno_con_punto_sets_atomically(self) -> None:
+        venta = _venta_externo()
+        original_canal = venta.canal_origen
+        pid = uuid.uuid4()
+
+        venta.cambiar_tipo_cliente(TipoCliente.INTERNO, pid)
+
+        assert venta.participantes.punto_de_venta_id == pid
+        assert venta.tipo_cliente == TipoCliente.INTERNO
+        # canal_origen MUST NOT change
+        assert venta.canal_origen == original_canal
+
+    def test_interno_punto_de_venta_id_is_set_from_arg(self) -> None:
+        """The punto_de_venta_id stored must equal the punto_id argument, not something else."""
+        venta = _venta_externo()
+        pid = uuid.uuid4()
+        venta.cambiar_tipo_cliente(TipoCliente.INTERNO, pid)
+        assert venta.participantes.punto_de_venta_id == pid
+
+    def test_participantes_is_replaced_not_mutated(self) -> None:
+        """Participantes is frozen; cambiar_tipo_cliente must produce a new instance."""
+        venta = _venta_externo()
+        old_participantes = venta.participantes
+        pid = uuid.uuid4()
+
+        venta.cambiar_tipo_cliente(TipoCliente.INTERNO, pid)
+
+        # A new Participantes instance must have been created
+        assert venta.participantes is not old_participantes
