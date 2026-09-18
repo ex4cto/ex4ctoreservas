@@ -731,6 +731,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Cliente: {cliente}\n"
             "Tours: {tours}\n"
             "Fecha: {fecha}\n"
+            "Canal: {canal}\n"
+            "{punto_line}"
+            "{origen_line}"
             "Valor: ${valor:,.0f}"
         )
     },
@@ -857,7 +860,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "⚠️ La venta se editó pero no se pudo reenviar la factura."
     },
     # --- Gestión de ventas: editar canal ---
-    "gestion_ventas.campo_canal": {Idioma.ES: "🏷 Canal"},
+    "gestion_ventas.campo_canal": {Idioma.ES: "🏷 Canal de ventas"},
     "gestion_ventas.seleccionar_canal": {
         Idioma.ES: "¿A qué canal deseas cambiar esta venta?"
     },

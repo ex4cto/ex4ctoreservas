@@ -116,6 +116,9 @@ GV_DETALLE_PATTERN = "^gv_(editar|anular|cancelar|atras)$"
 # button to the detail view. Guarded by a test against _construir_teclado_campos.
 GV_EDIT_CAMPO_PATTERN = "^(gv_campo:[a-z_]+|gv_volver_detalle)$"
 
+# Canal-type selector: gv_canal:<TIPO> OR back-to-field-submenu.
+GV_EDIT_CANAL_TIPO_PATTERN = "^(gv_canal:.*|gv_volver_detalle)$"
+
 # Editable client fields shown in the submenu, in display order (label key, campo).
 _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
     ("gestion_ventas.campo_nombre", CampoCliente.NOMBRE),
@@ -132,6 +135,12 @@ _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
 # amount/percentage.
 _VENTANA_DIAS_GESTION = 180
 _MAX_VENTAS = 40
+
+_TIPO_CLIENTE_LABEL: dict[TipoCliente, str] = {
+    TipoCliente.INTERNO: "Presencial",
+    TipoCliente.EXTERNO: "Externo",
+    TipoCliente.DIGITAL: "Digital",
+}
 
 
 def _construir_teclado_filtros() -> InlineKeyboardMarkup:
@@ -206,34 +215,30 @@ def _construir_teclado_detalle() -> InlineKeyboardMarkup:
 
 
 def _construir_teclado_campos() -> InlineKeyboardMarkup:
-    """Build the edit-field submenu: fecha + canal + client fields, plus back-to-detail.
+    """Build the edit-field submenu in summary-field order, plus back-to-detail.
 
+    Order mirrors the detail view: Nombre, Fecha, Canal de ventas, Hotel, Habitación,
+    Teléfono, Correo, Identificación, Atrás.
     Every callback_data here MUST be covered by GV_EDIT_CAMPO_PATTERN (test-guarded).
     """
-    filas = [
-        [InlineKeyboardButton(
-            obtener_mensaje("gestion_ventas.campo_fecha"),
-            callback_data="gv_campo:fecha",
-        )],
-        [InlineKeyboardButton(
-            obtener_mensaje("gestion_ventas.campo_canal"),
-            callback_data="gv_campo:tipo_cliente",
-        )],
-    ]
-    filas += [
-        [InlineKeyboardButton(
-            obtener_mensaje(label_key),
-            callback_data=f"gv_campo:{campo.value}",
-        )]
-        for label_key, campo in _CAMPOS_CLIENTE
-    ]
-    filas.append(
+
+    def _btn(label_key: str, data: str) -> list[InlineKeyboardButton]:
+        return [InlineKeyboardButton(obtener_mensaje(label_key), callback_data=data)]
+
+    return InlineKeyboardMarkup([
+        _btn("gestion_ventas.campo_nombre", "gv_campo:nombre"),
+        _btn("gestion_ventas.campo_fecha", "gv_campo:fecha"),
+        _btn("gestion_ventas.campo_canal", "gv_campo:tipo_cliente"),
+        _btn("gestion_ventas.campo_hotel", "gv_campo:hotel"),
+        _btn("gestion_ventas.campo_habitacion", "gv_campo:numero_habitacion"),
+        _btn("gestion_ventas.campo_telefono", "gv_campo:telefono"),
+        _btn("gestion_ventas.campo_email", "gv_campo:email"),
+        _btn("gestion_ventas.campo_identificacion", "gv_campo:identificacion"),
         [InlineKeyboardButton(
             obtener_mensaje("gestion_ventas.boton_atras"),
             callback_data="gv_volver_detalle",
-        )]
-    )
-    return InlineKeyboardMarkup(filas)
+        )],
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -512,10 +517,26 @@ async def _render_detalle(
         context.user_data["gv_cliente_nombre"] = cliente_nombre
         context.user_data["gv_tours"] = tours_str
 
+    canal_display = _TIPO_CLIENTE_LABEL.get(venta.tipo_cliente, venta.tipo_cliente.value)
+
+    punto_line = ""
+    if venta.tipo_cliente == TipoCliente.INTERNO and venta.participantes.punto_de_venta_id:
+        pdv_repo = context.bot_data.get("pdv_repo")
+        if pdv_repo is not None:
+            pdv_id = venta.participantes.punto_de_venta_id
+            punto = await asyncio.to_thread(pdv_repo.buscar_por_id, pdv_id)
+            if punto is not None:
+                punto_line = f"Punto: {punto.nombre}\n"
+
+    origen_line = f"Origen: {venta.canal_origen}\n" if venta.canal_origen else ""
+
     detail_text = obtener_mensaje("gestion_ventas.detalle").format(
         cliente=cliente_nombre,
         tours=tours_str,
         fecha=f"{venta.fecha:%d/%m/%Y}",
+        canal=canal_display,
+        punto_line=punto_line,
+        origen_line=origen_line,
         valor=venta.valor_venta.monto,
     )
 
@@ -683,6 +704,10 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
                 obtener_mensaje("gestion_ventas.canal_digital"),
                 callback_data="gv_canal:DIGITAL",
             )],
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_atras"),
+                callback_data="gv_volver_detalle",
+            )],
         ])
         await query.edit_message_text(
             obtener_mensaje("gestion_ventas.seleccionar_canal"),
@@ -803,6 +828,23 @@ async def handle_gv_edit_canal_tipo(
     await query.answer()
 
     data = query.data or ""
+
+    if data == "gv_volver_detalle":
+        venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_id_str = (context.user_data or {}).get("gv_venta_id")
+        venta = None
+        if venta_repo is not None and venta_id_str:
+            venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+        if venta is None:
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_campo"),
+            reply_markup=_construir_teclado_campos(),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_CAMPO
+
     tipo_str = data.removeprefix("gv_canal:")
 
     if context.user_data is not None:

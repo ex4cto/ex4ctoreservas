@@ -222,6 +222,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_CAMPO_PATTERN,
     GV_EDIT_CANAL_PUNTO,
     GV_EDIT_CANAL_TIPO,
+    GV_EDIT_CANAL_TIPO_PATTERN,
     GV_EDIT_FECHA,
     GV_EDIT_VALOR,
     GV_FILTRO,
@@ -1024,7 +1025,9 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_EDIT_FECHA: [MessageHandler(_TEXT, handle_gv_edit_fecha)],
             GV_EDIT_CAMPO: [_CB(handle_gv_edit_campo, pattern=GV_EDIT_CAMPO_PATTERN)],
             GV_EDIT_VALOR: [MessageHandler(_TEXT, handle_gv_edit_valor)],
-            GV_EDIT_CANAL_TIPO: [_CB(handle_gv_edit_canal_tipo, pattern="^gv_canal:")],
+            GV_EDIT_CANAL_TIPO: [
+                _CB(handle_gv_edit_canal_tipo, pattern=GV_EDIT_CANAL_TIPO_PATTERN)
+            ],
             GV_EDIT_CANAL_PUNTO: [_CB(handle_gv_edit_canal_punto, pattern="^gv_punto:")],
         },
         fallbacks=[
