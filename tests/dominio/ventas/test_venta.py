@@ -470,3 +470,106 @@ class TestCambiarTipoCliente:
 
         # A new Participantes instance must have been created
         assert venta.participantes is not old_participantes
+
+
+# ---------------------------------------------------------------------------
+# Venta.cambiar_participantes
+# ---------------------------------------------------------------------------
+
+
+def _venta_con_participantes(
+    vendedor_id: uuid.UUID | None = None,
+    vendedor_nombre: str | None = "Ana",
+    cerrador_id: uuid.UUID | None = None,
+    cerrador_nombre: str | None = "Luis",
+) -> Venta:
+    return Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero(1_000_000),
+        neto=Dinero(900_000),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=uuid.uuid4(),
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2024, 1, 15),
+        participantes=Participantes(
+            vendedor_id=vendedor_id or uuid.uuid4(),
+            vendedor_nombre=vendedor_nombre,
+            cerrador_id=cerrador_id or uuid.uuid4(),
+            cerrador_nombre=cerrador_nombre,
+        ),
+    )
+
+
+class TestVentaCambiarParticipantes:
+    def test_cambia_vendedor_correctamente(self) -> None:
+        from garay.dominio.ventas.errores import MismosParticipantes
+
+        venta = _venta_con_participantes()
+        nuevo_id = uuid.uuid4()
+
+        venta.cambiar_participantes(
+            nuevo_vendedor_id=nuevo_id,
+            nuevo_vendedor_nombre="Pedro",
+            nuevo_cerrador_id=venta.participantes.cerrador_id,
+            nuevo_cerrador_nombre=venta.participantes.cerrador_nombre,
+        )
+
+        assert venta.participantes.vendedor_id == nuevo_id
+        assert venta.participantes.vendedor_nombre == "Pedro"
+        # cerrador unchanged
+        assert venta.participantes.cerrador_nombre == "Luis"
+
+    def test_cambia_cerrador_correctamente(self) -> None:
+        venta = _venta_con_participantes()
+        nuevo_id = uuid.uuid4()
+
+        venta.cambiar_participantes(
+            nuevo_vendedor_id=venta.participantes.vendedor_id,
+            nuevo_vendedor_nombre=venta.participantes.vendedor_nombre,
+            nuevo_cerrador_id=nuevo_id,
+            nuevo_cerrador_nombre="Carlos",
+        )
+
+        assert venta.participantes.cerrador_id == nuevo_id
+        assert venta.participantes.cerrador_nombre == "Carlos"
+        # vendedor unchanged
+        assert venta.participantes.vendedor_nombre == "Ana"
+
+    def test_lanza_venta_ya_anulada(self) -> None:
+        venta = _venta_con_participantes()
+        venta.anular()
+
+        with pytest.raises(VentaYaAnulada):
+            venta.cambiar_participantes(
+                nuevo_vendedor_id=uuid.uuid4(),
+                nuevo_vendedor_nombre="Pedro",
+                nuevo_cerrador_id=venta.participantes.cerrador_id,
+                nuevo_cerrador_nombre=venta.participantes.cerrador_nombre,
+            )
+
+    def test_lanza_mismos_participantes_si_sin_cambios(self) -> None:
+        from garay.dominio.ventas.errores import MismosParticipantes
+
+        venta = _venta_con_participantes()
+
+        with pytest.raises(MismosParticipantes):
+            venta.cambiar_participantes(
+                nuevo_vendedor_id=venta.participantes.vendedor_id,
+                nuevo_vendedor_nombre=venta.participantes.vendedor_nombre,
+                nuevo_cerrador_id=venta.participantes.cerrador_id,
+                nuevo_cerrador_nombre=venta.participantes.cerrador_nombre,
+            )
+
+    def test_participantes_instance_replaced(self) -> None:
+        venta = _venta_con_participantes()
+        old = venta.participantes
+        nuevo_id = uuid.uuid4()
+
+        venta.cambiar_participantes(
+            nuevo_vendedor_id=nuevo_id,
+            nuevo_vendedor_nombre="Pedro",
+            nuevo_cerrador_id=venta.participantes.cerrador_id,
+            nuevo_cerrador_nombre=venta.participantes.cerrador_nombre,
+        )
+
+        assert venta.participantes is not old

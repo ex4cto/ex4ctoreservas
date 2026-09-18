@@ -734,6 +734,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "🏷 Canal: {canal}\n"
             "{punto_line}"
             "{origen_line}"
+            "👥 Vendedor: {vendedor_line}"
+            "🔑 Cerrador: {cerrador_line}"
             "💰 Valor: ${valor:,.0f}"
         )
     },
@@ -887,6 +889,31 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "📍 Tour: {tours}\n"
             "🏷 Nuevo canal: <b>{canal}</b>\n"
             "{punto_line}"
+            "📝 Motivo: {motivo}\n"
+            "🙍 Por: {actor}"
+        )
+    },
+    "gestion_ventas.campo_vendedor": {Idioma.ES: "👥 Vendedor"},
+    "gestion_ventas.campo_cerrador": {Idioma.ES: "🔑 Cerrador"},
+    "gestion_ventas.seleccionar_freelancer": {
+        Idioma.ES: "Selecciona el nuevo {rol}:\nActual: <b>{actual}</b>"
+    },
+    "gestion_ventas.participante_editado": {
+        Idioma.ES: "✅ Participante actualizado correctamente."
+    },
+    "gestion_ventas.mismo_participante": {
+        Idioma.ES: (
+            "i Los participantes de esta venta ya son los mismos. "
+            "No se realizó ningún cambio."
+        )
+    },
+    "gestion_ventas.correccion_edicion_participante": {
+        Idioma.ES: (
+            "👥 <b>Participante de venta modificado</b>\n"
+            "Agencia Garay Tours\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tour: {tours}\n"
+            "🔄 {rol}: <b>{nuevo}</b>\n"
             "📝 Motivo: {motivo}\n"
             "🙍 Por: {actor}"
         )

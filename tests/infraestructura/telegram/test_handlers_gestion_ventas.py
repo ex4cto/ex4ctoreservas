@@ -648,8 +648,11 @@ class TestHandleGvDetalleEditar:
     @pytest.mark.asyncio
     async def test_gv_editar_muestra_submenu_de_campos(self) -> None:
         """gv_editar swaps only the keyboard (detail text stays) and returns GV_EDIT_CAMPO."""
+        venta = _make_venta()
         update = _make_update(callback_data="gv_editar")
         ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
 
         result = await handle_gv_detalle(update, ctx)
 
@@ -1891,3 +1894,290 @@ class TestHandleGvConfirmarEditarCanal:
         assert result == ConversationHandler.END
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.motivo_vacio") in calls
+
+
+# ---------------------------------------------------------------------------
+# Editar participantes (vendedor/cerrador) — handler tests
+# ---------------------------------------------------------------------------
+
+
+def _make_context_participantes(
+    ventas: list[MagicMock] | None = None,
+) -> MagicMock:
+    ctx = _make_context(ventas=ventas)
+    editar_participantes_service = MagicMock()
+    ctx.bot_data["editar_participantes_venta_service"] = editar_participantes_service
+
+    fl1 = MagicMock()
+    fl1.id = uuid.uuid4()
+    fl1.nombre = "Pedro"
+    fl2 = MagicMock()
+    fl2.id = uuid.uuid4()
+    fl2.nombre = "Carlos"
+    freelancer_repo = MagicMock()
+    freelancer_repo.listar_activos.return_value = [fl1, fl2]
+    freelancer_repo.buscar_por_id.return_value = fl1
+    freelancer_repo.buscar_por_telegram_id.return_value = _make_admin_freelancer()
+    ctx.bot_data["freelancer_repo"] = freelancer_repo
+    return ctx
+
+
+class TestEditarParticipantesConstant:
+    """GV_EDIT_PARTICIPANTE = 231 must exist."""
+
+    def test_gv_edit_participante_constant(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import GV_EDIT_PARTICIPANTE
+
+        assert GV_EDIT_PARTICIPANTE == 231
+
+
+class TestTecladoCamposWithVendedor:
+    """_construir_teclado_campos(venta) shows vendedor/cerrador when non-null."""
+
+    def test_teclado_sin_venta_no_tiene_vendedor(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_campos
+
+        markup = _construir_teclado_campos(None)
+        all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert "gv_campo:vendedor" not in all_data
+        assert "gv_campo:cerrador" not in all_data
+
+    def test_teclado_con_venta_vendedor_nonnull_tiene_boton(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_campos
+
+        venta = _make_venta(vendedor_nombre="Ana", cerrador_nombre=None)
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_nombre = None
+
+        markup = _construir_teclado_campos(venta)
+        all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert "gv_campo:vendedor" in all_data
+        assert "gv_campo:cerrador" not in all_data
+
+    def test_teclado_con_venta_cerrador_nonnull_tiene_boton(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_campos
+
+        venta = _make_venta(vendedor_nombre=None, cerrador_nombre="Luis")
+        venta.participantes.vendedor_nombre = None
+        venta.participantes.cerrador_nombre = "Luis"
+
+        markup = _construir_teclado_campos(venta)
+        all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
+        assert "gv_campo:vendedor" not in all_data
+        assert "gv_campo:cerrador" in all_data
+
+
+class TestRoutingGvCampoVendedor:
+    """handle_gv_edit_campo routing: gv_campo:vendedor → GV_EDIT_PARTICIPANTE."""
+
+    @pytest.mark.asyncio
+    async def test_vendedor_sets_accion_editar_vendedor(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_PARTICIPANTE,
+            handle_gv_edit_campo,
+        )
+
+        venta = _make_venta(vendedor_nombre="Ana", cerrador_nombre="Luis")
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_nombre = "Luis"
+
+        update = _make_update(callback_data="gv_campo:vendedor")
+        ctx = _make_context_participantes()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_EDIT_PARTICIPANTE
+        assert ctx.user_data.get("gv_accion") == "editar_vendedor"
+
+    @pytest.mark.asyncio
+    async def test_cerrador_sets_accion_editar_cerrador(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_PARTICIPANTE,
+            handle_gv_edit_campo,
+        )
+
+        venta = _make_venta(vendedor_nombre="Ana", cerrador_nombre="Luis")
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_nombre = "Luis"
+
+        update = _make_update(callback_data="gv_campo:cerrador")
+        ctx = _make_context_participantes()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        result = await handle_gv_edit_campo(update, ctx)
+
+        assert result == GV_EDIT_PARTICIPANTE
+        assert ctx.user_data.get("gv_accion") == "editar_cerrador"
+
+
+class TestHandleGvEditParticipante:
+    """handle_gv_edit_participante state handler."""
+
+    @pytest.mark.asyncio
+    async def test_volver_detalle_returns_edit_campo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_CAMPO,
+            handle_gv_edit_participante,
+        )
+
+        venta = _make_venta()
+        update = _make_update(callback_data="gv_volver_detalle")
+        ctx = _make_context_participantes()
+        ctx.user_data["gv_venta_id"] = str(venta.id)
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        result = await handle_gv_edit_participante(update, ctx)
+
+        assert result == GV_EDIT_CAMPO
+
+    @pytest.mark.asyncio
+    async def test_freelancer_selected_stores_data_and_prompts_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_participante,
+        )
+
+        fl_id = uuid.uuid4()
+        fl = MagicMock()
+        fl.id = fl_id
+        fl.nombre = "Pedro"
+
+        update = _make_update(callback_data=f"gv_freelancer:{fl_id}")
+        ctx = _make_context_participantes()
+        ctx.bot_data["freelancer_repo"].buscar_por_id.return_value = fl
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+
+        result = await handle_gv_edit_participante(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_nuevo_freelancer_id") == str(fl_id)
+        assert ctx.user_data.get("gv_nuevo_freelancer_nombre") == "Pedro"
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invalid_uuid_returns_end(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import handle_gv_edit_participante
+
+        update = _make_update(callback_data="gv_freelancer:not-a-uuid")
+        ctx = _make_context_participantes()
+
+        result = await handle_gv_edit_participante(update, ctx)
+
+        assert result == ConversationHandler.END
+
+    @pytest.mark.asyncio
+    async def test_freelancer_not_found_returns_end(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import handle_gv_edit_participante
+
+        fl_id = uuid.uuid4()
+        update = _make_update(callback_data=f"gv_freelancer:{fl_id}")
+        ctx = _make_context_participantes()
+        ctx.bot_data["freelancer_repo"].buscar_por_id.return_value = None
+
+        result = await handle_gv_edit_participante(update, ctx)
+
+        assert result == ConversationHandler.END
+
+
+class TestHandleGvConfirmarEditarParticipante:
+    """handle_gv_confirmar with gv_accion="editar_vendedor" / "editar_cerrador"."""
+
+    @pytest.mark.asyncio
+    async def test_dispatches_editar_vendedor_calls_service(self) -> None:
+        venta = _make_venta()
+        venta.participantes.vendedor_id = uuid.uuid4()
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_id = uuid.uuid4()
+        venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        ctx.bot_data["editar_participantes_venta_service"].ejecutar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_success_shows_participante_editado(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta = _make_venta()
+        venta.participantes.vendedor_id = uuid.uuid4()
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_id = uuid.uuid4()
+        venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_cerrador"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Carlos"
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.participante_editado") in calls
+
+    @pytest.mark.asyncio
+    async def test_mismos_participantes_shows_mismo_participante(self) -> None:
+        from garay.dominio.ventas.errores import MismosParticipantes
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta = _make_venta()
+        venta.participantes.vendedor_id = uuid.uuid4()
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+        ctx.bot_data["editar_participantes_venta_service"].ejecutar.side_effect = (
+            MismosParticipantes("mismos")
+        )
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.mismo_participante") in calls
+
+    @pytest.mark.asyncio
+    async def test_success_calls_notificar_grupo(self) -> None:
+        venta = _make_venta()
+        venta.participantes.vendedor_id = uuid.uuid4()
+        venta.participantes.vendedor_nombre = "Ana"
+        venta.participantes.cerrador_id = uuid.uuid4()
+        venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+
+        await handle_gv_confirmar(update, ctx)
+
+        notificador = ctx.bot_data["notificador"]
+        notificador.notificar.assert_called_once()

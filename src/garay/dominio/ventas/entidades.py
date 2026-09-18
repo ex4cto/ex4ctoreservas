@@ -15,6 +15,7 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     GananciaNegativa,
     MismoCanal,
+    MismosParticipantes,
     MonedaIncompatible,
     PuntoDeVentaRequerido,
     ValorVentaInvalido,
@@ -137,6 +138,26 @@ class Venta:
             self.participantes, punto_de_venta_id=target_punto_id
         )
         self.tipo_cliente = nuevo_tipo
+
+    def cambiar_participantes(
+        self,
+        nuevo_vendedor_id: uuid.UUID | None,
+        nuevo_vendedor_nombre: str | None,
+        nuevo_cerrador_id: uuid.UUID | None,
+        nuevo_cerrador_nombre: str | None,
+    ) -> None:
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar una venta ya anulada.")
+        nueva = dataclasses.replace(
+            self.participantes,
+            vendedor_id=nuevo_vendedor_id,
+            vendedor_nombre=nuevo_vendedor_nombre,
+            cerrador_id=nuevo_cerrador_id,
+            cerrador_nombre=nuevo_cerrador_nombre,
+        )
+        if nueva == self.participantes:
+            raise MismosParticipantes("Los participantes ya son los mismos.")
+        self.participantes = nueva
 
     @property
     def ganancia(self) -> Dinero:

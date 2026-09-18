@@ -45,3 +45,15 @@ class EditarCanalVentaComando:
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarParticipantesVentaComando:
+    venta_id: uuid.UUID
+    nuevo_vendedor_id: uuid.UUID | None
+    nuevo_vendedor_nombre: str | None
+    nuevo_cerrador_id: uuid.UUID | None
+    nuevo_cerrador_nombre: str | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None

@@ -25,10 +25,12 @@ from garay.aplicacion.ventas.comandos import (
     EditarCanalVentaComando,
     EditarClienteVentaComando,
     EditarFechaVentaComando,
+    EditarParticipantesVentaComando,
 )
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.clientes.errores import ClienteNoEncontrado
 from garay.dominio.comun.tipos import TipoCliente
@@ -43,6 +45,7 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
     MismoCanal,
+    MismosParticipantes,
     MotivoRequerido,
     PuntoDeVentaRequerido,
     VentaNoEncontrada,
@@ -72,6 +75,9 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_hasta", None)
         context.user_data.pop("gv_nuevo_tipo", None)
         context.user_data.pop("gv_punto_id", None)
+        context.user_data.pop("gv_nuevo_freelancer_id", None)
+        context.user_data.pop("gv_nuevo_freelancer_nombre", None)
+        context.user_data.pop("gv_participante_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -106,6 +112,7 @@ GV_FILTRO: int = 227
 GV_RANGO_INPUT: int = 228
 GV_EDIT_CANAL_TIPO: int = 229
 GV_EDIT_CANAL_PUNTO: int = 230
+GV_EDIT_PARTICIPANTE: int = 231
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
@@ -118,6 +125,9 @@ GV_EDIT_CAMPO_PATTERN = "^(gv_campo:[a-z_]+|gv_volver_detalle)$"
 
 # Canal-type selector: gv_canal:<TIPO> OR back-to-field-submenu.
 GV_EDIT_CANAL_TIPO_PATTERN = "^(gv_canal:.*|gv_volver_detalle)$"
+
+# Freelancer picker: gv_freelancer:<uuid> OR back-to-detail.
+GV_EDIT_PARTICIPANTE_PATTERN = "^(gv_freelancer:.+|gv_volver_detalle)$"
 
 # Editable client fields shown in the submenu, in display order (label key, campo).
 _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
@@ -214,21 +224,27 @@ def _construir_teclado_detalle() -> InlineKeyboardMarkup:
     )
 
 
-def _construir_teclado_campos() -> InlineKeyboardMarkup:
+def _construir_teclado_campos(venta: Venta | None = None) -> InlineKeyboardMarkup:
     """Build the edit-field submenu in summary-field order, plus back-to-detail.
 
-    Order mirrors the detail view: Nombre, Fecha, Canal de ventas, Hotel, Habitación,
-    Teléfono, Correo, Identificación, Atrás.
+    Order mirrors the detail view: Nombre, Fecha, Canal de ventas, (Vendedor, Cerrador
+    when non-null), Hotel, Habitación, Teléfono, Correo, Identificación, Atrás.
     Every callback_data here MUST be covered by GV_EDIT_CAMPO_PATTERN (test-guarded).
     """
 
     def _btn(label_key: str, data: str) -> list[InlineKeyboardButton]:
         return [InlineKeyboardButton(obtener_mensaje(label_key), callback_data=data)]
 
-    return InlineKeyboardMarkup([
+    rows: list[list[InlineKeyboardButton]] = [
         _btn("gestion_ventas.campo_nombre", "gv_campo:nombre"),
         _btn("gestion_ventas.campo_fecha", "gv_campo:fecha"),
         _btn("gestion_ventas.campo_canal", "gv_campo:tipo_cliente"),
+    ]
+    if venta is not None and venta.participantes.vendedor_nombre is not None:
+        rows.append(_btn("gestion_ventas.campo_vendedor", "gv_campo:vendedor"))
+    if venta is not None and venta.participantes.cerrador_nombre is not None:
+        rows.append(_btn("gestion_ventas.campo_cerrador", "gv_campo:cerrador"))
+    rows += [
         _btn("gestion_ventas.campo_hotel", "gv_campo:hotel"),
         _btn("gestion_ventas.campo_habitacion", "gv_campo:numero_habitacion"),
         _btn("gestion_ventas.campo_telefono", "gv_campo:telefono"),
@@ -238,7 +254,8 @@ def _construir_teclado_campos() -> InlineKeyboardMarkup:
             obtener_mensaje("gestion_ventas.boton_atras"),
             callback_data="gv_volver_detalle",
         )],
-    ])
+    ]
+    return InlineKeyboardMarkup(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -535,6 +552,15 @@ async def _render_detalle(
 
     origen_line = f"📲 Origen: {venta.canal_origen}\n" if venta.canal_origen else ""
 
+    vendedor_line = (
+        f"{venta.participantes.vendedor_nombre}\n"
+        if venta.participantes.vendedor_nombre else ""
+    )
+    cerrador_line = (
+        f"{venta.participantes.cerrador_nombre}\n"
+        if venta.participantes.cerrador_nombre else ""
+    )
+
     detail_text = obtener_mensaje("gestion_ventas.detalle").format(
         cliente=cliente_nombre,
         tours=tours_str,
@@ -542,10 +568,12 @@ async def _render_detalle(
         canal=canal_display,
         punto_line=punto_line,
         origen_line=origen_line,
+        vendedor_line=vendedor_line,
+        cerrador_line=cerrador_line,
         valor=venta.valor_venta.monto,
     )
 
-    keyboard = _construir_teclado_campos() if modo_edicion else _construir_teclado_detalle()
+    keyboard = _construir_teclado_campos(venta) if modo_edicion else _construir_teclado_detalle()
     await query.edit_message_text(
         detail_text,
         reply_markup=keyboard,
@@ -580,7 +608,17 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data == "gv_editar":
         # Swap only the keyboard — keep the detail text visible so the user can
         # see current values while choosing which field to edit.
-        await query.edit_message_reply_markup(reply_markup=_construir_teclado_campos())
+        venta_repo_ed: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_id_str_ed = (context.user_data or {}).get("gv_venta_id")
+        venta_ed = None
+        if venta_repo_ed is not None and venta_id_str_ed:
+            venta_ed = await asyncio.to_thread(
+                venta_repo_ed.buscar_por_id, uuid.UUID(venta_id_str_ed)
+            )
+        if venta_ed is None:
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        await query.edit_message_reply_markup(reply_markup=_construir_teclado_campos(venta_ed))
         return GV_EDIT_CAMPO
 
     if data == "gv_atras":
@@ -723,6 +761,43 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
             parse_mode="HTML",
         )
         return GV_EDIT_CANAL_TIPO
+
+    if campo_str in ("vendedor", "cerrador"):
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = f"editar_{campo_str}"
+        actual_nombre = (
+            venta.participantes.vendedor_nombre
+            if campo_str == "vendedor"
+            else venta.participantes.cerrador_nombre
+        ) or "—"
+        rol_label = "Vendedor" if campo_str == "vendedor" else "Cerrador"
+        if context.user_data is not None:
+            context.user_data["gv_participante_anterior"] = actual_nombre
+
+        freelancer_repo = context.bot_data.get("freelancer_repo")
+        freelancers: list[object] = []
+        if freelancer_repo is not None:
+            freelancers = await asyncio.to_thread(freelancer_repo.listar_activos)
+        keyboard_rows: list[list[InlineKeyboardButton]] = [
+            [InlineKeyboardButton(
+                getattr(f, "nombre", "?"),
+                callback_data=f"gv_freelancer:{getattr(f, 'id', '')}",
+            )]
+            for f in freelancers
+        ]
+        keyboard_rows.append([InlineKeyboardButton(
+            obtener_mensaje("gestion_ventas.boton_atras"),
+            callback_data="gv_volver_detalle",
+        )])
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_freelancer").format(
+                rol=rol_label,
+                actual=actual_nombre,
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard_rows),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_PARTICIPANTE
 
     try:
         campo = CampoCliente(campo_str)
@@ -912,6 +987,61 @@ async def handle_gv_edit_canal_punto(
 
 
 # ---------------------------------------------------------------------------
+# GV_EDIT_PARTICIPANTE state — user picks a freelancer from the list
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_participante(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle gv_freelancer:<uuid> or gv_volver_detalle from the freelancer picker."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+
+    if data == "gv_volver_detalle":
+        venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_id_str = (context.user_data or {}).get("gv_venta_id")
+        venta = None
+        if venta_repo is not None and venta_id_str:
+            venta = await asyncio.to_thread(
+                venta_repo.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        if venta is None:
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        return await _render_detalle(query, context, venta, modo_edicion=True)
+
+    freelancer_id_str = data.removeprefix("gv_freelancer:")
+    try:
+        freelancer_id = uuid.UUID(freelancer_id_str)
+    except ValueError:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    freelancer_repo = context.bot_data.get("freelancer_repo")
+    freelancer = None
+    if freelancer_repo is not None:
+        freelancer = await asyncio.to_thread(freelancer_repo.buscar_por_id, freelancer_id)
+    if freelancer is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_freelancer_id"] = str(freelancer_id)
+        context.user_data["gv_nuevo_freelancer_nombre"] = freelancer.nombre
+
+    await query.edit_message_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
 # GV_MOTIVO state — text input for justification
 # ---------------------------------------------------------------------------
 
@@ -968,6 +1098,16 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 f"¿Confirmas cambiar el canal a <b>{nuevo_tipo_str}</b>?\n"
                 f"Motivo: {motivo}"
             )
+    elif gv_accion in ("editar_vendedor", "editar_cerrador"):
+        rol_label = "Vendedor" if gv_accion == "editar_vendedor" else "Cerrador"
+        nuevo_nombre = user_data.get("gv_nuevo_freelancer_nombre") or "—"
+        anterior = user_data.get("gv_participante_anterior") or "—"
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_cliente").format(
+            campo=rol_label,
+            anterior=anterior,
+            valor=nuevo_nombre,
+            motivo=motivo,
+        )
     else:
         confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
 
@@ -1028,6 +1168,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_canal":
         return await _handle_confirmar_editar_canal(update, context, user_data, user)
+
+    if gv_accion in ("editar_vendedor", "editar_cerrador"):
+        return await _handle_confirmar_editar_participante(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -1374,6 +1517,142 @@ async def _handle_confirmar_editar_canal(
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.canal_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_participante(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-participante action (vendedor or cerrador)."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_fl_id_str: str | None = user_data.get("gv_nuevo_freelancer_id")
+    nuevo_fl_nombre: str | None = user_data.get("gv_nuevo_freelancer_nombre")
+    gv_accion: str = user_data.get("gv_accion", "")
+
+    if not venta_id_str or not motivo or not nuevo_fl_id_str or not nuevo_fl_nombre:
+        logger.error("editar_participante confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    try:
+        nuevo_fl_id = uuid.UUID(nuevo_fl_id_str)
+    except ValueError:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    venta = None
+    if venta_repo is not None:
+        venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+    if venta is None:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.no_encontrada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    es_vendedor = gv_accion == "editar_vendedor"
+    cmd = EditarParticipantesVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_vendedor_id=nuevo_fl_id if es_vendedor else venta.participantes.vendedor_id,
+        nuevo_vendedor_nombre=(
+            nuevo_fl_nombre if es_vendedor else venta.participantes.vendedor_nombre
+        ),
+        nuevo_cerrador_id=(
+            venta.participantes.cerrador_id if es_vendedor else nuevo_fl_id
+        ),
+        nuevo_cerrador_nombre=(
+            venta.participantes.cerrador_nombre if es_vendedor else nuevo_fl_nombre
+        ),
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarParticipantesVentaService | None = context.bot_data.get(
+        "editar_participantes_venta_service"
+    )
+    if service is None:
+        logger.error("editar_participantes_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismosParticipantes:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.mismo_participante"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_participante")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        rol_label = "Vendedor" if es_vendedor else "Cerrador"
+        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            rol=escape(rol_label, quote=False),
+            nuevo=escape(nuevo_fl_nombre, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        await _notificar_grupo(context, mensaje_grupo)
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.participante_editado"),
                 parse_mode="HTML",
             )
         _limpiar(context)

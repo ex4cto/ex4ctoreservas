@@ -16,7 +16,12 @@ from garay.dominio.ventas.errores import LimiteEdicionesAlcanzado
 
 MAX_EDICIONES = 2
 ACCIONES_EDICION = frozenset(
-    {AccionAuditoria.EDITAR_FECHA, AccionAuditoria.EDITAR_CLIENTE, AccionAuditoria.EDITAR_CANAL}
+    {
+        AccionAuditoria.EDITAR_FECHA,
+        AccionAuditoria.EDITAR_CLIENTE,
+        AccionAuditoria.EDITAR_CANAL,
+        AccionAuditoria.EDITAR_PARTICIPANTES,
+    }
 )
 
 

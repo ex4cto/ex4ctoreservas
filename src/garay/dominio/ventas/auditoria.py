@@ -14,6 +14,7 @@ class AccionAuditoria(StrEnum):
     EDITAR_CLIENTE = "EDITAR_CLIENTE"
     ANULAR = "ANULAR"
     EDITAR_CANAL = "EDITAR_CANAL"
+    EDITAR_PARTICIPANTES = "EDITAR_PARTICIPANTES"
 
 
 @dataclass(frozen=True)

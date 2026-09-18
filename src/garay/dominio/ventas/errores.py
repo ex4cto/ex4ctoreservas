@@ -48,3 +48,7 @@ class MismoCanal(ErrorDeDominio):
 
 class PuntoDeVentaRequerido(ErrorDeDominio):
     """El canal INTERNO requiere un punto_de_venta_id no nulo."""
+
+
+class MismosParticipantes(ErrorDeDominio):
+    """Se intenta cambiar los participantes por los mismos valores ya registrados."""
