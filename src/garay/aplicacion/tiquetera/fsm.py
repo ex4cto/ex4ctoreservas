@@ -211,31 +211,43 @@ class FSMTiquetera:
 
     @staticmethod
     def _build_catalog(
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
+        servicios: list[
+            tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
+            | tuple[int, str, Decimal | None, Decimal | None, str, list[str], dict[str, Decimal]]
+        ],
     ) -> tuple[
-        dict[int, tuple[str, Decimal | None, Decimal | None]],
+        dict[int, tuple[str, Decimal | None, Decimal | None, dict[str, Decimal]]],
         dict[str, list[int]],
         dict[int, list[str]],
     ]:
-        """Build catalog dicts from a flat list of 6-element service tuples.
+        """Build catalog dicts from a flat list of 6- or 7-element service tuples.
 
-        The 6th element (horarios) is stored in a separate dict so that the
-        internal 3-tuple layout of _servicios is preserved unchanged and all
-        existing unpack-sites remain valid.
+        The 6th element (horarios) is stored in a separate dict.
+        The optional 7th element (netos_por_horario) is stored in the 4th position
+        of the internal _servicios 4-tuple, enabling per-horario neto derivation.
+        When omitted (6-element tuples), netos_por_horario defaults to {}.
 
         Returns:
             (_servicios, _familias, _horarios) — same structure as instance attrs.
         """
-        servicios_dict: dict[int, tuple[str, Decimal | None, Decimal | None]] = {
-            n: (nombre, neto_a, neto_n)
-            for n, nombre, neto_a, neto_n, _cat, _hor in servicios
-        }
-        horarios_dict: dict[int, list[str]] = {
-            n: list(hor) for n, _nombre, _a, _n, _cat, hor in servicios
-        }
+        _srv_tuple_type = tuple[str, Decimal | None, Decimal | None, dict[str, Decimal]]
+        servicios_dict: dict[int, _srv_tuple_type] = {}
+        horarios_dict: dict[int, list[str]] = {}
         familias_raw: dict[str, list[int]] = {}
-        for numero, _nombre, _neto_a, _neto_n, categoria, _hor in servicios:
-            familias_raw.setdefault(categoria, []).append(numero)
+
+        for entry in servicios:
+            raw = tuple(entry)
+            n: int = raw[0]  # type: ignore[assignment]
+            nombre: str = raw[1]  # type: ignore[assignment]
+            neto_a: Decimal | None = raw[2]  # type: ignore[assignment]
+            neto_n: Decimal | None = raw[3]  # type: ignore[assignment]
+            categoria: str = raw[4]  # type: ignore[assignment]
+            hor: list[str] = raw[5]  # type: ignore[assignment]
+            netos_hor: dict[str, Decimal] = raw[6] if len(raw) == 7 else {}  # type: ignore[assignment]
+            servicios_dict[n] = (nombre, neto_a, neto_n, netos_hor)
+            horarios_dict[n] = list(hor)
+            familias_raw.setdefault(categoria, []).append(n)
+
         familias_dict: dict[str, list[int]] = {
             categoria: sorted(numeros)
             for categoria, numeros in sorted(familias_raw.items())
@@ -245,13 +257,16 @@ class FSMTiquetera:
 
     def __init__(
         self,
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
+        servicios: list[
+            tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
+            | tuple[int, str, Decimal | None, Decimal | None, str, list[str], dict[str, Decimal]]
+        ],
         puntos_venta: list[str],
         freelancers: list[tuple[uuid.UUID, str, bool]] | None = None,
         multi_tour_habilitado: bool = False,
         permite_ninos: dict[int, bool] | None = None,
     ) -> None:
-        # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino)
+        # dict for O(1) lookup: numero → (nombre, neto_adulto, neto_nino, netos_por_horario)
         # categoria → sorted list of service numeros (only non-empty families).
         # numero → list of configured departure times (empty = no time prompt).
         self._servicios, self._familias, self._horarios = self._build_catalog(servicios)
@@ -266,7 +281,10 @@ class FSMTiquetera:
 
     def refrescar_servicios(
         self,
-        servicios: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]],
+        servicios: list[
+            tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
+            | tuple[int, str, Decimal | None, Decimal | None, str, list[str], dict[str, Decimal]]
+        ],
         permite_ninos: dict[int, bool] | None = None,
     ) -> None:
         """Rebuild _servicios, _familias, _horarios, and _permite_ninos in place.
@@ -559,7 +577,12 @@ class FSMTiquetera:
         )
 
     def _calcular_neto(self, ctx: ContextoVenta) -> Decimal | None:
-        """Sum neto across all selected services. Returns None if any service lacks pricing."""
+        """Sum neto across all selected services. Returns None if any service lacks pricing.
+
+        For services with netos_por_horario, uses the per-horario neto for the horario
+        already selected in ctx.horarios_por_servicio. Falls back to neto_adulto when
+        no horario is selected or no per-horario entry exists for the selected horario.
+        """
         if not ctx.destinos_numeros or ctx.adultos is None:
             return None
         total = Decimal("0")
@@ -567,13 +590,21 @@ class FSMTiquetera:
             info = self._servicios.get(numero)
             if info is None:
                 return None
-            _, neto_adulto, neto_nino = info
-            if neto_adulto is None:
+            _, neto_adulto, neto_nino, netos_por_horario = info
+            # Derive effective adult neto: per-horario overrides the catalog default.
+            horario_seleccionado = ctx.horarios_por_servicio.get(numero)
+            efectivo_adulto: Decimal | None
+            if horario_seleccionado is not None and horario_seleccionado in netos_por_horario:
+                efectivo_adulto = netos_por_horario[horario_seleccionado]
+            else:
+                efectivo_adulto = neto_adulto
+            if efectivo_adulto is None:
                 return None
-            total += neto_adulto * ctx.adultos
+            total += efectivo_adulto * ctx.adultos
             if ctx.ninos and ctx.ninos > 0:
-                # Business rule: neto_nino=None → use neto_adulto as proxy price
-                efectivo_nino = neto_nino if neto_nino is not None else neto_adulto
+                # Business rule: neto_nino=None → use neto_adulto as proxy price.
+                # niños neto is NOT per-horario (spec out of scope).
+                efectivo_nino = neto_nino if neto_nino is not None else efectivo_adulto
                 total += efectivo_nino * ctx.ninos
         return total
 
@@ -582,8 +613,10 @@ class FSMTiquetera:
         nombres = []
         for numero in ctx.destinos_numeros:
             info = self._servicios.get(numero)
-            if info is not None and info[1] is None:
-                nombres.append(info[0])
+            if info is not None:
+                _nombre, neto_adulto, _neto_nino, _netos_hor = info
+                if neto_adulto is None:
+                    nombres.append(info[0])
         return nombres
 
     # ── private handlers ────────────────────────────────────────────────────
@@ -771,7 +804,7 @@ class FSMTiquetera:
         ctx.punto_de_venta_nombre = entrada.strip()
         if ctx.destinos_nombres:
             nombres_norm = {n.lower().strip() for n in ctx.destinos_nombres}
-            for numero, (nombre, _, _) in self._servicios.items():
+            for numero, (nombre, _, _, _) in self._servicios.items():
                 if nombre.lower().strip() in nombres_norm and numero not in ctx.destinos_numeros:
                     ctx.destinos_numeros.append(numero)
         if ctx.modo_edicion:

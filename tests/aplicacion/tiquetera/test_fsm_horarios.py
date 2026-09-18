@@ -44,15 +44,16 @@ class TestHorariosDict:
         assert fsm._horarios[1] == ["07:00"]
         assert fsm._horarios[2] == []
 
-    def test_servicios_internal_layout_unchanged(self) -> None:
-        """Internal _servicios keeps 3-tuple layout; adding _horarios must not change it."""
+    def test_servicios_internal_layout_is_4tuple(self) -> None:
+        """Internal _servicios uses a 4-tuple: (nombre, neto_a, neto_n, netos_por_horario)."""
         servicios = catalogo_fsm({"numero": 1, "horarios": ["08:00"]})
         fsm = FSMTiquetera(servicios=servicios, puntos_venta=["PDV"])
-        # _servicios[1] must be exactly (nombre, neto_a, neto_n) — the 3-tuple
-        nombre, neto_a, neto_n = fsm._servicios[1]
+        # _servicios[1] must be exactly (nombre, neto_a, neto_n, netos_por_horario) — the 4-tuple
+        nombre, neto_a, neto_n, netos_por_horario = fsm._servicios[1]
         assert nombre == "Tour"
         assert neto_a == Decimal("50")
         assert neto_n == Decimal("25")
+        assert netos_por_horario == {}
 
 
 class TestRefrescarServicios6Tuples:

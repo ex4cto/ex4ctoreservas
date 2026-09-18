@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,10 +23,12 @@ def to_orm(s: Servicio) -> ServicioModel:
         permite_ninos=s.permite_ninos,
         categoria=s.categoria,
         horarios=s.horarios,
+        netos_por_horario={k: str(v) for k, v in s.netos_por_horario.items()},
     )
 
 
 def to_domain(m: ServicioModel) -> Servicio:
+    raw_netos: dict[str, str] = m.netos_por_horario if m.netos_por_horario else {}
     return Servicio(
         id=m.id,
         numero=m.numero,
@@ -37,6 +40,7 @@ def to_domain(m: ServicioModel) -> Servicio:
         permite_ninos=m.permite_ninos,
         categoria=m.categoria,
         horarios=list(m.horarios) if m.horarios else [],
+        netos_por_horario={k: Decimal(str(v)) for k, v in raw_netos.items()},
     )
 
 

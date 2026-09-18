@@ -9,27 +9,31 @@ from sqlalchemy.orm import Session, sessionmaker
 from garay.infraestructura.persistencia import modelos  # noqa: F401
 from garay.infraestructura.persistencia.base import Base
 
-# Type alias for the 6-tuple catalog format consumed by FSMTiquetera.
-CatalogoTuple = tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
+# Type alias for the 7-tuple catalog format consumed by FSMTiquetera.
+# Element 7 (netos_por_horario) is new; existing call sites that omit it get {}.
+CatalogoTuple = tuple[int, str, Decimal | None, Decimal | None, str, list[str], dict[str, Decimal]]
 
-_DEFAULT_ENTRY: CatalogoTuple = (1, "Tour", Decimal("50"), Decimal("25"), "cat", [])
+_DEFAULT_ENTRY: CatalogoTuple = (1, "Tour", Decimal("50"), Decimal("25"), "cat", [], {})
 
 
 def catalogo_fsm(*overrides: dict[str, object]) -> list[CatalogoTuple]:
-    """Build a list of 6-tuple catalog entries for FSMTiquetera tests.
+    """Build a list of 7-tuple catalog entries for FSMTiquetera tests.
 
     Each positional argument is a partial override dict for one entry.
     When no arguments are given, returns a single default entry:
-      (1, "Tour", Decimal("50"), Decimal("25"), "cat", [])
+      (1, "Tour", Decimal("50"), Decimal("25"), "cat", [], {})
 
-    Keys: numero, nombre, neto_a, neto_n, categoria, horarios.
+    Keys: numero, nombre, neto_a, neto_n, categoria, horarios, netos_por_horario.
 
     Example:
         catalogo_fsm()
-        # [(1, "Tour", Decimal("50"), Decimal("25"), "cat", [])]
+        # [(1, "Tour", Decimal("50"), Decimal("25"), "cat", [], {})]
 
         catalogo_fsm({"numero": 2, "horarios": ["07:00"]})
-        # [(2, "Tour", Decimal("50"), Decimal("25"), "cat", ["07:00"])]
+        # [(2, "Tour", Decimal("50"), Decimal("25"), "cat", ["07:00"], {})]
+
+        catalogo_fsm({"netos_por_horario": {"08:00": Decimal("60000")}})
+        # [(1, "Tour", ..., {"08:00": Decimal("60000")})]
     """
     if not overrides:
         return [_DEFAULT_ENTRY]
@@ -46,7 +50,11 @@ def catalogo_fsm(*overrides: dict[str, object]) -> list[CatalogoTuple]:
         categoria = str(override.get("categoria", _DEFAULT_ENTRY[4]))
         raw_horarios = override.get("horarios", _DEFAULT_ENTRY[5])
         horarios: list[str] = raw_horarios if isinstance(raw_horarios, list) else []
-        result.append((numero, nombre, neto_a, neto_n, categoria, horarios))
+        raw_netos = override.get("netos_por_horario", _DEFAULT_ENTRY[6])
+        netos_por_horario: dict[str, Decimal] = (
+            raw_netos if isinstance(raw_netos, dict) else {}
+        )
+        result.append((numero, nombre, neto_a, neto_n, categoria, horarios, netos_por_horario))
     return result
 
 

@@ -56,6 +56,9 @@ class ServicioModel(Base):
     horarios: Mapped[list[str]] = mapped_column(
         JSON, nullable=False, default=list, server_default=sa.text("'[]'")
     )
+    netos_por_horario: Mapped[dict[str, str]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=sa.text("'{}'")
+    )
 
 
 class ClienteModel(Base):

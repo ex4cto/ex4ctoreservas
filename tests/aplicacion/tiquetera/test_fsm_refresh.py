@@ -39,8 +39,8 @@ def test_refrescar_servicios_rebuilds_servicios() -> None:
         (2, "Tour Isla Grande", Decimal("150000"), None, "ISLAS", []),
     ]
     fsm.refrescar_servicios(nuevos)
-    # Tour 1 has updated name and neto.
-    assert fsm._servicios[1] == ("Tour Playa Blanca NUEVO", Decimal("120000"), Decimal("60000"))
+    # Tour 1 has updated name and neto; netos_por_horario defaults to {} for 6-tuples.
+    assert fsm._servicios[1] == ("Tour Playa Blanca NUEVO", Decimal("120000"), Decimal("60000"), {})
     # Tour 3 is no longer in the list — should be absent.
     assert 3 not in fsm._servicios
 

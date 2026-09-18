@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from decimal import Decimal
 import logging
 from pathlib import Path
 
@@ -170,7 +171,10 @@ def main() -> None:
     )
 
     servicios_activos = servicio_repo.listar_activos()
-    servicios = [
+    servicios: list[
+        tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
+        | tuple[int, str, Decimal | None, Decimal | None, str, list[str], dict[str, Decimal]]
+    ] = [
         (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
         for s in servicios_activos
     ]
