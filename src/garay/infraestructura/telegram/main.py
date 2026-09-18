@@ -9,6 +9,7 @@ from pathlib import Path
 from telegram import Update
 
 from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
+from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
 from garay.aplicacion.egresos.gestionar_categorias import GestionarCategoriasService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
@@ -72,6 +73,9 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
     SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
+from garay.infraestructura.persistencia.repositorios.obligaciones_hotel import (
+    SQLAObligacionHotelRepository,
+)
 from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.gastos_recurrentes import (
@@ -121,6 +125,7 @@ def main() -> None:
     conciliacion_repo = SQLAConciliacionRepository(sf)
     ingreso_repo = SQLAIngresoRepository(sf)
     egreso_repo = SQLAEgresoRepository(sf)
+    obligacion_hotel_repo = SQLAObligacionHotelRepository(sf)
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
     auditoria_egreso_repo = SQLAAuditoriaEgresoRepository(sf)
     gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
@@ -151,6 +156,10 @@ def main() -> None:
         motor=MotorComisiones(),
     )
 
+    hotel_service = ServicioHoteles(
+        obligaciones=obligacion_hotel_repo,
+        egresos=egreso_repo,
+    )
     egreso_service = RegistrarEgresoManualService(
         egreso_repo=egreso_repo,
         categoria_repo=categoria_egreso_repo,
@@ -391,6 +400,8 @@ def main() -> None:
 
     app.bot_data.update(
         {
+            "hotel_service": hotel_service,
+            "obligacion_repo": obligacion_hotel_repo,
             "monitor_infra_service": monitor_infra_service,
             "monitor_cuota_resend_service": monitor_cuota_resend_service,
             "monitor_costo_railway_service": monitor_costo_railway_service,

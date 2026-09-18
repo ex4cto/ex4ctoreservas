@@ -114,6 +114,7 @@ from garay.infraestructura.telegram.handlers_egresos import (
     CB_HUB_CANCELAR,
     CB_HUB_CATEGORIAS,
     CB_HUB_FIJOS,
+    CB_HUB_HOTELES,
     CB_HUB_NUEVO,
     CB_OMITIR,
     CB_USAR_SUGERIDO,
@@ -176,6 +177,34 @@ from garay.infraestructura.telegram.handlers_egresos import (
     handle_gf_monto,
     handle_gf_nombre,
     handle_hub_cancelar,
+)
+from garay.infraestructura.telegram.handlers_hoteles import (
+    CB_HOTEL_ATRAS,
+    CB_HOTEL_HISTORIAL,
+    CB_HOTEL_HOY,
+    CB_HOTEL_OMITIR_CONCEPTO,
+    CB_HOTEL_PAGAR,
+    CB_HOTEL_PAGO_CANCELAR,
+    CB_HOTEL_PAGO_CONFIRMAR,
+    CB_HOTEL_PAGO_EDITAR,
+    CB_HOTEL_USAR_SUGERIDO,
+    CB_HOTEL_VOLVER_DETALLE,
+    HOTEL_DETALLE,
+    HOTEL_HISTORIAL,
+    HOTEL_LIST,
+    HOTEL_PAGO_CONCEPTO,
+    HOTEL_PAGO_CONFIRMAR,
+    HOTEL_PAGO_FECHA,
+    HOTEL_PAGO_MONTO,
+    PREFIJO_HOTEL_SEL,
+    cmd_deudas,
+    handle_hotel_detalle,
+    handle_hotel_historial,
+    handle_hotel_lista,
+    handle_pago_concepto,
+    handle_pago_confirmar,
+    handle_pago_fecha,
+    handle_pago_monto,
 )
 from garay.infraestructura.telegram.handlers_freelancers import (
     EDITAR_CAMPO,
@@ -1140,6 +1169,50 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
+    # Hotel payment ConversationHandler (states 200-219)
+    # Entry: CB_HUB_HOTELES callback from the egresos hub
+    hotel_conv_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(handle_hotel_lista, pattern=f"^{CB_HUB_HOTELES}$"),
+        ],
+        states={
+            HOTEL_LIST: [
+                _CB(handle_hotel_detalle, pattern=f"^{PREFIJO_HOTEL_SEL}"),
+                _CB(handle_hotel_detalle, pattern=f"^{CB_HOTEL_ATRAS}$"),
+            ],
+            HOTEL_DETALLE: [
+                _CB(handle_hotel_detalle, pattern=f"^{CB_HOTEL_PAGAR}$"),
+                _CB(handle_hotel_detalle, pattern=f"^{CB_HOTEL_HISTORIAL}$"),
+                _CB(handle_hotel_detalle, pattern=f"^{CB_HOTEL_ATRAS}$"),
+            ],
+            HOTEL_PAGO_MONTO: [
+                _CB(handle_pago_monto, pattern=f"^{CB_HOTEL_USAR_SUGERIDO}$"),
+                MessageHandler(_TEXT, handle_pago_monto),
+            ],
+            HOTEL_PAGO_FECHA: [
+                _CB(handle_pago_fecha, pattern=f"^{CB_HOTEL_HOY}$"),
+                MessageHandler(_TEXT, handle_pago_fecha),
+            ],
+            HOTEL_PAGO_CONCEPTO: [
+                _CB(handle_pago_concepto, pattern=f"^{CB_HOTEL_OMITIR_CONCEPTO}$"),
+                MessageHandler(_TEXT, handle_pago_concepto),
+            ],
+            HOTEL_PAGO_CONFIRMAR: [
+                _CB(
+                    handle_pago_confirmar,
+                    pattern=f"^({CB_HOTEL_PAGO_CONFIRMAR}|{CB_HOTEL_PAGO_EDITAR}|{CB_HOTEL_PAGO_CANCELAR})$",
+                ),
+            ],
+            HOTEL_HISTORIAL: [
+                _CB(handle_hotel_historial, pattern=f"^{CB_HOTEL_VOLVER_DETALLE}$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancelar", cmd_cancelar),
+            CommandHandler("start", cmd_start),
+        ],
+    )
+
     # /generar_documento (dev-only) — multi-select proposal/contract generator
     propuesta_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("generar_documento", cmd_generar_documento)],
@@ -1181,6 +1254,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(TypeHandler(Update, _ignorar_grupo_notificaciones), group=-1)
 
     app.add_handler(conv_handler)
+    app.add_handler(hotel_conv_handler, group=11)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(categorias_conv_handler, group=4)
@@ -1193,6 +1267,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(nuevo_tour_conv_handler, group=8)
     app.add_handler(propuesta_conv_handler, group=9)
+    app.add_handler(CommandHandler("deudas", cmd_deudas), group=1)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)

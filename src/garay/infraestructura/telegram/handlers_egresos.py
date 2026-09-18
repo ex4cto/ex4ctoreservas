@@ -1232,12 +1232,14 @@ CB_HUB_NUEVO: str = "hub_egreso_nuevo"
 CB_HUB_FIJOS: str = "hub_egreso_fijos"
 CB_HUB_CATEGORIAS: str = "hub_categorias"
 CB_HUB_CANCELAR: str = "hub_cancelar"
+CB_HUB_HOTELES: str = "hub_hoteles"
 
 
 async def _mostrar_hub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Render the egresos hub menu. Auth-free — callers must have already verified access."""
     teclado = InlineKeyboardMarkup(
         [
+            _fila_boton(obtener_mensaje("hub.boton_hoteles"), CB_HUB_HOTELES),
             _fila_boton(obtener_mensaje("hub.boton_nuevo"), CB_HUB_NUEVO),
             _fila_boton(obtener_mensaje("hub.boton_fijos"), CB_HUB_FIJOS),
             _fila_boton(obtener_mensaje("hub.boton_categorias"), CB_HUB_CATEGORIAS),
