@@ -727,14 +727,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "gestion_ventas.detalle": {
         Idioma.ES: (
-            "<b>Detalle de la venta</b>\n"
-            "Cliente: {cliente}\n"
-            "Tours: {tours}\n"
-            "Fecha: {fecha}\n"
-            "Canal: {canal}\n"
+            "<b>Detalle de la venta</b>\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tours: {tours}\n"
+            "📅 Fecha: {fecha}\n"
+            "🏷 Canal: {canal}\n"
             "{punto_line}"
             "{origen_line}"
-            "Valor: ${valor:,.0f}"
+            "💰 Valor: ${valor:,.0f}"
         )
     },
     "gestion_ventas.boton_anular": {Idioma.ES: "Anular"},
@@ -862,7 +862,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     # --- Gestión de ventas: editar canal ---
     "gestion_ventas.campo_canal": {Idioma.ES: "🏷 Canal de ventas"},
     "gestion_ventas.seleccionar_canal": {
-        Idioma.ES: "¿A qué canal deseas cambiar esta venta?"
+        Idioma.ES: "¿A qué canal deseas cambiar esta venta?\nActual: <b>{actual}</b>"
     },
     "gestion_ventas.canal_interno": {Idioma.ES: "🏨 Presencial (punto de venta)"},
     "gestion_ventas.canal_externo": {Idioma.ES: "🤝 Externo"},
@@ -881,10 +881,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "gestion_ventas.correccion_edicion_canal": {
         Idioma.ES: (
-            "🔄 Corrección de canal — Cliente: {cliente} | Tours: {tours}\n"
-            "Nuevo canal: {canal}\n"
-            "Motivo: {motivo}\n"
-            "Por: {actor}"
+            "🔄 <b>Canal de venta modificado</b>\n"
+            "Agencia Garay Tours\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tour: {tours}\n"
+            "🏷 Nuevo canal: <b>{canal}</b>\n"
+            "{punto_line}"
+            "📝 Motivo: {motivo}\n"
+            "🙍 Por: {actor}"
         )
     },
     # --- Tours ---

@@ -526,9 +526,9 @@ async def _render_detalle(
             pdv_id = venta.participantes.punto_de_venta_id
             punto = await asyncio.to_thread(pdv_repo.buscar_por_id, pdv_id)
             if punto is not None:
-                punto_line = f"Punto: {punto.nombre}\n"
+                punto_line = f"🏠 Punto: {punto.nombre}\n"
 
-    origen_line = f"Origen: {venta.canal_origen}\n" if venta.canal_origen else ""
+    origen_line = f"📲 Origen: {venta.canal_origen}\n" if venta.canal_origen else ""
 
     detail_text = obtener_mensaje("gestion_ventas.detalle").format(
         cliente=cliente_nombre,
@@ -691,6 +691,9 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
     if campo_str == "tipo_cliente":
         if context.user_data is not None:
             context.user_data["gv_accion"] = "editar_canal"
+        actual_label = _TIPO_CLIENTE_LABEL.get(
+            venta.tipo_cliente, venta.tipo_cliente.value
+        )
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(
                 obtener_mensaje("gestion_ventas.canal_interno"),
@@ -710,7 +713,9 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
             )],
         ])
         await query.edit_message_text(
-            obtener_mensaje("gestion_ventas.seleccionar_canal"),
+            obtener_mensaje("gestion_ventas.seleccionar_canal").format(
+                actual=actual_label
+            ),
             reply_markup=keyboard,
             parse_mode="HTML",
         )
@@ -1324,7 +1329,7 @@ async def _handle_confirmar_editar_canal(
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
     except MismoCanal:
-        canal_label = nuevo_tipo_str
+        canal_label = _TIPO_CLIENTE_LABEL.get(nuevo_tipo, nuevo_tipo_str)
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.canal_igual").format(canal=canal_label),
@@ -1349,10 +1354,21 @@ async def _handle_confirmar_editar_canal(
         mensaje_key = "gestion_ventas.error_generico"
     else:
         # Success
+        canal_label = _TIPO_CLIENTE_LABEL.get(nuevo_tipo, nuevo_tipo.value)
+        punto_line_grupo = ""
+        if nuevo_tipo == TipoCliente.INTERNO and punto_id is not None:
+            pdv_repo = context.bot_data.get("pdv_repo")
+            if pdv_repo is not None:
+                pdv_obj = await asyncio.to_thread(pdv_repo.buscar_por_id, punto_id)
+                if pdv_obj is not None:
+                    punto_line_grupo = (
+                        f"🏠 Punto: {escape(pdv_obj.nombre, quote=False)}\n"
+                    )
         mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_canal").format(
             cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
             tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            canal=escape(nuevo_tipo_str, quote=False),
+            canal=escape(canal_label, quote=False),
+            punto_line=punto_line_grupo,
             motivo=escape(motivo, quote=False),
             actor=escape(nombre or "—", quote=False),
         )
