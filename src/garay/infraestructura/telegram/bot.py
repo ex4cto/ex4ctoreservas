@@ -799,6 +799,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 MessageHandler(_TEXT, handle_monto_neto),
             ],
             estados[EstadoFSM.METODO_PAGO]: [
+                _CB(handle_metodo_pago),
                 MessageHandler(_TEXT, handle_metodo_pago),
             ],
             estados[EstadoFSM.PARTICIPANTE_ROL]: [
