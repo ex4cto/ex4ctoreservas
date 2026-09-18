@@ -28,6 +28,24 @@ from garay.dominio.servicios.horarios import formato_display, render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
+# Option labels — shared between keyboard construction and user input comparison.
+# Both sides must use the same constant so a catalog change propagates atomically.
+_OP_MANUAL = obtener_mensaje("fsm.metodo_manual")
+_OP_FOTO = obtener_mensaje("fsm.metodo_foto")
+_OP_PRESENCIAL = obtener_mensaje("fsm.modalidad_presencial")
+_OP_DIGITAL = obtener_mensaje("fsm.modalidad_digital")
+_OP_INTERNO = obtener_mensaje("fsm.tipo_interno")
+_OP_EXTERNO = obtener_mensaje("fsm.tipo_externo")
+_OP_AMBOS = obtener_mensaje("fsm.rol_ambos")
+_OP_SOLO_VENDEDOR = obtener_mensaje("fsm.rol_solo_vendedor")
+_OP_SOLO_CERRADOR = obtener_mensaje("fsm.rol_solo_cerrador")
+_OP_NOMBRE_FREELANCERS = obtener_mensaje("fsm.rol_nombre_freelancers")
+_OP_CONFIRMAR = obtener_mensaje("fsm.confirmar")
+_OP_EDITAR = obtener_mensaje("fsm.editar")
+_OP_CANCELAR = obtener_mensaje("fsm.cancelar")
+_DISPLAY_TU = obtener_mensaje("fsm.display_tu")
+_DISPLAY_VACIO = obtener_mensaje("fsm.display_vacio")
+
 
 class EstadoFSM(StrEnum):
     METODO_INPUT = "metodo_input"
@@ -163,8 +181,7 @@ def _clonar(ctx: ContextoVenta) -> ContextoVenta:
 
 def _tú_si(rol: str | None, *roles: str) -> str:
     """Return '(tú)' when `rol` is in `roles`, otherwise '—'."""
-    # i18n debt: "(tú)" and "—" are user-visible strings bypassing the catalog
-    return "(tú)" if rol in roles else "—"
+    return _DISPLAY_TU if rol in roles else _DISPLAY_VACIO
 
 
 def _siguiente_tour_sin_fecha(ctx: ContextoVenta) -> int | None:
@@ -277,7 +294,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
             mensaje=obtener_mensaje("pregunta_metodo_input"),
-            opciones=["Manual", "Foto"],
+            opciones=[_OP_MANUAL, _OP_FOTO],
             contexto=ContextoVenta(),
         )
 
@@ -435,7 +452,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -563,14 +580,14 @@ class FSMTiquetera:
     def _handle_metodo_input(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         opcion = entrada.strip()
-        if opcion == "Manual":
+        if opcion == _OP_MANUAL:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MODALIDAD_VENTA,
                 mensaje=obtener_mensaje("pregunta_modalidad_venta"),
-                opciones=["Presencial", "Digital"],
+                opciones=[_OP_PRESENCIAL, _OP_DIGITAL],
                 contexto=ctx,
             )
-        if opcion == "Foto":
+        if opcion == _OP_FOTO:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.ESPERANDO_FOTO,
                 mensaje=obtener_mensaje("pregunta_enviar_foto"),
@@ -579,7 +596,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.METODO_INPUT,
             mensaje=obtener_mensaje("error_metodo_invalido"),
-            opciones=["Manual", "Foto"],
+            opciones=[_OP_MANUAL, _OP_FOTO],
             contexto=ctx,
         )
 
@@ -595,7 +612,7 @@ class FSMTiquetera:
         """New state: asks Presencial vs Digital before asking for the punto."""
         ctx = _clonar(contexto)
         opcion = entrada.strip()
-        if opcion == "Digital":
+        if opcion == _OP_DIGITAL:
             ctx.tipo_cliente = TipoCliente.DIGITAL
             if ctx.modo_edicion:
                 ctx.punto_de_venta_nombre = None  # digital has no punto
@@ -611,7 +628,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -620,7 +637,7 @@ class FSMTiquetera:
                 opciones=[c.value for c in CanalOrigen],
                 contexto=ctx,
             )
-        if opcion == "Presencial":
+        if opcion == _OP_PRESENCIAL:
             if ctx.modo_edicion:
                 ctx.canal_origen = None  # presencial has no canal
                 ctx.tipo_cliente = None  # will be determined at TIPO_RESERVA or Crespo branch
@@ -640,7 +657,7 @@ class FSMTiquetera:
                     return SalidaFSM(
                         nuevo_estado=EstadoFSM.CONFIRMACION,
                         mensaje=self._construir_resumen(ctx),
-                        opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                        opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                         contexto=ctx,
                     )
                 # Non-Crespo presencial with existing punto: re-ask TIPO_RESERVA.
@@ -648,7 +665,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.TIPO_RESERVA,
                     mensaje=obtener_mensaje("pregunta_tipo_reserva"),
-                    opciones=["INTERNO", "EXTERNO"],
+                    opciones=[_OP_INTERNO, _OP_EXTERNO],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -660,7 +677,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.MODALIDAD_VENTA,
             mensaje=obtener_mensaje("error_modalidad_invalida"),
-            opciones=["Presencial", "Digital"],
+            opciones=[_OP_PRESENCIAL, _OP_DIGITAL],
             contexto=ctx,
         )
 
@@ -668,15 +685,15 @@ class FSMTiquetera:
         # TIPO_RESERVA now only appears for presencial non-Crespo sales.
         # DIGITAL is decided at MODALIDAD_VENTA; Crespo is decided at PUNTO_DE_VENTA.
         tipo_map = {
-            "INTERNO": TipoCliente.INTERNO,
-            "EXTERNO": TipoCliente.EXTERNO,
+            _OP_INTERNO: TipoCliente.INTERNO,
+            _OP_EXTERNO: TipoCliente.EXTERNO,
         }
         tipo = tipo_map.get(entrada.strip().upper())
         if tipo is None:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.TIPO_RESERVA,
                 mensaje=obtener_mensaje("error_tipo_reserva_invalido"),
-                opciones=["INTERNO", "EXTERNO"],
+                opciones=[_OP_INTERNO, _OP_EXTERNO],
                 contexto=_clonar(contexto),
             )
         ctx = _clonar(contexto)
@@ -687,7 +704,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         if ctx.foto_modo:
@@ -722,7 +739,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         if ctx.foto_modo:
@@ -757,7 +774,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             if viejo_punto == "Crespo" or ctx.tipo_cliente is None:
@@ -768,7 +785,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.TIPO_RESERVA,
                     mensaje=obtener_mensaje("pregunta_tipo_reserva"),
-                    opciones=["INTERNO", "EXTERNO"],
+                    opciones=[_OP_INTERNO, _OP_EXTERNO],
                     contexto=ctx,
                 )
             # Non-Crespo → non-Crespo edit with existing tipo: keep it, return to CONFIRMACION.
@@ -776,7 +793,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         # Crespo: skip TIPO_RESERVA, set sentinel EXTERNO.
@@ -801,7 +818,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.TIPO_RESERVA,
             mensaje=obtener_mensaje("pregunta_tipo_reserva"),
-            opciones=["INTERNO", "EXTERNO"],
+            opciones=[_OP_INTERNO, _OP_EXTERNO],
             contexto=ctx,
         )
 
@@ -885,7 +902,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
 
@@ -975,7 +992,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -995,7 +1012,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1012,7 +1029,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1038,7 +1055,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1085,7 +1102,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1109,7 +1126,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         if ctx.tipo_cliente == TipoCliente.INTERNO:
@@ -1141,7 +1158,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -1156,7 +1173,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1173,7 +1190,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1303,7 +1320,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1346,7 +1363,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         return SalidaFSM(
@@ -1393,7 +1410,7 @@ class FSMTiquetera:
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.CONFIRMACION,
                     mensaje=self._construir_resumen(ctx),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -1439,16 +1456,16 @@ class FSMTiquetera:
     def _handle_participante_rol(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
         opcion = entrada.strip()
-        if opcion == "Ambos":
+        if opcion == _OP_AMBOS:
             ctx.rol_registrante = "ambos"
             ctx.modo_edicion = False
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
-        if opcion == "Solo vendedor":
+        if opcion == _OP_SOLO_VENDEDOR:
             ctx.rol_registrante = "vendedor"
             opciones_fl = self._opciones_freelancers(solo_activos=True)
             if not opciones_fl:
@@ -1464,7 +1481,7 @@ class FSMTiquetera:
                 opciones_estructuradas=opciones_fl,
                 contexto=ctx,
             )
-        if opcion == "Solo cerrador":
+        if opcion == _OP_SOLO_CERRADOR:
             ctx.rol_registrante = "cerrador"
             opciones_fl = self._opciones_freelancers(solo_activos=True)
             if not opciones_fl:
@@ -1480,7 +1497,7 @@ class FSMTiquetera:
                 opciones_estructuradas=opciones_fl,
                 contexto=ctx,
             )
-        if opcion == "A nombre de freelancers" and ctx.registrante_privilegiado:
+        if opcion == _OP_NOMBRE_FREELANCERS and ctx.registrante_privilegiado:
             ctx.rol_registrante = "ninguno"
             opciones_fl = self._opciones_freelancers(solo_activos=True)
             if not opciones_fl:
@@ -1558,7 +1575,7 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.CONFIRMACION,
                 mensaje=self._construir_resumen(ctx),
-                opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
         if ctx.rol_registrante == "vendedor":
@@ -1576,7 +1593,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
-            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+            opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
             contexto=ctx,
         )
 
@@ -1635,7 +1652,7 @@ class FSMTiquetera:
 
     def _handle_confirmacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
-        if entrada.strip() == "✅ Confirmar":
+        if entrada.strip() == _OP_CONFIRMAR:
             faltantes = self._validar_datos_confirmacion(ctx)
             if faltantes:
                 return SalidaFSM(
@@ -1647,7 +1664,7 @@ class FSMTiquetera:
                         + "\n\n"
                         + self._construir_resumen(ctx)
                     ),
-                    opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+                    opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                     contexto=ctx,
                 )
             return SalidaFSM(
@@ -1656,7 +1673,7 @@ class FSMTiquetera:
                 listo=True,
                 contexto=ctx,
             )
-        if entrada.strip() == "✏️ Editar":
+        if entrada.strip() == _OP_EDITAR:
             opciones_editar = self._opciones_editables(ctx)
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.EDITAR_SELECTOR,
@@ -1790,7 +1807,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
-            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+            opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
             contexto=ctx,
         )
 
@@ -1820,7 +1837,7 @@ class FSMTiquetera:
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CONFIRMACION,
             mensaje=self._construir_resumen(ctx),
-            opciones=["✅ Confirmar", "✏️ Editar", "❌ Cancelar"],
+            opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
             contexto=ctx,
         )
 
@@ -1900,15 +1917,15 @@ class FSMTiquetera:
 
     def _opciones_rol(self, ctx: ContextoVenta) -> list[str]:
         """Opciones del paso de rol. Añade 'A nombre de freelancers' para dev/dueño/admin."""
-        opciones = ["Ambos", "Solo vendedor", "Solo cerrador"]
+        opciones = [_OP_AMBOS, _OP_SOLO_VENDEDOR, _OP_SOLO_CERRADOR]
         if ctx.registrante_privilegiado:
-            opciones.append("A nombre de freelancers")
+            opciones.append(_OP_NOMBRE_FREELANCERS)
         return opciones
 
     def _opciones_para_estado(self, estado: EstadoFSM, ctx: ContextoVenta) -> list[str]:
         opts: dict[EstadoFSM, list[str]] = {
-            EstadoFSM.MODALIDAD_VENTA: ["Presencial", "Digital"],
-            EstadoFSM.TIPO_RESERVA: ["INTERNO", "EXTERNO"],
+            EstadoFSM.MODALIDAD_VENTA: [_OP_PRESENCIAL, _OP_DIGITAL],
+            EstadoFSM.TIPO_RESERVA: [_OP_INTERNO, _OP_EXTERNO],
             EstadoFSM.CANAL_ORIGEN: [c.value for c in CanalOrigen],
             EstadoFSM.PUNTO_DE_VENTA: list(self._puntos_venta),
             EstadoFSM.CLIENTE_TIPO_ID: ["CC", "NIT"],

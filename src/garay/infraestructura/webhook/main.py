@@ -6,7 +6,6 @@ import logging
 
 from fastapi import FastAPI
 
-from garay.aplicacion.webhook.app import crear_app
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.correos_no_parseados import (
@@ -15,6 +14,7 @@ from garay.infraestructura.persistencia.repositorios.correos_no_parseados import
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
+from garay.infraestructura.webhook.app import crear_app
 
 logging.basicConfig(level=logging.INFO)
 

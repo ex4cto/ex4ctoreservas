@@ -36,7 +36,7 @@ class SQLACategoriaEgresoRepository(CategoriaEgresoRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(CategoriaEgresoModel)
-                .where(CategoriaEgresoModel.activo == True)  # noqa: E712
+                .where(CategoriaEgresoModel.activo == True)
                 .order_by(CategoriaEgresoModel.orden, CategoriaEgresoModel.nombre)
             )
             rows = session.execute(stmt).scalars().all()

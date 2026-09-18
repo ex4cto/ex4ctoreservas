@@ -55,6 +55,16 @@ ignore = ["N818"]
 # HTML inside f-string — reformatting would corrupt the invoice; adding noqa inside the
 # string literal would inject literal text into the HTML output.
 "src/garay/aplicacion/factura/servicio.py" = ["E501"]
+# Message catalog: string values are user-facing text that cannot be split across lines.
+# RUF001: ➕ is an intentional emoji symbol in user-facing text, not an accidental + substitute.
+"src/garay/mensajes/catalogo.py" = ["E501", "RUF001"]
+# SQLAlchemy filter expressions use == False / == True / == None intentionally to generate
+# IS FALSE / IS TRUE / IS NULL SQL; ruff E712/E711 cannot distinguish this from Python bugs.
+"src/garay/infraestructura/persistencia/repositorios/*.py" = ["E711", "E712"]
+# FastAPI Depends() in route signatures is intentional and required by the framework.
+"src/garay/infraestructura/webhook/rutas.py" = ["B008"]
+# ➕ is an intentional emoji in button labels, not an accidental + substitute.
+"src/garay/infraestructura/telegram/handlers_tours.py" = ["RUF001"]
 
 [tool.mypy]
 python_version = "3.12"

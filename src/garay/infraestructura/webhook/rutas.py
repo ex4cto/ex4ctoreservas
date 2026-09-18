@@ -143,10 +143,10 @@ def _quarantine_and_alert(
 def recibir_email(
     payload: PayloadEmail,
     secret: str = Query(...),
-    ingreso_repo: IngresoRepository = Depends(),  # noqa: B008
-    egreso_repo: EgresoRepository = Depends(),  # noqa: B008
-    correo_repo: CorreoNoParseadoRepository = Depends(),  # noqa: B008
-    notificador: NotificadorGrupo = Depends(),  # noqa: B008
+    ingreso_repo: IngresoRepository = Depends(),
+    egreso_repo: EgresoRepository = Depends(),
+    correo_repo: CorreoNoParseadoRepository = Depends(),
+    notificador: NotificadorGrupo = Depends(),
     moneda: str = Depends(_get_moneda),
 ) -> dict[str, str]:
     """Receive a forwarded bank email notification from Forward Email.

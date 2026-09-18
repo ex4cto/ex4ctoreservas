@@ -1,14 +1,19 @@
-"""Pydantic schemas for the email webhook endpoint."""
+"""Pydantic schemas for the email webhook endpoint.
+
+PagoExtraido and EgresoExtraido are defined in the application layer and re-exported here
+so parsers (infrastructure) can import from a stable infra-local path.
+"""
 
 from __future__ import annotations
 
-import datetime
-from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel, model_validator
 
+from garay.aplicacion.webhook.schemas import EgresoExtraido, PagoExtraido
 from garay.infraestructura.webhook.html_texto import html_a_texto
+
+__all__ = ["EgresoExtraido", "PagoExtraido", "PayloadEmail"]
 
 
 class PayloadEmail(BaseModel):
@@ -50,18 +55,3 @@ class PayloadEmail(BaseModel):
             "cuerpo_html": cuerpo_html,
             "cuerpo_texto": cuerpo_texto,
         }
-
-
-class PagoExtraido(BaseModel):
-    monto: Decimal
-    remitente: str
-    banco_origen: str
-    fecha_pago: datetime.datetime
-
-
-class EgresoExtraido(BaseModel):
-    monto: Decimal
-    descripcion: str
-    banco_origen: str
-    fecha_egreso: datetime.datetime
-    destinatario: str | None = None

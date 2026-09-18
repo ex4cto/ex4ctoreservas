@@ -99,6 +99,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "Enviá la foto del tiquet para extraer los datos automáticamente."
     },
     "error_metodo_invalido": {Idioma.ES: "Opción inválida. Elegí Manual o Foto."},
+    # --- FSM option labels (used both to build keyboards and to compare user input) ---
+    "fsm.metodo_manual": {Idioma.ES: "Manual"},
+    "fsm.metodo_foto": {Idioma.ES: "Foto"},
+    "fsm.modalidad_presencial": {Idioma.ES: "Presencial"},
+    "fsm.modalidad_digital": {Idioma.ES: "Digital"},
+    "fsm.tipo_interno": {Idioma.ES: "INTERNO"},
+    "fsm.tipo_externo": {Idioma.ES: "EXTERNO"},
+    "fsm.rol_ambos": {Idioma.ES: "Ambos"},
+    "fsm.rol_solo_vendedor": {Idioma.ES: "Solo vendedor"},
+    "fsm.rol_solo_cerrador": {Idioma.ES: "Solo cerrador"},
+    "fsm.rol_nombre_freelancers": {Idioma.ES: "A nombre de freelancers"},
+    "fsm.confirmar": {Idioma.ES: "✅ Confirmar"},
+    "fsm.editar": {Idioma.ES: "✏️ Editar"},
+    "fsm.cancelar": {Idioma.ES: "❌ Cancelar"},
+    "fsm.display_tu": {Idioma.ES: "(tú)"},
+    "fsm.display_vacio": {Idioma.ES: "—"},
     "error_esperando_foto_texto": {
         Idioma.ES: "Necesito la foto del tiquet, no texto. Enviá la imagen para continuar."
     },
@@ -321,7 +337,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Categoría: {categoria}\n\n¿Confirmamos?"
         )
     },
-    "egreso.boton_otro": {Idioma.ES: "➕ Otro egreso"},  # noqa: RUF001
+    "egreso.boton_otro": {Idioma.ES: "➕ Otro egreso"},
     "egreso.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
     "egreso.boton_hoy": {Idioma.ES: "📅 Hoy"},
     "egreso.boton_usar_sugerido": {Idioma.ES: "✅ Usar {monto_sugerido}"},
@@ -377,7 +393,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "categoria.menu_titulo": {
         Idioma.ES: "🗂️ <b>Categorías de egreso</b>\n✅ activa · 🚫 inactiva · 🔒 protegida"
     },
-    "categoria.boton_nueva": {Idioma.ES: "➕ Nueva categoría"},  # noqa: RUF001
+    "categoria.boton_nueva": {Idioma.ES: "➕ Nueva categoría"},
     "categoria.boton_cerrar": {Idioma.ES: "❌ Cerrar"},
     "categoria.boton_atras": {Idioma.ES: "⬅️ Atrás"},
     "categoria.boton_desactivar": {Idioma.ES: "🚫 Desactivar"},
@@ -587,20 +603,20 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     # --- Freelancers ---
     "freelancer.pedir_nombre": {Idioma.ES: "¿Cuál es el nombre del freelancer?"},
-    "freelancer.error_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresá el nombre:"},  # noqa: E501
-    "freelancer.pedir_telegram_id": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero, ej: 123456789)"},  # noqa: E501
-    "freelancer.error_telegram_id_invalido": {Idioma.ES: "El ID debe ser un número entero. Intentá de nuevo:"},  # noqa: E501
-    "freelancer.error_telegram_id_duplicado": {Idioma.ES: "Ese ID ya está asignado a otro freelancer. Ingresá otro:"},  # noqa: E501
+    "freelancer.error_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresá el nombre:"},
+    "freelancer.pedir_telegram_id": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero, ej: 123456789)"},
+    "freelancer.error_telegram_id_invalido": {Idioma.ES: "El ID debe ser un número entero. Intentá de nuevo:"},
+    "freelancer.error_telegram_id_duplicado": {Idioma.ES: "Ese ID ya está asignado a otro freelancer. Ingresá otro:"},
     # Identity fields — Slice A1
     "freelancer.pedir_nombre_completo": {Idioma.ES: "¿Cuál es el nombre completo del freelancer?"},
-    "freelancer.error_nombre_completo_vacio": {Idioma.ES: "El nombre completo no puede estar vacío. Ingresá el nombre completo:"},  # noqa: E501
+    "freelancer.error_nombre_completo_vacio": {Idioma.ES: "El nombre completo no puede estar vacío. Ingresá el nombre completo:"},
     "freelancer.pedir_cedula": {Idioma.ES: "¿Cuál es el número de cédula? (6 a 10 dígitos)"},
-    "freelancer.error_cedula_invalida": {Idioma.ES: "Cédula inválida. Debe contener entre 6 y 10 dígitos numéricos. Intentá de nuevo:"},  # noqa: E501
-    "freelancer.error_cedula_duplicada": {Idioma.ES: "Ya existe un freelancer con esa cédula. Ingresá otra:"},  # noqa: E501
-    "freelancer.pedir_nombre_corto": {Idioma.ES: "¿Cuál es el nombre corto? (Enter para usar \"{prefill}\")"},  # noqa: E501
-    "freelancer.pedir_display_override": {Idioma.ES: "El display automático es \"{display}\". ¿Querés usarlo? (Enter para confirmar, o escribí uno nuevo)"},  # noqa: E501
-    "freelancer.telegram_id_opcional": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero) — o presioná Omitir:"},  # noqa: E501
-    "freelancer.telegram_omitido": {Idioma.ES: "Telegram omitido. El freelancer no tendrá ID de Telegram vinculado."},  # noqa: E501
+    "freelancer.error_cedula_invalida": {Idioma.ES: "Cédula inválida. Debe contener entre 6 y 10 dígitos numéricos. Intentá de nuevo:"},
+    "freelancer.error_cedula_duplicada": {Idioma.ES: "Ya existe un freelancer con esa cédula. Ingresá otra:"},
+    "freelancer.pedir_nombre_corto": {Idioma.ES: "¿Cuál es el nombre corto? (Enter para usar \"{prefill}\")"},
+    "freelancer.pedir_display_override": {Idioma.ES: "El display automático es \"{display}\". ¿Querés usarlo? (Enter para confirmar, o escribí uno nuevo)"},
+    "freelancer.telegram_id_opcional": {Idioma.ES: "¿ID de Telegram del freelancer? (número entero) — o presioná Omitir:"},
+    "freelancer.telegram_omitido": {Idioma.ES: "Telegram omitido. El freelancer no tendrá ID de Telegram vinculado."},
     "freelancer.confirmacion_nuevo": {
         Idioma.ES: (
             "¿Confirmás crear este freelancer?\n\n"
@@ -710,7 +726,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     # --- Slice 2: otro tour para el mismo cliente ---
     "pregunta_otro_tour": {Idioma.ES: "¿Registrar otro tour para {cliente}?"},
-    "boton_otro_tour": {Idioma.ES: "➕ Otro tour"},  # noqa: RUF001
+    "boton_otro_tour": {Idioma.ES: "➕ Otro tour"},
     "boton_terminar": {Idioma.ES: "🏁 Terminar"},
     "resumen_reservas": {
         Idioma.ES: "Listo: {cantidad} reserva(s) registrada(s) para {cliente}."
@@ -1080,7 +1096,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "generar.contrato_software_enviado": {Idioma.ES: "Contrato de software — {empresa}"},
     "generar.contrato_audiovisual_enviado": {Idioma.ES: "Contrato audiovisual — {empresa}"},
     # --- Liquidar socio (pago de socios) ---
-    "liquidar_socio.error_config": {Idioma.ES: "Error de configuración. Contacta al administrador."},
+    "liquidar_socio.error_config": {
+        Idioma.ES: "Error de configuración. Contacta al administrador."
+    },
     "liquidar_socio.sin_socios": {Idioma.ES: "No hay socios configurados."},
     "liquidar_socio.seleccionar_socio": {Idioma.ES: "👤 Selecciona el socio a liquidar:"},
     "liquidar_socio.boton_cancelar": {Idioma.ES: "❌ Cancelar"},
@@ -1092,7 +1110,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "❌ Monto inválido. Ingresa un número, por ejemplo: <code>500000</code>"
     },
     "liquidar_socio.cancelado": {Idioma.ES: "❌ Cancelado."},
-    "liquidar_socio.estado_incompleto": {Idioma.ES: "❌ Estado incompleto. Inicia el flujo de nuevo."},
+    "liquidar_socio.estado_incompleto": {
+        Idioma.ES: "❌ Estado incompleto. Inicia el flujo de nuevo."
+    },
     "liquidar_socio.tipo_total": {Idioma.ES: "Total"},
     "liquidar_socio.tipo_parcial": {Idioma.ES: "Parcial"},
     "liquidar_socio.confirmacion": {

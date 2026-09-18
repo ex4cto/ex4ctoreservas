@@ -177,7 +177,7 @@ def _teclado_horarios(horarios: list[str], prefix: str) -> InlineKeyboardMarkup:
         for h in horarios
     ]
     botones.append(
-        [InlineKeyboardButton("➕ Agregar horario", callback_data=f"{prefix}agregar")]  # noqa: RUF001
+        [InlineKeyboardButton("➕ Agregar horario", callback_data=f"{prefix}agregar")]
     )
     botones.append(
         [InlineKeyboardButton("✅ Listo", callback_data=f"{prefix}listo")]
@@ -515,7 +515,7 @@ async def handle_edt_ficha(
             [InlineKeyboardButton(fam, callback_data=f"edt_familia_nueva:{fam}")]
             for fam in familias
         ]
-        nueva_label = "➕ Nueva familia"  # noqa: RUF001
+        nueva_label = "➕ Nueva familia"
         botones.append(
             [InlineKeyboardButton(nueva_label, callback_data="edt_familia_nueva_libre")]
         )
@@ -1087,7 +1087,7 @@ def _teclado_familias_nvt(servicios: list[Servicio]) -> InlineKeyboardMarkup:
         for fam in familias
     ]
     botones.append(
-        [InlineKeyboardButton("➕ Nueva familia", callback_data="nvt_familia_nueva_libre")]  # noqa: RUF001
+        [InlineKeyboardButton("➕ Nueva familia", callback_data="nvt_familia_nueva_libre")]
     )
     return InlineKeyboardMarkup(botones)
 

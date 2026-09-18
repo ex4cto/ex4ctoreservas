@@ -148,7 +148,11 @@ async def cmd_liquidar_socio(update: Update, context: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton(nombre.capitalize(), callback_data=f"{_CB_SOCIO_PREFIX}{nombre}")]
         )
     botones.append(
-        [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR)]
+        [
+            InlineKeyboardButton(
+                obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR
+            )
+        ]
     )
 
     markup = InlineKeyboardMarkup(botones)
@@ -201,13 +205,23 @@ async def handle_lq_seleccion(update: Update, context: ContextTypes.DEFAULT_TYPE
                     callback_data=_CB_TOTAL,
                 )
             ],
-            [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_parcial"), callback_data=_CB_PARCIAL)],
-            [InlineKeyboardButton(obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR)],
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("liquidar_socio.boton_parcial"), callback_data=_CB_PARCIAL
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    obtener_mensaje("liquidar_socio.boton_cancelar"), callback_data=_CB_CANCELAR
+                )
+            ],
         ]
     )
     if update.effective_message:
         await update.effective_message.reply_text(
-            formatear_html(obtener_mensaje("liquidar_socio.seleccionar_tipo"), nombre=nombre.capitalize()),
+            formatear_html(
+                obtener_mensaje("liquidar_socio.seleccionar_tipo"), nombre=nombre.capitalize()
+            ),
             reply_markup=markup,
             parse_mode="HTML",
         )

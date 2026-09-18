@@ -192,7 +192,11 @@ async def handle_cs_editar_tg(update: Update, context: ContextTypes.DEFAULT_TYPE
             [InlineKeyboardButton(nombre_cap, callback_data=f"{_CB_TG_PREFIX}{socio.nombre}")]
         )
     botones.append(
-        [InlineKeyboardButton(obtener_mensaje("config_socios.boton_cancelar"), callback_data=_CB_CANCELAR)]
+        [
+            InlineKeyboardButton(
+                obtener_mensaje("config_socios.boton_cancelar"), callback_data=_CB_CANCELAR
+            )
+        ]
     )
     markup = InlineKeyboardMarkup(botones)
 
@@ -294,7 +298,9 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
         if i < len(decimals)
     )
     await update.effective_message.reply_text(
-        formatear_html(obtener_mensaje("config_socios.porcentajes_actualizados"), resumen=partes_fmt),
+        formatear_html(
+            obtener_mensaje("config_socios.porcentajes_actualizados"), resumen=partes_fmt
+        ),
         parse_mode="HTML",
     )
     return ConversationHandler.END
@@ -391,9 +397,13 @@ async def handle_cs_tg_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     nombre_cap = nombre.capitalize()
     if telegram_id is None:
-        msg = formatear_html(obtener_mensaje("config_socios.telegram_eliminado"), nombre=nombre_cap)
+        msg = formatear_html(
+            obtener_mensaje("config_socios.telegram_eliminado"), nombre=nombre_cap
+        )
     else:
-        msg = formatear_html(obtener_mensaje("config_socios.telegram_actualizado"), nombre=nombre_cap)
+        msg = formatear_html(
+            obtener_mensaje("config_socios.telegram_actualizado"), nombre=nombre_cap
+        )
 
     await update.effective_message.reply_text(msg, parse_mode="HTML")
     return ConversationHandler.END

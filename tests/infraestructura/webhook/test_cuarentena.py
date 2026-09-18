@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
-from garay.aplicacion.webhook.app import crear_app
+from garay.infraestructura.webhook.app import crear_app
 from garay.infraestructura.telegram.errores import NotificadorError
 from garay.infraestructura.webhook.alertas import construir_alerta_dev
 from tests.infraestructura.webhook.conftest import _SECRET

@@ -56,6 +56,8 @@ _UTC = datetime.UTC
 
 _TZ = ZoneInfo("America/Bogota")
 
+_FOTO_EXTRACT_TIMEOUT_S: float = 300.0
+
 logger = logging.getLogger(__name__)
 
 
@@ -665,7 +667,7 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         ctx = await asyncio.wait_for(
             asyncio.to_thread(extractor.extraer_de_foto, foto_bytes),
-            timeout=300.0,
+            timeout=_FOTO_EXTRACT_TIMEOUT_S,
         )
     except TimeoutError:
         if update.effective_message:

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from garay.aplicacion.webhook.app import crear_app
+from garay.infraestructura.webhook.app import crear_app
 
 _SECRET = "test-secret-12345"
 

@@ -5,12 +5,12 @@ from __future__ import annotations
 import datetime
 import uuid
 
+from garay.aplicacion.webhook.schemas import EgresoExtraido, PagoExtraido
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.categorias import CATEGORIA_OTRO
 from garay.dominio.conciliacion.entidades import Egreso, Ingreso
 from garay.dominio.conciliacion.tipos import TipoEgreso
 from garay.dominio.puertos.repositorios import EgresoRepository, IngresoRepository
-from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
 
 def guardar_ingreso(

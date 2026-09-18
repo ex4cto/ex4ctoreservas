@@ -62,7 +62,7 @@ class SQLAIngresoRepository(IngresoRepository):
 
     def listar_sin_clasificar(self) -> list[Ingreso]:
         with self._sf.begin() as session:
-            stmt = select(IngresoModel).where(IngresoModel.clasificado == False)  # noqa: E712
+            stmt = select(IngresoModel).where(IngresoModel.clasificado == False)
             rows = session.execute(stmt).scalars().all()
             return [_to_domain(r) for r in rows]
 

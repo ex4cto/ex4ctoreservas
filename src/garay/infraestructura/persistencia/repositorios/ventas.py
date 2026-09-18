@@ -106,7 +106,7 @@ class SQLAVentaRepository(VentaRepository):
 
     def listar(self) -> list[Venta]:
         with self._sf.begin() as session:
-            stmt = select(VentaModel).where(VentaModel.anulada == False)  # noqa: E712
+            stmt = select(VentaModel).where(VentaModel.anulada == False)
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]
 
@@ -120,17 +120,17 @@ class SQLAVentaRepository(VentaRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
-                .where(VentaModel.anulada == False)  # noqa: E712
+                .where(VentaModel.anulada == False)
                 .where(
                     # Stricter 4-clause: name-match ONLY when id column IS NULL
                     (VentaModel.vendedor_id == freelancer_id)
                     | (VentaModel.cerrador_id == freelancer_id)
                     | (
-                        (VentaModel.vendedor_id == None)  # noqa: E711
+                        (VentaModel.vendedor_id == None)
                         & (VentaModel.vendedor_nombre == nombre)
                     )
                     | (
-                        (VentaModel.cerrador_id == None)  # noqa: E711
+                        (VentaModel.cerrador_id == None)
                         & (VentaModel.cerrador_nombre == nombre)
                     )
                 )
@@ -144,7 +144,7 @@ class SQLAVentaRepository(VentaRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
-                .where(VentaModel.anulada == False)  # noqa: E712
+                .where(VentaModel.anulada == False)
                 .where(VentaModel.fecha >= desde)
                 .where(VentaModel.fecha <= hasta)
             )
@@ -161,7 +161,7 @@ class SQLAVentaRepository(VentaRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
-                .where(VentaModel.anulada == False)  # noqa: E712
+                .where(VentaModel.anulada == False)
                 .where(VentaModel.fecha >= desde)
                 .order_by(orden.desc())
             )

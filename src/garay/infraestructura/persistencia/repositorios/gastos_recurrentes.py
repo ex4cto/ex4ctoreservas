@@ -51,7 +51,7 @@ class SQLAGastoRecurrenteRepository(GastoRecurrenteRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(GastoRecurrenteModel)
-                .where(GastoRecurrenteModel.activo == True)  # noqa: E712
+                .where(GastoRecurrenteModel.activo == True)
                 .order_by(GastoRecurrenteModel.nombre)
             )
             rows = session.execute(stmt).scalars().all()

@@ -72,7 +72,7 @@ class SQLACorreoNoParseadoRepository(CorreoNoParseadoRepository):
     def listar_pendientes(self, max_intentos: int) -> list[CorreoNoParseado]:
         with self._sf.begin() as session:
             stmt = select(CorreoNoParseadoModel).where(
-                CorreoNoParseadoModel.procesado == False,  # noqa: E712
+                CorreoNoParseadoModel.procesado == False,
                 CorreoNoParseadoModel.intentos < max_intentos,
             )
             rows = session.execute(stmt).scalars().all()
