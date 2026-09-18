@@ -71,6 +71,7 @@ def _make_context(
     fsm: FSMTiquetera | None = None,
     ctx: ContextoVenta | None = None,
     user_data_extra: dict | None = None,  # type: ignore[type-arg]
+    es_admin: bool = False,
 ) -> MagicMock:
     context = MagicMock()
 
@@ -78,7 +79,7 @@ def _make_context(
     fl_repo = MagicMock()
     fl_mock = MagicMock()
     fl_mock.nombre = "Maria Lopez"
-    fl_mock.es_admin = False
+    fl_mock.es_admin = es_admin
     fl_repo.buscar_por_telegram_id.return_value = fl_mock
 
     context.bot_data = {"fsm": fsm_inst, "freelancer_repo": fl_repo}
@@ -143,6 +144,104 @@ class TestIniciohoyProcedeAMetodoInput:
         result = await handle_inicio_hoy(update, context)
 
         assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+
+
+# ---------------------------------------------------------------------------
+# B2. handle_inicio_hoy sets registrante_privilegiado based on tier
+# ---------------------------------------------------------------------------
+
+
+class TestIniciohoySetRegistrantePrivilegiado:
+    @pytest.mark.asyncio
+    async def test_admin_sets_privilegiado_true(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_inicio_hoy
+
+        update = _make_update_cb("inicio_hoy")
+        context = _make_context(es_admin=True)
+
+        result = await handle_inicio_hoy(update, context)
+
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        ctx = context.user_data.get("contexto")
+        assert isinstance(ctx, ContextoVenta)
+        assert ctx.registrante_privilegiado is True
+
+    @pytest.mark.asyncio
+    async def test_freelancer_sets_privilegiado_false(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_inicio_hoy
+
+        update = _make_update_cb("inicio_hoy")
+        context = _make_context(es_admin=False)
+
+        await handle_inicio_hoy(update, context)
+
+        ctx = context.user_data.get("contexto")
+        assert isinstance(ctx, ContextoVenta)
+        assert ctx.registrante_privilegiado is False
+
+    @pytest.mark.asyncio
+    async def test_sends_metodo_prompt_message(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_inicio_hoy
+
+        update = _make_update_cb("inicio_hoy")
+        context = _make_context()
+
+        await handle_inicio_hoy(update, context)
+
+        update.callback_query.edit_message_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# D2. handle_fecha_ayer sets registrante_privilegiado
+# ---------------------------------------------------------------------------
+
+
+class TestFechaAyerSetRegistrantePrivilegiado:
+    @pytest.mark.asyncio
+    async def test_admin_sets_privilegiado_true(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_fecha_ayer
+
+        update = _make_update_cb("fecha_ayer")
+        context = _make_context(es_admin=True)
+
+        result = await handle_fecha_ayer(update, context)
+
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        ctx = context.user_data.get("contexto")
+        assert isinstance(ctx, ContextoVenta)
+        assert ctx.registrante_privilegiado is True
+
+    @pytest.mark.asyncio
+    async def test_preserves_fecha_override_after_setting_privilegiado(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_fecha_ayer
+
+        update = _make_update_cb("fecha_ayer")
+        context = _make_context(es_admin=True)
+
+        await handle_fecha_ayer(update, context)
+
+        assert context.user_data.get("fecha_venta_override") is not None
+
+
+# ---------------------------------------------------------------------------
+# E2. handle_fecha_antes_ayer sets registrante_privilegiado
+# ---------------------------------------------------------------------------
+
+
+class TestFechaAntesAyerSetRegistrantePrivilegiado:
+    @pytest.mark.asyncio
+    async def test_admin_sets_privilegiado_true(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_fecha_antes_ayer
+
+        update = _make_update_cb("fecha_antes_ayer")
+        context = _make_context(es_admin=True)
+
+        result = await handle_fecha_antes_ayer(update, context)
+
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        ctx = context.user_data.get("contexto")
+        assert isinstance(ctx, ContextoVenta)
+        assert ctx.registrante_privilegiado is True
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +350,29 @@ class TestFechaRetroactivaTextoValido:
         assert override.day == 15
         assert override.month == 9
         assert override.year == 2026
+
+
+# ---------------------------------------------------------------------------
+# F2. handle_fecha_retroactiva_texto sets registrante_privilegiado
+# ---------------------------------------------------------------------------
+
+
+class TestFechaRetroactivaTextoSetRegistrantePrivilegiado:
+    @pytest.mark.asyncio
+    async def test_admin_sets_privilegiado_true(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import (
+            handle_fecha_retroactiva_texto,
+        )
+
+        update = _make_update_text("15/09/2026")
+        context = _make_context(es_admin=True)
+
+        result = await handle_fecha_retroactiva_texto(update, context)
+
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        ctx = context.user_data.get("contexto")
+        assert isinstance(ctx, ContextoVenta)
+        assert ctx.registrante_privilegiado is True
 
 
 # ---------------------------------------------------------------------------

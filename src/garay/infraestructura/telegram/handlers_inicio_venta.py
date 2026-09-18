@@ -28,8 +28,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from garay.aplicacion.comun.fechas import parsear_fecha
-from garay.aplicacion.tiquetera.fsm import EstadoFSM
-from garay.infraestructura.telegram.estados import ESTADO_PTB
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +79,12 @@ async def handle_inicio_hoy(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> int:
-    """User chose 'Nueva venta hoy' — proceed to METODO_INPUT with no date override."""
+    """User chose 'Nueva venta hoy' — initialize FSM context and proceed to METODO_INPUT."""
     if update.callback_query is not None:
         await update.callback_query.answer()
-    return ESTADO_PTB[EstadoFSM.METODO_INPUT]
+    from garay.infraestructura.telegram.handlers import _lanzar_flujo_venta
+
+    return await _lanzar_flujo_venta(update, context)
 
 
 async def handle_inicio_otra_fecha(
@@ -121,7 +121,9 @@ async def handle_fecha_ayer(
     ayer = _hoy_bogota() - datetime.timedelta(days=1)
     if context.user_data is not None:
         context.user_data["fecha_venta_override"] = _date_to_datetime(ayer)
-    return ESTADO_PTB[EstadoFSM.METODO_INPUT]
+    from garay.infraestructura.telegram.handlers import _lanzar_flujo_venta
+
+    return await _lanzar_flujo_venta(update, context)
 
 
 async def handle_fecha_antes_ayer(
@@ -134,7 +136,9 @@ async def handle_fecha_antes_ayer(
     antes_ayer = _hoy_bogota() - datetime.timedelta(days=2)
     if context.user_data is not None:
         context.user_data["fecha_venta_override"] = _date_to_datetime(antes_ayer)
-    return ESTADO_PTB[EstadoFSM.METODO_INPUT]
+    from garay.infraestructura.telegram.handlers import _lanzar_flujo_venta
+
+    return await _lanzar_flujo_venta(update, context)
 
 
 async def handle_fecha_retroactiva_otra(
@@ -179,7 +183,9 @@ async def handle_fecha_retroactiva_texto(
 
     if context.user_data is not None:
         context.user_data["fecha_venta_override"] = fecha
-    return ESTADO_PTB[EstadoFSM.METODO_INPUT]
+    from garay.infraestructura.telegram.handlers import _lanzar_flujo_venta
+
+    return await _lanzar_flujo_venta(update, context)
 
 
 async def handle_inicio_volver(
