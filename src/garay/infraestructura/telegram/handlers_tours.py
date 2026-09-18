@@ -88,6 +88,13 @@ EDH_AGREGAR: int = 238  # dedicated text state for free-text horario input
 # 239 = buffer
 
 # ---------------------------------------------------------------------------
+# State constants — neto-por-horario editor range 242-243
+# ---------------------------------------------------------------------------
+
+EDH_NETO_HOR_SELECCIONAR: int = 242  # callback: pick which horario to set neto for
+EDH_NETO_HOR_INGRESAR: int = 243     # text: enter neto amount
+
+# ---------------------------------------------------------------------------
 # State constants — /nuevo_tour schedule editor range 240-241
 # ---------------------------------------------------------------------------
 
@@ -102,6 +109,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("nombre", "Nombre"),
     ("neto_adulto", "Neto adulto"),
     ("neto_nino", "Neto niño"),
+    ("neto_por_horario", "Neto por horario"),
     ("permite_ninos", "Permite niños"),
     ("familia", "Familia"),
     ("horarios", "Horarios"),
@@ -185,6 +193,20 @@ def _teclado_horarios(horarios: list[str], prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(botones)
 
 
+def _teclado_neto_horarios(s: Servicio) -> InlineKeyboardMarkup:
+    """Build a keyboard listing each horario with its current neto (if set)."""
+    botones: list[list[InlineKeyboardButton]] = []
+    for h in s.horarios:
+        neto = s.netos_por_horario.get(h)
+        label = (
+            f"{formato_display(h)} → ${int(neto):,}" if neto is not None
+            else f"{formato_display(h)} → —"
+        )
+        botones.append([InlineKeyboardButton(label, callback_data=f"edh_neto_hor:{h}")])
+    botones.append([InlineKeyboardButton("✅ Listo", callback_data="edh_neto_hor_listo")])
+    return InlineKeyboardMarkup(botones)
+
+
 def _teclado_tours(
     servicios: list[Servicio],
     familia: str,
@@ -228,7 +250,10 @@ def _refrescar_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     activos = repo.listar_activos()
     tuples = [
-        (s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino, s.categoria, s.horarios)
+        (
+            s.numero, s.nombre, s.precio_neto_adulto, s.precio_neto_nino,
+            s.categoria, s.horarios, s.netos_por_horario,
+        )
         for s in activos
     ]
     permite_ninos = {s.numero: s.permite_ninos for s in activos}
@@ -246,6 +271,7 @@ def _limpiar_edt(context: ContextTypes.DEFAULT_TYPE) -> None:
             "edt_valor",
             "edt_activo_nuevo",
             "edt_permite_ninos_nuevo",
+            "edt_neto_hor_horario",
         ):
             context.user_data.pop(key, None)
 
@@ -524,6 +550,26 @@ async def handle_edt_ficha(
             obtener_mensaje("tour_selecciona_familia"), reply_markup=teclado2
         )
         return EDF_FAMILIA
+
+    if campo == "neto_por_horario":
+        ud_np = context.user_data if context.user_data is not None else {}
+        target_id_np = str(ud_np.get("edt_target_id", ""))
+        repo_np: ServicioRepository | None = context.bot_data.get("servicio_repo")
+        s_np: Servicio | None = None
+        with contextlib.suppress(ValueError, AttributeError):
+            s_np = repo_np.buscar_por_id(uuid.UUID(target_id_np)) if repo_np else None
+        if not s_np or not s_np.horarios:
+            await update.effective_message.reply_text(
+                obtener_mensaje("tour_neto_hor_sin_horarios")
+            )
+            return EDF_FICHA
+        teclado_np = _teclado_neto_horarios(s_np)
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_neto_hor_titulo").format(nombre=s_np.nombre),
+            reply_markup=teclado_np,
+            parse_mode="HTML",
+        )
+        return EDH_NETO_HOR_SELECCIONAR
 
     # Text field prompts
     prompts: dict[str, str] = {
@@ -857,6 +903,112 @@ async def handle_edh_agregar_texto(
         reply_markup=teclado,
     )
     return EDH_LISTA
+
+
+# ---------------------------------------------------------------------------
+# /editar_tour — neto por horario editor (EDH_NETO_HOR states 242-243)
+# ---------------------------------------------------------------------------
+
+
+async def handle_edh_neto_hor_seleccionar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Route EDH_NETO_HOR_SELECCIONAR callbacks: pick horario or finish."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await _limpiar_botones(query)
+    if update.effective_message is None or query is None or query.data is None:
+        return EDH_NETO_HOR_SELECCIONAR
+
+    data: str = query.data
+    ud = context.user_data if context.user_data is not None else {}
+    target_id_str = str(ud.get("edt_target_id", ""))
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if data == "edh_neto_hor_listo":
+        if s is not None:
+            await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
+        return await _menu_campos(update, context)
+
+    if data.startswith("edh_neto_hor:"):
+        horario = data.removeprefix("edh_neto_hor:")
+        if context.user_data is not None:
+            context.user_data["edt_neto_hor_horario"] = horario
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_neto_hor_ingrese").format(
+                horario=formato_display(horario)
+            )
+        )
+        return EDH_NETO_HOR_INGRESAR
+
+    return EDH_NETO_HOR_SELECCIONAR
+
+
+async def handle_edh_neto_hor_ingresar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle text input for a horario's neto. 0 or empty clears; positive number sets."""
+    if update.effective_message is None:
+        return EDH_NETO_HOR_INGRESAR
+
+    texto = (update.effective_message.text or "").strip()
+    ud = context.user_data if context.user_data is not None else {}
+    horario = str(ud.get("edt_neto_hor_horario", ""))
+    target_id_str = str(ud.get("edt_target_id", ""))
+
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if s is None:
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
+
+    netos = dict(s.netos_por_horario)
+    if texto in ("0", ""):
+        netos.pop(horario, None)
+        s.netos_por_horario = netos
+    else:
+        monto = parsear_monto(texto)
+        if monto is None or monto <= Decimal("0"):
+            await update.effective_message.reply_text(
+                obtener_mensaje("tour_neto_invalido")
+            )
+            return EDH_NETO_HOR_INGRESAR
+        netos[horario] = monto
+        s.netos_por_horario = netos
+
+    if repo:
+        repo.guardar(s)
+    _refrescar_fsm(context)
+
+    if context.user_data is not None:
+        context.user_data.pop("edt_neto_hor_horario", None)
+
+    monto_guardado = s.netos_por_horario.get(horario)
+    if monto_guardado is not None:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_neto_hor_guardado").format(
+                horario=formato_display(horario), monto=int(monto_guardado)
+            )
+        )
+
+    # Re-show selector so the user can set another horario
+    s_loaded = repo.buscar_por_id(s.id) if repo else None
+    s_to_show: Servicio = s_loaded if s_loaded is not None else s
+    teclado_np = _teclado_neto_horarios(s_to_show)
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_neto_hor_titulo").format(nombre=s_to_show.nombre),
+        reply_markup=teclado_np,
+        parse_mode="HTML",
+    )
+    return EDH_NETO_HOR_SELECCIONAR
 
 
 # ---------------------------------------------------------------------------

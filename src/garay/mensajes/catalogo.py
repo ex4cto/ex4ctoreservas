@@ -1013,6 +1013,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     # --- Egresos por destinatario (Slice 3 dashboard) ---
     "egresos_por_destinatario_titulo": {Idioma.ES: "Egresos por destinatario"},
     "egresos_sin_destinatario": {Idioma.ES: "Sin destinatario"},
+    # --- Neto por horario editor ---
+    "tour_neto_hor_titulo": {
+        Idioma.ES: "💰 <b>Neto por horario — {nombre}</b>\nSelecciona el horario:"
+    },
+    "tour_neto_hor_ingrese": {
+        Idioma.ES: "Ingresa el neto para {horario} (o 0 para eliminar):"
+    },
+    "tour_neto_hor_guardado": {
+        Idioma.ES: "✓ Neto guardado: {horario} → ${monto:,}"
+    },
+    "tour_neto_hor_sin_horarios": {
+        Idioma.ES: (
+            "Este tour no tiene horarios configurados. "
+            "Agrega horarios primero."
+        )
+    },
     # --- Horarios editor (Fase 3 PR-B) ---
     "tour_horarios_lista": {
         Idioma.ES: "🕐 <b>Horarios del tour</b>\nActuales: {horarios}"
