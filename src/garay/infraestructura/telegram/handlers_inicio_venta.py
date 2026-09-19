@@ -39,10 +39,15 @@ FECHA_RETROACTIVA_TEXTO: int = 35
 _TZ_BOGOTA = datetime.timezone(datetime.timedelta(hours=-5))
 
 
-def _teclado_inicio(mostrar_otra_fecha: bool) -> InlineKeyboardMarkup:
+def _teclado_inicio(
+    mostrar_otra_fecha: bool,
+    mostrar_cotizacion: bool = False,
+) -> InlineKeyboardMarkup:
     filas = [[InlineKeyboardButton("📅 Nueva venta (hoy)", callback_data="inicio_hoy")]]
     if mostrar_otra_fecha:
         filas.append([InlineKeyboardButton("🗓 Otra fecha", callback_data="inicio_otra_fecha")])
+    if mostrar_cotizacion:
+        filas.append([InlineKeyboardButton("📋 Cotización", callback_data="inicio_cotizacion")])
     return InlineKeyboardMarkup(filas)
 
 
@@ -66,11 +71,8 @@ async def _mostrar_selector_inicio(
 
     texto = "¿Cuándo es la venta?"
     user = update.effective_user
-    mostrar_otra_fecha = (
-        user is not None
-        and await es_admin_o_propietario(user.id, context)
-    )
-    markup = _teclado_inicio(mostrar_otra_fecha)
+    autorizado = user is not None and await es_admin_o_propietario(user.id, context)
+    markup = _teclado_inicio(mostrar_otra_fecha=autorizado, mostrar_cotizacion=autorizado)
     if update.callback_query is not None:
         await update.callback_query.edit_message_text(texto, reply_markup=markup)
     elif update.message is not None:

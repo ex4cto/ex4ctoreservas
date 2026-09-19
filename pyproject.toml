@@ -55,6 +55,7 @@ ignore = ["N818"]
 # HTML inside f-string — reformatting would corrupt the invoice; adding noqa inside the
 # string literal would inject literal text into the HTML output.
 "src/garay/aplicacion/factura/servicio.py" = ["E501"]
+"src/garay/aplicacion/cotizacion/servicio.py" = ["E501"]
 # Message catalog: string values are user-facing text that cannot be split across lines.
 # RUF001: ➕ is an intentional emoji symbol in user-facing text, not an accidental + substitute.
 "src/garay/mensajes/catalogo.py" = ["E501", "RUF001"]

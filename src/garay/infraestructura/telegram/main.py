@@ -14,6 +14,7 @@ from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
 from garay.aplicacion.egresos.gestionar_categorias import GestionarCategoriasService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
+from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
@@ -289,6 +290,14 @@ def main() -> None:
         telefono=settings.factura_telefono,
         contacto_email=settings.factura_contacto_email,
     )
+    generar_cotizacion_service = GenerarCotizacionService(
+        logo_url=logo_url,
+        nit=settings.factura_nit,
+        rnt=settings.factura_rnt,
+        direccion=settings.factura_direccion,
+        telefono=settings.factura_telefono,
+        contacto_email=settings.factura_contacto_email,
+    )
     notificador_email: NotificadorEmail | None = None
     if settings.resend_api_key and settings.resend_from:
         notificador_email = ResendAdapter(
@@ -449,6 +458,8 @@ def main() -> None:
             "editar_canal_venta_service": editar_canal_venta_service,
             "editar_participantes_venta_service": editar_participantes_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
+            "cotizacion_service": generar_cotizacion_service,
+            "notificador_email": notificador_email,
             "notificador": notificador,
             "grupo_id": settings.grupo_id,
             "propietario_telegram_ids": settings.propietario_telegram_ids,
