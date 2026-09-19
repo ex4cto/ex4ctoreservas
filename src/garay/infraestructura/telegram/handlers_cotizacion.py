@@ -23,6 +23,7 @@ from telegram.ext import (
 
 from garay.aplicacion.cotizacion.contexto import ContextoCotizacion
 from garay.dominio.servicios.entidades import Servicio
+from garay.infraestructura.telegram.handlers import cmd_start
 
 logger = logging.getLogger(__name__)
 
@@ -670,7 +671,7 @@ cotizacion_conv_handler = ConversationHandler(
     },
     fallbacks=[
         CommandHandler("cancelar", cmd_cancelar_cotizacion),
-        CommandHandler("start", cmd_cancelar_cotizacion),
+        CommandHandler("start", cmd_start),
     ],
 )
 
