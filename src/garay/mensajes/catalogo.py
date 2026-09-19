@@ -16,6 +16,7 @@ class Idioma(StrEnum):
     """Idiomas soportados por el catalogo de mensajes."""
 
     ES = "es"
+    EN = "en"
 
 
 _CATALOGO: dict[str, dict[Idioma, str]] = {
@@ -1263,6 +1264,25 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "config_socios.socio_no_encontrado": {Idioma.ES: "⚠️ Socio '{nombre}' no encontrado."},
     "config_socios.telegram_eliminado": {Idioma.ES: "✅ Telegram ID de {nombre} eliminado."},
     "config_socios.telegram_actualizado": {Idioma.ES: "✅ Telegram ID de {nombre} actualizado."},
+    # --- Cotizaciones ---
+    "cotizacion.asunto_email.es": {Idioma.ES: "Cotización de servicio — Garay Tours"},
+    "cotizacion.asunto_email.en": {Idioma.EN: "Service Quote — Garay Tours"},
+    "cotizacion.notificacion_telegram": {
+        Idioma.ES: (
+            "📋 <b>Cotización generada</b>\n\n"
+            "🏝 Tour: <b>{tour}</b>\n"
+            "👤 Cliente: <b>{cliente}</b>\n"
+            "📅 Fecha: {fecha}\n"
+            "🌐 Idioma: {idioma}\n"
+            "🧑 Adultos: {adultos}\n"
+            "🧒 Niños: {ninos}\n"
+            "💵 Total: <b>{total}</b>\n\n"
+            "{estado_email}"
+        )
+    },
+    "cotizacion.cancelado": {Idioma.ES: "❌ Cotización cancelada."},
+    "cotizacion.estado_email_enviado": {Idioma.ES: "✉️ Enviado a {email}"},
+    "cotizacion.estado_email_sin": {Idioma.ES: "📵 Sin email — no se envió"},
 }
 
 
