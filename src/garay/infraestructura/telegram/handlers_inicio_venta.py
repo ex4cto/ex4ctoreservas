@@ -39,13 +39,11 @@ FECHA_RETROACTIVA_TEXTO: int = 35
 _TZ_BOGOTA = datetime.timezone(datetime.timedelta(hours=-5))
 
 
-def _teclado_inicio() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📅 Nueva venta (hoy)", callback_data="inicio_hoy")],
-            [InlineKeyboardButton("🗓 Otra fecha", callback_data="inicio_otra_fecha")],
-        ]
-    )
+def _teclado_inicio(mostrar_otra_fecha: bool) -> InlineKeyboardMarkup:
+    filas = [[InlineKeyboardButton("📅 Nueva venta (hoy)", callback_data="inicio_hoy")]]
+    if mostrar_otra_fecha:
+        filas.append([InlineKeyboardButton("🗓 Otra fecha", callback_data="inicio_otra_fecha")])
+    return InlineKeyboardMarkup(filas)
 
 
 def _teclado_fecha_retroactiva() -> InlineKeyboardMarkup:
@@ -64,8 +62,15 @@ async def _mostrar_selector_inicio(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> int:
     """Send (or edit) the initial date-choice screen and return INICIO_VENTA."""
+    from garay.infraestructura.telegram.auth import es_admin_o_propietario
+
     texto = "¿Cuándo es la venta?"
-    markup = _teclado_inicio()
+    user = update.effective_user
+    mostrar_otra_fecha = (
+        user is not None
+        and await es_admin_o_propietario(user.id, context)
+    )
+    markup = _teclado_inicio(mostrar_otra_fecha)
     if update.callback_query is not None:
         await update.callback_query.edit_message_text(texto, reply_markup=markup)
     elif update.message is not None:
@@ -91,7 +96,29 @@ async def handle_inicio_otra_fecha(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> int:
-    """User chose 'Otra fecha' — show the date sub-picker."""
+    """User chose 'Otra fecha' — show the date sub-picker.
+
+    Stale-callback defence: if a FREELANCER somehow reaches this handler
+    (e.g. stale inline keyboard), show an alert and return INICIO_VENTA
+    without setting any override.
+    """
+    from garay.infraestructura.telegram.auth import es_admin_o_propietario
+    from garay.mensajes.catalogo import obtener_mensaje
+
+    user = update.effective_user
+    autorizado = (
+        user is not None
+        and await es_admin_o_propietario(user.id, context)
+    )
+    if not autorizado:
+        if update.callback_query is not None:
+            await update.callback_query.answer(
+                obtener_mensaje("venta.retroactiva_sin_acceso"),
+                show_alert=True,
+            )
+        return INICIO_VENTA
+
+    # Authorized path: show sub-picker
     if update.callback_query is not None:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text(

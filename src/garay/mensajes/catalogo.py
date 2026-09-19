@@ -124,6 +124,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "error_neto_supera_valor": {Idioma.ES: "El neto no puede superar el valor total de la venta."},
     "venta_cancelada": {Idioma.ES: "Operación cancelada. Escribí /start para comenzar de nuevo."},
+    "venta.retroactiva_sin_acceso": {
+        Idioma.ES: "Solo los administradores pueden registrar ventas con fecha pasada."
+    },
     "cancelar_sin_operacion": {
         Idioma.ES: "No hay ninguna operación activa. Escribí /start para comenzar."
     },

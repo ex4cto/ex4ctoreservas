@@ -315,6 +315,35 @@ def requiere_propietario_conv(
     return wrapper
 
 
+async def es_admin_o_propietario(
+    telegram_user_id: int,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> bool:
+    """Return True when the user is a dev, an owner, or an admin freelancer.
+
+    Fails closed: returns False (and logs a warning) when freelancer_repo is absent.
+    Mirrors the resolution order of requiere_admin_o_propietario_conv.
+    """
+    # 1. dev bypass
+    if _es_dev(telegram_user_id):
+        return True
+    # 2. propietario_telegram_ids (settings)
+    ids_str = obtener_settings().propietario_telegram_ids.strip()
+    if ids_str:
+        ids_permitidos = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+        if telegram_user_id in ids_permitidos:
+            return True
+    # 3. registered freelancer with es_admin=True
+    repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    if repo is None:
+        logger.warning(
+            "freelancer_repo not found in bot_data — es_admin_o_propietario fails closed"
+        )
+        return False
+    freelancer = repo.buscar_por_telegram_id(telegram_user_id)
+    return freelancer is not None and freelancer.es_admin
+
+
 def es_propietario(telegram_user_id: int) -> bool:
     """Return True when the user is a developer or an owner."""
     if _es_dev(telegram_user_id):
