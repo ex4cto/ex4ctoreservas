@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from telegram import Update
 from telegram.ext import ConversationHandler
 
@@ -257,6 +259,37 @@ class TestRequiereAdminConv:
 # ---------------------------------------------------------------------------
 # Tests for dev_telegram_ids() helper
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Tests for es_admin_o_propietario
+# ---------------------------------------------------------------------------
+
+
+class TestEsAdminOPropietario:
+    """SC-10: es_admin_o_propietario fails closed when freelancer_repo is absent."""
+
+    @pytest.mark.asyncio
+    async def test_falla_cerrado_sin_repo(self) -> None:
+        from garay.infraestructura.telegram.auth import es_admin_o_propietario
+
+        ctx = MagicMock()
+        ctx.bot_data = {}  # no freelancer_repo
+
+        settings_mock = MagicMock()
+        settings_mock.propietario_telegram_ids = ""
+        with (
+            patch(
+                "garay.infraestructura.telegram.auth.obtener_settings",
+                return_value=settings_mock,
+            ),
+            patch(
+                "garay.infraestructura.telegram.auth.dev_telegram_ids",
+                return_value=set(),
+            ),
+        ):
+            result = await es_admin_o_propietario(999, ctx)
+        assert result is False
 
 
 _PATCH_SETTINGS = "garay.infraestructura.telegram.auth.obtener_settings"

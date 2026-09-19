@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -103,15 +103,20 @@ def _make_context(
 class TestIniciarVentaMuestraBotonesDeInicio:
     @pytest.mark.asyncio
     async def test_muestra_botones_inicio_hoy_y_otra_fecha(self) -> None:
+        """SC-02: Admin sees both buttons."""
         from telegram import InlineKeyboardMarkup
 
         from garay.infraestructura.telegram.handlers import handle_iniciar_venta
         from garay.infraestructura.telegram.handlers_inicio_venta import INICIO_VENTA
 
         update = _make_update_command()
-        context = _make_context()
+        context = _make_context(es_admin=True)
 
-        result = await handle_iniciar_venta(update, context)
+        with patch(
+            "garay.infraestructura.telegram.auth.es_admin_o_propietario",
+            new=AsyncMock(return_value=True),
+        ):
+            result = await handle_iniciar_venta(update, context)
 
         assert result == INICIO_VENTA
         update.message.reply_text.assert_called_once()
@@ -126,6 +131,172 @@ class TestIniciarVentaMuestraBotonesDeInicio:
         ]
         assert "inicio_hoy" in flat_data
         assert "inicio_otra_fecha" in flat_data
+
+
+# ---------------------------------------------------------------------------
+# SC-01..SC-04, SC-07..SC-09: tier-aware keyboard in _mostrar_selector_inicio
+# ---------------------------------------------------------------------------
+
+_PATCH_ES_ADMIN = "garay.infraestructura.telegram.auth.es_admin_o_propietario"
+
+
+class TestMostrarSelectorInicio:
+    """Tests for tier-aware keyboard shape via handle_iniciar_venta and handle_inicio_volver."""
+
+    @pytest.mark.asyncio
+    async def test_sc01_freelancer_oculta_otra_fecha(self) -> None:
+        """SC-01: FREELANCER entry — inicio_otra_fecha absent."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers import handle_iniciar_venta
+        from garay.infraestructura.telegram.handlers_inicio_venta import INICIO_VENTA
+
+        update = _make_update_command()
+        context = _make_context(es_admin=False)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
+            result = await handle_iniciar_venta(update, context)
+
+        assert result == INICIO_VENTA
+        kwargs = update.message.reply_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_hoy" in flat
+        assert "inicio_otra_fecha" not in flat
+
+    @pytest.mark.asyncio
+    async def test_sc02_admin_muestra_ambos_botones(self) -> None:
+        """SC-02: ADMIN entry — both buttons present."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers import handle_iniciar_venta
+
+        update = _make_update_command()
+        context = _make_context(es_admin=True)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            await handle_iniciar_venta(update, context)
+
+        kwargs = update.message.reply_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_hoy" in flat
+        assert "inicio_otra_fecha" in flat
+
+    @pytest.mark.asyncio
+    async def test_sc03_propietario_muestra_ambos_botones(self) -> None:
+        """SC-03: PROPIETARIO entry — both buttons present."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers import handle_iniciar_venta
+
+        update = _make_update_command()
+        context = _make_context(es_admin=False)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            await handle_iniciar_venta(update, context)
+
+        kwargs = update.message.reply_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_otra_fecha" in flat
+
+    @pytest.mark.asyncio
+    async def test_sc04_dev_muestra_ambos_botones(self) -> None:
+        """SC-04: DEV entry — both buttons present."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers import handle_iniciar_venta
+
+        update = _make_update_command()
+        context = _make_context(es_admin=False)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            await handle_iniciar_venta(update, context)
+
+        kwargs = update.message.reply_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_otra_fecha" in flat
+
+    @pytest.mark.asyncio
+    async def test_sc07_freelancer_venta_hoy_sin_override(self) -> None:
+        """SC-07: FREELANCER today sale — correct state, no fecha_venta_override."""
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_inicio_hoy
+
+        update = _make_update_cb("inicio_hoy")
+        context = _make_context(es_admin=False)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
+            result = await handle_inicio_hoy(update, context)
+
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
+        assert "fecha_venta_override" not in context.user_data
+
+    @pytest.mark.asyncio
+    async def test_sc08_freelancer_atras_oculta_otra_fecha(self) -> None:
+        """SC-08: FREELANCER Atrás — returns INICIO_VENTA, override cleared, hides otra_fecha."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers_inicio_venta import (
+            INICIO_VENTA,
+            handle_inicio_volver,
+        )
+
+        update = _make_update_cb("inicio_volver")
+        context = _make_context(
+            es_admin=False,
+            user_data_extra={"fecha_venta_override": datetime.datetime(2026, 9, 10)},
+        )
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
+            result = await handle_inicio_volver(update, context)
+
+        assert result == INICIO_VENTA
+        assert "fecha_venta_override" not in context.user_data
+        kwargs = update.callback_query.edit_message_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_otra_fecha" not in flat
+
+    @pytest.mark.asyncio
+    async def test_sc09_admin_atras_muestra_ambos_botones(self) -> None:
+        """SC-09: ADMIN Atrás — returns INICIO_VENTA, override cleared, keyboard shows both."""
+        from telegram import InlineKeyboardMarkup
+
+        from garay.infraestructura.telegram.handlers_inicio_venta import (
+            INICIO_VENTA,
+            handle_inicio_volver,
+        )
+
+        update = _make_update_cb("inicio_volver")
+        context = _make_context(
+            es_admin=True,
+            user_data_extra={"fecha_venta_override": datetime.datetime(2026, 9, 10)},
+        )
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            result = await handle_inicio_volver(update, context)
+
+        assert result == INICIO_VENTA
+        assert "fecha_venta_override" not in context.user_data
+        kwargs = update.callback_query.edit_message_text.call_args
+        all_args = list(kwargs[0]) + list(kwargs[1].values())
+        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
+        assert markup is not None
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_hoy" in flat
+        assert "inicio_otra_fecha" in flat
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +423,7 @@ class TestFechaAntesAyerSetRegistrantePrivilegiado:
 class TestIniciOtraFechaMuestraSubPicker:
     @pytest.mark.asyncio
     async def test_muestra_botones_fecha_retroactiva(self) -> None:
+        """SC-06 variant: authorized user sees the retroactive date sub-picker."""
         from telegram import InlineKeyboardMarkup
 
         from garay.infraestructura.telegram.handlers_inicio_venta import (
@@ -260,9 +432,10 @@ class TestIniciOtraFechaMuestraSubPicker:
         )
 
         update = _make_update_cb("inicio_otra_fecha")
-        context = _make_context()
+        context = _make_context(es_admin=True)
 
-        result = await handle_inicio_otra_fecha(update, context)
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            result = await handle_inicio_otra_fecha(update, context)
 
         assert result == FECHA_RETROACTIVA
         update.callback_query.edit_message_text.assert_called_once()
@@ -451,3 +624,85 @@ class TestFechaSalidaAutoFillCuandoHayOverride:
         assert result != ESTADO_PTB[EstadoFSM.FECHA_SALIDA]
         # Override must be consumed
         assert "fecha_venta_override" not in context.user_data
+
+
+# ---------------------------------------------------------------------------
+# SC-05 / SC-06. Stale-callback guard in handle_inicio_otra_fecha
+# ---------------------------------------------------------------------------
+
+
+class TestHandleInicioOtraFecha:
+    @pytest.mark.asyncio
+    async def test_sc05_freelancer_stale_callback_retorna_inicio_venta(self) -> None:
+        """SC-05: FREELANCER stale callback — INICIO_VENTA, alert shown, no override."""
+        from garay.infraestructura.telegram.handlers_inicio_venta import (
+            INICIO_VENTA,
+            handle_inicio_otra_fecha,
+        )
+
+        update = _make_update_cb("inicio_otra_fecha")
+        context = _make_context(es_admin=False)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
+            result = await handle_inicio_otra_fecha(update, context)
+
+        assert result == INICIO_VENTA
+        update.callback_query.answer.assert_called_once()
+        call_kwargs = update.callback_query.answer.call_args
+        assert call_kwargs.kwargs.get("show_alert") is True or (
+            len(call_kwargs.args) > 0
+            and call_kwargs.kwargs.get("show_alert") is True
+        )
+        assert "fecha_venta_override" not in context.user_data
+
+    @pytest.mark.asyncio
+    async def test_sc06_admin_muestra_sub_picker(self) -> None:
+        """SC-06: ADMIN callback — returns FECHA_RETROACTIVA, edit_message_text called."""
+        from garay.infraestructura.telegram.handlers_inicio_venta import (
+            FECHA_RETROACTIVA,
+            handle_inicio_otra_fecha,
+        )
+
+        update = _make_update_cb("inicio_otra_fecha")
+        context = _make_context(es_admin=True)
+
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            result = await handle_inicio_otra_fecha(update, context)
+
+        assert result == FECHA_RETROACTIVA
+        update.callback_query.edit_message_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# SC-13. venta.retroactiva_sin_acceso message key exists in catalog
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# SC-11 / SC-12. _teclado_inicio unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestTecladoInicio:
+    def test_sin_otra_fecha_una_sola_fila(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import _teclado_inicio
+
+        markup = _teclado_inicio(mostrar_otra_fecha=False)
+        assert len(markup.inline_keyboard) == 1
+        assert markup.inline_keyboard[0][0].callback_data == "inicio_hoy"
+
+    def test_con_otra_fecha_dos_filas(self) -> None:
+        from garay.infraestructura.telegram.handlers_inicio_venta import _teclado_inicio
+
+        markup = _teclado_inicio(mostrar_otra_fecha=True)
+        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "inicio_hoy" in flat
+        assert "inicio_otra_fecha" in flat
+
+
+class TestMensajeRetroactivaSinAcceso:
+    def test_clave_retroactiva_sin_acceso_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        msg = obtener_mensaje("venta.retroactiva_sin_acceso")
+        assert msg and isinstance(msg, str)
