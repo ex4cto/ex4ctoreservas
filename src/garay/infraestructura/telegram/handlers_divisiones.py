@@ -39,14 +39,16 @@ DIV_RESULT: int = 313
 # Callback prefixes
 # ---------------------------------------------------------------------------
 
-_CB_MENU = "rep_s:menu:"       # rep_s:menu:hoy | ayer | periodo | cancel
-_CB_CAL = "rep_s:cal:"         # rep_s:cal:desde:yyyy-mm | rep_s:cal:hasta:yyyy-mm
+_CB_MENU = "rep_s:menu:"       # rep_s:menu:hoy | ayer | periodo | cancel | ver
+_CB_CAL = "rep_s:cal:"         # rep_s:cal:desde:yyyy-mm  or  rep_s:cal:hasta:yyyy-mm
 _CB_DIA = "rep_s:dia:"         # rep_s:dia:desde:yyyy-mm-dd | rep_s:dia:hasta:yyyy-mm-dd
 _CB_ATRAS = "rep_s:atras:"     # rep_s:atras:menu | rep_s:atras:hasta
 
 # user_data keys
-_KEY_DESDE = "div_desde"   # datetime.date | None
-_KEY_MES = "div_mes"       # "yyyy-mm" string — currently viewed month
+_KEY_DESDE = "div_desde"       # datetime.date | None
+_KEY_MES = "div_mes"           # "yyyy-mm" string — currently viewed month
+_KEY_HOY_SEL = "div_hoy_sel"   # bool — Hoy checkbox state
+_KEY_AYER_SEL = "div_ayer_sel"  # bool — Ayer checkbox state
 
 _MESES_ES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -62,6 +64,47 @@ _MESES_ES = {
 
 def _fmt_cop(d: Dinero) -> str:
     return "$" + f"{int(d.monto):,}".replace(",", ".")
+
+
+# ---------------------------------------------------------------------------
+# Menu keyboard builder
+# ---------------------------------------------------------------------------
+
+
+def _teclado_menu(hoy_sel: bool, ayer_sel: bool) -> InlineKeyboardMarkup:
+    """Build the main menu keyboard with Hoy/Ayer as toggle checkboxes.
+
+    Row 0: [⬜/✅ Hoy] [⬜/✅ Ayer] [📊 Período] [✖ Cancelar]
+    Row 1: [📊 Ver resumen] (full width)
+    """
+    hoy_icon = "✅" if hoy_sel else "⬜"
+    ayer_icon = "✅" if ayer_sel else "⬜"
+
+    row0 = [
+        InlineKeyboardButton(
+            f"{hoy_icon} {obtener_mensaje('resumen_divisiones.menu_hoy')}",
+            callback_data=f"{_CB_MENU}hoy",
+        ),
+        InlineKeyboardButton(
+            f"{ayer_icon} {obtener_mensaje('resumen_divisiones.menu_ayer')}",
+            callback_data=f"{_CB_MENU}ayer",
+        ),
+        InlineKeyboardButton(
+            obtener_mensaje("resumen_divisiones.menu_periodo"),
+            callback_data=f"{_CB_MENU}periodo",
+        ),
+        InlineKeyboardButton(
+            obtener_mensaje("resumen_divisiones.menu_cancelar"),
+            callback_data=f"{_CB_MENU}cancel",
+        ),
+    ]
+    row1 = [
+        InlineKeyboardButton(
+            obtener_mensaje("resumen_divisiones.menu_ver"),
+            callback_data=f"{_CB_MENU}ver",
+        ),
+    ]
+    return InlineKeyboardMarkup([row0, row1])
 
 
 # ---------------------------------------------------------------------------
@@ -209,29 +252,11 @@ def _periodo_label_rango(desde: datetime.date, hasta: datetime.date) -> str:
 async def cmd_resumen_divisiones(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Entry point: show the 4-button menu."""
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_hoy"),
-                    callback_data=f"{_CB_MENU}hoy",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_ayer"),
-                    callback_data=f"{_CB_MENU}ayer",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_periodo"),
-                    callback_data=f"{_CB_MENU}periodo",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_cancelar"),
-                    callback_data=f"{_CB_MENU}cancel",
-                ),
-            ]
-        ]
-    )
+    """Entry point: show the toggle-checkbox menu."""
+    context.user_data[_KEY_HOY_SEL] = False  # type: ignore[index]
+    context.user_data[_KEY_AYER_SEL] = False  # type: ignore[index]
+
+    keyboard = _teclado_menu(False, False)
     if update.effective_message:
         await update.effective_message.reply_text(
             obtener_mensaje("resumen_divisiones.titulo").format(periodo="…"),
@@ -244,7 +269,7 @@ async def cmd_resumen_divisiones(
 async def handle_div_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Handle menu button selection: hoy, ayer, periodo, cancel."""
+    """Handle menu button selection: hoy (toggle), ayer (toggle), ver, periodo, cancel."""
     cq = update.callback_query
     if cq is None:
         return DIV_MENU
@@ -271,25 +296,67 @@ async def handle_div_menu(
         )
         return DIV_CAL_DESDE
 
-    # Quick paths: hoy / ayer
-    split_service = context.bot_data.get("split_socios_service")
-    if split_service is None:
-        logger.error("split_socios_service not found in bot_data")
-        return ConversationHandler.END
-
+    # Toggle Hoy checkbox
     if data == f"{_CB_MENU}hoy":
-        hoy = datetime.date.today()
-        resultado = split_service.calcular_periodo(hoy, hoy)
-        texto = _render_resultado(resultado, _periodo_label_hoy())
-    elif data == f"{_CB_MENU}ayer":
-        ayer = datetime.date.today() - datetime.timedelta(days=1)
-        resultado = split_service.calcular_periodo(ayer, ayer)
-        texto = _render_resultado(resultado, _periodo_label_ayer())
-    else:
+        current: bool = bool(context.user_data.get(_KEY_HOY_SEL, False))  # type: ignore[union-attr]
+        context.user_data[_KEY_HOY_SEL] = not current  # type: ignore[index]
+        hoy_sel: bool = context.user_data[_KEY_HOY_SEL]  # type: ignore[index]
+        ayer_sel: bool = bool(context.user_data.get(_KEY_AYER_SEL, False))  # type: ignore[union-attr]
+        await cq.edit_message_reply_markup(
+            reply_markup=_teclado_menu(hoy_sel, ayer_sel)
+        )
         return DIV_MENU
 
-    await cq.edit_message_text(texto, parse_mode="HTML")
-    return ConversationHandler.END
+    # Toggle Ayer checkbox
+    if data == f"{_CB_MENU}ayer":
+        current_ayer: bool = bool(context.user_data.get(_KEY_AYER_SEL, False))  # type: ignore[union-attr]
+        context.user_data[_KEY_AYER_SEL] = not current_ayer  # type: ignore[index]
+        hoy_sel_a: bool = bool(context.user_data.get(_KEY_HOY_SEL, False))  # type: ignore[union-attr]
+        ayer_sel_a: bool = context.user_data[_KEY_AYER_SEL]  # type: ignore[index]
+        await cq.edit_message_reply_markup(
+            reply_markup=_teclado_menu(hoy_sel_a, ayer_sel_a)
+        )
+        return DIV_MENU
+
+    # Ver resumen — compute from selections
+    if data == f"{_CB_MENU}ver":
+        hoy_selected: bool = bool(context.user_data.get(_KEY_HOY_SEL, False))  # type: ignore[union-attr]
+        ayer_selected: bool = bool(context.user_data.get(_KEY_AYER_SEL, False))  # type: ignore[union-attr]
+
+        if not hoy_selected and not ayer_selected:
+            await cq.answer(
+                obtener_mensaje("resumen_divisiones.nada_seleccionado"),
+                show_alert=True,
+            )
+            return DIV_MENU
+
+        hoy = datetime.date.today()
+        ayer = hoy - datetime.timedelta(days=1)
+
+        if hoy_selected and ayer_selected:
+            desde = ayer
+            hasta = hoy
+            periodo_label = _periodo_label_rango(ayer, hoy)
+        elif hoy_selected:
+            desde = hoy
+            hasta = hoy
+            periodo_label = _periodo_label_hoy()
+        else:
+            desde = ayer
+            hasta = ayer
+            periodo_label = _periodo_label_ayer()
+
+        split_service = context.bot_data.get("split_socios_service")
+        if split_service is None:
+            logger.error("split_socios_service not found in bot_data")
+            return ConversationHandler.END
+
+        resultado = split_service.calcular_periodo(desde, hasta)
+        texto = _render_resultado(resultado, periodo_label)
+        await cq.edit_message_text(texto, parse_mode="HTML")
+        return ConversationHandler.END
+
+    return DIV_MENU
 
 
 async def handle_div_cal(
@@ -340,9 +407,7 @@ async def handle_div_dia(
     data: str = cq.data or ""
     # data format: rep_s:dia:desde:yyyy-mm-dd  or  rep_s:dia:hasta:yyyy-mm-dd
     parts = data.split(":")
-    # parts: ["rep_s", "dia", step, "yyyy", "mm", "dd"]  (ISO date uses -)
-    # Actually the ISO date yyyy-mm-dd uses "-" so after split(":") we get
-    # ["rep_s", "dia", "desde", "2026-09-05"] — 4 parts, last is the date string
+    # parts: ["rep_s", "dia", step, "yyyy-mm-dd"] — 4 parts, last is the date string
     if len(parts) < 4:
         await cq.answer("Dato inválido.")
         return DIV_CAL_DESDE
@@ -430,29 +495,9 @@ async def handle_div_atras(
         return DIV_CAL_DESDE
 
     # Back to menu
-    hoy = datetime.date.today()
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_hoy"),
-                    callback_data=f"{_CB_MENU}hoy",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_ayer"),
-                    callback_data=f"{_CB_MENU}ayer",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_periodo"),
-                    callback_data=f"{_CB_MENU}periodo",
-                ),
-                InlineKeyboardButton(
-                    obtener_mensaje("resumen_divisiones.menu_cancelar"),
-                    callback_data=f"{_CB_MENU}cancel",
-                ),
-            ]
-        ]
-    )
+    hoy_sel: bool = bool(context.user_data.get(_KEY_HOY_SEL, False))  # type: ignore[union-attr]
+    ayer_sel: bool = bool(context.user_data.get(_KEY_AYER_SEL, False))  # type: ignore[union-attr]
+    keyboard = _teclado_menu(hoy_sel, ayer_sel)
     await cq.edit_message_text(
         obtener_mensaje("resumen_divisiones.titulo").format(periodo="…"),
         reply_markup=keyboard,

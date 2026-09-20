@@ -45,6 +45,7 @@ def _make_update_cb(data: str, user_id: int = 99999) -> MagicMock:
     cq.data = data
     cq.answer = AsyncMock()
     cq.edit_message_text = AsyncMock()
+    cq.edit_message_reply_markup = AsyncMock()
     cq.message = AsyncMock()
     cq.message.reply_text = AsyncMock()
     update.callback_query = cq
@@ -126,15 +127,15 @@ class TestStateConstants:
 
 
 # ---------------------------------------------------------------------------
-# Menu keyboard
+# Menu keyboard — toggle checkbox layout
 # ---------------------------------------------------------------------------
 
 
 class TestMenuKeyboard:
-    """Menu shows exactly 4 buttons: Hoy, Ayer, Período, Cancelar."""
+    """Menu shows Hoy, Ayer, Período, Cancelar in row 1 and Ver resumen in row 2."""
 
     @pytest.mark.asyncio
-    async def test_menu_keyboard_has_four_buttons(self) -> None:
+    async def test_menu_keyboard_row1_has_four_buttons(self) -> None:
         from unittest.mock import patch
 
         from garay.infraestructura.telegram.handlers_divisiones import (
@@ -152,13 +153,82 @@ class TestMenuKeyboard:
 
         update.effective_message.reply_text.assert_called_once()
         call_kwargs = update.effective_message.reply_text.call_args
-        if len(call_kwargs.args) > 1:
-            markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs.args[1]
-        else:
-            markup = call_kwargs.kwargs.get("reply_markup")
+        markup = call_kwargs.kwargs.get("reply_markup") or (
+            call_kwargs.args[1] if len(call_kwargs.args) > 1 else None
+        )
         assert markup is not None, "reply_markup must be set"
-        flat_buttons = [btn for row in markup.inline_keyboard for btn in row]
-        assert len(flat_buttons) == 4
+        # Row 0: 4 buttons (Hoy, Ayer, Periodo, Cancelar)
+        assert len(markup.inline_keyboard[0]) == 4
+
+    @pytest.mark.asyncio
+    async def test_menu_keyboard_row2_is_ver_resumen(self) -> None:
+        from unittest.mock import patch
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            cmd_resumen_divisiones,
+        )
+
+        update = _make_update_command()
+        context = _make_context()
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=_make_settings_patch("99999"),
+        ):
+            await cmd_resumen_divisiones(update, context)
+
+        markup = update.effective_message.reply_text.call_args.kwargs.get("reply_markup")
+        if markup is None:
+            markup = update.effective_message.reply_text.call_args.args[1]
+        # Row 1 (second row): 1 button — Ver resumen
+        assert len(markup.inline_keyboard) == 2
+        assert len(markup.inline_keyboard[1]) == 1
+        assert markup.inline_keyboard[1][0].callback_data == "rep_s:menu:ver"
+
+    @pytest.mark.asyncio
+    async def test_menu_initial_state_shows_unchecked_hoy_ayer(self) -> None:
+        from unittest.mock import patch
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            cmd_resumen_divisiones,
+        )
+
+        update = _make_update_command()
+        context = _make_context()
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=_make_settings_patch("99999"),
+        ):
+            await cmd_resumen_divisiones(update, context)
+
+        markup = update.effective_message.reply_text.call_args.kwargs.get("reply_markup")
+        if markup is None:
+            markup = update.effective_message.reply_text.call_args.args[1]
+        hoy_btn = markup.inline_keyboard[0][0]
+        ayer_btn = markup.inline_keyboard[0][1]
+        assert "⬜" in hoy_btn.text
+        assert "⬜" in ayer_btn.text
+
+    @pytest.mark.asyncio
+    async def test_menu_initializes_selection_flags_to_false(self) -> None:
+        from unittest.mock import patch
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            cmd_resumen_divisiones,
+        )
+
+        update = _make_update_command()
+        context = _make_context()
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=_make_settings_patch("99999"),
+        ):
+            await cmd_resumen_divisiones(update, context)
+
+        assert context.user_data.get("div_hoy_sel") is False
+        assert context.user_data.get("div_ayer_sel") is False
 
     @pytest.mark.asyncio
     async def test_menu_button_callbacks_use_rep_s_prefix(self) -> None:
@@ -185,56 +255,281 @@ class TestMenuKeyboard:
 
 
 # ---------------------------------------------------------------------------
-# Hoy / Ayer quick paths
+# _teclado_menu helper
 # ---------------------------------------------------------------------------
 
 
-class TestHoyAyerPaths:
-    """Hoy and Ayer compute correct date ranges and call calcular_periodo."""
+class TestTecladoMenu:
+    """_teclado_menu builds the correct toggle keyboard."""
+
+    def test_teclado_menu_unchecked_shows_empty_boxes(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=False, ayer_sel=False)
+        hoy_btn = markup.inline_keyboard[0][0]
+        ayer_btn = markup.inline_keyboard[0][1]
+        assert "⬜" in hoy_btn.text
+        assert "⬜" in ayer_btn.text
+
+    def test_teclado_menu_hoy_checked_shows_checkmark(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=True, ayer_sel=False)
+        hoy_btn = markup.inline_keyboard[0][0]
+        ayer_btn = markup.inline_keyboard[0][1]
+        assert "✅" in hoy_btn.text
+        assert "⬜" in ayer_btn.text
+
+    def test_teclado_menu_both_checked(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=True, ayer_sel=True)
+        hoy_btn = markup.inline_keyboard[0][0]
+        ayer_btn = markup.inline_keyboard[0][1]
+        assert "✅" in hoy_btn.text
+        assert "✅" in ayer_btn.text
+
+    def test_teclado_menu_has_two_rows(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=False, ayer_sel=False)
+        assert len(markup.inline_keyboard) == 2
+
+    def test_teclado_menu_row2_is_full_width_ver_resumen(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=False, ayer_sel=False)
+        assert len(markup.inline_keyboard[1]) == 1
+        assert markup.inline_keyboard[1][0].callback_data == "rep_s:menu:ver"
+
+    def test_teclado_menu_callback_data_correct(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_menu
+
+        markup = _teclado_menu(hoy_sel=False, ayer_sel=False)
+        row0 = markup.inline_keyboard[0]
+        assert row0[0].callback_data == "rep_s:menu:hoy"
+        assert row0[1].callback_data == "rep_s:menu:ayer"
+        assert row0[2].callback_data == "rep_s:menu:periodo"
+        assert row0[3].callback_data == "rep_s:menu:cancel"
+
+
+# ---------------------------------------------------------------------------
+# Hoy / Ayer toggle behavior
+# ---------------------------------------------------------------------------
+
+
+class TestHoyAyerToggle:
+    """Hoy and Ayer buttons toggle selection, do NOT immediately produce a result."""
 
     @pytest.mark.asyncio
-    async def test_hoy_uses_today_as_both_bounds(self) -> None:
+    async def test_hoy_toggle_on_updates_keyboard_and_stays_in_div_menu(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_menu,
+        )
+
+        context = _make_context(user_data={"div_hoy_sel": False, "div_ayer_sel": False})
+        update = _make_update_cb("rep_s:menu:hoy")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_MENU
+        assert context.user_data["div_hoy_sel"] is True
+        # Must edit the keyboard, not the text
+        update.callback_query.edit_message_reply_markup.assert_called_once()
+        # Must NOT call calcular_periodo
+        context.bot_data["split_socios_service"].calcular_periodo.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_hoy_toggle_off_when_already_selected(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_menu,
+        )
+
+        context = _make_context(user_data={"div_hoy_sel": True, "div_ayer_sel": False})
+        update = _make_update_cb("rep_s:menu:hoy")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_MENU
+        assert context.user_data["div_hoy_sel"] is False
+
+    @pytest.mark.asyncio
+    async def test_ayer_toggle_on_updates_keyboard_and_stays_in_div_menu(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_menu,
+        )
+
+        context = _make_context(user_data={"div_hoy_sel": False, "div_ayer_sel": False})
+        update = _make_update_cb("rep_s:menu:ayer")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_MENU
+        assert context.user_data["div_ayer_sel"] is True
+        update.callback_query.edit_message_reply_markup.assert_called_once()
+        context.bot_data["split_socios_service"].calcular_periodo.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ayer_toggle_off_when_already_selected(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_menu,
+        )
+
+        context = _make_context(user_data={"div_hoy_sel": False, "div_ayer_sel": True})
+        update = _make_update_cb("rep_s:menu:ayer")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_MENU
+        assert context.user_data["div_ayer_sel"] is False
+
+    @pytest.mark.asyncio
+    async def test_hoy_toggle_renders_checked_keyboard(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+
+        context = _make_context(user_data={"div_hoy_sel": False, "div_ayer_sel": False})
+        update = _make_update_cb("rep_s:menu:hoy")
+
+        await handle_div_menu(update, context)
+
+        call = update.callback_query.edit_message_reply_markup.call_args
+        markup = call.kwargs.get("reply_markup") or (call.args[0] if call.args else None)
+        assert markup is not None
+        hoy_btn = markup.inline_keyboard[0][0]
+        assert "✅" in hoy_btn.text
+
+
+# ---------------------------------------------------------------------------
+# Ver resumen — validation and computation
+# ---------------------------------------------------------------------------
+
+
+class TestVerResumen:
+    """Ver resumen computes date range from selections or shows toast if none."""
+
+    @pytest.mark.asyncio
+    async def test_ver_resumen_with_nothing_selected_shows_toast_and_stays(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_menu,
+        )
+
+        context = _make_context(user_data={"div_hoy_sel": False, "div_ayer_sel": False})
+        update = _make_update_cb("rep_s:menu:ver")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_MENU
+        # Must show toast with show_alert=True
+        cq = update.callback_query
+        # answer() called with show_alert=True
+        alert_calls = [
+            c for c in cq.answer.call_args_list
+            if c.kwargs.get("show_alert") is True or (len(c.args) > 0 and c.args[0])
+        ]
+        # At minimum one answer call with show_alert=True
+        assert any(
+            c.kwargs.get("show_alert") is True
+            for c in cq.answer.call_args_list
+        ), "Expected show_alert=True toast"
+        context.bot_data["split_socios_service"].calcular_periodo.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ver_resumen_hoy_only_calls_calcular_with_today_today(self) -> None:
+        from telegram.ext import ConversationHandler
+
         from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _resultado_con_datos()
-        context = _make_context(split_service=split_service)
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
 
-        update = _make_update_cb("rep_s:menu:hoy")
+        result = await handle_div_menu(update, context)
 
-        with MagicMock() as _p:
-            await handle_div_menu(update, context)
-
+        assert result == ConversationHandler.END
         today = datetime.date.today()
         split_service.calcular_periodo.assert_called_once_with(today, today)
 
     @pytest.mark.asyncio
-    async def test_ayer_uses_yesterday_as_both_bounds(self) -> None:
+    async def test_ver_resumen_ayer_only_calls_calcular_with_yesterday_yesterday(self) -> None:
+        from telegram.ext import ConversationHandler
+
         from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _empty_resultado()
-        context = _make_context(split_service=split_service)
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": False, "div_ayer_sel": True},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
 
-        update = _make_update_cb("rep_s:menu:ayer")
-        await handle_div_menu(update, context)
+        result = await handle_div_menu(update, context)
 
+        assert result == ConversationHandler.END
         ayer = datetime.date.today() - datetime.timedelta(days=1)
         split_service.calcular_periodo.assert_called_once_with(ayer, ayer)
 
     @pytest.mark.asyncio
-    async def test_sin_datos_muestra_mensaje_vacio(self) -> None:
+    async def test_ver_resumen_both_selected_calls_calcular_with_yesterday_today(self) -> None:
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_datos()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": True},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == ConversationHandler.END
+        today = datetime.date.today()
+        ayer = today - datetime.timedelta(days=1)
+        split_service.calcular_periodo.assert_called_once_with(ayer, today)
+
+    @pytest.mark.asyncio
+    async def test_ver_resumen_edits_message_with_result(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_datos()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        await handle_div_menu(update, context)
+
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_ver_resumen_sin_datos_edits_message(self) -> None:
         from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _empty_resultado()
-        context = _make_context(split_service=split_service)
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
 
-        update = _make_update_cb("rep_s:menu:hoy")
         await handle_div_menu(update, context)
 
         cq = update.callback_query
-        # Should edit message with sin_datos text
         cq.edit_message_text.assert_called_once()
         call = cq.edit_message_text.call_args
         text = call.args[0] if call.args else call.kwargs.get("text", "")

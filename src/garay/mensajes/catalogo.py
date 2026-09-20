@@ -1305,6 +1305,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.menu_ayer": {Idioma.ES: "📅 Ayer"},
     "resumen_divisiones.menu_periodo": {Idioma.ES: "📊 Período"},
     "resumen_divisiones.menu_cancelar": {Idioma.ES: "✖ Cancelar"},
+    "resumen_divisiones.menu_ver": {Idioma.ES: "📊 Ver resumen"},
+    "resumen_divisiones.nada_seleccionado": {Idioma.ES: "Selecciona al menos un día."},
     "resumen_divisiones.titulo": {Idioma.ES: "📊 <b>Divisiones — {periodo}</b>"},
     "resumen_divisiones.periodo_hoy": {Idioma.ES: "Hoy ({fecha})"},
     "resumen_divisiones.periodo_ayer": {Idioma.ES: "Ayer ({fecha})"},
