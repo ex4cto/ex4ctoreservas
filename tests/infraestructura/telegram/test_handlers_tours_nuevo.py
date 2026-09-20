@@ -1578,7 +1578,8 @@ class TestNvtHorStatesBotWiring:
 
         for _group, handlers in app.handlers.items():
             for h in handlers:
-                if isinstance(h, ConversationHandler) and 230 in h.states:
+                # Use NVT_NOMBRE (232) to discriminate: GV also has state 230
+                if isinstance(h, ConversationHandler) and 232 in h.states:
                     return h
         return None
 
