@@ -279,6 +279,12 @@ def _render_resultado(
             ]
             for i, venta in enumerate(resultado.ventas_detalle)
         ]
+        rows.append(
+            [InlineKeyboardButton(
+                obtener_mensaje("resumen_divisiones.btn_cerrar"),
+                callback_data="rep_s:menu:cerrar",
+            )]
+        )
         markup = InlineKeyboardMarkup(rows)
 
     return texto, markup
@@ -700,6 +706,21 @@ async def handle_div_venta(
     return DIV_RESULT
 
 
+async def handle_div_cerrar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """User pressed Cerrar — remove keyboard and show /start hint."""
+    cq = update.callback_query
+    if cq is None:
+        return ConversationHandler.END
+    await cq.answer()
+    await cq.edit_message_text(
+        obtener_mensaje("resumen_divisiones.cerrado"),
+        parse_mode="HTML",
+    )
+    return ConversationHandler.END
+
+
 # ---------------------------------------------------------------------------
 # ConversationHandler factory
 # ---------------------------------------------------------------------------
@@ -728,6 +749,7 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
             DIV_RESULT: [
                 CallbackQueryHandler(handle_div_venta, pattern=r"^rep_s:venta:"),
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:resultado"),
+                CallbackQueryHandler(handle_div_cerrar, pattern=r"^rep_s:menu:cerrar"),
             ],
         },
         fallbacks=[

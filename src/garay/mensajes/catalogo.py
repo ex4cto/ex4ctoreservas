@@ -1323,6 +1323,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.cal_inicio": {Idioma.ES: "📅 Selecciona fecha inicio:"},
     "resumen_divisiones.cal_fin": {Idioma.ES: "📅 Selecciona fecha fin:"},
     "resumen_divisiones.cancelado": {Idioma.ES: "Operación cancelada."},
+    "resumen_divisiones.btn_cerrar": {Idioma.ES: "✖ Cerrar"},
+    "resumen_divisiones.cerrado": {Idioma.ES: "Resumen cerrado. Escribe /start para volver al menú."},
     "resumen_divisiones.detalle_titulo": {Idioma.ES: "📋 {fecha} · {nombre}"},
     "resumen_divisiones.detalle_bruto": {Idioma.ES: "Bruto:  {monto}"},
     "resumen_divisiones.detalle_comisiones_header": {Idioma.ES: "💼 Comisiones:"},
