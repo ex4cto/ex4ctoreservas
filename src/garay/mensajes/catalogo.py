@@ -1283,6 +1283,40 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "cotizacion.cancelado": {Idioma.ES: "❌ Cotización cancelada."},
     "cotizacion.estado_email_enviado": {Idioma.ES: "✉️ Enviado a {email}"},
     "cotizacion.estado_email_sin": {Idioma.ES: "📵 Sin email — no se envió"},
+    # ── Waterfall DM — per-sale private notification ─────────────────────────
+    "dm.waterfall.titulo": {Idioma.ES: "💰 <b>Nueva venta — tu parte</b>"},
+    "dm.waterfall.bruto": {Idioma.ES: "💵 Bruto: {monto}"},
+    "dm.waterfall.neto": {Idioma.ES: "🏭 Neto operador: {monto}"},
+    "dm.waterfall.ganancia": {Idioma.ES: "📈 Ganancia: {monto}"},
+    "dm.waterfall.vendedor": {Idioma.ES: "👤 Vendedor ({pct}%): {monto}"},
+    "dm.waterfall.cerrador": {Idioma.ES: "🔑 Cerrador ({pct}%): {monto}"},
+    "dm.waterfall.punto_venta": {Idioma.ES: "🏪 Punto de venta ({pct}%): {monto}"},
+    "dm.waterfall.agencia_neta": {Idioma.ES: "🏢 Agencia neta: {monto}"},
+    "dm.waterfall.socio_share": {Idioma.ES: "   {icono} {nombre} ({pct}%): {monto}"},
+    # ── /resumen_divisiones ──────────────────────────────────────────────────
+    "resumen_divisiones.sin_acceso": {
+        Idioma.ES: "Este comando es solo para administradores o el propietario."
+    },
+    "resumen_divisiones.menu_hoy": {Idioma.ES: "📅 Hoy"},
+    "resumen_divisiones.menu_ayer": {Idioma.ES: "📅 Ayer"},
+    "resumen_divisiones.menu_periodo": {Idioma.ES: "📊 Período"},
+    "resumen_divisiones.menu_cancelar": {Idioma.ES: "✖ Cancelar"},
+    "resumen_divisiones.titulo": {Idioma.ES: "📊 <b>Divisiones — {periodo}</b>"},
+    "resumen_divisiones.periodo_hoy": {Idioma.ES: "Hoy ({fecha})"},
+    "resumen_divisiones.periodo_ayer": {Idioma.ES: "Ayer ({fecha})"},
+    "resumen_divisiones.periodo_rango": {Idioma.ES: "{desde} – {hasta}"},
+    "resumen_divisiones.ventas_row": {Idioma.ES: "Ventas: {n}  |  Bruto: {bruto}"},
+    "resumen_divisiones.freelancer_row": {Idioma.ES: "💼 Comisiones freelancers:  {monto}"},
+    "resumen_divisiones.agencia_row": {Idioma.ES: "🏢 Agencia neta:            {monto}"},
+    "resumen_divisiones.socio_row": {Idioma.ES: "   {arbol} {nombre}:{padding} {monto}"},
+    "resumen_divisiones.ganancia_row": {Idioma.ES: "──────────────────────────\nTotal ganancia:             {monto}"},
+    "resumen_divisiones.sin_datos": {Idioma.ES: "No hay datos para este período."},
+    "resumen_divisiones.error_fecha_fin": {
+        Idioma.ES: "La fecha fin no puede ser anterior a la fecha inicio."
+    },
+    "resumen_divisiones.cal_inicio": {Idioma.ES: "📅 Selecciona fecha inicio:"},
+    "resumen_divisiones.cal_fin": {Idioma.ES: "📅 Selecciona fecha fin:"},
+    "resumen_divisiones.cancelado": {Idioma.ES: "Operación cancelada."},
 }
 
 

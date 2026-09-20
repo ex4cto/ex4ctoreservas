@@ -612,15 +612,36 @@ def _make_socio(nombre: str, porcentaje: Decimal, telegram_id: int | None) -> So
     return SocioConfig(nombre=nombre, porcentaje=porcentaje, telegram_id=telegram_id)
 
 
+def _make_fake_desglose(agencia: Dinero = _AGENCIA) -> "DesgloseComision":  # type: ignore[name-defined]
+    """Build a real DesgloseComision so the enriched DM builder can access typed fields."""
+    from garay.dominio.comisiones.snapshot import SnapshotReglas
+    from garay.dominio.comisiones.valor_objetos import DesgloseComision
+    from garay.dominio.comun.tipos import TipoCliente
+
+    snap = SnapshotReglas(
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("10"),
+        porcentaje_cerrador=Decimal("5"),
+        porcentaje_referido_maximo=Decimal("0"),
+        porcentaje_capa_punto=Decimal("0"),
+    )
+    return DesgloseComision(
+        vendedor=Dinero("15000"),
+        cerrador=Dinero("7500"),
+        punto_de_venta=Dinero("0"),
+        referido=Dinero("0"),
+        agencia=agencia,
+        snapshot=snap,
+    )
+
+
 def _build_service_con_socios(
     socios: list[SocioConfig],
     notificador: MagicMock,
 ) -> RegistrarVentaService:
     """Helper: service with a real-looking desglose.agencia = _AGENCIA."""
     motor = MagicMock()
-    fake_desglose = MagicMock()
-    fake_desglose.agencia = _AGENCIA
-    motor.calcular.return_value = fake_desglose
+    motor.calcular.return_value = _make_fake_desglose(_AGENCIA)
 
     socios_config = MagicMock()
     socios_config.listar.return_value = socios
@@ -739,3 +760,176 @@ class TestMensajePrivadoSocios:
         ]
         assert len(ryan_calls) == 1
         assert "25" in ryan_calls[0].args[0]
+
+
+# ---------------------------------------------------------------------------
+# Slice K: enriched waterfall DM
+# ---------------------------------------------------------------------------
+
+
+def _make_desglose(
+    vendedor: int = 100_000,
+    cerrador: int = 150_000,
+    punto: int = 0,
+    agencia: int = 550_000,
+) -> "DesgloseComision":
+    from garay.dominio.comisiones.entidades import ComisionRegistrada as _CR  # noqa: F401
+    from garay.dominio.comisiones.snapshot import SnapshotReglas
+    from garay.dominio.comisiones.valor_objetos import DesgloseComision
+    from garay.dominio.comun.tipos import TipoCliente
+
+    snap = SnapshotReglas(
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("10"),
+        porcentaje_cerrador=Decimal("15"),
+        porcentaje_referido_maximo=Decimal("0"),
+        porcentaje_capa_punto=Decimal("0"),
+    )
+    return DesgloseComision(
+        vendedor=Dinero(vendedor),
+        cerrador=Dinero(cerrador),
+        punto_de_venta=Dinero(punto),
+        referido=Dinero(0),
+        agencia=Dinero(agencia),
+        snapshot=snap,
+    )
+
+
+class TestConstruirMensajePrivadoWaterfall:
+    """Slice K: _construir_mensaje_privado must render the full money waterfall."""
+
+    def _build_msg(
+        self,
+        *,
+        socio_nombre: str = "ryan",
+        socio_pct: str = "25",
+        telegram_id: int = 777777,
+        valor_venta: int = 2_000_000,
+        neto: int = 1_200_000,
+        vendedor: int = 100_000,
+        cerrador: int = 150_000,
+        punto: int = 0,
+        agencia: int = 550_000,
+        socios_extra: list[SocioConfig] | None = None,
+        servicio_nombres: list[str] | None = None,
+    ) -> str:
+        from garay.aplicacion.tiquetera.servicio import _construir_mensaje_privado
+        from garay.dominio.socios.servicio import calcular_split_venta
+
+        socio = SocioConfig(
+            nombre=socio_nombre,
+            porcentaje=Decimal(socio_pct),
+            telegram_id=telegram_id,
+        )
+        socios: list[SocioConfig] = [socio]
+        if socios_extra:
+            socios = socios_extra
+
+        desglose = _make_desglose(
+            vendedor=vendedor,
+            cerrador=cerrador,
+            punto=punto,
+            agencia=agencia,
+        )
+        split = calcular_split_venta(desglose.agencia, socios)
+        monto = split.get(socio_nombre, Dinero(0))
+
+        cmd = RegistrarVentaComando(
+            valor_venta=Dinero(valor_venta),
+            neto=Dinero(neto),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2026, 9, 5),
+            participantes=Participantes(
+                vendedor_nombre="Ana",
+                cerrador_nombre="Luis",
+            ),
+            adultos=2,
+            ninos=0,
+            servicio_nombres=servicio_nombres if servicio_nombres is not None else ["Isla Barú"],
+        )
+        return _construir_mensaje_privado(
+            socio=socio,
+            monto=monto,
+            desglose=desglose,
+            cmd=cmd,
+            split=split,
+            socios=socios,
+        )
+
+    def test_waterfall_contains_bruto(self) -> None:
+        """DM must show bruto = valor_venta."""
+        msg = self._build_msg(valor_venta=2_000_000)
+        assert "2.000.000" in msg
+
+    def test_waterfall_contains_neto(self) -> None:
+        """DM must show neto operador."""
+        msg = self._build_msg(neto=1_200_000)
+        assert "1.200.000" in msg
+
+    def test_waterfall_contains_ganancia(self) -> None:
+        """DM must show ganancia = bruto - neto."""
+        msg = self._build_msg(valor_venta=2_000_000, neto=1_200_000)
+        assert "800.000" in msg
+
+    def test_waterfall_contains_vendedor_line(self) -> None:
+        """Vendedor commission must appear when non-zero."""
+        msg = self._build_msg(vendedor=100_000)
+        assert "100.000" in msg
+        assert "10" in msg  # percentage
+
+    def test_waterfall_contains_cerrador_line(self) -> None:
+        """Cerrador commission must appear when non-zero."""
+        msg = self._build_msg(cerrador=150_000)
+        assert "150.000" in msg
+        assert "15" in msg
+
+    def test_waterfall_omits_punto_de_venta_when_zero(self) -> None:
+        """punto_de_venta line is omitted when Dinero(0)."""
+        msg = self._build_msg(punto=0)
+        # 'Punto' should not appear in the freelancer section
+        assert "Punto" not in msg
+
+    def test_waterfall_contains_punto_de_venta_when_nonzero(self) -> None:
+        """punto_de_venta line appears when amount is nonzero."""
+        msg = self._build_msg(punto=50_000)
+        assert "50.000" in msg
+
+    def test_waterfall_contains_agencia_neta(self) -> None:
+        """Agencia neta must be present."""
+        msg = self._build_msg(agencia=550_000)
+        assert "550.000" in msg
+
+    def test_waterfall_shows_all_socios(self) -> None:
+        """Every configured socio's split must appear regardless of recipient."""
+        socios = [
+            SocioConfig(nombre="empresa", porcentaje=Decimal("50"), telegram_id=None),
+            SocioConfig(nombre="garay", porcentaje=Decimal("25"), telegram_id=None),
+            SocioConfig(nombre="ryan", porcentaje=Decimal("25"), telegram_id=777777),
+        ]
+        msg = self._build_msg(
+            socio_nombre="ryan",
+            socios_extra=socios,
+            agencia=1_000_000,
+        )
+        # All three socios must be visible to ryan
+        assert "empresa" in msg
+        assert "garay" in msg
+        assert "ryan" in msg
+
+    def test_waterfall_order_is_correct(self) -> None:
+        """Waterfall order: bruto → neto → ganancia → freelancers → agencia → socios."""
+        msg = self._build_msg(
+            valor_venta=2_000_000,
+            neto=1_200_000,
+            vendedor=100_000,
+            cerrador=150_000,
+            agencia=550_000,
+        )
+        # Rough ordering check: bruto appears before neto before ganancia before agencia
+        idx_bruto = msg.index("2.000.000")
+        idx_neto = msg.index("1.200.000")
+        idx_ganancia = msg.index("800.000")
+        idx_agencia_neta = msg.index("550.000")
+        assert idx_bruto < idx_neto < idx_ganancia < idx_agencia_neta
