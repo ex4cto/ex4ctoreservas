@@ -272,9 +272,9 @@ async def handle_div_menu(
         return DIV_CAL_DESDE
 
     # Quick paths: hoy / ayer
-    split_service = context.bot_data.get("split_service")
+    split_service = context.bot_data.get("split_socios_service")
     if split_service is None:
-        logger.error("split_service not found in bot_data")
+        logger.error("split_socios_service not found in bot_data")
         return ConversationHandler.END
 
     if data == f"{_CB_MENU}hoy":
@@ -386,9 +386,9 @@ async def handle_div_dia(
         return DIV_CAL_HASTA
 
     # Both dates valid — compute result
-    split_service = context.bot_data.get("split_service")
+    split_service = context.bot_data.get("split_socios_service")
     if split_service is None:
-        logger.error("split_service not found in bot_data")
+        logger.error("split_socios_service not found in bot_data")
         return ConversationHandler.END
 
     resultado = split_service.calcular_periodo(desde, fecha)

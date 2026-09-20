@@ -65,7 +65,7 @@ def _make_context(
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _empty_resultado()
     context.bot_data = {
-        "split_service": split_service,
+        "split_socios_service": split_service,
         "freelancer_repo": MagicMock(),
     }
     return context
