@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import datetime
+import uuid
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from garay.dominio.comun.dinero import Dinero
@@ -42,6 +44,30 @@ class ResumenSocioPeriodo:
 
 
 @dataclass(frozen=True)
+class ResumenFreelancerPeriodo:
+    """Per-freelancer commission total for a date range."""
+
+    nombre: str
+    comision: Dinero
+
+
+@dataclass(frozen=True)
+class ResumenVentaDetalle:
+    """Per-sale breakdown for drill-down view in /resumen_divisiones."""
+
+    venta_id: uuid.UUID
+    fecha: datetime.date
+    vendedor_nombre: str | None
+    cerrador_nombre: str | None
+    valor_bruto: Dinero
+    desglose_vendedor: Dinero
+    desglose_cerrador: Dinero
+    desglose_punto: Dinero
+    desglose_agencia: Dinero
+    split_socios: tuple[ResumenSocioPeriodo, ...]
+
+
+@dataclass(frozen=True)
 class ResumenSplitPeriodo:
     """Aggregate split result for a [desde, hasta] date range."""
 
@@ -50,3 +76,5 @@ class ResumenSplitPeriodo:
     total_bruto: Dinero
     total_comisiones_freelancer: Dinero
     ventas_count: int
+    ventas_detalle: tuple[ResumenVentaDetalle, ...] = field(default_factory=tuple)
+    por_freelancer: tuple[ResumenFreelancerPeriodo, ...] = field(default_factory=tuple)

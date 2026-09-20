@@ -405,3 +405,264 @@ class TestSplitSociosServiceCalcularPeriodo:
         service.calcular_periodo(self._DESDE, self._HASTA)
 
         repo_ventas.listar_por_periodo.assert_called_once_with(self._DESDE, self._HASTA)
+
+
+class TestResumenVentaDetalleDTO:
+    """Tests for ResumenVentaDetalle and ResumenFreelancerPeriodo DTOs."""
+
+    def test_resumen_venta_detalle_fields_exist(self) -> None:
+        """ResumenVentaDetalle has all required fields."""
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+
+        venta_id = uuid.uuid4()
+        detalle = ResumenVentaDetalle(
+            venta_id=venta_id,
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre="Juan García",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(600_000),
+            desglose_vendedor=Dinero(60_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(540_000),
+            split_socios=(),
+        )
+
+        assert detalle.venta_id == venta_id
+        assert detalle.fecha == datetime.date(2026, 9, 19)
+        assert detalle.vendedor_nombre == "Juan García"
+        assert detalle.cerrador_nombre is None
+        assert detalle.valor_bruto == Dinero(600_000)
+        assert detalle.desglose_vendedor == Dinero(60_000)
+        assert detalle.desglose_cerrador == Dinero(0)
+        assert detalle.desglose_punto == Dinero(0)
+        assert detalle.desglose_agencia == Dinero(540_000)
+        assert detalle.split_socios == ()
+
+    def test_resumen_freelancer_periodo_fields_exist(self) -> None:
+        """ResumenFreelancerPeriodo has nombre and comision fields."""
+        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo
+
+        fl = ResumenFreelancerPeriodo(nombre="Juan García", comision=Dinero(60_000))
+
+        assert fl.nombre == "Juan García"
+        assert fl.comision == Dinero(60_000)
+
+    def test_resumen_split_periodo_has_new_fields(self) -> None:
+        """ResumenSplitPeriodo has ventas_detalle and por_freelancer fields."""
+        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenVentaDetalle
+
+        resultado = ResumenSplitPeriodo(
+            por_socio=(),
+            total_agencia=Dinero(0),
+            total_bruto=Dinero(0),
+            total_comisiones_freelancer=Dinero(0),
+            ventas_count=0,
+        )
+        # Default values should be empty tuples
+        assert resultado.ventas_detalle == ()
+        assert resultado.por_freelancer == ()
+
+    def test_resumen_split_periodo_with_detalle(self) -> None:
+        """ResumenSplitPeriodo accepts ventas_detalle and por_freelancer."""
+        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenVentaDetalle
+
+        venta_id = uuid.uuid4()
+        detalle = ResumenVentaDetalle(
+            venta_id=venta_id,
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre="Juan",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(600_000),
+            desglose_vendedor=Dinero(60_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(540_000),
+            split_socios=(),
+        )
+        fl = ResumenFreelancerPeriodo(nombre="Juan", comision=Dinero(60_000))
+
+        resultado = ResumenSplitPeriodo(
+            por_socio=(),
+            total_agencia=Dinero(540_000),
+            total_bruto=Dinero(600_000),
+            total_comisiones_freelancer=Dinero(60_000),
+            ventas_count=1,
+            ventas_detalle=(detalle,),
+            por_freelancer=(fl,),
+        )
+
+        assert len(resultado.ventas_detalle) == 1
+        assert resultado.ventas_detalle[0] == detalle
+        assert len(resultado.por_freelancer) == 1
+        assert resultado.por_freelancer[0] == fl
+
+
+class TestCalcularPeriodoVentaDetalle:
+    """Tests for calcular_periodo populating ventas_detalle and por_freelancer."""
+
+    _DESDE = datetime.date(2026, 9, 1)
+    _HASTA = datetime.date(2026, 9, 30)
+
+    def _make_venta(
+        self,
+        valor: int = 600_000,
+        vendedor_nombre: str | None = "Juan García",
+        cerrador_nombre: str | None = None,
+    ) -> Venta:
+        return Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(valor),
+            neto=Dinero(valor // 2),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2026, 9, 19),
+            participantes=Participantes(
+                vendedor_nombre=vendedor_nombre,
+                cerrador_nombre=cerrador_nombre,
+            ),
+        )
+
+    def _make_comision(
+        self,
+        venta_id: uuid.UUID,
+        vendedor: int = 60_000,
+        cerrador: int = 0,
+        punto: int = 0,
+        agencia: int = 540_000,
+    ) -> ComisionRegistrada:
+        return ComisionRegistrada(
+            venta_id=venta_id,
+            desglose=DesgloseComision(
+                vendedor=Dinero(vendedor),
+                cerrador=Dinero(cerrador),
+                punto_de_venta=Dinero(punto),
+                referido=Dinero(0),
+                agencia=Dinero(agencia),
+                snapshot=_make_snapshot(),
+            ),
+            fecha=datetime.date(2026, 9, 19),
+        )
+
+    def _make_service(
+        self,
+        ventas: list[Venta],
+        comisiones: list[ComisionRegistrada],
+        configs: list[SocioConfig] | None = None,
+    ) -> SplitSociosService:
+        if configs is None:
+            configs = []
+        repo_ventas = MagicMock()
+        repo_ventas.listar_por_periodo.return_value = ventas
+        repo_comisiones = MagicMock()
+        repo_comisiones.listar_por_venta_ids.return_value = comisiones
+        repo_configs = MagicMock()
+        repo_configs.listar.return_value = configs
+        repo_pagos = MagicMock()
+        return SplitSociosService(
+            ventas=repo_ventas,
+            comisiones=repo_comisiones,
+            socios_config=repo_configs,
+            pagos_socio=repo_pagos,
+        )
+
+    def test_ventas_detalle_populated_from_venta_and_comision(self) -> None:
+        """calcular_periodo populates ventas_detalle with joined data."""
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+
+        venta = self._make_venta(valor=600_000, vendedor_nombre="Juan García")
+        com = self._make_comision(
+            venta.id, vendedor=60_000, cerrador=0, punto=0, agencia=540_000
+        )
+        service = self._make_service([venta], [com])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        assert len(resultado.ventas_detalle) == 1
+        det = resultado.ventas_detalle[0]
+        assert isinstance(det, ResumenVentaDetalle)
+        assert det.venta_id == venta.id
+        assert det.fecha == venta.fecha
+        assert det.vendedor_nombre == "Juan García"
+        assert det.valor_bruto == Dinero(600_000)
+        assert det.desglose_vendedor == Dinero(60_000)
+        assert det.desglose_agencia == Dinero(540_000)
+
+    def test_ventas_detalle_uses_zero_when_no_comision(self) -> None:
+        """When no comision found for a venta, zero Dinero is used."""
+        venta = self._make_venta(valor=600_000)
+        # No comisiones provided
+        service = self._make_service([venta], [])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        assert len(resultado.ventas_detalle) == 1
+        det = resultado.ventas_detalle[0]
+        assert det.desglose_agencia == Dinero(0)
+        assert det.desglose_vendedor == Dinero(0)
+
+    def test_por_freelancer_aggregates_vendedor(self) -> None:
+        """por_freelancer sums vendedor commission across sales."""
+        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo
+
+        venta1 = self._make_venta(vendedor_nombre="Juan García")
+        venta2 = self._make_venta(vendedor_nombre="Juan García")
+        com1 = self._make_comision(venta1.id, vendedor=60_000, agencia=540_000)
+        com2 = self._make_comision(venta2.id, vendedor=60_000, agencia=540_000)
+        service = self._make_service([venta1, venta2], [com1, com2])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        # Juan should have 120_000 total commission
+        juan = next(
+            (f for f in resultado.por_freelancer if f.nombre == "Juan García"), None
+        )
+        assert juan is not None
+        assert juan.comision == Dinero(120_000)
+
+    def test_por_freelancer_aggregates_cerrador_separately(self) -> None:
+        """Cerrador commission aggregated under cerrador_nombre."""
+        venta = self._make_venta(
+            vendedor_nombre="Juan García",
+            cerrador_nombre="Maria Lopez",
+        )
+        com = self._make_comision(venta.id, vendedor=60_000, cerrador=40_000, agencia=500_000)
+        service = self._make_service([venta], [com])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        nombres = {f.nombre: f.comision for f in resultado.por_freelancer}
+        assert "Juan García" in nombres
+        assert "Maria Lopez" in nombres
+        assert nombres["Juan García"] == Dinero(60_000)
+        assert nombres["Maria Lopez"] == Dinero(40_000)
+
+    def test_por_freelancer_omits_none_names(self) -> None:
+        """Freelancers with None name are not included in por_freelancer."""
+        venta = self._make_venta(vendedor_nombre=None, cerrador_nombre=None)
+        com = self._make_comision(venta.id, vendedor=0, cerrador=0, agencia=600_000)
+        service = self._make_service([venta], [com])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        assert resultado.por_freelancer == ()
+
+    def test_per_sale_split_in_ventas_detalle(self) -> None:
+        """ventas_detalle[i].split_socios reflects per-sale split."""
+        venta = self._make_venta(valor=600_000)
+        com = self._make_comision(venta.id, agencia=540_000)
+        configs = [
+            _make_config("empresa", "50"),
+            _make_config("ryan", "50"),
+        ]
+        service = self._make_service([venta], [com], configs)
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        det = resultado.ventas_detalle[0]
+        assert len(det.split_socios) == 2
+        empresa = next(s for s in det.split_socios if s.nombre == "empresa")
+        ryan = next(s for s in det.split_socios if s.nombre == "ryan")
+        assert empresa.acumulado == Dinero(270_000)
+        assert ryan.acumulado == Dinero(270_000)

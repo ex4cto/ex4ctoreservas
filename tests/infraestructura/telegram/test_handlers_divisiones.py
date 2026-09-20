@@ -688,3 +688,321 @@ class TestConvHandlerFactory:
 
         handler = build_divisiones_conv_handler()
         assert isinstance(handler, ConversationHandler)
+
+
+# ---------------------------------------------------------------------------
+# ResumenVentaDetalle button label format
+# ---------------------------------------------------------------------------
+
+
+class TestButtonLabelFormat:
+    """Button label format: {dd/mm}  {primer_nombre}  ${k_format}."""
+
+    def test_k_format_600k(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _fmt_k
+
+        assert _fmt_k(600_000) == "$600k"
+
+    def test_k_format_1200k(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _fmt_k
+
+        assert _fmt_k(1_200_000) == "$1.200k"
+
+    def test_k_format_2500k(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import _fmt_k
+
+        assert _fmt_k(2_500_000) == "$2.500k"
+
+    def test_venta_button_label_format(self) -> None:
+        """Button label uses dd/mm, first name, k-format."""
+        import uuid
+
+        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenVentaDetalle
+        from garay.infraestructura.telegram.handlers_divisiones import _venta_btn_label
+
+        detalle = ResumenVentaDetalle(
+            venta_id=uuid.uuid4(),
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre="Juan García",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(600_000),
+            desglose_vendedor=Dinero(60_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(540_000),
+            split_socios=(),
+        )
+        label = _venta_btn_label(detalle)
+        assert label == "19/09  Juan  $600k"
+
+    def test_venta_button_label_none_vendedor_shows_dash(self) -> None:
+        import uuid
+
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+        from garay.infraestructura.telegram.handlers_divisiones import _venta_btn_label
+
+        detalle = ResumenVentaDetalle(
+            venta_id=uuid.uuid4(),
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre=None,
+            cerrador_nombre=None,
+            valor_bruto=Dinero(1_200_000),
+            desglose_vendedor=Dinero(0),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(1_200_000),
+            split_socios=(),
+        )
+        label = _venta_btn_label(detalle)
+        assert label == "19/09  —  $1.200k"
+
+
+# ---------------------------------------------------------------------------
+# Result view with sale buttons — handle_div_resultado
+# ---------------------------------------------------------------------------
+
+
+def _resultado_con_detalle() -> "ResumenSplitPeriodo":
+    """ResumenSplitPeriodo with ventas_detalle populated."""
+    import uuid
+
+    from garay.aplicacion.socios.split import (
+        ResumenFreelancerPeriodo,
+        ResumenVentaDetalle,
+    )
+
+    socios = (
+        ResumenSocioPeriodo(nombre="empresa", porcentaje=Decimal("50"), acumulado=Dinero(500_000)),
+        ResumenSocioPeriodo(nombre="garay", porcentaje=Decimal("25"), acumulado=Dinero(250_000)),
+        ResumenSocioPeriodo(nombre="ryan", porcentaje=Decimal("25"), acumulado=Dinero(250_000)),
+    )
+    venta1 = ResumenVentaDetalle(
+        venta_id=uuid.uuid4(),
+        fecha=datetime.date(2026, 9, 19),
+        vendedor_nombre="Juan García",
+        cerrador_nombre=None,
+        valor_bruto=Dinero(600_000),
+        desglose_vendedor=Dinero(60_000),
+        desglose_cerrador=Dinero(0),
+        desglose_punto=Dinero(0),
+        desglose_agencia=Dinero(540_000),
+        split_socios=socios,
+    )
+    freelancers = (
+        ResumenFreelancerPeriodo(nombre="Juan García", comision=Dinero(60_000)),
+    )
+    return ResumenSplitPeriodo(
+        por_socio=socios,
+        total_agencia=Dinero(540_000),
+        total_bruto=Dinero(600_000),
+        total_comisiones_freelancer=Dinero(60_000),
+        ventas_count=1,
+        ventas_detalle=(venta1,),
+        por_freelancer=freelancers,
+    )
+
+
+class TestResultViewWithButtons:
+    """When result has ventas_detalle, show inline keyboard with sale buttons."""
+
+    @pytest.mark.asyncio
+    async def test_ver_resultado_shows_sale_buttons(self) -> None:
+        """Ver resumen produces inline keyboard with one button per sale."""
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_detalle()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        await handle_div_menu(update, context)
+
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call = cq.edit_message_text.call_args
+        markup = call.kwargs.get("reply_markup")
+        assert markup is not None, "Should have reply_markup with sale buttons"
+        # One button per sale
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        sale_btns = [b for b in flat if b.callback_data.startswith("rep_s:venta:")]
+        assert len(sale_btns) == 1
+
+    @pytest.mark.asyncio
+    async def test_ver_resultado_stores_ventas_in_user_data(self) -> None:
+        """Ventas list stored in user_data[div_ventas] for drill-down access."""
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_detalle()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        await handle_div_menu(update, context)
+
+        assert "div_ventas" in context.user_data
+        assert len(context.user_data["div_ventas"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_ver_resultado_returns_div_result_state(self) -> None:
+        """When result has sales, handler returns DIV_RESULT (not END)."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_menu,
+        )
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_detalle()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_RESULT
+
+
+# ---------------------------------------------------------------------------
+# Drill-down per-sale handler
+# ---------------------------------------------------------------------------
+
+
+class TestDrillDownVenta:
+    """handle_div_venta renders per-sale detail and shows Atrás button."""
+
+    @pytest.mark.asyncio
+    async def test_drill_down_shows_detail_text(self) -> None:
+        import uuid
+
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_venta,
+        )
+
+        venta = ResumenVentaDetalle(
+            venta_id=uuid.uuid4(),
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre="Juan García",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(600_000),
+            desglose_vendedor=Dinero(60_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(540_000),
+            split_socios=(),
+        )
+        context = _make_context(user_data={"div_ventas": [venta]})
+        update = _make_update_cb("rep_s:venta:0")
+
+        result = await handle_div_venta(update, context)
+
+        assert result == DIV_RESULT
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call = cq.edit_message_text.call_args
+        text = call.args[0] if call.args else call.kwargs.get("text", "")
+        assert "Juan" in text or "19/09" in text
+
+    @pytest.mark.asyncio
+    async def test_drill_down_shows_atras_button(self) -> None:
+        import uuid
+
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_venta
+
+        venta = ResumenVentaDetalle(
+            venta_id=uuid.uuid4(),
+            fecha=datetime.date(2026, 9, 10),
+            vendedor_nombre="Maria",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(300_000),
+            desglose_vendedor=Dinero(30_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(270_000),
+            split_socios=(),
+        )
+        context = _make_context(user_data={"div_ventas": [venta]})
+        update = _make_update_cb("rep_s:venta:0")
+
+        await handle_div_venta(update, context)
+
+        cq = update.callback_query
+        call = cq.edit_message_text.call_args
+        markup = call.kwargs.get("reply_markup")
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        atras = [b for b in flat if "atras" in b.callback_data]
+        assert len(atras) == 1
+        assert atras[0].callback_data == "rep_s:atras:resultado"
+
+
+# ---------------------------------------------------------------------------
+# Atrás from drill-down restores result view
+# ---------------------------------------------------------------------------
+
+
+class TestAtrasDesdeDrillDown:
+    """Pressing Atrás in drill-down restores the result view with sale buttons."""
+
+    @pytest.mark.asyncio
+    async def test_atras_resultado_restores_result_state(self) -> None:
+        import uuid
+
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_atras,
+        )
+
+        venta = ResumenVentaDetalle(
+            venta_id=uuid.uuid4(),
+            fecha=datetime.date(2026, 9, 19),
+            vendedor_nombre="Pedro",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(500_000),
+            desglose_vendedor=Dinero(50_000),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(450_000),
+            split_socios=(),
+        )
+
+        from garay.aplicacion.socios.split import (
+            ResumenFreelancerPeriodo,
+            ResumenSplitPeriodo,
+        )
+
+        resultado = ResumenSplitPeriodo(
+            por_socio=(),
+            total_agencia=Dinero(450_000),
+            total_bruto=Dinero(500_000),
+            total_comisiones_freelancer=Dinero(50_000),
+            ventas_count=1,
+            ventas_detalle=(venta,),
+            por_freelancer=(),
+        )
+
+        context = _make_context(user_data={
+            "div_ventas": [venta],
+            "div_resultado": resultado,
+            "div_periodo_label": "Hoy (19/09/2026)",
+        })
+        update = _make_update_cb("rep_s:atras:resultado")
+
+        result = await handle_div_atras(update, context)
+
+        assert result == DIV_RESULT
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call = cq.edit_message_text.call_args
+        markup = call.kwargs.get("reply_markup")
+        assert markup is not None

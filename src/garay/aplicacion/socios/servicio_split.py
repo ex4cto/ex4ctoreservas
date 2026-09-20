@@ -5,10 +5,12 @@ from __future__ import annotations
 import datetime
 
 from garay.aplicacion.socios.split import (
+    ResumenFreelancerPeriodo,
     ResumenSocio,
     ResumenSocioPeriodo,
     ResumenSplitPeriodo,
     ResumenSplitSocios,
+    ResumenVentaDetalle,
 )
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
@@ -97,6 +99,9 @@ class SplitSociosService:
         venta_ids = [v.id for v in ventas]
         comisiones = self._comisiones.listar_por_venta_ids(venta_ids) if venta_ids else []
 
+        # Build lookup: venta_id → ComisionRegistrada
+        comision_por_venta_id = {c.venta_id: c for c in comisiones}
+
         total_agencia = sum(
             (c.desglose.agencia for c in comisiones), start=Dinero(0)
         )
@@ -112,6 +117,67 @@ class SplitSociosService:
         )
         ventas_count = len(ventas)
 
+        # Build per-sale detail and per-freelancer aggregation
+        freelancer_totales: dict[str, Dinero] = {}
+        ventas_detalle_list: list[ResumenVentaDetalle] = []
+
+        for venta in ventas:
+            com = comision_por_venta_id.get(venta.id)
+            if com is not None:
+                dv = com.desglose.vendedor
+                dc = com.desglose.cerrador
+                dp = com.desglose.punto_de_venta
+                da = com.desglose.agencia
+            else:
+                dv = dc = dp = da = Dinero(0)
+
+            # Per-sale split
+            per_sale_agencia = da
+            if configs:
+                per_sale_split_map = calcular_split_venta(per_sale_agencia, configs)
+                sale_socios = tuple(
+                    ResumenSocioPeriodo(
+                        nombre=c.nombre,
+                        porcentaje=c.porcentaje,
+                        acumulado=per_sale_split_map.get(c.nombre, Dinero(0)),
+                    )
+                    for c in configs
+                )
+            else:
+                sale_socios = ()
+
+            ventas_detalle_list.append(
+                ResumenVentaDetalle(
+                    venta_id=venta.id,
+                    fecha=venta.fecha,
+                    vendedor_nombre=venta.participantes.vendedor_nombre,
+                    cerrador_nombre=venta.participantes.cerrador_nombre,
+                    valor_bruto=venta.valor_venta,
+                    desglose_vendedor=dv,
+                    desglose_cerrador=dc,
+                    desglose_punto=dp,
+                    desglose_agencia=da,
+                    split_socios=sale_socios,
+                )
+            )
+
+            # Freelancer aggregation
+            vendedor_nombre = venta.participantes.vendedor_nombre
+            if vendedor_nombre is not None and dv > Dinero(0):
+                freelancer_totales[vendedor_nombre] = (
+                    freelancer_totales.get(vendedor_nombre, Dinero(0)) + dv
+                )
+            cerrador_nombre = venta.participantes.cerrador_nombre
+            if cerrador_nombre is not None and dc > Dinero(0):
+                freelancer_totales[cerrador_nombre] = (
+                    freelancer_totales.get(cerrador_nombre, Dinero(0)) + dc
+                )
+
+        por_freelancer = tuple(
+            ResumenFreelancerPeriodo(nombre=nombre, comision=monto)
+            for nombre, monto in freelancer_totales.items()
+        )
+
         if not configs:
             return ResumenSplitPeriodo(
                 por_socio=(),
@@ -119,6 +185,8 @@ class SplitSociosService:
                 total_bruto=total_bruto,
                 total_comisiones_freelancer=total_comisiones_freelancer,
                 ventas_count=ventas_count,
+                ventas_detalle=tuple(ventas_detalle_list),
+                por_freelancer=por_freelancer,
             )
 
         acumulado_por_socio = calcular_split_venta(total_agencia, configs)
@@ -138,4 +206,6 @@ class SplitSociosService:
             total_bruto=total_bruto,
             total_comisiones_freelancer=total_comisiones_freelancer,
             ventas_count=ventas_count,
+            ventas_detalle=tuple(ventas_detalle_list),
+            por_freelancer=por_freelancer,
         )
