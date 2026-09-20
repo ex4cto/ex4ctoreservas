@@ -12,6 +12,7 @@ from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, Resultado
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
@@ -76,19 +77,61 @@ def _derivar_numero_personas(participantes: Participantes) -> int | None:
 def _construir_mensaje_privado(
     socio: SocioConfig,
     monto: Dinero,
-    agencia: Dinero,
+    desglose: DesgloseComision,
     cmd: RegistrarVentaComando,
+    split: dict[str, Dinero],
+    socios: list[SocioConfig],
 ) -> str:
-    """Build the private HTML split message for a socio."""
-    lineas: list[str] = ["💰 <b>Tu parte — nueva venta</b>", ""]
+    """Build the private HTML split waterfall message for a socio.
+
+    Shows the complete money waterfall for a single sale:
+    destino/fecha → bruto → neto → ganancia → freelancer commissions
+    (omitting zero roles) → agencia neta → every socio's share.
+    """
+    ganancia = cmd.valor_venta - cmd.neto
+    agencia_neta = desglose.agencia
+    snap = desglose.snapshot
+
+    lineas: list[str] = ["💰 <b>Nueva venta — tu parte</b>", ""]
 
     if cmd.servicio_nombres:
         lineas.append(f"📍 Destino: {_esc(', '.join(cmd.servicio_nombres))}")
 
     lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
-    lineas.append(f"💵 Valor: {_fmt_cop(cmd.valor_venta)}")
-    lineas.append(f"🏢 Agencia: {_fmt_cop(agencia)}")
-    lineas.append(f"📊 Tu split ({socio.porcentaje}%): {_fmt_cop(monto)}")
+    lineas.append("")
+
+    lineas.append(f"💵 Bruto: {_fmt_cop(cmd.valor_venta)}")
+    lineas.append(f"🏭 Neto operador: {_fmt_cop(cmd.neto)}")
+    lineas.append(f"📈 Ganancia: {_fmt_cop(ganancia)}")
+
+    # Freelancer commissions — omit roles whose amount is zero
+    lineas.append("")
+    if desglose.vendedor.monto > 0:
+        lineas.append(
+            f"👤 Vendedor ({snap.porcentaje_vendedor}%): {_fmt_cop(desglose.vendedor)}"
+        )
+    if desglose.cerrador.monto > 0:
+        lineas.append(
+            f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {_fmt_cop(desglose.cerrador)}"
+        )
+    if desglose.punto_de_venta.monto > 0:
+        pct_punto = snap.porcentaje_capa_punto
+        lineas.append(
+            f"🏪 Punto de venta ({pct_punto}%): {_fmt_cop(desglose.punto_de_venta)}"
+        )
+
+    lineas.append(f"🏢 Agencia neta: {_fmt_cop(agencia_neta)}")
+
+    # All socios' shares — every socio sees every other socio's cut
+    lineas.append("")
+    for s in socios:
+        cantidad = split.get(s.nombre, Dinero(0))
+        lineas.append(
+            f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {_fmt_cop(cantidad)}"
+        )
+
+    lineas.append("")
+    lineas.append(f"✅ Tu parte: {_fmt_cop(monto)}")
 
     return "\n".join(lineas)
 
@@ -271,7 +314,7 @@ class RegistrarVentaService:
                 venta.id,
             )
 
-        # 9. Send private split message to each socio with telegram_id (best-effort)
+        # 9. Send private split waterfall message to each socio with telegram_id (best-effort)
         socios = self._socios_config.listar()
         if socios:
             split = calcular_split_venta(desglose.agencia, socios)
@@ -282,8 +325,10 @@ class RegistrarVentaService:
                 msg_privado = _construir_mensaje_privado(
                     socio=socio,
                     monto=monto_socio,
-                    agencia=desglose.agencia,
+                    desglose=desglose,
                     cmd=cmd,
+                    split=split,
+                    socios=socios,
                 )
                 try:
                     self._notificador.notificar(msg_privado, str(socio.telegram_id))

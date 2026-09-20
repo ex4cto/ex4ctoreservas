@@ -97,6 +97,8 @@ from garay.infraestructura.telegram.handlers import (
     handle_servicio_en_familia,
     handle_tipo_reserva,
 )
+from garay.infraestructura.telegram.handlers_cotizacion import cotizacion_conv_handler
+from garay.infraestructura.telegram.handlers_divisiones import build_divisiones_conv_handler
 from garay.infraestructura.telegram.handlers_egresos import (
     CAT_ACCIONES,
     CAT_EDIT_DESC,
@@ -377,7 +379,6 @@ from garay.infraestructura.telegram.handlers_tours import (
     handle_nvt_nombre,
     handle_nvt_nueva_familia,
 )
-from garay.infraestructura.telegram.handlers_cotizacion import cotizacion_conv_handler
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
 from garay.mensajes.catalogo import obtener_mensaje
 
@@ -1268,6 +1269,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(conv_handler)
     app.add_handler(hotel_conv_handler, group=11)
     app.add_handler(cotizacion_conv_handler, group=12)
+    app.add_handler(build_divisiones_conv_handler(), group=13)
     app.add_handler(egreso_conv_handler, group=2)
     app.add_handler(gastos_fijos_conv_handler, group=3)
     app.add_handler(categorias_conv_handler, group=4)

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import datetime
 
-from garay.aplicacion.socios.split import ResumenSocio, ResumenSplitSocios
+from garay.aplicacion.socios.split import (
+    ResumenSocio,
+    ResumenSocioPeriodo,
+    ResumenSplitPeriodo,
+    ResumenSplitSocios,
+)
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
@@ -76,4 +81,61 @@ class SplitSociosService:
         return ResumenSplitSocios(
             por_socio=tuple(resumenes),
             total_agencia=total_agencia,
+        )
+
+    def calcular_periodo(
+        self, desde: datetime.date, hasta: datetime.date
+    ) -> ResumenSplitPeriodo:
+        """Calculate the split for sales in [desde, hasta] (both bounds inclusive).
+
+        Does NOT access PagoSocioRepository — there is no date-filtered payment
+        query, and this view has no 'pendiente' concept.
+        """
+        ventas = self._ventas.listar_por_periodo(desde, hasta)
+        configs = self._socios_config.listar()
+
+        venta_ids = [v.id for v in ventas]
+        comisiones = self._comisiones.listar_por_venta_ids(venta_ids) if venta_ids else []
+
+        total_agencia = sum(
+            (c.desglose.agencia for c in comisiones), start=Dinero(0)
+        )
+        total_bruto = sum(
+            (v.valor_venta for v in ventas), start=Dinero(0)
+        )
+        total_comisiones_freelancer = sum(
+            (
+                c.desglose.vendedor + c.desglose.cerrador + c.desglose.punto_de_venta
+                for c in comisiones
+            ),
+            start=Dinero(0),
+        )
+        ventas_count = len(ventas)
+
+        if not configs:
+            return ResumenSplitPeriodo(
+                por_socio=(),
+                total_agencia=total_agencia,
+                total_bruto=total_bruto,
+                total_comisiones_freelancer=total_comisiones_freelancer,
+                ventas_count=ventas_count,
+            )
+
+        acumulado_por_socio = calcular_split_venta(total_agencia, configs)
+
+        resumenes: list[ResumenSocioPeriodo] = [
+            ResumenSocioPeriodo(
+                nombre=config.nombre,
+                porcentaje=config.porcentaje,
+                acumulado=acumulado_por_socio.get(config.nombre, Dinero(0)),
+            )
+            for config in configs
+        ]
+
+        return ResumenSplitPeriodo(
+            por_socio=tuple(resumenes),
+            total_agencia=total_agencia,
+            total_bruto=total_bruto,
+            total_comisiones_freelancer=total_comisiones_freelancer,
+            ventas_count=ventas_count,
         )
