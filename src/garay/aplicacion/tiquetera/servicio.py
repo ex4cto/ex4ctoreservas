@@ -12,6 +12,7 @@ from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, Resultado
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.motor import MotorComisiones
+from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
@@ -21,7 +22,6 @@ from garay.dominio.puertos.repositorios import (
     TiqueteraRepository,
     VentaRepository,
 )
-from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
 from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.socios.entidades import SocioConfig
@@ -115,8 +115,9 @@ def _construir_mensaje_privado(
             f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {_fmt_cop(desglose.cerrador)}"
         )
     if desglose.punto_de_venta.monto > 0:
+        pct_punto = snap.porcentaje_capa_punto
         lineas.append(
-            f"🏪 Punto de venta ({snap.porcentaje_capa_punto}%): {_fmt_cop(desglose.punto_de_venta)}"
+            f"🏪 Punto de venta ({pct_punto}%): {_fmt_cop(desglose.punto_de_venta)}"
         )
 
     lineas.append(f"🏢 Agencia neta: {_fmt_cop(agencia_neta)}")

@@ -335,7 +335,7 @@ async def handle_div_dia(
     cq = update.callback_query
     if cq is None:
         return DIV_CAL_DESDE
-    await cq.answer.__self__ if hasattr(cq.answer, "__self__") else None
+    await cq.answer()
 
     data: str = cq.data or ""
     # data format: rep_s:dia:desde:yyyy-mm-dd  or  rep_s:dia:hasta:yyyy-mm-dd

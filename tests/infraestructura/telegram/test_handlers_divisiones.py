@@ -263,10 +263,10 @@ class TestCalendarValidation:
         await handle_div_dia(update, context)
 
         cq = update.callback_query
-        cq.answer.assert_called_once()
-        # Should show error message in the answer (toast) or edit
-        call = cq.answer.call_args
-        answer_text = call.args[0] if call.args else call.kwargs.get("text", "")
+        # answer() called twice: initial ack (no args) + error toast (with message)
+        assert cq.answer.call_count == 2
+        last_call = cq.answer.call_args
+        answer_text = last_call.args[0] if last_call.args else last_call.kwargs.get("text", "")
         assert "anterior" in answer_text.lower() or "fin" in answer_text.lower()
 
 
