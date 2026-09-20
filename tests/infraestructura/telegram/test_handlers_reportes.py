@@ -283,6 +283,49 @@ def test_formatear_tours_sin_ventas() -> None:
     assert "No hay datos" in _formatear_tours(wf, rk, rc, 7, 2026)
 
 
+def test_formatear_resumen_ventas_incluye_seccion_metodo_pago() -> None:
+    """ResumenVentas with por_metodo_pago data → message includes the section."""
+    from garay.aplicacion.reportes.resumen_ventas import ResumenVendedor, ResumenVentas
+    from garay.dominio.comun.dinero import Dinero
+    from garay.dominio.comun.tipos import MetodoPago
+    from garay.infraestructura.telegram.handlers_reportes import _formatear_resumen_ventas
+
+    resumen = ResumenVentas(
+        mes=7,
+        año=2026,
+        total_ventas=2,
+        total_valor=Dinero(500_000),
+        ganancia_agencia=Dinero(50_000),
+        por_vendedor=(),
+        por_metodo_pago=(
+            (MetodoPago.TRANSFERENCIA, 2, Dinero(500_000)),
+        ),
+    )
+    txt = _formatear_resumen_ventas(resumen, 7, 2026)
+    assert "método de pago" in txt.lower() or "metodo de pago" in txt.lower()
+    assert "Transferencia" in txt
+    assert "2" in txt
+
+
+def test_formatear_resumen_ventas_metodo_pago_none_muestra_sin_registrar() -> None:
+    """None metodo_pago → displayed as 'Sin registrar'."""
+    from garay.aplicacion.reportes.resumen_ventas import ResumenVentas
+    from garay.dominio.comun.dinero import Dinero
+    from garay.infraestructura.telegram.handlers_reportes import _formatear_resumen_ventas
+
+    resumen = ResumenVentas(
+        mes=7,
+        año=2026,
+        total_ventas=1,
+        total_valor=Dinero(200_000),
+        ganancia_agencia=Dinero(20_000),
+        por_vendedor=(),
+        por_metodo_pago=((None, 1, Dinero(200_000)),),
+    )
+    txt = _formatear_resumen_ventas(resumen, 7, 2026)
+    assert "Sin registrar" in txt
+
+
 def test_formatear_resumen_ventas_escapa_nombre_html() -> None:
     """Slice 4: el nombre del vendedor (dato DB) debe escaparse en HTML."""
     from garay.aplicacion.reportes.resumen_ventas import ResumenVendedor, ResumenVentas

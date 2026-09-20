@@ -413,3 +413,98 @@ def test_por_dia_vacio_si_sin_ventas() -> None:
     resumen = service.ejecutar(mes=7, año=2026)
 
     assert resumen.por_dia == ()
+
+
+# ─── MetodoPago grouping tests (TDD RED) ─────────────────────────────────────
+
+
+class TestResumenVentasPorMetodoPago:
+    """Tests for the por_metodo_pago grouping on ResumenVentas."""
+
+    def test_por_metodo_pago_agrupa_conteo_y_total(self) -> None:
+        """Two ventas with same MetodoPago → one group with count=2 and summed total."""
+        from garay.dominio.comun.tipos import MetodoPago
+
+        v1 = _make_venta(valor=300_000, neto=200_000)
+        v2 = _make_venta(valor=200_000, neto=150_000)
+        v1 = Venta(
+            id=v1.id,
+            valor_venta=v1.valor_venta,
+            neto=v1.neto,
+            servicio_ids=v1.servicio_ids,
+            cliente_id=v1.cliente_id,
+            tipo_cliente=v1.tipo_cliente,
+            fecha=v1.fecha,
+            participantes=v1.participantes,
+            metodo_pago=MetodoPago.TRANSFERENCIA,
+        )
+        v2 = Venta(
+            id=v2.id,
+            valor_venta=v2.valor_venta,
+            neto=v2.neto,
+            servicio_ids=v2.servicio_ids,
+            cliente_id=v2.cliente_id,
+            tipo_cliente=v2.tipo_cliente,
+            fecha=v2.fecha,
+            participantes=v2.participantes,
+            metodo_pago=MetodoPago.TRANSFERENCIA,
+        )
+        c1 = _make_comision(v1.id)
+        c2 = _make_comision(v2.id)
+        service = _make_service(ventas=[v1, v2], comisiones=[c1, c2])
+        resumen = service.ejecutar(mes=7, año=2026)
+
+        grupos = {metodo: (cnt, total) for metodo, cnt, total in resumen.por_metodo_pago}
+        assert MetodoPago.TRANSFERENCIA in grupos
+        cnt, total = grupos[MetodoPago.TRANSFERENCIA]
+        assert cnt == 2
+        assert total == Dinero(500_000)
+
+    def test_por_metodo_pago_agrupa_distintos_metodos(self) -> None:
+        """Ventas with different MetodoPago values → separate groups."""
+        from garay.dominio.comun.tipos import MetodoPago
+
+        v_tf = _make_venta(valor=300_000, neto=200_000)
+        v_ef = _make_venta(valor=150_000, neto=100_000)
+        v_tf = Venta(
+            id=v_tf.id, valor_venta=v_tf.valor_venta, neto=v_tf.neto,
+            servicio_ids=v_tf.servicio_ids, cliente_id=v_tf.cliente_id,
+            tipo_cliente=v_tf.tipo_cliente, fecha=v_tf.fecha,
+            participantes=v_tf.participantes,
+            metodo_pago=MetodoPago.TRANSFERENCIA,
+        )
+        v_ef = Venta(
+            id=v_ef.id, valor_venta=v_ef.valor_venta, neto=v_ef.neto,
+            servicio_ids=v_ef.servicio_ids, cliente_id=v_ef.cliente_id,
+            tipo_cliente=v_ef.tipo_cliente, fecha=v_ef.fecha,
+            participantes=v_ef.participantes,
+            metodo_pago=MetodoPago.EFECTIVO,
+        )
+        c1 = _make_comision(v_tf.id)
+        c2 = _make_comision(v_ef.id)
+        service = _make_service(ventas=[v_tf, v_ef], comisiones=[c1, c2])
+        resumen = service.ejecutar(mes=7, año=2026)
+
+        grupos = {metodo: (cnt, total) for metodo, cnt, total in resumen.por_metodo_pago}
+        assert MetodoPago.TRANSFERENCIA in grupos
+        assert MetodoPago.EFECTIVO in grupos
+        assert grupos[MetodoPago.TRANSFERENCIA][0] == 1
+        assert grupos[MetodoPago.EFECTIVO][0] == 1
+
+    def test_por_metodo_pago_none_agrupa_separado(self) -> None:
+        """Venta with metodo_pago=None → appears as None key in the grouping."""
+        v1 = _make_venta(valor=200_000, neto=100_000)
+        # v1 has metodo_pago=None by default
+        c1 = _make_comision(v1.id)
+        service = _make_service(ventas=[v1], comisiones=[c1])
+        resumen = service.ejecutar(mes=7, año=2026)
+
+        grupos = {metodo: (cnt, total) for metodo, cnt, total in resumen.por_metodo_pago}
+        assert None in grupos
+        assert grupos[None][0] == 1
+
+    def test_por_metodo_pago_vacio_si_sin_ventas(self) -> None:
+        """No ventas → por_metodo_pago is empty tuple."""
+        service = _make_service(ventas=[], comisiones=[])
+        resumen = service.ejecutar(mes=7, año=2026)
+        assert resumen.por_metodo_pago == ()

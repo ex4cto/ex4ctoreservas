@@ -99,6 +99,18 @@ def _formatear_resumen_ventas(resumen: object, mes: int, año: int) -> str:
                         comision=f"{v.comision.monto:,.0f}",
                     )
                 )
+    if resumen.por_metodo_pago:
+        lineas.append("")
+        lineas.append(obtener_mensaje("reporte.ventas.metodo_pago_header"))
+        for metodo, ventas_cnt, valor in resumen.por_metodo_pago:
+            nombre_metodo = metodo.value.capitalize() if metodo is not None else "Sin registrar"
+            lineas.append(
+                obtener_mensaje("reporte.ventas.metodo_pago_item").format(
+                    metodo=nombre_metodo,
+                    ventas=ventas_cnt,
+                    valor=_fmt_cop(valor.monto),
+                )
+            )
     return "\n".join(lineas)
 
 

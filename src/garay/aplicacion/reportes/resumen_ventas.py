@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.tipos import MetodoPago
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
@@ -45,6 +46,7 @@ class ResumenVentas:
     por_vendedor: tuple[ResumenVendedor, ...]
     por_canal: tuple[ResumenCanal, ...] = ()
     por_dia: tuple[tuple[date, int, Dinero], ...] = ()
+    por_metodo_pago: tuple[tuple[MetodoPago | None, int, Dinero], ...] = ()
 
 
 class ResumenVentasService:
@@ -180,6 +182,14 @@ class ResumenVentasService:
             sorted((d, conteo_dia[d], valor_dia[d]) for d in conteo_dia)
         )
 
+        metodo_contador: dict[MetodoPago | None, tuple[int, Dinero]] = {}
+        for v in ventas:
+            cnt, total = metodo_contador.get(v.metodo_pago, (0, Dinero(0)))
+            metodo_contador[v.metodo_pago] = (cnt + 1, total + v.valor_venta)
+        por_metodo_pago = tuple(
+            (metodo, cnt, total) for metodo, (cnt, total) in metodo_contador.items()
+        )
+
         return ResumenVentas(
             mes=mes,
             año=año,
@@ -189,4 +199,5 @@ class ResumenVentasService:
             por_vendedor=por_vendedor,
             por_canal=por_canal,
             por_dia=por_dia,
+            por_metodo_pago=por_metodo_pago,
         )

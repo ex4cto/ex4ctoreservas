@@ -576,6 +576,10 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.ventas.vendedor_item": {
         Idioma.ES: "• {nombre}: {ventas} ventas · comisión ${comision}"
     },
+    "reporte.ventas.metodo_pago_header": {Idioma.ES: "💳 <b>Por método de pago:</b>"},
+    "reporte.ventas.metodo_pago_item": {
+        Idioma.ES: "  • {metodo}: {ventas} ventas · ${valor}"
+    },
     "reporte.caja.encabezado": {
         Idioma.ES: (
             "💰 <b>Flujo de Caja — {mes} {año}</b>\n"
