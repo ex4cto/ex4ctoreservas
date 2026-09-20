@@ -195,7 +195,7 @@ class TestRenderMenu:
 
     def test_contiene_cabecera_bienvenida(self) -> None:
         text = render_menu(TierComando.FREELANCER)
-        assert "Garay Tours" in text
+        assert "Ex4cto reservas" in text
 
     def test_grupo_ventas_presente_para_todos(self) -> None:
         text = render_menu(TierComando.FREELANCER)

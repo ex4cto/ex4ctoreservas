@@ -115,7 +115,7 @@ def render_menu(tier: TierComando) -> str:
     """
     accessible = comandos_para_tier(tier)
 
-    lines: list[str] = ["👋 <b>Bienvenido a Garay Tours</b>"]
+    lines: list[str] = ["👋 <b>Bienvenido a Ex4cto reservas</b>"]
 
     # Iterate groups in declaration order (StrEnum preserves insertion order).
     for grupo in GrupoComando:
