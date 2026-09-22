@@ -43,8 +43,10 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
+    ComisionRegistradaRepository,
     FreelancerRepository,
     ServicioRepository,
+    SocioConfigRepository,
     VentaRepository,
 )
 from garay.dominio.ventas.entidades import Venta
@@ -1967,6 +1969,197 @@ async def _handle_confirmar_editar_participante(
     return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
 
+async def _construir_textos_edicion_financiera(
+    context: ContextTypes.DEFAULT_TYPE,
+    venta: Venta,
+    *,
+    campo_label: str,
+    anterior: str,
+    nuevo: str,
+    motivo: str,
+    actor: str,
+) -> tuple[str, str, str]:
+    """Build the three notification texts for a financial edit (neto or valor_venta).
+
+    Returns (mensaje_grupo_text, dm_socios_text, dm_admins_text).
+    All three are pre-formatted HTML strings ready to pass to _notificar_edicion.
+    Every step is best-effort: missing repos/data fall back to safe defaults.
+    """
+    # --- Resolve client data ---
+    cliente_repo: ClienteRepository | None = context.bot_data.get("cliente_repo")
+    cliente_nombre = "—"
+    telefono_line = ""
+    hotel_line = ""
+    if cliente_repo is not None:
+        cliente = await asyncio.to_thread(cliente_repo.buscar_por_id, venta.cliente_id)
+        if cliente is not None:
+            cliente_nombre = cliente.nombre
+            if cliente.telefono:
+                telefono_line = (
+                    f"📞 Teléfono: {escape(cliente.telefono, quote=False)}\n"
+                )
+            if cliente.hotel:
+                hab = (
+                    f" | Hab: {escape(cliente.numero_habitacion, quote=False)}"
+                    if cliente.numero_habitacion
+                    else ""
+                )
+                hotel_line = (
+                    f"🏨 Hotel: {escape(cliente.hotel, quote=False)}{hab}\n"
+                )
+
+    # --- Resolve tour names ---
+    servicio_repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    tour_nombres: list[str] = []
+    if servicio_repo is not None:
+        for sid in venta.servicio_ids:
+            svc = await asyncio.to_thread(servicio_repo.buscar_por_id, sid)
+            if svc is not None:
+                tour_nombres.append(escape(svc.nombre, quote=False))
+    tours_str = ", ".join(tour_nombres) if tour_nombres else "—"
+
+    # --- Resolve commissions ---
+    comision_repo: ComisionRegistradaRepository | None = context.bot_data.get(
+        "comision_registrada_repo"
+    )
+    desglose = None
+    if comision_repo is not None:
+        comision = await asyncio.to_thread(comision_repo.buscar_por_venta_id, venta.id)
+        if comision is not None:
+            desglose = comision.desglose
+
+    # --- Resolve socios config ---
+    socios_config_repo: SocioConfigRepository | None = context.bot_data.get(
+        "socios_config_repo"
+    )
+    socios = []
+    if socios_config_repo is not None:
+        try:
+            socios = await asyncio.to_thread(socios_config_repo.listar)
+        except Exception:
+            socios = []
+
+    # --- Build optional line fragments ---
+    destinos_line = f"📍 Destino: {tours_str}\n"
+    fecha_line = f"📅 Fecha: {venta.fecha:%d/%m/%Y}\n"
+    cliente_line = f"👤 Cliente: {escape(cliente_nombre, quote=False)}\n"
+    pax_ninos = (
+        f" / {venta.ninos} niño(s)" if venta.ninos > 0 else ""
+    )
+    pax_line = f"👥 Pax: {venta.adultos} adultos{pax_ninos}\n"
+    canal_label = _TIPO_CLIENTE_LABEL.get(venta.tipo_cliente, venta.tipo_cliente.value)
+    canal_line = (
+        f"\n📲 Canal: {escape(canal_label, quote=False)}"
+        if venta.canal_origen or True  # canal is always relevant
+        else ""
+    )
+    abono_dinero = venta.abono
+    abono_line = ""
+    if abono_dinero is not None and abono_dinero.monto > 0:
+        abono_line = f" | Abono: {abono_dinero}"
+    saldo = (
+        venta.valor_venta - abono_dinero
+        if abono_dinero is not None
+        else venta.valor_venta
+    )
+
+    # Commissions section for group message
+    tipo_label = venta.tipo_cliente.value
+    agencia_com = str(desglose.agencia) if desglose else "—"
+    vendedor_line_com = ""
+    cerrador_line_com = ""
+    if desglose is not None:
+        snap = desglose.snapshot
+        if venta.participantes.vendedor_nombre and desglose.vendedor.monto > 0:
+            vendedor_line_com = (
+                f"\n  Vendedor ({escape(venta.participantes.vendedor_nombre, quote=False)})"
+                f": {desglose.vendedor}"
+            )
+        if venta.participantes.cerrador_nombre and desglose.cerrador.monto > 0:
+            cerrador_line_com = (
+                f"\n  Cerrador ({escape(venta.participantes.cerrador_nombre, quote=False)})"
+                f": {desglose.cerrador}"
+            )
+
+    mensaje_grupo_text = obtener_mensaje("gestion_ventas.venta_actualizada_grupo").format(
+        destinos_line=destinos_line,
+        fecha_line=fecha_line,
+        cliente_line=cliente_line,
+        telefono_line=telefono_line,
+        hotel_line=hotel_line,
+        pax_line=pax_line,
+        valor=str(venta.valor_venta),
+        abono_line=abono_line,
+        saldo=str(saldo),
+        tipo=escape(tipo_label, quote=False),
+        canal_line=canal_line,
+        agencia=agencia_com,
+        vendedor_line=vendedor_line_com,
+        cerrador_line=cerrador_line_com,
+        campo_label=escape(campo_label, quote=False),
+        anterior=escape(anterior, quote=False),
+        nuevo=escape(nuevo, quote=False),
+        motivo=escape(motivo, quote=False),
+        actor=escape(actor, quote=False),
+    )
+
+    # --- Build DM socios text ---
+    ganancia = venta.ganancia
+    neto = venta.neto
+    comisiones_lines = ""
+    if desglose is not None:
+        snap = desglose.snapshot
+        if venta.participantes.vendedor_nombre and desglose.vendedor.monto > 0:
+            comisiones_lines += (
+                f"👤 Vendedor ({snap.porcentaje_vendedor}%): {desglose.vendedor}\n"
+            )
+        if venta.participantes.cerrador_nombre and desglose.cerrador.monto > 0:
+            comisiones_lines += (
+                f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {desglose.cerrador}\n"
+            )
+        if desglose.punto_de_venta.monto > 0:
+            comisiones_lines += (
+                f"🏪 Punto de venta ({snap.porcentaje_capa_punto}%): {desglose.punto_de_venta}\n"
+            )
+    agencia_neta = str(desglose.agencia) if desglose else "—"
+    split_lines = ""
+    for socio in socios:
+        parte = desglose.agencia.aplicar_porcentaje(socio.porcentaje) if desglose else None
+        if parte is not None:
+            split_lines += (
+                f"   📊 {escape(socio.nombre, quote=False)} ({socio.porcentaje}%): {parte}\n"
+            )
+    # mi_parte is the total agencia net (shown to every socio equally)
+    mi_parte = str(desglose.agencia) if desglose else "—"
+
+    dm_socios_text = obtener_mensaje("gestion_ventas.dm_socio_edicion_financiera").format(
+        destinos_line=destinos_line,
+        fecha_line=f"📅 Fecha: {venta.fecha:%d/%m/%Y}",
+        valor=str(venta.valor_venta),
+        neto=str(neto),
+        ganancia=str(ganancia),
+        comisiones_lines=comisiones_lines,
+        agencia=agencia_neta,
+        split_lines=split_lines,
+        mi_parte=mi_parte,
+        campo_label=escape(campo_label, quote=False),
+        anterior=escape(anterior, quote=False),
+        nuevo=escape(nuevo, quote=False),
+    )
+
+    # --- Build DM admins text ---
+    dm_admins_text = obtener_mensaje("gestion_ventas.dm_admin_edicion").format(
+        cliente=escape(cliente_nombre, quote=False),
+        tours=tours_str,
+        campo_label=escape(campo_label, quote=False),
+        anterior=escape(anterior, quote=False),
+        nuevo=escape(nuevo, quote=False),
+        actor=escape(actor, quote=False),
+    )
+
+    return mensaje_grupo_text, dm_socios_text, dm_admins_text
+
+
 async def _handle_confirmar_editar_neto(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -2041,6 +2234,8 @@ async def _handle_confirmar_editar_neto(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
+    # Capture the old value before the service mutates the entity in-place.
+    anterior_neto_str = str(venta.neto)
     mensaje_key: str | None = None
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
@@ -2060,17 +2255,33 @@ async def _handle_confirmar_editar_neto(
         logger.exception("Unexpected error in _handle_confirmar_editar_neto")
         mensaje_key = "gestion_ventas.error_generico"
     else:
-        _msg_neto = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            rol="Neto",
-            nuevo=escape(nuevo_neto_str, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
+        # Reload venta from repo so it reflects the updated neto and recalculated comisiones.
+        venta_actualizada: Venta | None = None
+        if venta_repo is not None:
+            venta_actualizada = await asyncio.to_thread(
+                venta_repo.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        _venta_para_notif = venta_actualizada if venta_actualizada is not None else venta
+        campo_label_neto = obtener_mensaje("gestion_ventas.campo_neto")
+        mensaje_grupo_text, dm_socios_text, dm_admins_text = (
+            await _construir_textos_edicion_financiera(
+                context,
+                _venta_para_notif,
+                campo_label=campo_label_neto,
+                anterior=anterior_neto_str,
+                nuevo=nuevo_neto_str,
+                motivo=motivo,
+                actor=nombre or "—",
+            )
         )
-        # venta is already loaded above to get the moneda.
         await _notificar_edicion(
-            context, venta, _msg_neto, campo_label="Neto", es_financiero=True
+            context,
+            _venta_para_notif,
+            mensaje_grupo_text,
+            campo_label=campo_label_neto,
+            es_financiero=True,
+            dm_socios_text=dm_socios_text,
+            dm_admins_text=dm_admins_text,
         )
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -2165,6 +2376,8 @@ async def _handle_confirmar_editar_valor_venta(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
+    # Capture the old value before the service mutates the entity in-place.
+    anterior_vv_str = str(venta.valor_venta)
     mensaje_key: str | None = None
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
@@ -2186,17 +2399,33 @@ async def _handle_confirmar_editar_valor_venta(
         logger.exception("Unexpected error in _handle_confirmar_editar_valor_venta")
         mensaje_key = "gestion_ventas.error_generico"
     else:
-        _msg_vv = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            rol="Valor de venta",
-            nuevo=escape(nuevo_vv_str, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
+        # Reload venta from repo so it reflects the updated valor_venta and recalculated comisiones.
+        venta_actualizada_vv: Venta | None = None
+        if venta_repo is not None:
+            venta_actualizada_vv = await asyncio.to_thread(
+                venta_repo.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        _venta_para_notif_vv = venta_actualizada_vv if venta_actualizada_vv is not None else venta
+        campo_label_vv = obtener_mensaje("gestion_ventas.campo_valor_venta")
+        mensaje_grupo_text, dm_socios_text, dm_admins_text = (
+            await _construir_textos_edicion_financiera(
+                context,
+                _venta_para_notif_vv,
+                campo_label=campo_label_vv,
+                anterior=anterior_vv_str,
+                nuevo=nuevo_vv_str,
+                motivo=motivo,
+                actor=nombre or "—",
+            )
         )
-        # venta is already loaded above to get the moneda.
         await _notificar_edicion(
-            context, venta, _msg_vv, campo_label="Valor de venta", es_financiero=True
+            context,
+            _venta_para_notif_vv,
+            mensaje_grupo_text,
+            campo_label=campo_label_vv,
+            es_financiero=True,
+            dm_socios_text=dm_socios_text,
+            dm_admins_text=dm_admins_text,
         )
         if update.effective_message:
             await update.effective_message.reply_text(
