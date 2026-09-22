@@ -186,22 +186,24 @@ class TestEditarFechaVentaService:
         ventas_repo.guardar.assert_not_called()
         auditoria_repo.guardar.assert_not_called()
 
-    def test_dos_ediciones_previas_bloquean_la_tercera(self) -> None:
-        """With 2 prior EDITAR_FECHA records, the 3rd edit must be blocked — nothing persisted."""
+    def test_informativo_no_tiene_limite_ediciones(self) -> None:
+        """Informational edits (fecha) are now unlimited — many prior records must NOT block.
+
+        Behavior changed in PR 2 (editar-neto-valor-venta): informational fields
+        use verificar_limite_ediciones_informativo which is a no-op.
+        """
         venta = _make_venta()
         ventas_repo, auditoria_repo = _make_repos(venta)
+        # Even with many prior EDITAR_FECHA records, informational verifier is a no-op.
         auditoria_repo.listar_por_venta_id.return_value = [
-            _rec(AccionAuditoria.EDITAR_FECHA),
-            _rec(AccionAuditoria.EDITAR_FECHA),
+            _rec(AccionAuditoria.EDITAR_FECHA)
+            for _ in range(10)
         ]
         service = EditarFechaVentaService(ventas=ventas_repo, auditoria=auditoria_repo)
 
-        with pytest.raises(LimiteEdicionesAlcanzado):
-            service.ejecutar(_make_cmd(venta_id=venta.id))
-
-        venta.cambiar_fecha.assert_not_called()
-        ventas_repo.guardar.assert_not_called()
-        auditoria_repo.guardar.assert_not_called()
+        # Should NOT raise — informational edits are now unlimited per design change R3.
+        service.ejecutar(_make_cmd(venta_id=venta.id))
+        auditoria_repo.guardar.assert_called_once()
 
     def test_una_edicion_previa_permite_editar(self) -> None:
         """Triangulation: with only 1 prior edit the 2nd edit is still allowed."""

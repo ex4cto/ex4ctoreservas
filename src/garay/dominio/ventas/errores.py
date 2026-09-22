@@ -52,3 +52,19 @@ class PuntoDeVentaRequerido(ErrorDeDominio):
 
 class MismosParticipantes(ErrorDeDominio):
     """Se intenta cambiar los participantes por los mismos valores ya registrados."""
+
+
+class NetoIgualOSuperaValorVenta(ErrorDeDominio):
+    """El nuevo neto es igual o mayor al valor de venta (ganancia cero o negativa bloqueada)."""
+
+
+class ValorVentaMenorQueAbono(ErrorDeDominio):
+    """El nuevo valor de venta es menor que el abono ya registrado."""
+
+
+class MismoNeto(ErrorDeDominio):
+    """Idempotency guard: el nuevo neto es idéntico al neto actual."""
+
+
+class MismoValorVenta(ErrorDeDominio):
+    """Idempotency guard: el nuevo valor de venta es idéntico al valor actual."""

@@ -256,12 +256,14 @@ class TestEditarCanalVentaService:
     # --- limit reached → LimiteEdicionesAlcanzado ---
 
     def test_limite_ediciones_raises_nada_guardado(self) -> None:
+        # Financial limit: MAX=3, counting EDITAR_CANAL (x3)
         venta = _make_venta_mock()
         ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo = _make_repos(
             venta,
             auditoria_records=[
-                _rec(AccionAuditoria.EDITAR_FECHA),
-                _rec(AccionAuditoria.EDITAR_FECHA),
+                _rec(AccionAuditoria.EDITAR_CANAL),
+                _rec(AccionAuditoria.EDITAR_CANAL),
+                _rec(AccionAuditoria.EDITAR_CANAL),
             ],
         )
         service = _make_service(ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo)

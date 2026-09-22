@@ -1578,8 +1578,10 @@ class TestNvtHorStatesBotWiring:
 
         for _group, handlers in app.handlers.items():
             for h in handlers:
-                # Use NVT_NOMBRE (232) to discriminate: GV also has state 230
-                if isinstance(h, ConversationHandler) and 232 in h.states:
+                # Use NVT_HOR_AGREGAR (241) to discriminate: unique to nuevo_tour handler.
+                # NVT_NOMBRE (232) is no longer a safe discriminator because GV_EDIT_NETO
+                # also uses integer 232 in the gestion_ventas ConversationHandler.
+                if isinstance(h, ConversationHandler) and 241 in h.states:
                     return h
         return None
 

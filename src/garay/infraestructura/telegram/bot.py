@@ -222,14 +222,18 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_CANAL_TIPO,
     GV_EDIT_CANAL_TIPO_PATTERN,
     GV_EDIT_FECHA,
+    GV_EDIT_NETO,
     GV_EDIT_PARTICIPANTE,
     GV_EDIT_PARTICIPANTE_PATTERN,
     GV_EDIT_VALOR,
+    GV_EDIT_VALOR_VENTA,
     GV_FILTRO,
     GV_MOTIVO,
     GV_RANGO_INPUT,
     GV_SELECCIONAR,
     cmd_gestionar_ventas,
+    handle_gv_capturar_neto,
+    handle_gv_capturar_valor_venta,
     handle_gv_confirmar,
     handle_gv_detalle,
     handle_gv_edit_campo,
@@ -1069,6 +1073,8 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_EDIT_PARTICIPANTE: [
                 _CB(handle_gv_edit_participante, pattern=GV_EDIT_PARTICIPANTE_PATTERN)
             ],
+            GV_EDIT_NETO: [MessageHandler(_TEXT, handle_gv_capturar_neto)],
+            GV_EDIT_VALOR_VENTA: [MessageHandler(_TEXT, handle_gv_capturar_valor_venta)],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),

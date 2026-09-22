@@ -90,6 +90,11 @@ def _make_context(
     ctx = MagicMock()
     ctx.user_data = {}
 
+    # bot must be an AsyncMock so _notificar_edicion can await bot.send_message.
+    ctx.bot = AsyncMock()
+    ctx.bot.send_message = AsyncMock(return_value=MagicMock(message_id=999))
+    ctx.bot.delete_message = AsyncMock()
+
     venta_repo = MagicMock()
     ventas_list = ventas or []
     venta_repo.listar_para_gestion.return_value = ventas_list
@@ -108,6 +113,9 @@ def _make_context(
     servicio.nombre = "Tour Isla"
     servicio_repo.buscar_por_id.return_value = servicio
 
+    socios_config_repo = MagicMock()
+    socios_config_repo.listar.return_value = []
+
     anular_service = MagicMock()
     editar_fecha_service = MagicMock()
     editar_cliente_service = MagicMock()
@@ -123,6 +131,7 @@ def _make_context(
         "editar_cliente_venta_service": editar_cliente_service,
         "notificador": notificador,
         "grupo_id": "-1001234567",
+        "socios_config_repo": socios_config_repo,
     }
     return ctx
 
@@ -1070,7 +1079,7 @@ class TestNotificarGrupoAnular:
 class TestNotificarGrupoEditar:
     @pytest.mark.asyncio
     async def test_editar_success_calls_notificador_once(self) -> None:
-        """On successful editar, notificador.notificar must be called once."""
+        """On successful editar, group notification must be sent via bot.send_message."""
         venta_id = uuid.uuid4()
         nueva_fecha_str = datetime.datetime(2026, 9, 20, 10, 30).isoformat()
         update = _make_update(callback_data="gv_confirmar", user_id=123)
@@ -1082,11 +1091,15 @@ class TestNotificarGrupoEditar:
         ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
         ctx.user_data["gv_tours"] = "Tour Isla"
 
-        result = await handle_gv_confirmar(update, ctx)
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            result = await handle_gv_confirmar(update, ctx)
 
         assert result == ConversationHandler.END
-        notificador = ctx.bot_data["notificador"]
-        notificador.notificar.assert_called_once()
+        # Notification now goes through _notificar_edicion → bot.send_message.
+        ctx.bot.send_message.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_editar_notificador_message_contains_cliente_tour_fecha_motivo(self) -> None:
@@ -1102,18 +1115,29 @@ class TestNotificarGrupoEditar:
         ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
         ctx.user_data["gv_tours"] = "Tour Isla"
 
-        await handle_gv_confirmar(update, ctx)
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
 
-        notificador = ctx.bot_data["notificador"]
-        call_args = notificador.notificar.call_args
-        mensaje_arg: str = call_args[0][0]
-        grupo_id_arg: str = call_args[0][1]
-
-        assert "Juan Perez" in mensaje_arg
-        assert "Tour Isla" in mensaje_arg
-        assert "20/09/2026" in mensaje_arg
-        assert "Cambio de plan del pasajero" in mensaje_arg
-        assert grupo_id_arg == "-1001234567"
+        # Notification now goes via bot.send_message; verify message content.
+        ctx.bot.send_message.assert_awaited()
+        call_kwargs = ctx.bot.send_message.await_args
+        assert call_kwargs is not None
+        # Extract the text argument (first positional or keyword).
+        text_arg: str = (
+            call_kwargs.kwargs.get("text") or
+            (call_kwargs.args[1] if len(call_kwargs.args) > 1 else "")
+        )
+        chat_id_arg = call_kwargs.kwargs.get("chat_id") or (
+            call_kwargs.args[0] if call_kwargs.args else ""
+        )
+        assert "Juan Perez" in text_arg
+        assert "Tour Isla" in text_arg
+        assert "20/09/2026" in text_arg
+        assert "Cambio de plan del pasajero" in text_arg
+        assert chat_id_arg == "-1001234567"
 
     @pytest.mark.asyncio
     async def test_editar_notificador_raises_flow_still_ends(self) -> None:
@@ -1740,6 +1764,7 @@ class TestHandleGvConfirmarEditarCanal:
 
     @pytest.mark.asyncio
     async def test_success_calls_notificar_grupo(self) -> None:
+        """On success, group notification is sent via bot.send_message (delete+send)."""
         venta_id = uuid.uuid4()
         update = _make_update(callback_data="gv_confirmar", user_id=123)
         ctx = _make_context_canal()
@@ -1749,10 +1774,14 @@ class TestHandleGvConfirmarEditarCanal:
         ctx.user_data["gv_nuevo_tipo"] = "DIGITAL"
         ctx.user_data["gv_punto_id"] = None
 
-        await handle_gv_confirmar(update, ctx)
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
 
-        notificador = ctx.bot_data["notificador"]
-        notificador.notificar.assert_called_once()
+        # Notification now goes via _notificar_edicion → bot.send_message.
+        ctx.bot.send_message.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_mismo_canal_shows_canal_igual(self) -> None:
@@ -2161,6 +2190,7 @@ class TestHandleGvConfirmarEditarParticipante:
 
     @pytest.mark.asyncio
     async def test_success_calls_notificar_grupo(self) -> None:
+        """On success, notification is sent via bot.send_message (delete+send)."""
         venta = _make_venta()
         venta.participantes.vendedor_id = uuid.uuid4()
         venta.participantes.vendedor_nombre = "Ana"
@@ -2177,7 +2207,11 @@ class TestHandleGvConfirmarEditarParticipante:
         ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
         ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
 
-        await handle_gv_confirmar(update, ctx)
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
 
-        notificador = ctx.bot_data["notificador"]
-        notificador.notificar.assert_called_once()
+        # Notification now goes via _notificar_edicion → bot.send_message.
+        ctx.bot.send_message.assert_awaited()

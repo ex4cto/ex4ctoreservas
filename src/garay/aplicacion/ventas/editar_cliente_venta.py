@@ -11,7 +11,7 @@ import datetime
 import uuid
 
 from garay.aplicacion.ventas.comandos import EditarClienteVentaComando
-from garay.aplicacion.ventas.limite_ediciones import verificar_limite_ediciones
+from garay.aplicacion.ventas.limite_ediciones import verificar_limite_ediciones_informativo
 from garay.dominio.clientes.errores import ClienteNoEncontrado
 from garay.dominio.puertos.repositorios import (
     AuditoriaVentaRepository,
@@ -41,7 +41,7 @@ class EditarClienteVentaService:
         if venta is None:
             raise VentaNoEncontrada(f"No se encontró la venta con id={cmd.venta_id}.")
 
-        verificar_limite_ediciones(self._auditoria, cmd.venta_id)
+        verificar_limite_ediciones_informativo(self._auditoria, cmd.venta_id)
 
         cliente = self._clientes.buscar_por_id(venta.cliente_id)
         if cliente is None:

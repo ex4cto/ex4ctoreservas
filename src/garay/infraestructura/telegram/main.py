@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import base64
-from decimal import Decimal
 import logging
+from decimal import Decimal
 from pathlib import Path
 
 from telegram import Update
 
 from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
 from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
+from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
 from garay.aplicacion.egresos.gestionar_categorias import GestionarCategoriasService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
-from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
@@ -45,7 +45,9 @@ from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
+from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.conciliacion.motor import MotorConciliacion
@@ -75,15 +77,15 @@ from garay.infraestructura.persistencia.repositorios.conciliaciones import (
     SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
-from garay.infraestructura.persistencia.repositorios.obligaciones_hotel import (
-    SQLAObligacionHotelRepository,
-)
 from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
 from garay.infraestructura.persistencia.repositorios.freelancers import SQLAFreelancerRepository
 from garay.infraestructura.persistencia.repositorios.gastos_recurrentes import (
     SQLAGastoRecurrenteRepository,
 )
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
+from garay.infraestructura.persistencia.repositorios.obligaciones_hotel import (
+    SQLAObligacionHotelRepository,
+)
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
@@ -150,6 +152,22 @@ def main() -> None:
         motor=MotorComisiones(),
     )
     editar_participantes_venta_service = EditarParticipantesVentaService(
+        ventas=ventas_repo,
+        auditoria=auditoria_venta_repo,
+        reglas_repo=reglas_repo,
+        puntos_repo=pdv_repo,
+        comisiones_repo=comisiones_repo,
+        motor=MotorComisiones(),
+    )
+    editar_neto_venta_service = EditarNetoVentaService(
+        ventas=ventas_repo,
+        auditoria=auditoria_venta_repo,
+        reglas_repo=reglas_repo,
+        puntos_repo=pdv_repo,
+        comisiones_repo=comisiones_repo,
+        motor=MotorComisiones(),
+    )
+    editar_valor_venta_service = EditarValorVentaService(
         ventas=ventas_repo,
         auditoria=auditoria_venta_repo,
         reglas_repo=reglas_repo,
@@ -457,6 +475,8 @@ def main() -> None:
             "editar_cliente_venta_service": editar_cliente_venta_service,
             "editar_canal_venta_service": editar_canal_venta_service,
             "editar_participantes_venta_service": editar_participantes_venta_service,
+            "editar_neto_venta_service": editar_neto_venta_service,
+            "editar_valor_venta_service": editar_valor_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
             "cotizacion_service": generar_cotizacion_service,
             "notificador_email": notificador_email,

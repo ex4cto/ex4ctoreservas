@@ -952,6 +952,101 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "🙍 Por: {actor}"
         )
     },
+    # --- Gestión de ventas: editar neto y valor de venta ---
+    "gestion_ventas.campo_neto": {Idioma.ES: "💲 Neto"},
+    "gestion_ventas.campo_valor_venta": {Idioma.ES: "💰 Valor de venta"},
+    "gestion_ventas.pedir_neto": {
+        Idioma.ES: "Neto actual: {actual}\n\nEscribe el nuevo neto (solo número):"
+    },
+    "gestion_ventas.pedir_valor_venta": {
+        Idioma.ES: "Valor actual: {actual}\n\nEscribe el nuevo valor de venta (solo número):"
+    },
+    "gestion_ventas.neto_invalido": {
+        Idioma.ES: "Valor inválido. Escribe un número mayor a cero:"
+    },
+    "gestion_ventas.valor_venta_invalido": {
+        Idioma.ES: "Valor inválido. Escribe un número mayor a cero:"
+    },
+    "gestion_ventas.neto_igual": {
+        Idioma.ES: "El neto ya es ese valor. No se realizó ningún cambio."
+    },
+    "gestion_ventas.valor_venta_igual": {
+        Idioma.ES: "El valor de venta ya es ese valor. No se realizó ningún cambio."
+    },
+    "gestion_ventas.neto_supera_valor": {
+        Idioma.ES: "⚠️ El neto no puede ser igual o mayor al valor de venta."
+    },
+    "gestion_ventas.valor_menor_abono": {
+        Idioma.ES: "⚠️ El valor de venta no puede ser menor al abono ya registrado."
+    },
+    "gestion_ventas.confirmar_editar_neto": {
+        Idioma.ES: (
+            "¿Confirmas cambiar el <b>neto</b> a <b>{valor}</b>?\n"
+            "Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.confirmar_editar_valor_venta": {
+        Idioma.ES: (
+            "¿Confirmas cambiar el <b>valor de venta</b> a <b>{valor}</b>?\n"
+            "Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.neto_editado": {Idioma.ES: "✅ Neto actualizado correctamente."},
+    "gestion_ventas.valor_venta_editado": {
+        Idioma.ES: "✅ Valor de venta actualizado correctamente."
+    },
+    "gestion_ventas.venta_actualizada_grupo": {
+        Idioma.ES: (
+            "✏️ <b>Venta actualizada</b>\n"
+            "Agencia Garay Tours\n\n"
+            "{destinos_line}"
+            "{fecha_line}"
+            "{cliente_line}"
+            "{telefono_line}"
+            "{hotel_line}"
+            "{pax_line}"
+            "💰 Valor: {valor}"
+            "{abono_line}\n"
+            "🧾 Saldo pendiente: {saldo}\n"
+            "🏷 Tipo: {tipo}"
+            "{canal_line}\n\n"
+            "Comisiones:\n"
+            "  Agencia: {agencia}"
+            "{vendedor_line}"
+            "{cerrador_line}\n\n"
+            "━━━━━━━\n"
+            "📝 {campo_label} actualizado\n"
+            "  Antes: {anterior} → Ahora: {nuevo}\n"
+            "  Motivo: {motivo}\n"
+            "  Por: {actor}"
+        )
+    },
+    "gestion_ventas.dm_socio_edicion_financiera": {
+        Idioma.ES: (
+            "💰 <b>Venta modificada — tu parte actualizada</b>\n\n"
+            "{destinos_line}"
+            "{fecha_line}\n"
+            "💵 Bruto: {valor}\n"
+            "🏭 Neto operador: {neto}\n"
+            "📈 Ganancia: {ganancia}\n"
+            "{comisiones_lines}"
+            "🏢 Agencia neta: {agencia}\n\n"
+            "{split_lines}"
+            "✅ Tu parte: {mi_parte}\n\n"
+            "📝 Cambio: {campo_label} {anterior} → {nuevo}"
+        )
+    },
+    "gestion_ventas.dm_admin_edicion": {
+        Idioma.ES: (
+            "🔔 <b>Edición de venta registrada</b>\n\n"
+            "👤 Cliente: {cliente}\n"
+            "📍 Tour: {tours}\n"
+            "📝 {campo_label}: {anterior} → {nuevo}\n"
+            "🙍 Por: {actor}"
+        )
+    },
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},

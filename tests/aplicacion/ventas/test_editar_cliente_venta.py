@@ -202,11 +202,15 @@ class TestEditarClienteVentaService:
         auditoria_repo.guardar.assert_not_called()
         clientes_repo.guardar.assert_not_called()
 
-    def test_limite_dos_ediciones_bloquea(self) -> None:
+    def test_informativo_no_tiene_limite_ediciones(self) -> None:
+        """Informational edits (cliente) are now unlimited per design change R3."""
         cliente = _make_cliente()
         venta = _make_venta(cliente.id)
         ventas_repo, clientes_repo, auditoria_repo = _make_repos(venta, cliente)
+        # Many prior informational edits must NOT block the service.
         auditoria_repo.listar_por_venta_id.return_value = [
+            _rec(AccionAuditoria.EDITAR_FECHA),
+            _rec(AccionAuditoria.EDITAR_CLIENTE),
             _rec(AccionAuditoria.EDITAR_FECHA),
             _rec(AccionAuditoria.EDITAR_CLIENTE),
         ]
@@ -214,8 +218,6 @@ class TestEditarClienteVentaService:
             ventas=ventas_repo, clientes=clientes_repo, auditoria=auditoria_repo
         )
 
-        with pytest.raises(LimiteEdicionesAlcanzado):
-            service.ejecutar(_make_cmd(venta.id))
-
-        auditoria_repo.guardar.assert_not_called()
-        clientes_repo.guardar.assert_not_called()
+        # Should NOT raise — informational edits are unlimited.
+        service.ejecutar(_make_cmd(venta.id))
+        auditoria_repo.guardar.assert_called_once()

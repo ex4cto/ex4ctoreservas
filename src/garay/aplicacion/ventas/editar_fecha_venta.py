@@ -6,7 +6,7 @@ import datetime
 import uuid
 
 from garay.aplicacion.ventas.comandos import EditarFechaVentaComando
-from garay.aplicacion.ventas.limite_ediciones import verificar_limite_ediciones
+from garay.aplicacion.ventas.limite_ediciones import verificar_limite_ediciones_informativo
 from garay.dominio.puertos.repositorios import AuditoriaVentaRepository, VentaRepository
 from garay.dominio.ventas.auditoria import AccionAuditoria, AuditoriaVenta
 from garay.dominio.ventas.errores import MotivoRequerido, VentaNoEncontrada
@@ -29,7 +29,7 @@ class EditarFechaVentaService:
         if venta is None:
             raise VentaNoEncontrada(f"No se encontró la venta con id={cmd.venta_id}.")
 
-        verificar_limite_ediciones(self._auditoria, cmd.venta_id)
+        verificar_limite_ediciones_informativo(self._auditoria, cmd.venta_id)
 
         # Capture the old fecha BEFORE mutating — this becomes datos_previos.
         datos_previos = {"fecha": venta.fecha.isoformat()}

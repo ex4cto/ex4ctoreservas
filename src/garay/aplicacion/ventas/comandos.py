@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass
 
 from garay.dominio.clientes.entidades import CampoCliente
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 
 
@@ -42,6 +43,24 @@ class EditarCanalVentaComando:
     venta_id: uuid.UUID
     nuevo_tipo: TipoCliente
     punto_id: uuid.UUID | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarNetoVentaComando:
+    venta_id: uuid.UUID
+    nuevo_neto: Dinero
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarValorVentaComando:
+    venta_id: uuid.UUID
+    nuevo_valor_venta: Dinero
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None

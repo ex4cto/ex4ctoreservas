@@ -9,6 +9,7 @@ import datetime
 import logging
 import re
 import uuid
+from decimal import Decimal, InvalidOperation
 from html import escape
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -25,14 +26,20 @@ from garay.aplicacion.ventas.comandos import (
     EditarCanalVentaComando,
     EditarClienteVentaComando,
     EditarFechaVentaComando,
+    EditarNetoVentaComando,
     EditarParticipantesVentaComando,
+    EditarValorVentaComando,
 )
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
+from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
+from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.clientes.errores import ClienteNoEncontrado
+from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
@@ -45,13 +52,20 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
     MismoCanal,
+    MismoNeto,
     MismosParticipantes,
+    MismoValorVenta,
     MotivoRequerido,
+    NetoIgualOSuperaValorVenta,
     PuntoDeVentaRequerido,
+    ValorVentaMenorQueAbono,
     VentaNoEncontrada,
     VentaYaAnulada,
 )
-from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
+from garay.infraestructura.telegram.auth import (
+    es_admin_o_propietario,
+    requiere_admin_o_propietario_conv,
+)
 from garay.infraestructura.telegram.handlers import cerrar_flujo
 from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
@@ -78,6 +92,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_nuevo_freelancer_id", None)
         context.user_data.pop("gv_nuevo_freelancer_nombre", None)
         context.user_data.pop("gv_participante_anterior", None)
+        context.user_data.pop("gv_nuevo_neto", None)
+        context.user_data.pop("gv_nuevo_valor_venta", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -97,6 +113,99 @@ async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> 
         logger.exception("Failed to send group correction message")
 
 
+async def _notificar_edicion(
+    context: ContextTypes.DEFAULT_TYPE,
+    venta: Venta,
+    mensaje_grupo: str,
+    campo_label: str,
+    *,
+    es_financiero: bool,
+    dm_socios_text: str | None = None,
+    dm_admins_text: str | None = None,
+) -> None:
+    """Delete the old group message (best-effort), send the updated one, DM socios/admins.
+
+    All steps are best-effort: any Telegram exception is swallowed.  The caller has
+    already committed the domain change — notification failure must never roll it back.
+
+    Args:
+        context: PTB context — provides bot + bot_data.
+        venta: The updated Venta entity; used to read/write mensaje_grupo_id.
+        mensaje_grupo: Pre-formatted text to send to the group chat.
+        campo_label: Human-readable field label (used in admin DM fallback).
+        es_financiero: If True, DMs are sent to socios.
+        dm_socios_text: Pre-formatted text for the socios DM (only when es_financiero).
+        dm_admins_text: Pre-formatted text for the admin DM; falls back to mensaje_grupo.
+    """
+    grupo_id: str | None = context.bot_data.get("grupo_id")
+
+    # Step 1 — delete original group message (best-effort).
+    if grupo_id and venta.mensaje_grupo_id is not None:
+        try:
+            await context.bot.delete_message(
+                chat_id=grupo_id, message_id=venta.mensaje_grupo_id
+            )
+        except Exception:
+            logger.warning(
+                "Could not delete old group message %s — continuing", venta.mensaje_grupo_id
+            )
+
+    # Step 2 — send new group message and capture message_id.
+    if grupo_id:
+        try:
+            sent = await context.bot.send_message(
+                chat_id=grupo_id, text=mensaje_grupo, parse_mode="HTML"
+            )
+            # Step 3 — persist new message_id onto the venta.
+            new_id: int | None = getattr(sent, "message_id", None)
+            if new_id is not None:
+                venta.mensaje_grupo_id = new_id
+                venta_repo = context.bot_data.get("venta_repo")
+                if venta_repo is not None:
+                    try:
+                        venta_repo.guardar(venta)
+                    except Exception:
+                        logger.warning(
+                            "Could not persist new mensaje_grupo_id for venta %s", venta.id
+                        )
+        except Exception:
+            logger.warning("Failed to send updated group message for venta %s", venta.id)
+
+    # Step 4 — DM socios (financial edits only).
+    if es_financiero and dm_socios_text:
+        socios_config_repo = context.bot_data.get("socios_config_repo")
+        if socios_config_repo is not None:
+            try:
+                socios = socios_config_repo.listar()
+            except Exception:
+                socios = []
+            for socio in socios:
+                tid: int | None = getattr(socio, "telegram_id", None)
+                if tid is None:
+                    continue
+                try:
+                    await context.bot.send_message(
+                        chat_id=tid, text=dm_socios_text, parse_mode="HTML"
+                    )
+                except Exception:
+                    logger.warning("Could not DM socio %s", tid)
+
+    # Step 5 — DM admins (all edits).
+    _dm_admin_text = dm_admins_text or mensaje_grupo
+    try:
+        ids_str = obtener_settings().propietario_telegram_ids.strip()
+        admin_ids = {int(x.strip()) for x in ids_str.split(",") if x.strip()}
+    except Exception:
+        admin_ids = set()
+    for admin_id in admin_ids:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id, text=_dm_admin_text, parse_mode="HTML"
+            )
+        except Exception:
+            logger.warning("Could not DM admin %s", admin_id)
+
+
 # ---------------------------------------------------------------------------
 # State constants — range 220-230 (freelancers: 200-213)
 # ---------------------------------------------------------------------------
@@ -113,6 +222,8 @@ GV_RANGO_INPUT: int = 228
 GV_EDIT_CANAL_TIPO: int = 229
 GV_EDIT_CANAL_PUNTO: int = 230
 GV_EDIT_PARTICIPANTE: int = 231
+GV_EDIT_NETO: int = 232
+GV_EDIT_VALOR_VENTA: int = 233
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
@@ -224,11 +335,14 @@ def _construir_teclado_detalle() -> InlineKeyboardMarkup:
     )
 
 
-def _construir_teclado_campos(venta: Venta | None = None) -> InlineKeyboardMarkup:
+def _construir_teclado_campos(
+    venta: Venta | None = None, *, es_admin: bool = False
+) -> InlineKeyboardMarkup:
     """Build the edit-field submenu in summary-field order, plus back-to-detail.
 
-    Order mirrors the detail view: Nombre, Fecha, Canal de ventas, (Vendedor, Cerrador
-    when non-null), Hotel, Habitación, Teléfono, Correo, Identificación, Atrás.
+    Order mirrors the detail view: Nombre, Fecha, Canal de ventas, (Neto, Valor de venta
+    — admin/propietario/dev only), (Vendedor, Cerrador when non-null), Hotel, Habitación,
+    Teléfono, Correo, Identificación, Atrás.
     Every callback_data here MUST be covered by GV_EDIT_CAMPO_PATTERN (test-guarded).
     """
 
@@ -240,6 +354,9 @@ def _construir_teclado_campos(venta: Venta | None = None) -> InlineKeyboardMarku
         _btn("gestion_ventas.campo_fecha", "gv_campo:fecha"),
         _btn("gestion_ventas.campo_canal", "gv_campo:tipo_cliente"),
     ]
+    if es_admin:
+        rows.append(_btn("gestion_ventas.campo_neto", "gv_campo:neto"))
+        rows.append(_btn("gestion_ventas.campo_valor_venta", "gv_campo:valor_venta"))
     if venta is not None and venta.participantes.vendedor_nombre is not None:
         rows.append(_btn("gestion_ventas.campo_vendedor", "gv_campo:vendedor"))
     if venta is not None and venta.participantes.cerrador_nombre is not None:
@@ -573,7 +690,13 @@ async def _render_detalle(
         valor=venta.valor_venta.monto,
     )
 
-    keyboard = _construir_teclado_campos(venta) if modo_edicion else _construir_teclado_detalle()
+    if modo_edicion:
+        _user_for_auth = query.from_user
+        _uid = _user_for_auth.id if _user_for_auth else 0
+        _es_admin = await es_admin_o_propietario(_uid, context)
+        keyboard = _construir_teclado_campos(venta, es_admin=_es_admin)
+    else:
+        keyboard = _construir_teclado_detalle()
     await query.edit_message_text(
         detail_text,
         reply_markup=keyboard,
@@ -618,7 +741,12 @@ async def handle_gv_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if venta_ed is None:
             _limpiar(context)
             return await cerrar_flujo(update, context, GrupoComando.VENTAS)
-        await query.edit_message_reply_markup(reply_markup=_construir_teclado_campos(venta_ed))
+        _user_ed = query.from_user
+        _uid_ed = _user_ed.id if _user_ed else 0
+        _es_admin_ed = await es_admin_o_propietario(_uid_ed, context)
+        await query.edit_message_reply_markup(
+            reply_markup=_construir_teclado_campos(venta_ed, es_admin=_es_admin_ed)
+        )
         return GV_EDIT_CAMPO
 
     if data == "gv_atras":
@@ -799,6 +927,40 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return GV_EDIT_PARTICIPANTE
 
+    if campo_str == "neto":
+        # Financial field — admin/propietario/dev only.
+        _user_neto = query.from_user
+        _uid_neto = _user_neto.id if _user_neto else 0
+        if not await es_admin_o_propietario(_uid_neto, context):
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_neto"
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_neto").format(
+                actual=venta.neto.monto,
+            ),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_NETO
+
+    if campo_str == "valor_venta":
+        # Financial field — admin/propietario/dev only.
+        _user_vv = query.from_user
+        _uid_vv = _user_vv.id if _user_vv else 0
+        if not await es_admin_o_propietario(_uid_vv, context):
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_valor_venta"
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_valor_venta").format(
+                actual=venta.valor_venta.monto,
+            ),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_VALOR_VENTA
+
     try:
         campo = CampoCliente(campo_str)
     except ValueError:
@@ -888,6 +1050,71 @@ async def handle_gv_edit_fecha(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if context.user_data is not None:
         context.user_data["gv_nueva_fecha"] = parsed.isoformat()
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_NETO / GV_EDIT_VALOR_VENTA states — Decimal text capture for financial edits
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_capturar_neto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Capture the new neto text, validate it is a positive Decimal, store it, ask motivo."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    raw = text.strip().replace(",", ".")
+    try:
+        valor_decimal = Decimal(raw)
+        if valor_decimal <= Decimal("0"):
+            raise InvalidOperation("non-positive")
+    except (InvalidOperation, ArithmeticError):
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.neto_invalido"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_NETO
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_neto"] = raw
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+async def handle_gv_capturar_valor_venta(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Capture the new valor_venta text, validate it is a positive Decimal, store it, ask motivo."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    raw = text.strip().replace(",", ".")
+    try:
+        valor_decimal = Decimal(raw)
+        if valor_decimal <= Decimal("0"):
+            raise InvalidOperation("non-positive")
+    except (InvalidOperation, ArithmeticError):
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.valor_venta_invalido"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_VALOR_VENTA
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_valor_venta"] = raw
 
     await update.effective_message.reply_text(
         obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
@@ -1108,6 +1335,18 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             valor=nuevo_nombre,
             motivo=motivo,
         )
+    elif gv_accion == "editar_neto":
+        nuevo_neto_str: str | None = user_data.get("gv_nuevo_neto")
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_neto").format(
+            valor=nuevo_neto_str or "—",
+            motivo=motivo,
+        )
+    elif gv_accion == "editar_valor_venta":
+        nuevo_vv_str: str | None = user_data.get("gv_nuevo_valor_venta")
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_valor_venta").format(
+            valor=nuevo_vv_str or "—",
+            motivo=motivo,
+        )
     else:
         confirm_text = obtener_mensaje("gestion_ventas.confirmar").format(motivo=motivo)
 
@@ -1171,6 +1410,12 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion in ("editar_vendedor", "editar_cerrador"):
         return await _handle_confirmar_editar_participante(update, context, user_data, user)
+
+    if gv_accion == "editar_neto":
+        return await _handle_confirmar_editar_neto(update, context, user_data, user)
+
+    if gv_accion == "editar_valor_venta":
+        return await _handle_confirmar_editar_valor_venta(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -1281,7 +1526,20 @@ async def _handle_confirmar_editar(
         motivo=escape(motivo, quote=False),
         actor=escape(nombre or "—", quote=False),
     )
-    await _notificar_grupo(context, mensaje_grupo)
+    # Reload venta after service execution so we have the current mensaje_grupo_id.
+    _venta_repo_fecha: VentaRepository | None = context.bot_data.get("venta_repo")
+    _venta_fecha = None
+    if _venta_repo_fecha is not None:
+        _venta_fecha = await asyncio.to_thread(
+            _venta_repo_fecha.buscar_por_id, uuid.UUID(venta_id_str)
+        )
+    if _venta_fecha is not None:
+        await _notificar_edicion(
+            context, _venta_fecha, mensaje_grupo, campo_label="Fecha",
+            es_financiero=False,
+        )
+    else:
+        await _notificar_grupo(context, mensaje_grupo)
 
     # C3: regenerate and resend the client invoice with the updated date.
     regenerar_service: RegenerarFacturaService | None = context.bot_data.get(
@@ -1367,20 +1625,47 @@ async def _handle_confirmar_editar_cliente(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
+    mensaje_key_cliente: str | None = None
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
     except LimiteEdicionesAlcanzado:
-        mensaje_key = "gestion_ventas.limite_ediciones"
+        mensaje_key_cliente = "gestion_ventas.limite_ediciones"
     except VentaNoEncontrada:
-        mensaje_key = "gestion_ventas.no_encontrada"
+        mensaje_key_cliente = "gestion_ventas.no_encontrada"
     except ClienteNoEncontrado:
-        mensaje_key = "gestion_ventas.no_encontrada"
+        mensaje_key_cliente = "gestion_ventas.no_encontrada"
     except MotivoRequerido:
-        mensaje_key = "gestion_ventas.motivo_vacio"
+        mensaje_key_cliente = "gestion_ventas.motivo_vacio"
     except Exception:
         logger.exception("Unexpected error in handle_gv_confirmar (editar_cliente)")
-        mensaje_key = "gestion_ventas.error_generico"
+        mensaje_key_cliente = "gestion_ventas.error_generico"
     else:
+        campo_label_c = (
+            obtener_mensaje(_ETIQUETA_POR_CAMPO[CampoCliente(campo_str)])
+            if campo_str
+            else campo_str or "—"
+        )
+        mensaje_grupo_c = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            rol=campo_label_c,
+            nuevo=escape(nuevo_valor, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        _venta_repo_c: VentaRepository | None = context.bot_data.get("venta_repo")
+        _venta_c = None
+        if _venta_repo_c is not None:
+            _venta_c = await asyncio.to_thread(
+                _venta_repo_c.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        if _venta_c is not None:
+            await _notificar_edicion(
+                context, _venta_c, mensaje_grupo_c, campo_label=campo_label_c,
+                es_financiero=False,
+            )
+        else:
+            await _notificar_grupo(context, mensaje_grupo_c)
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.cliente_editado"),
@@ -1389,9 +1674,9 @@ async def _handle_confirmar_editar_cliente(
         _limpiar(context)
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
-    if update.effective_message:
+    if update.effective_message and mensaje_key_cliente:
         await update.effective_message.reply_text(
-            obtener_mensaje(mensaje_key),
+            obtener_mensaje(mensaje_key_cliente),
             parse_mode="HTML",
         )
     _limpiar(context)
@@ -1513,7 +1798,19 @@ async def _handle_confirmar_editar_canal(
             motivo=escape(motivo, quote=False),
             actor=escape(nombre or "—", quote=False),
         )
-        await _notificar_grupo(context, mensaje_grupo)
+        _venta_repo_canal: VentaRepository | None = context.bot_data.get("venta_repo")
+        _venta_canal = None
+        if _venta_repo_canal is not None:
+            _venta_canal = await asyncio.to_thread(
+                _venta_repo_canal.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        if _venta_canal is not None:
+            await _notificar_edicion(
+                context, _venta_canal, mensaje_grupo, campo_label="Canal",
+                es_financiero=True,
+            )
+        else:
+            await _notificar_grupo(context, mensaje_grupo)
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.canal_editado"),
@@ -1649,10 +1946,261 @@ async def _handle_confirmar_editar_participante(
             motivo=escape(motivo, quote=False),
             actor=escape(nombre or "—", quote=False),
         )
-        await _notificar_grupo(context, mensaje_grupo)
+        # venta is already loaded above — participante edit does not change mensaje_grupo_id.
+        await _notificar_edicion(
+            context, venta, mensaje_grupo, campo_label=rol_label, es_financiero=False
+        )
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.participante_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_neto(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-neto action."""
+
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_neto_str: str | None = user_data.get("gv_nuevo_neto")
+
+    if not venta_id_str or not motivo or not nuevo_neto_str:
+        logger.error("editar_neto confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    # Load the venta to know its currency for the Dinero object.
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    venta = None
+    if venta_repo is not None:
+        venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+    if venta is None:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.no_encontrada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    try:
+        nuevo_neto = Dinero(Decimal(nuevo_neto_str), venta.neto.moneda)
+    except Exception:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.neto_invalido"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    cmd = EditarNetoVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_neto=nuevo_neto,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarNetoVentaService | None = context.bot_data.get("editar_neto_venta_service")
+    if service is None:
+        logger.error("editar_neto_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoNeto:
+        mensaje_key = "gestion_ventas.neto_igual"
+    except NetoIgualOSuperaValorVenta:
+        mensaje_key = "gestion_ventas.neto_supera_valor"
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_neto")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        _msg_neto = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            rol="Neto",
+            nuevo=escape(nuevo_neto_str, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        # venta is already loaded above to get the moneda.
+        await _notificar_edicion(
+            context, venta, _msg_neto, campo_label="Neto", es_financiero=True
+        )
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.neto_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_valor_venta(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-valor-venta action."""
+
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_vv_str: str | None = user_data.get("gv_nuevo_valor_venta")
+
+    if not venta_id_str or not motivo or not nuevo_vv_str:
+        logger.error("editar_valor_venta confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    # Load the venta to know its currency for the Dinero object.
+    venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+    venta = None
+    if venta_repo is not None:
+        venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+    if venta is None:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.no_encontrada"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    try:
+        nuevo_vv = Dinero(Decimal(nuevo_vv_str), venta.valor_venta.moneda)
+    except Exception:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.valor_venta_invalido"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    cmd = EditarValorVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_valor_venta=nuevo_vv,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarValorVentaService | None = context.bot_data.get(
+        "editar_valor_venta_service"
+    )
+    if service is None:
+        logger.error("editar_valor_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoValorVenta:
+        mensaje_key = "gestion_ventas.valor_venta_igual"
+    except NetoIgualOSuperaValorVenta:
+        mensaje_key = "gestion_ventas.neto_supera_valor"
+    except ValorVentaMenorQueAbono:
+        mensaje_key = "gestion_ventas.valor_menor_abono"
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_valor_venta")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        _msg_vv = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            rol="Valor de venta",
+            nuevo=escape(nuevo_vv_str, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        # venta is already loaded above to get the moneda.
+        await _notificar_edicion(
+            context, venta, _msg_vv, campo_label="Valor de venta", es_financiero=True
+        )
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.valor_venta_editado"),
                 parse_mode="HTML",
             )
         _limpiar(context)

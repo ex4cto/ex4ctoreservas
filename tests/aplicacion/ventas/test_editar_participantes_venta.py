@@ -199,11 +199,16 @@ class TestEditarParticipantesVentaComando:
 
 
 class TestAccionesEdicionIncludeEditarParticipantes:
-    def test_editar_participantes_in_acciones_edicion(self) -> None:
-        from garay.aplicacion.ventas.limite_ediciones import ACCIONES_EDICION
+    def test_editar_participantes_not_in_acciones_financieras(self) -> None:
+        """EDITAR_PARTICIPANTES is informational — it must NOT be in the financial set.
+
+        Design change in PR 2 (editar-neto-valor-venta): only EDITAR_CANAL,
+        EDITAR_NETO, and EDITAR_VALOR_VENTA count toward the financial limit.
+        """
+        from garay.aplicacion.ventas.limite_ediciones import ACCIONES_FINANCIERAS
         from garay.dominio.ventas.auditoria import AccionAuditoria
 
-        assert AccionAuditoria.EDITAR_PARTICIPANTES in ACCIONES_EDICION
+        assert AccionAuditoria.EDITAR_PARTICIPANTES not in ACCIONES_FINANCIERAS
 
 
 # ---------------------------------------------------------------------------
@@ -232,22 +237,22 @@ class TestEditarParticipantesVentaService:
 
         ventas_repo.guardar.assert_not_called()
 
-    def test_limite_ediciones_raises(self) -> None:
+    def test_informativo_no_tiene_limite_ediciones(self) -> None:
+        """Informational edits (participantes) are now unlimited per design change R3."""
         venta = _make_venta_mock()
         ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo = _make_repos(
             venta,
             auditoria_records=[
                 _rec(AccionAuditoria.EDITAR_FECHA),
                 _rec(AccionAuditoria.EDITAR_FECHA),
+                _rec(AccionAuditoria.EDITAR_PARTICIPANTES),
             ],
         )
         service = _make_service(ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo)
 
-        with pytest.raises(LimiteEdicionesAlcanzado):
-            service.ejecutar(_make_cmd(venta_id=venta.id))
-
-        ventas_repo.guardar.assert_not_called()
-        auditoria_repo.guardar.assert_not_called()
+        # Should NOT raise — informational edits are unlimited.
+        service.ejecutar(_make_cmd(venta_id=venta.id))
+        auditoria_repo.guardar.assert_called_once()
 
     def test_mismos_participantes_raises(self) -> None:
         from garay.dominio.ventas.errores import MismosParticipantes

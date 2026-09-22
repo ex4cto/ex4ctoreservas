@@ -15,10 +15,14 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     GananciaNegativa,
     MismoCanal,
+    MismoNeto,
     MismosParticipantes,
+    MismoValorVenta,
     MonedaIncompatible,
+    NetoIgualOSuperaValorVenta,
     PuntoDeVentaRequerido,
     ValorVentaInvalido,
+    ValorVentaMenorQueAbono,
     VentaYaAnulada,
 )
 from garay.dominio.ventas.valor_objetos import Participantes
@@ -160,6 +164,69 @@ class Venta:
         if nueva == self.participantes:
             raise MismosParticipantes("Los participantes ya son los mismos.")
         self.participantes = nueva
+
+    def cambiar_neto(self, nuevo_neto: Dinero) -> None:
+        """Change neto at edit time with stricter rules than constructor.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises MismoNeto if nuevo_neto equals the current neto (idempotency guard).
+        - Raises NetoIgualOSuperaValorVenta if nuevo_neto >= valor_venta (zero-ganancia blocked).
+        - Raises MonedaIncompatible if currencies differ.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el neto de una venta ya anulada.")
+        if nuevo_neto.moneda != self.valor_venta.moneda:
+            raise MonedaIncompatible(
+                f"nuevo_neto ({nuevo_neto.moneda}) y valor_venta ({self.valor_venta.moneda})"
+                " deben ser la misma moneda."
+            )
+        if nuevo_neto == self.neto:
+            raise MismoNeto("El neto ya es ese valor. No se realizó ningún cambio.")
+        if nuevo_neto >= self.valor_venta:
+            raise NetoIgualOSuperaValorVenta(
+                f"El neto ({nuevo_neto}) no puede ser igual o mayor al valor de venta"
+                f" ({self.valor_venta})."
+            )
+        self.neto = nuevo_neto
+
+    def cambiar_valor_venta(self, nuevo_valor_venta: Dinero) -> None:
+        """Change valor_venta at edit time with edit-specific rules.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises MismoValorVenta if nuevo_valor_venta equals the current valor_venta.
+        - Raises ValorVentaInvalido if nuevo_valor_venta <= 0.
+        - Raises NetoIgualOSuperaValorVenta if current neto >= nuevo_valor_venta.
+        - Raises ValorVentaMenorQueAbono if nuevo_valor_venta < abono (equal is ALLOWED).
+        - Raises MonedaIncompatible if currencies differ.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el valor de venta de una venta ya anulada.")
+        if nuevo_valor_venta.moneda != self.neto.moneda:
+            raise MonedaIncompatible(
+                f"nuevo_valor_venta ({nuevo_valor_venta.moneda}) y neto ({self.neto.moneda})"
+                " deben ser la misma moneda."
+            )
+        if nuevo_valor_venta == self.valor_venta:
+            raise MismoValorVenta(
+                "El valor de venta ya es ese valor. No se realizó ningún cambio."
+            )
+        if nuevo_valor_venta <= _CERO:
+            raise ValorVentaInvalido(
+                f"El valor de venta debe ser mayor que cero. Recibido: {nuevo_valor_venta}."
+            )
+        if self.neto >= nuevo_valor_venta:
+            raise NetoIgualOSuperaValorVenta(
+                f"El neto ({self.neto}) no puede ser igual o mayor al nuevo valor de venta"
+                f" ({nuevo_valor_venta})."
+            )
+        if self.abono is not None and nuevo_valor_venta < self.abono:
+            raise ValorVentaMenorQueAbono(
+                f"El valor de venta ({nuevo_valor_venta}) no puede ser menor al abono"
+                f" registrado ({self.abono})."
+            )
+        self.valor_venta = nuevo_valor_venta
 
     @property
     def ganancia(self) -> Dinero:
