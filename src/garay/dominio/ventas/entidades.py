@@ -54,6 +54,7 @@ class Venta:
     # a esta funcionalidad quedan en None.
     registrado_en: datetime.datetime | None = None
     metodo_pago: MetodoPago | None = None
+    mensaje_grupo_id: int | None = None
 
     def __post_init__(self) -> None:
         if self.valor_venta.moneda != self.neto.moneda:

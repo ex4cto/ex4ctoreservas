@@ -160,6 +160,9 @@ class VentaModel(Base):
         String, nullable=False, server_default="es", default="es"
     )
     metodo_pago: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    mensaje_grupo_id: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, default=None
+    )
 
 
 class TiqueteraModel(Base):

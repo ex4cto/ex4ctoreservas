@@ -45,7 +45,7 @@ class ExtractorIA(ABC):
 
 class NotificadorGrupo(ABC):
     @abstractmethod
-    def notificar(self, mensaje: str, grupo_id: str) -> None: ...
+    def notificar(self, mensaje: str, grupo_id: str) -> int | None: ...
 
 
 class ExtractorReserva(ABC):

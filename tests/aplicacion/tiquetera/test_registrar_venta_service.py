@@ -100,6 +100,8 @@ class TestRegistrarVentaInternaSinPuntoSinReferido:
         reglas_repo = MagicMock()
         motor = MagicMock()
         notificador = MagicMock()
+        # Return None so no second guardar is triggered for mensaje_grupo_id capture.
+        notificador.notificar.return_value = None
         fake_desglose = MagicMock()
         motor.calcular.return_value = fake_desglose
 
@@ -113,7 +115,7 @@ class TestRegistrarVentaInternaSinPuntoSinReferido:
 
         resultado = service.ejecutar(cmd)
 
-        # repo.guardar was called once
+        # repo.guardar was called once (no message_id to persist)
         ventas.guardar.assert_called_once()
         # motor.calcular was called once with the fetched rules and no punto
         motor.calcular.assert_called_once()

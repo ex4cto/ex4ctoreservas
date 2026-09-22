@@ -48,6 +48,7 @@ def to_orm(v: Venta) -> VentaModel:
         factura_idioma=v.factura_idioma,
         registrado_en=v.registrado_en,
         metodo_pago=v.metodo_pago.value if v.metodo_pago is not None else None,
+        mensaje_grupo_id=v.mensaje_grupo_id,
     )
 
 
@@ -90,6 +91,7 @@ def to_domain(m: VentaModel) -> Venta:
         factura_idioma=m.factura_idioma,
         registrado_en=m.registrado_en,
         metodo_pago=MetodoPago(m.metodo_pago) if m.metodo_pago is not None else None,
+        mensaje_grupo_id=m.mensaje_grupo_id,
     )
 
 

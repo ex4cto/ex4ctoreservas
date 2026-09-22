@@ -35,6 +35,10 @@ class NotificadorGrupoTelegram(NotificadorGrupo):
     ``migrate_to_chat_id``, it remembers the new id (in-memory, for this process),
     alerts the devs so they can persist it in ``GARAY_GRUPO_ID``, and retries to
     the new id so the notification still lands.
+
+    Returns the ``message_id`` of the sent message as an ``int`` on success, or
+    ``None`` when the notification could not be delivered (exception swallowed by
+    the caller's best-effort contract).
     """
 
     def __init__(self, token: str, dev_ids: list[int] | None = None) -> None:
@@ -43,19 +47,27 @@ class NotificadorGrupoTelegram(NotificadorGrupo):
         # old chat_id -> new supergroup id, learned at runtime.
         self._migraciones: dict[str, str] = {}
 
-    def notificar(self, mensaje: str, grupo_id: str) -> None:
+    def notificar(self, mensaje: str, grupo_id: str) -> int | None:
         destino = self._migraciones.get(grupo_id, grupo_id)
-        nuevo = self._enviar(destino, mensaje)
-        if nuevo is None:
-            return
+        migrate_id, message_id = self._enviar(destino, mensaje)
+        if migrate_id is None:
+            return message_id
         # El grupo migró a supergrupo: recordar, alertar y reintentar al id nuevo.
+        nuevo = migrate_id
         self._migraciones[grupo_id] = nuevo
         logger.warning("Grupo de notificaciones migró a supergrupo: %s -> %s", grupo_id, nuevo)
         self._alertar_migracion(grupo_id, nuevo)
-        self._enviar(nuevo, mensaje)  # reintento; una segunda migración (rara) se ignora
+        # Retry to new supergroup id; a second migration (rare) is ignored.
+        _, message_id = self._enviar(nuevo, mensaje)
+        return message_id
 
-    def _enviar(self, chat_id: str, mensaje: str) -> str | None:
-        """Send one message. Returns the new id if the chat migrated, else None.
+    def _enviar(self, chat_id: str, mensaje: str) -> tuple[str | None, int | None]:
+        """Send one message.
+
+        Returns a tuple ``(migrate_id, message_id)`` where:
+        - ``migrate_id`` is the new supergroup id as a string if the chat migrated, else ``None``.
+        - ``message_id`` is the Telegram ``message_id`` integer from the API response on success,
+          or ``None`` when the response could not be parsed.
 
         Raises NotificadorError / NotificadorNoDisponible on other failures.
         """
@@ -71,12 +83,18 @@ class NotificadorGrupoTelegram(NotificadorGrupo):
         )
         try:
             with urllib.request.urlopen(req) as resp:
-                resp.read()
-            return None
+                body = resp.read()
+            try:
+                data = json.loads(body.decode("utf-8"))
+                raw_id = (data.get("result") or {}).get("message_id")
+                msg_id = int(raw_id) if isinstance(raw_id, (int, float)) else None
+            except Exception:
+                msg_id = None
+            return None, msg_id
         except urllib.error.HTTPError as exc:
             nuevo = _extraer_migrate_id(exc)
             if nuevo is not None:
-                return str(nuevo)
+                return str(nuevo), None
             raise NotificadorError(f"Telegram API returned HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
             raise NotificadorNoDisponible(f"Telegram API is unreachable: {exc.reason}") from exc

@@ -306,8 +306,13 @@ class RegistrarVentaService:
         mensaje = "\n".join(lineas)
         # Best-effort: la notificación al grupo NUNCA debe tumbar la venta (ya se
         # commiteó arriba). Si el grupo falla, se registra y se sigue con la factura.
+        # Capture the returned message_id (int | None) so it can be persisted on the
+        # venta for future delete-and-replace edit notifications.
         try:
-            self._notificador.notificar(mensaje, self._grupo_id)
+            grupo_message_id = self._notificador.notificar(mensaje, self._grupo_id)
+            if grupo_message_id is not None:
+                venta.mensaje_grupo_id = grupo_message_id
+                self._ventas.guardar(venta)
         except Exception:
             logger.exception(
                 "No se pudo notificar la venta %s al grupo (la venta ya quedó registrada)",

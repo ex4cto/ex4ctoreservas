@@ -27,13 +27,17 @@ def _build_service(
 ) -> RegistrarVentaService:
     m = motor or MagicMock()
     m.calcular.return_value = MagicMock()
+    notificador = MagicMock()
+    # Return None so the service does not trigger a second ventas.guardar call
+    # for mensaje_grupo_id capture (tests here focus on other behaviour).
+    notificador.notificar.return_value = None
     return RegistrarVentaService(
         ventas=ventas or MagicMock(),
         reglas_repo=MagicMock(),
         tiqueteras=MagicMock(),
         puntos_repo=MagicMock(),
         motor=m,
-        notificador=MagicMock(),
+        notificador=notificador,
         grupo_id=_GRUPO_ID,
         comisiones_repo=MagicMock(),
         socios_config=MagicMock(),
