@@ -469,6 +469,7 @@ def main() -> None:
             "contrato_software_service": contrato_software_service,
             "contrato_audiovisual_service": contrato_audiovisual_service,
             "factura_repo": factura_repo,
+            "tiquetera_repo": tiqueteras_repo,
             "auditoria_venta_repo": auditoria_venta_repo,
             "anular_venta_service": anular_venta_service,
             "editar_fecha_venta_service": editar_fecha_venta_service,

@@ -16,6 +16,7 @@ from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, 
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.factura.regenerar_factura import (
     RegenerarFacturaService,
@@ -74,10 +75,6 @@ from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
-
-
-def fmt_cop(d: Dinero) -> str:
-    return "$" + f"{int(d.monto):,}".replace(",", ".")
 
 
 def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -674,27 +671,89 @@ async def _render_detalle(
             if punto is not None:
                 punto_line = f"🏠 Punto: {punto.nombre}\n"
 
-    origen_line = f"📲 Origen: {venta.canal_origen}\n" if venta.canal_origen else ""
+    origen_line = (
+        f"📲 Origen: {escape(venta.canal_origen, quote=False)}\n" if venta.canal_origen else ""
+    )
 
     vendedor_line = (
-        f"{venta.participantes.vendedor_nombre}\n"
+        f"{escape(venta.participantes.vendedor_nombre, quote=False)}\n"
         if venta.participantes.vendedor_nombre else ""
     )
     cerrador_line = (
-        f"{venta.participantes.cerrador_nombre}\n"
+        f"{escape(venta.participantes.cerrador_nombre, quote=False)}\n"
         if venta.participantes.cerrador_nombre else ""
     )
 
+    # --- Pax ---
+    pax_ninos = f" / {venta.ninos} niño(s)" if venta.ninos > 0 else ""
+    pax = f"{venta.adultos} adulto(s){pax_ninos}"
+
+    # --- Método de pago ---
+    metodo_pago_line = (
+        f"💳 Pago: {escape(venta.metodo_pago.value, quote=False)}\n"
+        if venta.metodo_pago is not None else ""
+    )
+
+    # --- Ticket (best-effort) ---
+    ticket_line = ""
+    tiquetera_repo = context.bot_data.get("tiquetera_repo")
+    if tiquetera_repo is not None:
+        tiquetera = await asyncio.to_thread(tiquetera_repo.buscar_por_venta_id, venta.id)
+        if tiquetera is not None and tiquetera.numero_fisico:
+            ticket_line = f"🎫 Ticket: {escape(tiquetera.numero_fisico, quote=False)}\n"
+
+    # --- Fecha de registro ---
+    registrado_en_line = ""
+    if venta.registrado_en is not None:
+        registrado_en_line = f"🕐 Registrado: {venta.registrado_en:%d/%m/%Y %H:%M}\n"
+
+    # --- Financiero ---
+    abono = venta.abono
+    abono_line = f"💵 Abono: {fmt_cop(abono)}\n" if abono is not None else ""
+    saldo = (venta.valor_venta - abono) if abono is not None else venta.valor_venta
+
+    # --- Comisiones (best-effort) ---
+    comisiones_section = ""
+    comision_repo: ComisionRegistradaRepository | None = context.bot_data.get(
+        "comision_registrada_repo"
+    )
+    if comision_repo is not None:
+        comision = await asyncio.to_thread(comision_repo.buscar_por_venta_id, venta.id)
+        if comision is not None:
+            d = comision.desglose
+            lineas_com = ["\nComisiones:"]
+            lineas_com.append(f"  Agencia: {fmt_cop(d.agencia)}")
+            if venta.participantes.vendedor_nombre and d.vendedor.monto > 0:
+                lineas_com.append(
+                    f"  Vendedor ({escape(venta.participantes.vendedor_nombre, quote=False)})"
+                    f": {fmt_cop(d.vendedor)}"
+                )
+            if venta.participantes.cerrador_nombre and d.cerrador.monto > 0:
+                lineas_com.append(
+                    f"  Cerrador ({escape(venta.participantes.cerrador_nombre, quote=False)})"
+                    f": {fmt_cop(d.cerrador)}"
+                )
+            comisiones_section = "\n".join(lineas_com) + "\n"
+
     detail_text = obtener_mensaje("gestion_ventas.detalle").format(
-        cliente=cliente_nombre,
-        tours=tours_str,
+        cliente=escape(cliente_nombre, quote=False),
+        tours=escape(tours_str, quote=False),
         fecha=f"{venta.fecha:%d/%m/%Y}",
-        canal=canal_display,
+        registrado_en_line=registrado_en_line,
+        canal=escape(canal_display, quote=False),
         punto_line=punto_line,
         origen_line=origen_line,
+        pax=pax,
+        metodo_pago_line=metodo_pago_line,
+        ticket_line=ticket_line,
+        valor=fmt_cop(venta.valor_venta),
+        abono_line=abono_line,
+        saldo=fmt_cop(saldo),
+        neto=fmt_cop(venta.neto),
+        ganancia=fmt_cop(venta.ganancia),
+        comisiones_section=comisiones_section,
         vendedor_line=vendedor_line,
         cerrador_line=cerrador_line,
-        valor=venta.valor_venta.monto,
     )
 
     if modo_edicion:

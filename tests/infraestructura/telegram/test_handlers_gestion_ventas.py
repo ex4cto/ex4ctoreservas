@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from telegram.ext import ConversationHandler
 
+from garay.dominio.comun.dinero import Dinero
 from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_CONFIRMAR,
     GV_DETALLE,
@@ -40,16 +42,26 @@ def _make_venta(
     vendedor_nombre: str | None = "Ana",
     cerrador_nombre: str | None = "Luis",
 ) -> MagicMock:
+    from garay.dominio.comun.tipos import TipoCliente
     v = MagicMock()
     v.id = venta_id or uuid.uuid4()
     v.cliente_id = cliente_id or uuid.uuid4()
     v.servicio_ids = [uuid.uuid4()]
     v.fecha = fecha or datetime.date(2026, 8, 1)
-    v.valor_venta = MagicMock()
-    v.valor_venta.monto = valor_monto
+    v.valor_venta = Dinero(Decimal(str(int(valor_monto))), "COP")
+    v.neto = Decimal("400000")
+    v.ganancia = Decimal("100000")
+    v.abono = None
+    v.adultos = 1
+    v.ninos = 0
+    v.metodo_pago = None
+    v.registrado_en = None
+    v.tipo_cliente = TipoCliente.EXTERNO
+    v.canal_origen = None
     v.participantes = MagicMock()
     v.participantes.vendedor_nombre = vendedor_nombre
     v.participantes.cerrador_nombre = cerrador_nombre
+    v.participantes.punto_de_venta_id = None
     return v
 
 
@@ -121,6 +133,11 @@ def _make_context(
     editar_cliente_service = MagicMock()
     notificador = MagicMock()
 
+    comision_registrada_repo = MagicMock()
+    comision_registrada_repo.buscar_por_venta_id.return_value = None
+    tiquetera_repo = MagicMock()
+    tiquetera_repo.buscar_por_venta_id.return_value = None
+
     ctx.bot_data = {
         "venta_repo": venta_repo,
         "freelancer_repo": freelancer_repo,
@@ -132,6 +149,8 @@ def _make_context(
         "notificador": notificador,
         "grupo_id": "-1001234567",
         "socios_config_repo": socios_config_repo,
+        "comision_registrada_repo": comision_registrada_repo,
+        "tiquetera_repo": tiquetera_repo,
     }
     return ctx
 
@@ -2088,7 +2107,9 @@ class TestHandleGvEditParticipante:
 
     @pytest.mark.asyncio
     async def test_invalid_uuid_returns_end(self) -> None:
-        from garay.infraestructura.telegram.handlers_gestion_ventas import handle_gv_edit_participante
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_participante,
+        )
 
         update = _make_update(callback_data="gv_freelancer:not-a-uuid")
         ctx = _make_context_participantes()
@@ -2099,7 +2120,9 @@ class TestHandleGvEditParticipante:
 
     @pytest.mark.asyncio
     async def test_freelancer_not_found_returns_end(self) -> None:
-        from garay.infraestructura.telegram.handlers_gestion_ventas import handle_gv_edit_participante
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_participante,
+        )
 
         fl_id = uuid.uuid4()
         update = _make_update(callback_data=f"gv_freelancer:{fl_id}")
