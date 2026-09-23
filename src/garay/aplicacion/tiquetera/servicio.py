@@ -290,6 +290,8 @@ class RegistrarVentaService:
         lineas.append(f"🏷 Tipo: {cmd.tipo_cliente.value}")
         if cmd.canal_origen:
             lineas.append(f"📲 Canal: {_esc(cmd.canal_origen)}")
+        if cmd.metodo_pago is not None:
+            lineas.append(f"💳 Pago: {cmd.metodo_pago.value}")
         lineas.append("")
         lineas.append("Comisiones:")
         lineas.append(f"  Agencia: {fmt_cop(desglose.agencia)}")

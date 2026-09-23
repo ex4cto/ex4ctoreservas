@@ -2058,6 +2058,11 @@ async def _construir_textos_edicion_financiera(
 
     # Commissions section for group message
     tipo_label = venta.tipo_cliente.value
+    metodo_pago_line = (
+        f"\n💳 Pago: {escape(venta.metodo_pago.value, quote=False)}"
+        if venta.metodo_pago is not None
+        else ""
+    )
     agencia_com = fmt_cop(desglose.agencia) if desglose else "—"
     vendedor_line_com = ""
     cerrador_line_com = ""
@@ -2086,6 +2091,7 @@ async def _construir_textos_edicion_financiera(
         saldo=fmt_cop(saldo),
         tipo=escape(tipo_label, quote=False),
         canal_line=canal_line,
+        metodo_pago_line=metodo_pago_line,
         agencia=agencia_com,
         vendedor_line=vendedor_line_com,
         cerrador_line=cerrador_line_com,
