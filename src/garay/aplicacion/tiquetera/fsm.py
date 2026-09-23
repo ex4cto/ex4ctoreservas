@@ -19,6 +19,7 @@ from garay.aplicacion.comun.fechas import (
 from garay.aplicacion.comun.fechas import (
     parsear_fecha as _parsear_fecha,
 )
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import (
     parsear_monto as _parsear_monto,
 )
@@ -177,12 +178,6 @@ _CAMPOS_EDITABLES: list[tuple[str, EstadoFSM]] = [
     ("Vendedor/Cerrador", EstadoFSM.EDITAR_VENDEDOR),
 ]
 
-
-def _formatear_monto(valor: Decimal | int | None) -> str:
-    """Format amount as Colombian pesos. E.g.: 200000 → '$200.000'"""
-    if valor is None:
-        return "—"
-    return "$" + f"{int(valor):,}".replace(",", ".")
 
 
 def _clonar(ctx: ContextoVenta) -> ContextoVenta:
@@ -1430,16 +1425,16 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_ABONO,
                 mensaje=obtener_mensaje("error_abono_supera_valor").format(
-                    abono=_formatear_monto(monto),
-                    valor=_formatear_monto(ctx.valor),
+                    abono=fmt_cop(monto),
+                    valor=fmt_cop(ctx.valor),
                 ),
                 contexto=ctx,
             )
         neto = self._calcular_neto(ctx)
         if neto is not None:
             if ctx.valor is not None and neto > ctx.valor:
-                neto_fmt = _formatear_monto(neto)
-                valor_fmt = _formatear_monto(ctx.valor)
+                neto_fmt = fmt_cop(neto)
+                valor_fmt = fmt_cop(ctx.valor)
                 return SalidaFSM(
                     nuevo_estado=EstadoFSM.MONTO_VALOR,
                     mensaje=obtener_mensaje("error_neto_supera_valor_detalle").format(
@@ -1484,8 +1479,8 @@ class FSMTiquetera:
             return SalidaFSM(
                 nuevo_estado=EstadoFSM.MONTO_NETO,
                 mensaje=obtener_mensaje("error_neto_supera_valor_monto_neto").format(
-                    neto=_formatear_monto(monto),
-                    valor=_formatear_monto(ctx.valor),
+                    neto=fmt_cop(monto),
+                    valor=fmt_cop(ctx.valor),
                 ),
                 contexto=ctx,
             )
@@ -1974,11 +1969,11 @@ class FSMTiquetera:
             ),
             EstadoFSM.MONTO_VALOR: formatear_html(
                 obtener_mensaje("pregunta_editar_monto_valor"),
-                actual=_formatear_monto(ctx.valor),
+                actual=fmt_cop(ctx.valor),
             ),
             EstadoFSM.MONTO_ABONO: formatear_html(
                 obtener_mensaje("pregunta_editar_monto_abono"),
-                actual=_formatear_monto(ctx.abono),
+                actual=fmt_cop(ctx.abono),
             ),
             EstadoFSM.METODO_PAGO: formatear_html(
                 obtener_mensaje("pregunta_editar_metodo_pago"),
@@ -2107,10 +2102,10 @@ class FSMTiquetera:
             horario_salida=horario_salida,
             adultos=ctx.adultos or 0,
             ninos=ctx.ninos or 0,
-            valor=_formatear_monto(ctx.valor),
-            abono=_formatear_monto(ctx.abono),
-            saldo_pendiente=_formatear_monto(saldo_pendiente),
-            neto=_formatear_monto(ctx.neto),
+            valor=fmt_cop(ctx.valor),
+            abono=fmt_cop(ctx.abono),
+            saldo_pendiente=fmt_cop(saldo_pendiente),
+            neto=fmt_cop(ctx.neto),
             metodo_pago=ctx.metodo_pago.value if ctx.metodo_pago is not None else "—",
             vendedor=vendedor_str,
             cerrador=cerrador_str,

@@ -13,6 +13,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.comun.texto import normalizar_texto
 from garay.dominio.comun.dinero import Dinero
@@ -112,10 +113,6 @@ def _parsear_monto_cop(texto: str) -> Decimal | None:
     return valor
 
 
-def _fmt_cop(valor: Decimal) -> str:
-    return "$" + f"{int(valor):,}".replace(",", ".")
-
-
 def _teclado_inline(opciones: list[str]) -> InlineKeyboardMarkup:
     botones = [[InlineKeyboardButton(op, callback_data=op)] for op in opciones]
     return InlineKeyboardMarkup(botones)
@@ -209,7 +206,7 @@ def _resumen_otro(ud: dict[str, object]) -> str:
     fecha: datetime.date = ud.get("egreso_fecha", datetime.date.today())  # type: ignore[assignment]
     return formatear_html(
         obtener_mensaje("egreso.confirmar_resumen"),
-        monto=_fmt_cop(monto),
+        monto=fmt_cop(monto),
         descripcion=descripcion,
         categoria=categoria,
         destinatario=destinatario,
@@ -225,7 +222,7 @@ def _resumen_rec(ud: dict[str, object]) -> str:
     return formatear_html(
         obtener_mensaje("egreso.rec_confirmar_resumen"),
         nombre=nombre,
-        monto=_fmt_cop(monto),
+        monto=fmt_cop(monto),
         fecha=fecha.strftime("%d/%m/%Y"),
         categoria=categoria,
     )
@@ -245,12 +242,12 @@ async def cmd_nuevo_egreso(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     hoy = _hoy_bogota()
     filas: list[list[InlineKeyboardButton]] = []
     for g in gastos:
-        label = f"{g.nombre} — {_fmt_cop(g.monto.monto)}"
+        label = f"{g.nombre} — {fmt_cop(g.monto.monto)}"
         if egreso_repo is not None:
             pagado = egreso_repo.sumar_por_recurrente_en_mes(g.id, hoy.year, hoy.month)
             if pagado.monto > Decimal("0"):
                 label = label + obtener_mensaje("egreso.indicador_pagado").format(
-                    pagado=_fmt_cop(pagado.monto)
+                    pagado=fmt_cop(pagado.monto)
                 )
         filas.append(
             [
@@ -310,7 +307,7 @@ async def handle_egreso_seleccion(update: Update, context: ContextTypes.DEFAULT_
         ud["rec_nombre"] = gasto.nombre
         ud["rec_categoria"] = gasto.categoria
         ud["rec_monto_sugerido"] = gasto.monto.monto
-        monto_fmt = _fmt_cop(gasto.monto.monto)
+        monto_fmt = fmt_cop(gasto.monto.monto)
         teclado = InlineKeyboardMarkup(
             [
                 [
@@ -425,7 +422,7 @@ async def handle_egreso_fecha(update: Update, context: ContextTypes.DEFAULT_TYPE
         monto_val: Decimal = ud.get("egreso_monto", Decimal("0"))  # type: ignore[assignment]
         aviso = formatear_html(
             obtener_mensaje("egreso.dup_aviso"),
-            monto=_fmt_cop(monto_val),
+            monto=fmt_cop(monto_val),
             fecha=fecha.strftime("%d/%m/%Y"),
         )
         await _reply(update, aviso, _teclado_dup())
@@ -668,7 +665,7 @@ async def handle_egreso_rec_edit_menu(update: Update, context: ContextTypes.DEFA
         return EGRESO_REC_CONFIRM
     if accion == CB_EDIT_MONTO:
         ud["editando"] = True
-        monto_fmt = _fmt_cop(ud.get("rec_monto_sugerido", Decimal("0")))  # type: ignore[arg-type]
+        monto_fmt = fmt_cop(ud.get("rec_monto_sugerido", Decimal("0")))  # type: ignore[arg-type]
         teclado = InlineKeyboardMarkup(
             [
                 [
@@ -721,7 +718,7 @@ def _menu_gastos_fijos(
     ud["gf_ids"] = [str(g.id) for g in gastos]
     filas: list[list[InlineKeyboardButton]] = []
     for i, g in enumerate(gastos):
-        label = f"{g.nombre} — {_fmt_cop(g.monto.monto)}"
+        label = f"{g.nombre} — {fmt_cop(g.monto.monto)}"
         filas.append([InlineKeyboardButton(label, callback_data=f"{PREFIJO_GF_SEL}{i}")])
     filas.append(_fila_boton(obtener_mensaje("gastos_fijos.boton_nuevo"), CB_GF_NUEVO))
     filas.append(_fila_boton(obtener_mensaje("gastos_fijos.boton_cerrar"), CB_GF_CERRAR))
@@ -782,7 +779,7 @@ async def handle_gf_lista(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         texto3 = formatear_html(
             obtener_mensaje("gastos_fijos.detalle"),
             nombre=gasto.nombre,
-            monto=_fmt_cop(gasto.monto.monto),
+            monto=fmt_cop(gasto.monto.monto),
             dia=gasto.dia_mes,
             categoria=gasto.categoria,
         )
@@ -837,14 +834,14 @@ async def handle_gf_detalle(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         liquidado = formatear_html(
             obtener_mensaje("gastos_fijos.liquidado"),
             nombre=gasto.nombre,
-            monto=_fmt_cop(gasto.monto.monto),
+            monto=fmt_cop(gasto.monto.monto),
         )
         await _reply(update, liquidado + "\n\n" + texto2, teclado2)
         return GF_LISTA
     texto3 = formatear_html(
         obtener_mensaje("gastos_fijos.detalle"),
         nombre=gasto.nombre,
-        monto=_fmt_cop(gasto.monto.monto),
+        monto=fmt_cop(gasto.monto.monto),
         dia=gasto.dia_mes,
         categoria=gasto.categoria,
     )
@@ -872,12 +869,12 @@ async def handle_gf_editar_monto(update: Update, context: ContextTypes.DEFAULT_T
     gasto.monto = Dinero(monto, moneda)
     service.guardar(gasto)
     confirmacion = formatear_html(
-        obtener_mensaje("gastos_fijos.monto_actualizado"), monto=_fmt_cop(monto)
+        obtener_mensaje("gastos_fijos.monto_actualizado"), monto=fmt_cop(monto)
     )
     texto_det = formatear_html(
         obtener_mensaje("gastos_fijos.detalle"),
         nombre=gasto.nombre,
-        monto=_fmt_cop(gasto.monto.monto),
+        monto=fmt_cop(gasto.monto.monto),
         dia=gasto.dia_mes,
         categoria=gasto.categoria,
     )
@@ -942,7 +939,7 @@ async def handle_gf_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     resumen = formatear_html(
         obtener_mensaje("gastos_fijos.confirmacion"),
         nombre=nombre,
-        monto=_fmt_cop(monto),
+        monto=fmt_cop(monto),
         categoria=categoria,
         dia=dia,
     )
@@ -981,7 +978,7 @@ async def handle_gf_confirmacion(update: Update, context: ContextTypes.DEFAULT_T
         formatear_html(
             obtener_mensaje("gastos_fijos.creado"),
             nombre=nombre,
-            monto=_fmt_cop(monto),
+            monto=fmt_cop(monto),
             dia=dia,
         ),
     )
@@ -1318,7 +1315,7 @@ async def _avisar_dev_egreso(
         quien=_nombre_usuario(update, context),
         categoria=categoria,
         concepto=concepto,
-        monto=_fmt_cop(monto),
+        monto=fmt_cop(monto),
         fecha=fecha.strftime("%d/%m/%Y"),
     )
     for dev_id in dev_telegram_ids():
@@ -1332,7 +1329,7 @@ def _detalle_egreso(egreso: Egreso) -> str:
         categoria=egreso.categoria,
         destinatario=egreso.destinatario or "—",
         concepto=egreso.descripcion,
-        monto=_fmt_cop(egreso.monto.monto),
+        monto=fmt_cop(egreso.monto.monto),
         fecha=egreso.fecha.strftime("%d/%m/%Y"),
     )
 
@@ -1367,7 +1364,7 @@ async def _mostrar_lista_egresos(update: Update, context: ContextTypes.DEFAULT_T
     ud["ge_indices"] = [str(e.id) for e in egresos]
     filas: list[list[InlineKeyboardButton]] = []
     for i, e in enumerate(egresos):
-        etiqueta = f"{e.fecha.strftime('%d/%m')} · {_fmt_cop(e.monto.monto)} · {e.categoria}"
+        etiqueta = f"{e.fecha.strftime('%d/%m')} · {fmt_cop(e.monto.monto)} · {e.categoria}"
         filas.append(_fila_boton(etiqueta, f"{PREFIJO_GE_SEL}{i}"))
     filas.append(_fila_boton(obtener_mensaje("gestionar_egresos.boton_cerrar"), CB_GE_CERRAR))
     await _reply(

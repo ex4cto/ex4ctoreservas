@@ -8,6 +8,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.ventas.contexto import ContextoVenta
 
@@ -226,12 +227,6 @@ def _hoy_bogota() -> datetime.date:
     return datetime.datetime.now(_BOGOTA).date()
 
 
-def _fmt_cop(valor: Decimal | None) -> str:
-    """Format a Decimal as Colombian pesos. E.g.: 500000 → '$500.000'"""
-    if valor is None:
-        return "$0"
-    return "$" + f"{int(valor):,}".replace(",", ".")
-
 
 def _render_fecha_tour(ctx: ContextoVenta) -> str:
     """Render the tour-date cell: scalar for one tour, compact per-tour otherwise."""
@@ -426,15 +421,15 @@ class GenerarFacturaService:
         </tr>
         <tr style="border-bottom:1px solid #e0e4ea;">
           <td style="padding:10px 14px;font-size:13px;">{t["concepto_valor"]}</td>
-          <td style="padding:10px 14px;text-align:right;font-size:13px;">{_fmt_cop(ctx.valor)}</td>
+          <td style="padding:10px 14px;text-align:right;font-size:13px;">{fmt_cop(ctx.valor)}</td>
         </tr>
         <tr style="border-bottom:1px solid #e0e4ea;">
           <td style="padding:10px 14px;font-size:13px;color:#555;">{t["concepto_abono"]}</td>
-          <td style="padding:10px 14px;text-align:right;font-size:13px;color:#555;">{_fmt_cop(ctx.abono)}</td>
+          <td style="padding:10px 14px;text-align:right;font-size:13px;color:#555;">{fmt_cop(ctx.abono)}</td>
         </tr>
         <tr style="background:#f5f7fa;">
           <td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1B3B6B;">{t["concepto_saldo"]}</td>
-          <td style="padding:12px 14px;text-align:right;font-size:16px;font-weight:bold;color:#1B3B6B;">{_fmt_cop(saldo)}</td>
+          <td style="padding:12px 14px;text-align:right;font-size:16px;font-weight:bold;color:#1B3B6B;">{fmt_cop(saldo)}</td>
         </tr>
       </table>
 

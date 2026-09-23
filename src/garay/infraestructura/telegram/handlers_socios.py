@@ -18,6 +18,7 @@ from telegram.ext import (
     filters,
 )
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.socios.split import ResumenSocio, ResumenSplitSocios
 from garay.dominio.comun.dinero import Dinero
@@ -55,11 +56,6 @@ _CB_CANCELAR: str = "lq_cancelar"
 # ---------------------------------------------------------------------------
 
 
-def _fmt_cop(valor: Decimal) -> str:
-    """Format a Decimal as Colombian pesos. E.g.: 500000 -> '$500.000'"""
-    return "$" + f"{int(valor):,}".replace(",", ".")
-
-
 def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove lq_* keys from user_data to prevent stale state."""
     if context.user_data is not None:
@@ -86,7 +82,7 @@ def _pantalla_confirmacion(
         if tipo == "total"
         else obtener_mensaje("liquidar_socio.tipo_parcial")
     )
-    monto_fmt = _fmt_cop(monto.monto)
+    monto_fmt = fmt_cop(monto.monto)
     nombre_cap = nombre_socio.capitalize()
     return formatear_html(
         obtener_mensaje("liquidar_socio.confirmacion"),
@@ -195,7 +191,7 @@ async def handle_lq_seleccion(update: Update, context: ContextTypes.DEFAULT_TYPE
         resumen: ResumenSplitSocios = split_service.calcular_acumulado()
         socio_resumen = _encontrar_resumen_socio(resumen, nombre)
         if socio_resumen is not None:
-            pendiente_fmt = _fmt_cop(socio_resumen.pendiente.monto)
+            pendiente_fmt = fmt_cop(socio_resumen.pendiente.monto)
 
     markup = InlineKeyboardMarkup(
         [
@@ -384,7 +380,7 @@ async def handle_lq_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
         if tipo == "total"
         else obtener_mensaje("liquidar_socio.tipo_parcial")
     )
-    monto_fmt = _fmt_cop(monto.monto)
+    monto_fmt = fmt_cop(monto.monto)
     fecha_str = datetime.date.today().strftime("%d/%m/%Y")
     if update.effective_message:
         await update.effective_message.reply_text(

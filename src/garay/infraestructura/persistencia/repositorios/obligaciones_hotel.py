@@ -56,7 +56,7 @@ class SQLAObligacionHotelRepository(ObligacionHotelRepository):
         with self._sf.begin() as session:
             stmt = (
                 select(ObligacionHotelModel)
-                .where(ObligacionHotelModel.activa == True)  # noqa: E712
+                .where(ObligacionHotelModel.activa == True)
                 .order_by(ObligacionHotelModel.punto_de_venta_nombre)
             )
             rows = session.execute(stmt).scalars().all()

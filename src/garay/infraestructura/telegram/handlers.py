@@ -9,7 +9,6 @@ import uuid
 from collections.abc import Callable
 from contextlib import suppress
 from datetime import date
-from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -22,6 +21,7 @@ from telegram import (
 from telegram.error import BadRequest, TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.reportes.mis_ventas import (
     LineaMisVentas,
@@ -582,10 +582,6 @@ async def cmd_cancelar_sin_conv(update: Update, context: ContextTypes.DEFAULT_TY
         await update.effective_message.reply_text(obtener_mensaje("cancelar_sin_operacion"))
 
 
-def _fmt_cop(valor: Decimal) -> str:
-    """Format a Decimal as Colombian pesos. E.g.: 260000 → '$260.000'"""
-    return "$" + f"{int(valor):,}".replace(",", ".")
-
 
 def _formatear_comision(desglose: DesgloseComision) -> str:
     """Commission text for the 'sale registered' message.
@@ -597,9 +593,9 @@ def _formatear_comision(desglose: DesgloseComision) -> str:
     cerrador = desglose.cerrador.monto
     if vendedor > 0 and cerrador > 0:
         return obtener_mensaje("comision_por_rol").format(
-            vendedor=_fmt_cop(vendedor), cerrador=_fmt_cop(cerrador)
+            vendedor=fmt_cop(vendedor), cerrador=fmt_cop(cerrador)
         )
-    return _fmt_cop(vendedor + cerrador)
+    return fmt_cop(vendedor + cerrador)
 
 
 def _linea_mis_ventas(linea: LineaMisVentas) -> str:
@@ -612,7 +608,7 @@ def _linea_mis_ventas(linea: LineaMisVentas) -> str:
         )
     return obtener_mensaje("mis_ventas.linea").format(
         fecha=linea.fecha.strftime("%d/%m"),
-        valor=_fmt_cop(linea.valor.monto),
+        valor=fmt_cop(linea.valor.monto),
         extra=extra,
     )
 
@@ -623,8 +619,8 @@ def _formatear_mis_ventas(mv: MisVentas) -> str:
     lineas = [
         obtener_mensaje("mis_ventas.encabezado").format(
             total=mv.total_ventas,
-            valor=_fmt_cop(mv.valor_total.monto),
-            comision=_fmt_cop(mv.comision_total.monto),
+            valor=fmt_cop(mv.valor_total.monto),
+            comision=fmt_cop(mv.comision_total.monto),
         )
     ]
     if mv.realizados:
@@ -720,11 +716,11 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
     if ctx.valor is not None:
         lineas.append(
-            obtener_mensaje("dato_extraido_valor").format(valor=_fmt_cop(ctx.valor))
+            obtener_mensaje("dato_extraido_valor").format(valor=fmt_cop(ctx.valor))
         )
     if ctx.abono is not None:
         lineas.append(
-            obtener_mensaje("dato_extraido_abono").format(valor=_fmt_cop(ctx.abono))
+            obtener_mensaje("dato_extraido_abono").format(valor=fmt_cop(ctx.abono))
         )
     if ctx.numero_fisico is not None:
         lineas.append(
@@ -803,15 +799,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                         # works for 'ambos'/'solo cerrador' (registrant is the closer).
                         _sincronizar_ids_participantes(ctx_final, cmd)
 
-                        def _cop(v: object) -> str:
-                            raw: Any = v.monto if hasattr(v, "monto") else (v or 0)
-                            return "$" + f"{int(raw):,}".replace(",", ".")
-
                         comision_txt = _formatear_comision(desglose)
                         msg_ok = obtener_mensaje("venta_registrada_ok").format(
                             cliente=ctx_final.cliente_nombre or "—",
-                            valor=_cop(ctx_final.valor),
-                            abono=_cop(ctx_final.abono),
+                            valor=fmt_cop(ctx_final.valor),
+                            abono=fmt_cop(ctx_final.abono),
                             comision=comision_txt,
                         )
                         try:
@@ -1062,7 +1054,7 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     lineas = [obtener_mensaje("verificar_pago.encabezado"), ""]
     for ingreso in ingresos:
-        monto_fmt = _fmt_cop(ingreso.monto.monto)
+        monto_fmt = fmt_cop(ingreso.monto.monto)
         remitente = ingreso.remitente or "Desconocido"
         tiempo = (
             _fmt_hace_minutos(ingreso.fecha_recibido)

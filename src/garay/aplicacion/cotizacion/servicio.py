@@ -8,9 +8,9 @@ re-implemented independently per the design decision (DECISION §2).
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.cotizacion.contexto import ContextoCotizacion
 
 _BOGOTA = ZoneInfo("America/Bogota")
@@ -219,11 +219,6 @@ def _hoy_bogota() -> datetime.date:
     return datetime.datetime.now(_BOGOTA).date()
 
 
-def _fmt_cop(valor: Decimal | None) -> str:
-    """Format a Decimal as Colombian pesos. E.g.: 500000 -> '$500.000'"""
-    if valor is None:
-        return "$0"
-    return "$" + f"{int(valor):,}".replace(",", ".")
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +363,7 @@ class GenerarCotizacionService:
         </tr>
         <tr style="background:#f5f7fa;">
           <td style="padding:12px 14px;font-size:14px;font-weight:bold;color:#1B3B6B;">{t["concepto_valor"]}</td>
-          <td style="padding:12px 14px;text-align:right;font-size:16px;font-weight:bold;color:#1B3B6B;">{_fmt_cop(ctx.valor_total)}</td>
+          <td style="padding:12px 14px;text-align:right;font-size:16px;font-weight:bold;color:#1B3B6B;">{fmt_cop(ctx.valor_total)}</td>
         </tr>
       </table>
 

@@ -18,6 +18,7 @@ from telegram.ext import (
     ConversationHandler,
 )
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.socios.split import (
     ResumenSplitPeriodo,
     ResumenVentaDetalle,
@@ -70,8 +71,6 @@ _MESES_ES = {
 # ---------------------------------------------------------------------------
 
 
-def _fmt_cop(d: Dinero) -> str:
-    return "$" + f"{int(d.monto):,}".replace(",", ".")
 
 
 def _fmt_k(monto: int) -> str:
@@ -215,10 +214,10 @@ def _render_resultado(
     titulo = obtener_mensaje("resumen_divisiones.titulo").format(periodo=periodo_label)
     ventas_row = obtener_mensaje("resumen_divisiones.ventas_row").format(
         n=resultado.ventas_count,
-        bruto=_fmt_cop(resultado.total_bruto),
+        bruto=fmt_cop(resultado.total_bruto),
     )
     agencia_row = obtener_mensaje("resumen_divisiones.agencia_row").format(
-        monto=_fmt_cop(resultado.total_agencia),
+        monto=fmt_cop(resultado.total_agencia),
     )
 
     lineas = [titulo, "", ventas_row, ""]
@@ -233,12 +232,12 @@ def _render_resultado(
                 obtener_mensaje("resumen_divisiones.freelancer_item").format(
                     arbol=arbol,
                     nombre=fl.nombre,
-                    monto=_fmt_cop(fl.comision),
+                    monto=fmt_cop(fl.comision),
                 )
             )
     else:
         freelancer_row = obtener_mensaje("resumen_divisiones.freelancer_row").format(
-            monto=_fmt_cop(resultado.total_comisiones_freelancer),
+            monto=fmt_cop(resultado.total_comisiones_freelancer),
         )
         lineas.append(freelancer_row)
 
@@ -254,14 +253,14 @@ def _render_resultado(
                 arbol=arbol,
                 nombre=s.nombre,
                 padding=padding,
-                monto=_fmt_cop(s.acumulado),
+                monto=fmt_cop(s.acumulado),
             )
         )
 
     # Total ganancia = agency net + freelancer commissions
     ganancia = resultado.total_agencia + resultado.total_comisiones_freelancer
     ganancia_row = obtener_mensaje("resumen_divisiones.ganancia_row").format(
-        monto=_fmt_cop(ganancia),
+        monto=fmt_cop(ganancia),
     )
     lineas.append(ganancia_row)
 
@@ -298,7 +297,7 @@ def _render_detalle_venta(venta: ResumenVentaDetalle) -> tuple[str, InlineKeyboa
         fecha=fecha_str, nombre=nombre
     )
     bruto = obtener_mensaje("resumen_divisiones.detalle_bruto").format(
-        monto=_fmt_cop(venta.valor_bruto)
+        monto=fmt_cop(venta.valor_bruto)
     )
 
     lineas = [titulo, "", bruto]
@@ -315,27 +314,27 @@ def _render_detalle_venta(venta: ResumenVentaDetalle) -> tuple[str, InlineKeyboa
             lineas.append(
                 obtener_mensaje("resumen_divisiones.detalle_comision_item").format(
                     nombre=venta.vendedor_nombre,
-                    monto=_fmt_cop(venta.desglose_vendedor),
+                    monto=fmt_cop(venta.desglose_vendedor),
                 )
             )
         if venta.desglose_cerrador > Dinero(0) and venta.cerrador_nombre:
             lineas.append(
                 obtener_mensaje("resumen_divisiones.detalle_comision_item").format(
                     nombre=venta.cerrador_nombre,
-                    monto=_fmt_cop(venta.desglose_cerrador),
+                    monto=fmt_cop(venta.desglose_cerrador),
                 )
             )
         if venta.desglose_punto > Dinero(0):
             lineas.append(
                 obtener_mensaje("resumen_divisiones.detalle_comision_item").format(
                     nombre="Punto de venta",
-                    monto=_fmt_cop(venta.desglose_punto),
+                    monto=fmt_cop(venta.desglose_punto),
                 )
             )
 
     lineas.append(
         obtener_mensaje("resumen_divisiones.detalle_agencia").format(
-            monto=_fmt_cop(venta.desglose_agencia)
+            monto=fmt_cop(venta.desglose_agencia)
         )
     )
 
@@ -349,7 +348,7 @@ def _render_detalle_venta(venta: ResumenVentaDetalle) -> tuple[str, InlineKeyboa
                 arbol=arbol,
                 nombre=s.nombre,
                 padding=padding,
-                monto=_fmt_cop(s.acumulado),
+                monto=fmt_cop(s.acumulado),
             )
         )
 

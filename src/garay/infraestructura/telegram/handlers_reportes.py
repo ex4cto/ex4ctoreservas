@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime
-from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.infraestructura.telegram.auth import (
     es_propietario,
     requiere_admin,
@@ -108,7 +108,7 @@ def _formatear_resumen_ventas(resumen: object, mes: int, año: int) -> str:
                 obtener_mensaje("reporte.ventas.metodo_pago_item").format(
                     metodo=nombre_metodo,
                     ventas=ventas_cnt,
-                    valor=_fmt_cop(valor.monto),
+                    valor=fmt_cop(valor.monto),
                 )
             )
     return "\n".join(lineas)
@@ -218,7 +218,7 @@ def _formatear_split_socios(resumen: object) -> str:
         "",
         formatear_html(
             obtener_mensaje("reporte.socios.agencia_total"),
-            monto=_fmt_cop(resumen.total_agencia.monto),
+            monto=fmt_cop(resumen.total_agencia.monto),
         ),
     ]
     for socio in resumen.por_socio:
@@ -231,9 +231,9 @@ def _formatear_split_socios(resumen: object) -> str:
                 emoji=emoji,
                 nombre=nombre_cap,
                 porcentaje=pct,
-                acumulado=_fmt_cop(socio.acumulado.monto),
-                pagado=_fmt_cop(socio.pagado.monto),
-                pendiente=_fmt_cop(socio.pendiente.monto),
+                acumulado=fmt_cop(socio.acumulado.monto),
+                pagado=fmt_cop(socio.pagado.monto),
+                pendiente=fmt_cop(socio.pendiente.monto),
             )
         )
     return "\n".join(lineas)
@@ -366,11 +366,6 @@ async def cb_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
 
 
-def _fmt_cop(valor: Decimal) -> str:
-    # Replicates the per-module pattern from handlers.py and handlers_egresos.py.
-    # E.g.: Decimal("208929.30") → "$208.929"
-    return "$" + f"{int(valor):,}".replace(",", ".")
-
 
 _BOGOTA = ZoneInfo("America/Bogota")
 
@@ -405,7 +400,7 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
                 if ing.fecha_recibido is not None
                 else "—"
             )
-            monto_str = _fmt_cop(ing.monto.monto)
+            monto_str = fmt_cop(ing.monto.monto)
             reenvio_tag = f" {tag_reenvio}" if ing.reenviado else ""
             lineas.append(
                 formatear_html(
@@ -425,7 +420,7 @@ def _formatear_movimientos(movimientos: object, horas: int) -> str:
                 if egr.fecha_recibido is not None
                 else "—"
             )
-            monto_str = _fmt_cop(egr.monto.monto)
+            monto_str = fmt_cop(egr.monto.monto)
             reenvio_tag = f" {tag_reenvio}" if egr.reenviado else ""
             lineas.append(
                 formatear_html(

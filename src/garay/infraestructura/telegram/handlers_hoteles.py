@@ -12,12 +12,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.fechas import parsear_fecha
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import ObligacionHotel
 from garay.infraestructura.telegram.auth import (
     requiere_admin,
-    requiere_admin_conv,
 )
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
@@ -69,12 +69,10 @@ def _hoy_bogota() -> datetime.date:
 # ---------------------------------------------------------------------------
 
 
-def _fmt_cop(valor: Decimal) -> str:
-    return "$" + f"{int(valor):,}".replace(",", ".")
 
 
 def _fmt_dinero(dinero: Dinero) -> str:
-    return _fmt_cop(dinero.monto)
+    return fmt_cop(dinero.monto)
 
 
 def _fila_boton(texto: str, data: str) -> list[InlineKeyboardButton]:
@@ -186,7 +184,7 @@ def _texto_resumen_pago(
         obtener_mensaje("hoteles.pagar_confirmar"),
         nombre=hotel.punto_de_venta_nombre,
         receptor=hotel.receptor_nombre,
-        monto=_fmt_cop(monto),
+        monto=fmt_cop(monto),
         fecha=fecha.strftime("%d/%m/%Y"),
         concepto=concepto or "—",
         saldo_tras_pago=_fmt_dinero(saldo_tras_pago),
@@ -519,7 +517,7 @@ async def handle_pago_confirmar(update: Update, context: ContextTypes.DEFAULT_TY
             formatear_html(
                 obtener_mensaje("hoteles.pago_registrado"),
                 nombre=nombre,
-                monto=_fmt_cop(monto),
+                monto=fmt_cop(monto),
                 saldo=_fmt_dinero(nuevo_saldo),
             ),
         )

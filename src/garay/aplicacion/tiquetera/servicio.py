@@ -8,6 +8,7 @@ import logging
 import uuid
 
 from garay.aplicacion.comun.fechas import formatear_fechas_compactas
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, ResultadoRegistrarVenta
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.dominio.comisiones.entidades import ComisionRegistrada
@@ -32,9 +33,6 @@ from garay.dominio.ventas.valor_objetos import Participantes
 
 logger = logging.getLogger(__name__)
 
-
-def _fmt_cop(d: Dinero) -> str:
-    return "$" + f"{int(d.monto):,}".replace(",", ".")
 
 
 def _esc(v: object) -> str:
@@ -100,38 +98,38 @@ def _construir_mensaje_privado(
     lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
     lineas.append("")
 
-    lineas.append(f"💵 Bruto: {_fmt_cop(cmd.valor_venta)}")
-    lineas.append(f"🏭 Neto operador: {_fmt_cop(cmd.neto)}")
-    lineas.append(f"📈 Ganancia: {_fmt_cop(ganancia)}")
+    lineas.append(f"💵 Bruto: {fmt_cop(cmd.valor_venta)}")
+    lineas.append(f"🏭 Neto operador: {fmt_cop(cmd.neto)}")
+    lineas.append(f"📈 Ganancia: {fmt_cop(ganancia)}")
 
     # Freelancer commissions — omit roles whose amount is zero
     lineas.append("")
     if desglose.vendedor.monto > 0:
         lineas.append(
-            f"👤 Vendedor ({snap.porcentaje_vendedor}%): {_fmt_cop(desglose.vendedor)}"
+            f"👤 Vendedor ({snap.porcentaje_vendedor}%): {fmt_cop(desglose.vendedor)}"
         )
     if desglose.cerrador.monto > 0:
         lineas.append(
-            f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {_fmt_cop(desglose.cerrador)}"
+            f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {fmt_cop(desglose.cerrador)}"
         )
     if desglose.punto_de_venta.monto > 0:
         pct_punto = snap.porcentaje_capa_punto
         lineas.append(
-            f"🏪 Punto de venta ({pct_punto}%): {_fmt_cop(desglose.punto_de_venta)}"
+            f"🏪 Punto de venta ({pct_punto}%): {fmt_cop(desglose.punto_de_venta)}"
         )
 
-    lineas.append(f"🏢 Agencia neta: {_fmt_cop(agencia_neta)}")
+    lineas.append(f"🏢 Agencia neta: {fmt_cop(agencia_neta)}")
 
     # All socios' shares — every socio sees every other socio's cut
     lineas.append("")
     for s in socios:
         cantidad = split.get(s.nombre, Dinero(0))
         lineas.append(
-            f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {_fmt_cop(cantidad)}"
+            f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {fmt_cop(cantidad)}"
         )
 
     lineas.append("")
-    lineas.append(f"✅ Tu parte: {_fmt_cop(monto)}")
+    lineas.append(f"✅ Tu parte: {fmt_cop(monto)}")
 
     return "\n".join(lineas)
 
@@ -276,15 +274,15 @@ class RegistrarVentaService:
         else:
             lineas.append(f"👥 Pax: {cmd.adultos} adultos")
 
-        valor_line = f"💰 Valor: {_fmt_cop(cmd.valor_venta)}"
+        valor_line = f"💰 Valor: {fmt_cop(cmd.valor_venta)}"
         if cmd.abono is not None:
-            valor_line += f" | Abono: {_fmt_cop(cmd.abono)}"
+            valor_line += f" | Abono: {fmt_cop(cmd.abono)}"
         lineas.append(valor_line)
 
         saldo_pendiente = (
             cmd.valor_venta - cmd.abono if cmd.abono is not None else cmd.valor_venta
         )
-        lineas.append(f"🧾 Saldo pendiente: {_fmt_cop(saldo_pendiente)}")
+        lineas.append(f"🧾 Saldo pendiente: {fmt_cop(saldo_pendiente)}")
 
         if cmd.numero_fisico:
             lineas.append(f"🎫 Ticket: {_esc(cmd.numero_fisico)}")
@@ -294,14 +292,14 @@ class RegistrarVentaService:
             lineas.append(f"📲 Canal: {_esc(cmd.canal_origen)}")
         lineas.append("")
         lineas.append("Comisiones:")
-        lineas.append(f"  Agencia: {_fmt_cop(desglose.agencia)}")
+        lineas.append(f"  Agencia: {fmt_cop(desglose.agencia)}")
 
         if vendedor == cerrador:
-            comision_total = _fmt_cop(desglose.vendedor + desglose.cerrador)
+            comision_total = fmt_cop(desglose.vendedor + desglose.cerrador)
             lineas.append(f"  {vendedor}: {comision_total}")
         else:
-            lineas.append(f"  Vendedor ({vendedor}): {_fmt_cop(desglose.vendedor)}")
-            lineas.append(f"  Cerrador ({cerrador}): {_fmt_cop(desglose.cerrador)}")
+            lineas.append(f"  Vendedor ({vendedor}): {fmt_cop(desglose.vendedor)}")
+            lineas.append(f"  Cerrador ({cerrador}): {fmt_cop(desglose.cerrador)}")
 
         mensaje = "\n".join(lineas)
         # Best-effort: la notificación al grupo NUNCA debe tumbar la venta (ya se
