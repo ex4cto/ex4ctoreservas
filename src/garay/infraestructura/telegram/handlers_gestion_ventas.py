@@ -75,6 +75,10 @@ from garay.mensajes.catalogo import obtener_mensaje
 logger = logging.getLogger(__name__)
 
 
+def _fmt_cop(d: Dinero) -> str:
+    return "$" + f"{int(d.monto):,}".replace(",", ".")
+
+
 def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove gv_* keys from user_data to prevent stale state across conversation runs."""
     if context.user_data is not None:
@@ -2048,15 +2052,11 @@ async def _construir_textos_edicion_financiera(
     )
     pax_line = f"👥 Pax: {venta.adultos} adultos{pax_ninos}\n"
     canal_label = _TIPO_CLIENTE_LABEL.get(venta.tipo_cliente, venta.tipo_cliente.value)
-    canal_line = (
-        f"\n📲 Canal: {escape(canal_label, quote=False)}"
-        if venta.canal_origen or True  # canal is always relevant
-        else ""
-    )
+    canal_line = f"\n📲 Canal: {escape(canal_label, quote=False)}"
     abono_dinero = venta.abono
     abono_line = ""
     if abono_dinero is not None and abono_dinero.monto > 0:
-        abono_line = f" | Abono: {abono_dinero}"
+        abono_line = f" | Abono: {_fmt_cop(abono_dinero)}"
     saldo = (
         venta.valor_venta - abono_dinero
         if abono_dinero is not None
@@ -2065,7 +2065,7 @@ async def _construir_textos_edicion_financiera(
 
     # Commissions section for group message
     tipo_label = venta.tipo_cliente.value
-    agencia_com = str(desglose.agencia) if desglose else "—"
+    agencia_com = _fmt_cop(desglose.agencia) if desglose else "—"
     vendedor_line_com = ""
     cerrador_line_com = ""
     if desglose is not None:
@@ -2073,12 +2073,12 @@ async def _construir_textos_edicion_financiera(
         if venta.participantes.vendedor_nombre and desglose.vendedor.monto > 0:
             vendedor_line_com = (
                 f"\n  Vendedor ({escape(venta.participantes.vendedor_nombre, quote=False)})"
-                f": {desglose.vendedor}"
+                f": {_fmt_cop(desglose.vendedor)}"
             )
         if venta.participantes.cerrador_nombre and desglose.cerrador.monto > 0:
             cerrador_line_com = (
                 f"\n  Cerrador ({escape(venta.participantes.cerrador_nombre, quote=False)})"
-                f": {desglose.cerrador}"
+                f": {_fmt_cop(desglose.cerrador)}"
             )
 
     mensaje_grupo_text = obtener_mensaje("gestion_ventas.venta_actualizada_grupo").format(
@@ -2088,9 +2088,9 @@ async def _construir_textos_edicion_financiera(
         telefono_line=telefono_line,
         hotel_line=hotel_line,
         pax_line=pax_line,
-        valor=str(venta.valor_venta),
+        valor=_fmt_cop(venta.valor_venta),
         abono_line=abono_line,
-        saldo=str(saldo),
+        saldo=_fmt_cop(saldo),
         tipo=escape(tipo_label, quote=False),
         canal_line=canal_line,
         agencia=agencia_com,
@@ -2111,33 +2111,35 @@ async def _construir_textos_edicion_financiera(
         snap = desglose.snapshot
         if venta.participantes.vendedor_nombre and desglose.vendedor.monto > 0:
             comisiones_lines += (
-                f"👤 Vendedor ({snap.porcentaje_vendedor}%): {desglose.vendedor}\n"
+                f"👤 Vendedor ({snap.porcentaje_vendedor}%): {_fmt_cop(desglose.vendedor)}\n"
             )
         if venta.participantes.cerrador_nombre and desglose.cerrador.monto > 0:
             comisiones_lines += (
-                f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {desglose.cerrador}\n"
+                f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {_fmt_cop(desglose.cerrador)}\n"
             )
         if desglose.punto_de_venta.monto > 0:
+            pct_pv = snap.porcentaje_capa_punto
             comisiones_lines += (
-                f"🏪 Punto de venta ({snap.porcentaje_capa_punto}%): {desglose.punto_de_venta}\n"
+                f"🏪 Punto de venta ({pct_pv}%): {_fmt_cop(desglose.punto_de_venta)}\n"
             )
-    agencia_neta = str(desglose.agencia) if desglose else "—"
+    agencia_neta = _fmt_cop(desglose.agencia) if desglose else "—"
     split_lines = ""
     for socio in socios:
         parte = desglose.agencia.aplicar_porcentaje(socio.porcentaje) if desglose else None
         if parte is not None:
+            nombre_socio = escape(socio.nombre, quote=False)
             split_lines += (
-                f"   📊 {escape(socio.nombre, quote=False)} ({socio.porcentaje}%): {parte}\n"
+                f"   📊 {nombre_socio} ({socio.porcentaje}%): {_fmt_cop(parte)}\n"
             )
     # mi_parte is the total agencia net (shown to every socio equally)
-    mi_parte = str(desglose.agencia) if desglose else "—"
+    mi_parte = _fmt_cop(desglose.agencia) if desglose else "—"
 
     dm_socios_text = obtener_mensaje("gestion_ventas.dm_socio_edicion_financiera").format(
         destinos_line=destinos_line,
         fecha_line=f"📅 Fecha: {venta.fecha:%d/%m/%Y}",
-        valor=str(venta.valor_venta),
-        neto=str(neto),
-        ganancia=str(ganancia),
+        valor=_fmt_cop(venta.valor_venta),
+        neto=_fmt_cop(neto),
+        ganancia=_fmt_cop(ganancia),
         comisiones_lines=comisiones_lines,
         agencia=agencia_neta,
         split_lines=split_lines,
@@ -2235,7 +2237,7 @@ async def _handle_confirmar_editar_neto(
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     # Capture the old value before the service mutates the entity in-place.
-    anterior_neto_str = str(venta.neto)
+    anterior_neto_str = _fmt_cop(venta.neto)
     mensaje_key: str | None = None
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
@@ -2269,7 +2271,7 @@ async def _handle_confirmar_editar_neto(
                 _venta_para_notif,
                 campo_label=campo_label_neto,
                 anterior=anterior_neto_str,
-                nuevo=nuevo_neto_str,
+                nuevo=_fmt_cop(nuevo_neto),
                 motivo=motivo,
                 actor=nombre or "—",
             )
@@ -2377,7 +2379,7 @@ async def _handle_confirmar_editar_valor_venta(
         return await cerrar_flujo(update, context, GrupoComando.VENTAS)
 
     # Capture the old value before the service mutates the entity in-place.
-    anterior_vv_str = str(venta.valor_venta)
+    anterior_vv_str = _fmt_cop(venta.valor_venta)
     mensaje_key: str | None = None
     try:
         await asyncio.to_thread(service.ejecutar, cmd)
@@ -2413,7 +2415,7 @@ async def _handle_confirmar_editar_valor_venta(
                 _venta_para_notif_vv,
                 campo_label=campo_label_vv,
                 anterior=anterior_vv_str,
-                nuevo=nuevo_vv_str,
+                nuevo=_fmt_cop(nuevo_vv),
                 motivo=motivo,
                 actor=nombre or "—",
             )

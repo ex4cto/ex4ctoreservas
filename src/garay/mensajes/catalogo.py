@@ -1017,7 +1017,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "{vendedor_line}"
             "{cerrador_line}\n\n"
             "━━━━━━━\n"
-            "📝 {campo_label} actualizado\n"
+            "{campo_label} actualizado\n"
             "  Antes: {anterior} → Ahora: {nuevo}\n"
             "  Motivo: {motivo}\n"
             "  Por: {actor}"
