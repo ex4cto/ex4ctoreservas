@@ -1168,18 +1168,6 @@ class FSMTiquetera:
                 opciones=[_OP_CONFIRMAR, _OP_EDITAR, _OP_CANCELAR],
                 contexto=ctx,
             )
-        if ctx.tipo_cliente == TipoCliente.INTERNO:
-            # INTERNO clients stay at the hotel where the punto de venta is located,
-            # so the hotel is implicit (the punto de venta) — skip the hotel/room
-            # questions and record the punto as the hotel.
-            ctx.cliente_hotel = ctx.punto_de_venta_nombre
-            ctx.cliente_habitacion = None
-            ctx.sin_hotel = False
-            return SalidaFSM(
-                nuevo_estado=EstadoFSM.FECHA_SALIDA,
-                mensaje=self._mensaje_entrada_fecha_salida(ctx),
-                contexto=ctx,
-            )
         return SalidaFSM(
             nuevo_estado=EstadoFSM.CLIENTE_HOTEL,
             mensaje=obtener_mensaje("pregunta_cliente_hotel"),
@@ -1715,9 +1703,6 @@ class FSMTiquetera:
             and (est != EstadoFSM.TIPO_RESERVA or not es_crespo)
             # Hide "Modalidad" for Digital (modalidad is already decided)
             and (est != EstadoFSM.MODALIDAD_VENTA or ctx.tipo_cliente != TipoCliente.DIGITAL)
-            # Hide "Hotel"/"Habitación" for INTERNO (hotel is the punto de venta)
-            and (est != EstadoFSM.CLIENTE_HOTEL or ctx.tipo_cliente != TipoCliente.INTERNO)
-            and (est != EstadoFSM.CLIENTE_HABITACION or ctx.tipo_cliente != TipoCliente.INTERNO)
         ]
 
     def _handle_confirmacion(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:

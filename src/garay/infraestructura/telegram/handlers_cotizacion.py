@@ -506,7 +506,7 @@ def _resumen_cotizacion(ctx: ContextoCotizacion) -> str:
         ctx.fecha_salida.strftime("%d/%m/%Y") if ctx.fecha_salida else "—"
     )
     tour = ", ".join(ctx.destinos_nombres) if ctx.destinos_nombres else "—"
-    from garay.aplicacion.cotizacion.servicio import _fmt_cop
+    from garay.aplicacion.comun.formato import fmt_cop as _fmt_cop
 
     return (
         f"<b>Resumen de cotización</b>\n\n"
@@ -531,7 +531,7 @@ async def handle_cot_confirmar(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> int:
     """Generate HTML, optionally send email, send Telegram notification, end flow."""
-    from garay.aplicacion.cotizacion.servicio import _fmt_cop
+    from garay.aplicacion.comun.formato import fmt_cop as _fmt_cop
     from garay.mensajes.catalogo import Idioma, obtener_mensaje
 
     if update.callback_query is not None:

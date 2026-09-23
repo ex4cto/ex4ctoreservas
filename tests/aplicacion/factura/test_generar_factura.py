@@ -160,11 +160,11 @@ class TestGenerarFacturaHtml:
         assert "ABC123" in html
 
     def test_fmt_cop_formatea_correctamente(self) -> None:
-        from garay.aplicacion.factura.servicio import _fmt_cop
+        from garay.aplicacion.comun.formato import fmt_cop
 
-        assert _fmt_cop(Decimal("500000")) == "$500.000"
-        assert _fmt_cop(Decimal("1000000")) == "$1.000.000"
-        assert _fmt_cop(None) == "$0"
+        assert fmt_cop(Decimal("500000")) == "$500.000"
+        assert fmt_cop(Decimal("1000000")) == "$1.000.000"
+        assert fmt_cop(None) == "—"
 
     def test_fecha_emision_usa_zona_bogota(self) -> None:
         from unittest.mock import patch

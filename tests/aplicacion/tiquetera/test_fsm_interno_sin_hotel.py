@@ -1,8 +1,8 @@
-"""INTERNO clients skip the hotel/room questions.
+"""INTERNO clients now go through hotel + room questions like EXTERNO.
 
-Business rule: an INTERNO client is staying at the hotel where the punto de venta
-is located, so the hotel is implicit (the punto de venta) and asking for it is
-redundant. EXTERNO/DIGITAL still get the hotel questions.
+Business rule (corrected): asking for hotel/room is skipped ONLY when the client
+says "sin hotel", which implies an EXTERNAL context. INTERNO clients always provide
+hotel and room — the previous shortcut (hotel = punto de venta) was incorrect.
 """
 
 from __future__ import annotations
@@ -27,44 +27,36 @@ def fsm() -> FSMTiquetera:
 
 
 class TestIdentificacionRuteoPorTipo:
-    def test_interno_salta_hotel_va_a_fecha_salida(self, fsm: FSMTiquetera) -> None:
+    def test_interno_va_a_cliente_hotel(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(tipo_cliente=TipoCliente.INTERNO, punto_de_venta_nombre="Marie Real")
         salida = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
-        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
 
-    def test_interno_guarda_punto_como_hotel(self, fsm: FSMTiquetera) -> None:
-        ctx = ContextoVenta(tipo_cliente=TipoCliente.INTERNO, punto_de_venta_nombre="Marie Real")
-        salida = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
-        assert salida.contexto.cliente_hotel == "Marie Real"
-
-    def test_externo_sigue_preguntando_hotel(self, fsm: FSMTiquetera) -> None:
+    def test_externo_va_a_cliente_hotel(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(tipo_cliente=TipoCliente.EXTERNO, punto_de_venta_nombre="Marie Real")
         salida = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
 
+    def test_interno_con_hotel_va_a_habitacion(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(tipo_cliente=TipoCliente.INTERNO, punto_de_venta_nombre="Marie Real")
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Marie Real", ctx)
+        assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
 
-class TestValidacionConfirmacionInterno:
-    def test_interno_no_exige_hotel_ni_habitacion(self, fsm: FSMTiquetera) -> None:
-        """INTERNO no longer requires hotel/habitación (hotel is the punto de venta)."""
-        ctx = ContextoVenta(
-            tipo_cliente=TipoCliente.INTERNO,
-            punto_de_venta_nombre="Marie Real",
-            cliente_hotel="Marie Real",
-            cliente_habitacion=None,
-        )
-        faltantes = fsm._validar_datos_confirmacion(ctx)
-        assert "Hotel" not in faltantes
-        assert "Habitación" not in faltantes
+    def test_sin_hotel_salta_habitacion(self, fsm: FSMTiquetera) -> None:
+        ctx = ContextoVenta(tipo_cliente=TipoCliente.INTERNO, punto_de_venta_nombre="Marie Real")
+        salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "sin hotel", ctx)
+        assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
+        assert salida.contexto.sin_hotel is True
 
 
-class TestOpcionesEditablesInterno:
-    def test_interno_oculta_hotel_y_habitacion(self, fsm: FSMTiquetera) -> None:
+class TestOpcionesEditables:
+    def test_interno_muestra_hotel_y_habitacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(tipo_cliente=TipoCliente.INTERNO, punto_de_venta_nombre="Marie Real")
         opciones = fsm._opciones_editables(ctx)
-        assert "Hotel" not in opciones
-        assert "Habitación" not in opciones
+        assert "Hotel" in opciones
+        assert "Habitación" in opciones
 
-    def test_externo_conserva_hotel(self, fsm: FSMTiquetera) -> None:
+    def test_externo_muestra_hotel_y_habitacion(self, fsm: FSMTiquetera) -> None:
         ctx = ContextoVenta(tipo_cliente=TipoCliente.EXTERNO, punto_de_venta_nombre="Marie Real")
         opciones = fsm._opciones_editables(ctx)
         assert "Hotel" in opciones

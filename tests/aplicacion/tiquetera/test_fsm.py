@@ -9,11 +9,11 @@ from decimal import Decimal
 import pytest
 
 from garay.aplicacion.comun.montos import parsear_monto as _parsear_monto
+from garay.aplicacion.comun.formato import fmt_cop as _formatear_monto
 from garay.aplicacion.tiquetera.fsm import (
     EstadoFSM,
     FSMTiquetera,
     _es_sin_hotel,
-    _formatear_monto,
 )
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.contexto import ContextoVenta
@@ -703,8 +703,18 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.CLIENTE_IDENTIFICACION
         ctx = s.contexto
 
-        # CLIENTE_IDENTIFICACION → INTERNO skips hotel/room (hotel = punto de venta)
+        # CLIENTE_IDENTIFICACION → CLIENTE_HOTEL (INTERNO also provides hotel + room)
         s = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
+        assert s.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
+        ctx = s.contexto
+
+        # CLIENTE_HOTEL
+        s = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Marie Real", ctx)
+        assert s.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
+        ctx = s.contexto
+
+        # CLIENTE_HABITACION
+        s = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "305", ctx)
         assert s.nuevo_estado == EstadoFSM.FECHA_SALIDA
         ctx = s.contexto
 
