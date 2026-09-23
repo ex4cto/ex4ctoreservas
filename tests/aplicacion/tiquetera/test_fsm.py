@@ -703,14 +703,10 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.CLIENTE_IDENTIFICACION
         ctx = s.contexto
 
-        # CLIENTE_IDENTIFICACION → CLIENTE_HOTEL (INTERNO also provides hotel + room)
+        # CLIENTE_IDENTIFICACION → INTERNO skips hotel (= punto de venta) → asks room
         s = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "1234567890", ctx)
-        assert s.nuevo_estado == EstadoFSM.CLIENTE_HOTEL
-        ctx = s.contexto
-
-        # CLIENTE_HOTEL
-        s = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Marie Real", ctx)
         assert s.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
+        assert s.contexto.cliente_hotel == "Marie Real"
         ctx = s.contexto
 
         # CLIENTE_HABITACION
