@@ -21,6 +21,34 @@ Estos estandares son obligatorios. Se definieron antes de escribir codigo, a pro
 - Redondeo explicito (`ROUND_HALF_UP`, 2 decimales). Las comisiones deben cuadrar: la suma
   de las partes es igual al total.
 
+## Formato de numeros financieros
+
+**Display — una sola funcion, sin excepciones:**
+
+```python
+from garay.aplicacion.comun.formato import fmt_cop
+fmt_cop(venta.valor_venta)   # → "$390.000"
+fmt_cop(some_decimal)        # → "$390.000"
+fmt_cop(None)                # → "—"
+```
+
+- Nunca `str(Dinero)` (produce `"390000.00 COP"`), nunca f-string directo sobre `Dinero`.
+- Nunca definir un `_fmt_cop` local en ningun modulo.
+
+**Input del usuario — un solo parser, sin excepciones:**
+
+```python
+from garay.aplicacion.comun.montos import parsear_monto
+parsear_monto("390000")   # → Decimal("390000")
+parsear_monto("390.000")  # → Decimal("390000")  # punto de miles colombiano
+parsear_monto("390")      # → Decimal("390000")  # atajo: < 1000 → × 1000
+parsear_monto("390k")     # → Decimal("390000")  # sufijo k/K
+parsear_monto("abc")      # → None
+```
+
+- Nunca `Decimal(texto)` directo sobre input del usuario.
+- Siempre validar que el resultado no sea `None` antes de construir `Dinero`.
+
 ## No hardcoding
 
 - Principio general. Splits, porcentajes, horarios de cupos, montos, IDs de grupos, tokens y
