@@ -179,7 +179,7 @@ class TestGenerarFacturaHtml:
         servicio = GenerarFacturaService()
         html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "BRE-B" in html.upper()
-        assert "@garay58804" in html
+        assert "@sharimel535" in html
 
     def test_html_no_menciona_nequi(self) -> None:
         servicio = GenerarFacturaService()
@@ -381,15 +381,11 @@ class TestMediosPago:
     def test_llave_sharimel_presente_es(self) -> None:
         assert "@sharimel535" in self._html("es")
 
-    def test_cuenta_garay_presente_secundaria_es(self) -> None:
-        assert "085-043956-43" in self._html("es")
+    def test_cuenta_garay_no_aparece(self) -> None:
+        assert "085-043956-43" not in self._html("es")
 
-    def test_llave_garay_presente_secundaria_es(self) -> None:
-        assert "@garay58804" in self._html("es")
-
-    def test_sharimel_aparece_antes_que_garay(self) -> None:
-        html = self._html("es")
-        assert html.index("09800010350") < html.index("085-043956-43")
+    def test_llave_garay_no_aparece(self) -> None:
+        assert "@garay58804" not in self._html("es")
 
     def test_cuenta_sharimel_presente_en(self) -> None:
         assert "09800010350" in self._html("en")

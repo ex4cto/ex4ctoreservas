@@ -173,7 +173,6 @@ _TEXTOS: dict[str, dict[str, str]] = {
         "medios_pago": "Medios de pago:",
         "cta_ahorro": "Bancolombia cta. ahorro:",
         "llave": "Bancolombia llave BRE-B:",
-        "cta_alterna": "Cta. alterna:",
         "referencia": "Referencia: número de factura",
         "footer_p1": (
             "Gracias por elegir Garay Tours. Este documento es una factura de servicio "
@@ -211,7 +210,6 @@ _TEXTOS: dict[str, dict[str, str]] = {
         "medios_pago": "Payment methods:",
         "cta_ahorro": "Bancolombia savings acct.:",
         "llave": "Bancolombia BRE-B key:",
-        "cta_alterna": "Alt. acct.:",
         "referencia": "Reference: invoice number",
         "footer_p1": (
             "Thank you for choosing Garay Tours. This document is a service invoice issued "
@@ -442,7 +440,6 @@ class GenerarFacturaService:
             <strong style="color:#1B3B6B;">{t["medios_pago"]}</strong><br>
             🏦 {t["cta_ahorro"]} <strong>09800010350</strong><br>
             🔑 {t["llave"]} <strong>@sharimel535</strong><br>
-            <span style="color:#888;font-size:11px;">{t["cta_alterna"]} 085-043956-43 · @garay58804</span><br>
             <span style="color:#555;font-size:11px;">{t["referencia"]} {numero_final}</span>
           </td>
         </tr>
