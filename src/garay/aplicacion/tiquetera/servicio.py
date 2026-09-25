@@ -106,16 +106,18 @@ def _construir_mensaje_privado(
     lineas.append("")
     if desglose.vendedor.monto > 0:
         vendedor_nombre = cmd.participantes.vendedor_nombre or "—"
+        pct_v = f"{snap.porcentaje_vendedor.normalize():f}"
         lineas.append(
-            f"👤 Vendedor — {_esc(vendedor_nombre)} ({snap.porcentaje_vendedor}%): {fmt_cop(desglose.vendedor)}"
+            f"👤 Vendedor — {_esc(vendedor_nombre)} ({pct_v}%): {fmt_cop(desglose.vendedor)}"
         )
     if desglose.cerrador.monto > 0:
         cerrador_nombre = cmd.participantes.cerrador_nombre or "—"
+        pct_c = f"{snap.porcentaje_cerrador.normalize():f}"
         lineas.append(
-            f"🔑 Cerrador — {_esc(cerrador_nombre)} ({snap.porcentaje_cerrador}%): {fmt_cop(desglose.cerrador)}"
+            f"🔑 Cerrador — {_esc(cerrador_nombre)} ({pct_c}%): {fmt_cop(desglose.cerrador)}"
         )
     if desglose.punto_de_venta.monto > 0:
-        pct_punto = snap.porcentaje_capa_punto
+        pct_punto = f"{snap.porcentaje_capa_punto.normalize():f}"
         lineas.append(
             f"🏪 Punto de venta ({pct_punto}%): {fmt_cop(desglose.punto_de_venta)}"
         )

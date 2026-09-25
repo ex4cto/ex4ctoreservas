@@ -1085,9 +1085,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "gestion_ventas.pedir_cambio_valor_venta_tour": {
         Idioma.ES: (
-            "Neto calculado: <b>{neto_nuevo}</b>\n\n"
-            "Valor de venta actual: {valor_actual}\n\n"
-            "¿Deseas cambiar también el valor de venta?"
+            "✅ Neto recalculado con el cambio de Tour: <b>{neto_nuevo}</b>\n"
+            "💰 Valor de venta actual: {valor_actual}\n\n"
+            "¿Deseas ajustar también el valor de venta?"
         )
     },
     "gestion_ventas.pedir_nuevo_valor_venta_tour": {
