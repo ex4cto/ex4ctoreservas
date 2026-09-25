@@ -47,6 +47,7 @@ from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaServi
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
+from garay.aplicacion.ventas.editar_servicio import EditarServicioVentaService
 from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
@@ -170,6 +171,15 @@ def main() -> None:
     editar_valor_venta_service = EditarValorVentaService(
         ventas=ventas_repo,
         auditoria=auditoria_venta_repo,
+        reglas_repo=reglas_repo,
+        puntos_repo=pdv_repo,
+        comisiones_repo=comisiones_repo,
+        motor=MotorComisiones(),
+    )
+    editar_servicio_venta_service = EditarServicioVentaService(
+        ventas=ventas_repo,
+        auditoria=auditoria_venta_repo,
+        servicios=servicio_repo,
         reglas_repo=reglas_repo,
         puntos_repo=pdv_repo,
         comisiones_repo=comisiones_repo,
@@ -478,6 +488,7 @@ def main() -> None:
             "editar_participantes_venta_service": editar_participantes_venta_service,
             "editar_neto_venta_service": editar_neto_venta_service,
             "editar_valor_venta_service": editar_valor_venta_service,
+            "editar_servicio_svc": editar_servicio_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
             "cotizacion_service": generar_cotizacion_service,
             "notificador_email": notificador_email,

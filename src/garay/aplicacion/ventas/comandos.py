@@ -76,3 +76,13 @@ class EditarParticipantesVentaComando:
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarServicioVentaComando:
+    venta_id: uuid.UUID
+    nuevo_servicio_id: uuid.UUID
+    nuevo_valor_venta: Dinero | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None

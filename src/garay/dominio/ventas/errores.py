@@ -68,3 +68,7 @@ class MismoNeto(ErrorDeDominio):
 
 class MismoValorVenta(ErrorDeDominio):
     """Idempotency guard: el nuevo valor de venta es idéntico al valor actual."""
+
+
+class MismoServicio(ErrorDeDominio):
+    """Idempotency guard: los nuevos servicio_ids son idénticos a los actuales."""

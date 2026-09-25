@@ -26,6 +26,7 @@ ACCIONES_FINANCIERAS = frozenset(
         AccionAuditoria.EDITAR_CANAL,       # historical records count toward financial limit
         AccionAuditoria.EDITAR_NETO,
         AccionAuditoria.EDITAR_VALOR_VENTA,
+        AccionAuditoria.EDITAR_SERVICIO,    # changing the tour changes the net amount
     }
 )
 

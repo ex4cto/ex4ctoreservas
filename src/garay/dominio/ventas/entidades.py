@@ -17,6 +17,7 @@ from garay.dominio.ventas.errores import (
     MismoCanal,
     MismoNeto,
     MismosParticipantes,
+    MismoServicio,
     MismoValorVenta,
     MonedaIncompatible,
     NetoIgualOSuperaValorVenta,
@@ -227,6 +228,71 @@ class Venta:
                 f" registrado ({self.abono})."
             )
         self.valor_venta = nuevo_valor_venta
+
+    def cambiar_servicio(
+        self,
+        nuevos_ids: list[uuid.UUID],
+        nuevo_neto: Dinero,
+        nuevo_valor_venta: Dinero | None = None,
+    ) -> None:
+        """Change servicio_ids, neto, and optionally valor_venta atomically.
+
+        Atomic to avoid MismoNeto being raised when the new tour has the same price.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el servicio de una venta ya anulada.")
+        if sorted(nuevos_ids) == sorted(self.servicio_ids):
+            raise MismoServicio("Los servicios ya son los mismos. No se realizó ningún cambio.")
+        effective_valor_venta = nuevo_valor_venta if nuevo_valor_venta is not None else self.valor_venta
+        if nuevo_neto.moneda != self.valor_venta.moneda:
+            raise MonedaIncompatible(
+                f"nuevo_neto ({nuevo_neto.moneda}) y valor_venta ({self.valor_venta.moneda})"
+                " deben ser la misma moneda."
+            )
+        if nuevo_neto >= effective_valor_venta:
+            raise NetoIgualOSuperaValorVenta(
+                f"El neto ({nuevo_neto}) no puede ser igual o mayor al valor de venta"
+                f" ({effective_valor_venta})."
+            )
+        if nuevo_valor_venta is not None:
+            if nuevo_valor_venta <= _CERO:
+                raise ValorVentaInvalido(
+                    f"El valor de venta debe ser mayor que cero. Recibido: {nuevo_valor_venta}."
+                )
+            if self.abono is not None and nuevo_valor_venta < self.abono:
+                raise ValorVentaMenorQueAbono(
+                    f"El valor de venta ({nuevo_valor_venta}) no puede ser menor al abono"
+                    f" registrado ({self.abono})."
+                )
+            if nuevo_valor_venta.moneda != self.neto.moneda:
+                raise MonedaIncompatible(
+                    f"nuevo_valor_venta ({nuevo_valor_venta.moneda}) y neto ({self.neto.moneda})"
+                    " deben ser la misma moneda."
+                )
+        viejo_id = self.servicio_ids[0] if self.servicio_ids else None
+        nuevo_id = nuevos_ids[0] if nuevos_ids else None
+        if (
+            self.fechas_por_servicio is not None
+            and len(self.fechas_por_servicio) == 1
+            and viejo_id is not None
+            and nuevo_id is not None
+            and viejo_id in self.fechas_por_servicio
+        ):
+            valor_fecha = self.fechas_por_servicio[viejo_id]
+            self.fechas_por_servicio = {nuevo_id: valor_fecha}
+        if (
+            self.horarios_por_servicio is not None
+            and len(self.horarios_por_servicio) == 1
+            and viejo_id is not None
+            and nuevo_id is not None
+            and viejo_id in self.horarios_por_servicio
+        ):
+            valor_horario = self.horarios_por_servicio[viejo_id]
+            self.horarios_por_servicio = {nuevo_id: valor_horario}
+        self.servicio_ids = list(nuevos_ids)
+        self.neto = nuevo_neto
+        if nuevo_valor_venta is not None:
+            self.valor_venta = nuevo_valor_venta
 
     @property
     def ganancia(self) -> Dinero:

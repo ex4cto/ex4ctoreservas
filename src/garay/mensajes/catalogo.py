@@ -1059,6 +1059,51 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "🙍 Por: {actor}"
         )
     },
+    # --- Gestión de ventas: editar tour ---
+    "gestion_ventas.campo_tour": {Idioma.ES: "🗺️ Tour"},
+    "gestion_ventas.seleccionar_familia_tour": {
+        Idioma.ES: "Tour actual: {actual}\n\nSelecciona la nueva categoría:"
+    },
+    "gestion_ventas.seleccionar_tour_en_familia": {
+        Idioma.ES: "Selecciona el tour:"
+    },
+    "gestion_ventas.mismo_tour": {
+        Idioma.ES: "El tour ya es ese. No se realizó ningún cambio."
+    },
+    "gestion_ventas.tour_multiples": {
+        Idioma.ES: (
+            "⚠️ Esta venta tiene múltiples tours. "
+            "El cambio de tour solo está disponible para ventas con un único tour."
+        )
+    },
+    "gestion_ventas.tour_sin_precio": {
+        Idioma.ES: (
+            "⚠️ Este tour no tiene precio registrado en el catálogo "
+            "para la combinación de servicio/horario actuales. "
+            "No se puede calcular el neto automáticamente."
+        )
+    },
+    "gestion_ventas.pedir_cambio_valor_venta_tour": {
+        Idioma.ES: (
+            "Neto calculado: <b>{neto_nuevo}</b>\n\n"
+            "Valor de venta actual: {valor_actual}\n\n"
+            "¿Deseas cambiar también el valor de venta?"
+        )
+    },
+    "gestion_ventas.pedir_nuevo_valor_venta_tour": {
+        Idioma.ES: "Escribe el nuevo valor de venta (solo número):"
+    },
+    "gestion_ventas.confirmar_editar_tour": {
+        Idioma.ES: (
+            "¿Confirmas el cambio de tour?\n\n"
+            "🗺️ Tour: {tour_anterior} → <b>{tour_nuevo}</b>\n"
+            "💲 Neto: {neto_anterior} → <b>{neto_nuevo}</b>\n"
+            "{valor_venta_line}"
+            "💬 Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.tour_editado": {Idioma.ES: "✅ Tour actualizado correctamente."},
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},
