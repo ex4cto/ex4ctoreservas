@@ -3286,7 +3286,24 @@ async def _handle_confirmar_anular(
         motivo=escape(motivo, quote=False),
         actor=escape(nombre or "—", quote=False),
     )
-    await _notificar_grupo(context, mensaje_grupo)
+    _venta_repo_anular: VentaRepository | None = context.bot_data.get("venta_repo")
+    _venta_anular: Venta | None = None
+    if _venta_repo_anular is not None:
+        _venta_anular = await asyncio.to_thread(
+            _venta_repo_anular.buscar_por_id, uuid.UUID(venta_id_str)
+        )
+    if _venta_anular is not None:
+        await _notificar_edicion(
+            context,
+            _venta_anular,
+            mensaje_grupo,
+            campo_label="Anulación",
+            es_financiero=True,
+            dm_socios_text=mensaje_grupo,
+            dm_admins_text=mensaje_grupo,
+        )
+    else:
+        await _notificar_grupo(context, mensaje_grupo)
 
     if update.effective_message:
         await update.effective_message.reply_text(

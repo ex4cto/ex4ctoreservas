@@ -645,6 +645,60 @@ class TestHandleGvConfirmar:
         update.effective_message.reply_text.assert_called()
 
 
+class TestAnularDmSocios:
+    """K — cancellation must DM socios and admins, not only the group."""
+
+    @pytest.mark.asyncio
+    async def test_anular_exitoso_dm_a_socio_con_telegram_id(self) -> None:
+        venta_id = uuid.uuid4()
+        socio = MagicMock()
+        socio.telegram_id = 7777
+
+        ctx = _make_context()
+        ctx.bot_data["socios_config_repo"] = MagicMock(listar=MagicMock(return_value=[socio]))
+        venta = MagicMock()
+        venta.mensaje_grupo_id = None
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Viaje cancelado"
+        ctx.user_data["gv_accion"] = "anular"
+
+        update = _make_update(callback_data="gv_confirmar")
+        await handle_gv_confirmar(update, ctx)
+
+        chat_ids = [
+            c.kwargs.get("chat_id") or (c.args[0] if c.args else None)
+            for c in ctx.bot.send_message.call_args_list
+        ]
+        assert 7777 in chat_ids
+
+    @pytest.mark.asyncio
+    async def test_anular_exitoso_no_dm_a_socio_sin_telegram_id(self) -> None:
+        venta_id = uuid.uuid4()
+        socio = MagicMock()
+        socio.telegram_id = None
+
+        ctx = _make_context()
+        ctx.bot_data["socios_config_repo"] = MagicMock(listar=MagicMock(return_value=[socio]))
+        venta = MagicMock()
+        venta.mensaje_grupo_id = None
+        ctx.bot_data["venta_repo"].buscar_por_id.return_value = venta
+
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Sin telegram"
+        ctx.user_data["gv_accion"] = "anular"
+
+        update = _make_update(callback_data="gv_confirmar")
+        await handle_gv_confirmar(update, ctx)
+
+        chat_ids = [
+            c.kwargs.get("chat_id") or (c.args[0] if c.args else None)
+            for c in ctx.bot.send_message.call_args_list
+        ]
+        assert None not in chat_ids
+
+
 class TestCmdGestionarVentasClearsStaleKeys:
     @pytest.mark.asyncio
     async def test_entry_clears_stale_gv_keys(self) -> None:
@@ -973,7 +1027,7 @@ class TestHandleGvSeleccionarStashNames:
 class TestNotificarGrupoAnular:
     @pytest.mark.asyncio
     async def test_anular_success_calls_notificador_once(self) -> None:
-        """On successful anular, notificador.notificar must be called once."""
+        """On successful anular, group notification must be sent (via bot.send_message)."""
         venta_id = uuid.uuid4()
         update = _make_update(callback_data="gv_confirmar", user_id=123)
         ctx = _make_context()
@@ -986,8 +1040,12 @@ class TestNotificarGrupoAnular:
         result = await handle_gv_confirmar(update, ctx)
 
         assert result == ConversationHandler.END
-        notificador = ctx.bot_data["notificador"]
-        notificador.notificar.assert_called_once()
+        # Notification now goes via bot.send_message (delete-and-replace path).
+        group_calls = [
+            c for c in ctx.bot.send_message.call_args_list
+            if (c.kwargs.get("chat_id") or (c.args[0] if c.args else None)) == "-1001234567"
+        ]
+        assert len(group_calls) >= 1
 
     @pytest.mark.asyncio
     async def test_anular_notificador_message_contains_cliente_tour_motivo(self) -> None:
@@ -1003,15 +1061,16 @@ class TestNotificarGrupoAnular:
 
         await handle_gv_confirmar(update, ctx)
 
-        notificador = ctx.bot_data["notificador"]
-        call_args = notificador.notificar.call_args
-        mensaje_arg: str = call_args[0][0]
-        grupo_id_arg: str = call_args[0][1]
+        group_calls = [
+            c for c in ctx.bot.send_message.call_args_list
+            if (c.kwargs.get("chat_id") or (c.args[0] if c.args else None)) == "-1001234567"
+        ]
+        assert group_calls, "expected at least one send_message to the group"
+        mensaje_arg: str = group_calls[0].kwargs.get("text") or group_calls[0].args[1]
 
         assert "Juan Perez" in mensaje_arg
         assert "Tour Isla" in mensaje_arg
         assert "Cliente cancelo el viaje" in mensaje_arg
-        assert grupo_id_arg == "-1001234567"
 
     @pytest.mark.asyncio
     async def test_anular_notificador_escapes_html_in_dynamic_values(self) -> None:
@@ -1027,7 +1086,12 @@ class TestNotificarGrupoAnular:
 
         await handle_gv_confirmar(update, ctx)
 
-        mensaje_arg: str = ctx.bot_data["notificador"].notificar.call_args[0][0]
+        group_calls = [
+            c for c in ctx.bot.send_message.call_args_list
+            if (c.kwargs.get("chat_id") or (c.args[0] if c.args else None)) == "-1001234567"
+        ]
+        assert group_calls, "expected at least one send_message to the group"
+        mensaje_arg: str = group_calls[0].kwargs.get("text") or group_calls[0].args[1]
 
         assert "&amp;" in mensaje_arg
         assert "&lt;urgente&gt;" in mensaje_arg
