@@ -223,6 +223,8 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_CANAL_TIPO_PATTERN,
     GV_EDIT_FAMILIA,
     GV_EDIT_FECHA,
+    GV_EDIT_METODO_PAGO,
+    GV_EDIT_METODO_PAGO_PATTERN,
     GV_EDIT_NETO,
     GV_EDIT_PARTICIPANTE,
     GV_EDIT_PARTICIPANTE_PATTERN,
@@ -244,6 +246,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_edit_canal_tipo,
     handle_gv_edit_familia,
     handle_gv_edit_fecha,
+    handle_gv_edit_metodo_pago,
     handle_gv_edit_participante,
     handle_gv_edit_servicio,
     handle_gv_edit_tour_valor,
@@ -1092,6 +1095,9 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_EDIT_TOUR_VALOR: [
                 _CB(handle_gv_edit_tour_valor, pattern=r"^gv_tour_valor_(si|no)$"),
                 MessageHandler(_TEXT, handle_gv_edit_tour_valor),
+            ],
+            GV_EDIT_METODO_PAGO: [
+                _CB(handle_gv_edit_metodo_pago, pattern=GV_EDIT_METODO_PAGO_PATTERN),
             ],
         },
         fallbacks=[

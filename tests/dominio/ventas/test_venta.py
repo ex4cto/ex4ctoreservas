@@ -8,13 +8,14 @@ import uuid
 import pytest
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import EstadoVenta, TipoCliente
+from garay.dominio.comun.tipos import EstadoVenta, MetodoPago, TipoCliente
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import (
     AbonoSuperaValorVenta,
     CantidadInvalida,
     DigitalConPuntoDeVenta,
     GananciaNegativa,
+    MismoMetodoPago,
     MonedaIncompatible,
     ValorVentaInvalido,
     VentaYaAnulada,
@@ -573,3 +574,32 @@ class TestVentaCambiarParticipantes:
         )
 
         assert venta.participantes is not old
+
+
+# ---------------------------------------------------------------------------
+# TestCambiarMetodoPago
+# ---------------------------------------------------------------------------
+
+
+class TestCambiarMetodoPago:
+    def test_success_cambia_metodo_pago(self) -> None:
+        """cambiar_metodo_pago must update metodo_pago on the entity."""
+        venta = _venta()
+        venta.metodo_pago = MetodoPago.TRANSFERENCIA
+        venta.cambiar_metodo_pago(MetodoPago.EFECTIVO)
+        assert venta.metodo_pago == MetodoPago.EFECTIVO
+
+    def test_mismo_metodo_pago_raises_mismo_metodo_pago(self) -> None:
+        """Idempotency guard: raises MismoMetodoPago when nuevo equals current."""
+        venta = _venta()
+        venta.metodo_pago = MetodoPago.EFECTIVO
+        with pytest.raises(MismoMetodoPago):
+            venta.cambiar_metodo_pago(MetodoPago.EFECTIVO)
+
+    def test_venta_anulada_raises_venta_ya_anulada(self) -> None:
+        """Raises VentaYaAnulada when venta.anulada is True."""
+        venta = _venta()
+        venta.metodo_pago = MetodoPago.TRANSFERENCIA
+        venta.anulada = True
+        with pytest.raises(VentaYaAnulada):
+            venta.cambiar_metodo_pago(MetodoPago.EFECTIVO)

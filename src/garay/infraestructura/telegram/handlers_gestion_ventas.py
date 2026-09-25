@@ -28,6 +28,7 @@ from garay.aplicacion.ventas.comandos import (
     EditarCanalVentaComando,
     EditarClienteVentaComando,
     EditarFechaVentaComando,
+    EditarMetodoPagoVentaComando,
     EditarNetoVentaComando,
     EditarParticipantesVentaComando,
     EditarServicioVentaComando,
@@ -36,6 +37,7 @@ from garay.aplicacion.ventas.comandos import (
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaService
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
 from garay.aplicacion.ventas.editar_servicio import (
@@ -48,7 +50,7 @@ from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.clientes.errores import ClienteNoEncontrado
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.comun.tipos import MetodoPago, TipoCliente
 from garay.dominio.puertos.repositorios import (
     ClienteRepository,
     ComisionRegistradaRepository,
@@ -62,6 +64,7 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
     MismoCanal,
+    MismoMetodoPago,
     MismoNeto,
     MismoServicio,
     MismosParticipantes,
@@ -110,6 +113,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_nuevo_servicio_id", None)
         context.user_data.pop("gv_nuevo_servicio_nombre", None)
         context.user_data.pop("gv_cambiar_valor_venta", None)
+        context.user_data.pop("gv_nuevo_metodo_pago", None)
+        context.user_data.pop("gv_metodo_pago_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -243,6 +248,9 @@ GV_EDIT_VALOR_VENTA: int = 233
 GV_EDIT_FAMILIA: int = 234        # user is picking tour category
 GV_EDIT_SERVICIO: int = 235       # user is picking tour within category
 GV_EDIT_TOUR_VALOR: int = 236     # user is answering valor_venta change question
+GV_EDIT_METODO_PAGO: int = 237    # user is picking new payment method
+
+GV_EDIT_METODO_PAGO_PATTERN = "^(gv_metodo_pago:.+|gv_volver_detalle)$"
 
 # Single source of truth for the GV_DETALLE callback pattern. Must match every
 # callback_data the detail keyboard produces (see _construir_teclado_detalle);
@@ -372,6 +380,7 @@ def _construir_teclado_campos(
         _btn("gestion_ventas.campo_nombre", "gv_campo:nombre"),
         _btn("gestion_ventas.campo_fecha", "gv_campo:fecha"),
         _btn("gestion_ventas.campo_canal", "gv_campo:tipo_cliente"),
+        _btn("gestion_ventas.campo_metodo_pago", "gv_campo:metodo_pago"),
     ]
     if es_admin:
         rows.append(_btn("gestion_ventas.campo_neto", "gv_campo:neto"))
@@ -1054,6 +1063,29 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
             context.user_data["gv_accion"] = "editar_tour"
         return await handle_gv_iniciar_edicion_tour(update, context)
 
+    if campo_str == "metodo_pago":
+        actual_mp = venta.metodo_pago.value if venta.metodo_pago is not None else "Sin método"
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_metodo_pago"
+            context.user_data["gv_metodo_pago_anterior"] = actual_mp
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                "💳 Transferencia", callback_data="gv_metodo_pago:TRANSFERENCIA"
+            )],
+            [InlineKeyboardButton("💵 Efectivo", callback_data="gv_metodo_pago:EFECTIVO")],
+            [InlineKeyboardButton("💳 Tarjeta", callback_data="gv_metodo_pago:TARJETA")],
+            [InlineKeyboardButton(
+                obtener_mensaje("gestion_ventas.boton_atras"),
+                callback_data="gv_volver_detalle",
+            )],
+        ])
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.seleccionar_metodo_pago").format(actual=actual_mp),
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+        return GV_EDIT_METODO_PAGO
+
     try:
         campo = CampoCliente(campo_str)
     except ValueError:
@@ -1640,6 +1672,49 @@ async def handle_gv_edit_tour_valor(
 
 
 # ---------------------------------------------------------------------------
+# GV_EDIT_METODO_PAGO state — user selects the new payment method
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_metodo_pago(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """GV_EDIT_METODO_PAGO state — user selects the new payment method."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    data = query.data or ""
+
+    if data == "gv_volver_detalle":
+        venta_repo: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_id_str: str | None = (context.user_data or {}).get("gv_venta_id")
+        venta = None
+        if venta_repo is not None and venta_id_str:
+            venta = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+        if venta is not None:
+            return await _render_detalle(query, context, venta)
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    metodo_str = data.removeprefix("gv_metodo_pago:")
+    try:
+        nuevo_metodo = MetodoPago(metodo_str)
+    except ValueError:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_metodo_pago"] = nuevo_metodo
+
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+            parse_mode="HTML",
+        )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
 # GV_MOTIVO state — text input for justification
 # ---------------------------------------------------------------------------
 
@@ -1716,6 +1791,14 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         nuevo_vv_str: str | None = user_data.get("gv_nuevo_valor_venta")
         confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_valor_venta").format(
             valor=nuevo_vv_str or "—",
+            motivo=motivo,
+        )
+    elif gv_accion == "editar_metodo_pago":
+        _nuevo_mp = user_data.get("gv_nuevo_metodo_pago")
+        _anterior_mp = user_data.get("gv_metodo_pago_anterior") or "Sin método"
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_metodo_pago").format(
+            anterior=_anterior_mp,
+            nuevo=_nuevo_mp.value if _nuevo_mp is not None else "—",
             motivo=motivo,
         )
     elif gv_accion == "editar_tour":
@@ -1835,6 +1918,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_tour":
         return await _handle_confirmar_editar_servicio(update, context, user_data, user)
+
+    if gv_accion == "editar_metodo_pago":
+        return await _handle_confirmar_editar_metodo_pago(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -2985,6 +3071,119 @@ async def _handle_confirmar_editar_servicio(
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.tour_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_metodo_pago(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-metodo-pago action (informational)."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_metodo: MetodoPago | None = user_data.get("gv_nuevo_metodo_pago")
+
+    if not venta_id_str or not motivo or nuevo_metodo is None:
+        logger.error("editar_metodo_pago confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarMetodoPagoVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_metodo_pago=nuevo_metodo,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarMetodoPagoVentaService | None = context.bot_data.get(
+        "editar_metodo_pago_venta_service"
+    )
+    if service is None:
+        logger.error("editar_metodo_pago_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    venta = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoMetodoPago:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.mismo_metodo_pago"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_metodo_pago")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        # Load venta for _notificar_edicion (need mensaje_grupo_id).
+        venta_repo_mp: VentaRepository | None = context.bot_data.get("venta_repo")
+        if venta_repo_mp is not None:
+            venta = await asyncio.to_thread(venta_repo_mp.buscar_por_id, uuid.UUID(venta_id_str))
+
+        anterior_str = user_data.get("gv_metodo_pago_anterior") or "Sin método"
+        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_metodo_pago").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            anterior=escape(anterior_str, quote=False),
+            nuevo=escape(nuevo_metodo.value, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        if venta is not None:
+            await _notificar_edicion(
+                context,
+                venta,
+                mensaje_grupo,
+                campo_label="Método de pago",
+                es_financiero=False,
+            )
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.metodo_pago_editado"),
                 parse_mode="HTML",
             )
         _limpiar(context)

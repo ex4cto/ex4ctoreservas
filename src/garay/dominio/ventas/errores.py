@@ -72,3 +72,7 @@ class MismoValorVenta(ErrorDeDominio):
 
 class MismoServicio(ErrorDeDominio):
     """Idempotency guard: los nuevos servicio_ids son idénticos a los actuales."""
+
+
+class MismoMetodoPago(ErrorDeDominio):
+    """Idempotency guard: el nuevo método de pago es idéntico al actual."""

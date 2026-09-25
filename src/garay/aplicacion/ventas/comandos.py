@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.comun.tipos import MetodoPago, TipoCliente
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,15 @@ class EditarServicioVentaComando:
     venta_id: uuid.UUID
     nuevo_servicio_id: uuid.UUID
     nuevo_valor_venta: Dinero | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarMetodoPagoVentaComando:
+    venta_id: uuid.UUID
+    nuevo_metodo_pago: MetodoPago
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None

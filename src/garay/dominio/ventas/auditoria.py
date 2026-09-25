@@ -18,6 +18,7 @@ class AccionAuditoria(StrEnum):
     EDITAR_NETO = "EDITAR_NETO"
     EDITAR_VALOR_VENTA = "EDITAR_VALOR_VENTA"
     EDITAR_SERVICIO = "EDITAR_SERVICIO"
+    EDITAR_METODO_PAGO = "EDITAR_METODO_PAGO"
 
 
 @dataclass(frozen=True)

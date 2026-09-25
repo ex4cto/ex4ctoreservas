@@ -1104,6 +1104,32 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         )
     },
     "gestion_ventas.tour_editado": {Idioma.ES: "✅ Tour actualizado correctamente."},
+    "gestion_ventas.campo_metodo_pago": {Idioma.ES: "💳 Método de pago"},
+    "gestion_ventas.seleccionar_metodo_pago": {
+        Idioma.ES: "Método de pago actual: <b>{actual}</b>\n\nSelecciona el nuevo método de pago:"
+    },
+    "gestion_ventas.mismo_metodo_pago": {
+        Idioma.ES: "El método de pago ya es ese. No se realizó ningún cambio."
+    },
+    "gestion_ventas.metodo_pago_editado": {Idioma.ES: "✅ Método de pago actualizado correctamente."},
+    "gestion_ventas.confirmar_editar_metodo_pago": {
+        Idioma.ES: (
+            "¿Confirmas el cambio de método de pago?\n\n"
+            "💳 Pago: {anterior} → <b>{nuevo}</b>\n"
+            "💬 Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.correccion_edicion_metodo_pago": {
+        Idioma.ES: (
+            "✏️ <b>Método de pago actualizado</b>\n"
+            "Cliente: {cliente}\n"
+            "Tours: {tours}\n"
+            "Pago: {anterior} → <b>{nuevo}</b>\n"
+            "Motivo: {motivo}\n"
+            "Por: {actor}"
+        )
+    },
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},

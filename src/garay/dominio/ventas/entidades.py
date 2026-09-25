@@ -15,9 +15,10 @@ from garay.dominio.ventas.errores import (
     DigitalConPuntoDeVenta,
     GananciaNegativa,
     MismoCanal,
+    MismoMetodoPago,
     MismoNeto,
-    MismosParticipantes,
     MismoServicio,
+    MismosParticipantes,
     MismoValorVenta,
     MonedaIncompatible,
     NetoIgualOSuperaValorVenta,
@@ -145,6 +146,19 @@ class Venta:
             self.participantes, punto_de_venta_id=target_punto_id
         )
         self.tipo_cliente = nuevo_tipo
+
+    def cambiar_metodo_pago(self, nuevo: MetodoPago) -> None:
+        """Change metodo_pago. Informational edit — no financial limits apply.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises MismoMetodoPago if nuevo equals the current metodo_pago.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el método de pago de una venta ya anulada.")
+        if nuevo == self.metodo_pago:
+            raise MismoMetodoPago("El método de pago ya es ese. No se realizó ningún cambio.")
+        self.metodo_pago = nuevo
 
     def cambiar_participantes(
         self,
