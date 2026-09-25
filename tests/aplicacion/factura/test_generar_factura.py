@@ -341,15 +341,19 @@ class TestDatosEmpresa:
         assert "157745" not in html
 
     def test_direccion_personalizada_aparece_en_html(self) -> None:
-        html = GenerarFacturaService(direccion="Calle Test #1-23").generar(_ctx_completo(), _venta_id())
+        svc = GenerarFacturaService(direccion="Calle Test #1-23")
+        html = svc.generar(_ctx_completo(), _venta_id())
         assert "Calle Test #1-23" in html
 
     def test_telefono_personalizado_aparece_en_html(self) -> None:
-        html = GenerarFacturaService(telefono="+570000000000").generar(_ctx_completo(), _venta_id())
+        html = GenerarFacturaService(telefono="+570000000000").generar(
+            _ctx_completo(), _venta_id()
+        )
         assert "+570000000000" in html
 
     def test_contacto_email_personalizado_aparece_en_html(self) -> None:
-        html = GenerarFacturaService(contacto_email="test@example.com").generar(_ctx_completo(), _venta_id())
+        svc = GenerarFacturaService(contacto_email="test@example.com")
+        html = svc.generar(_ctx_completo(), _venta_id())
         assert "test@example.com" in html
 
     def test_en_traduce_etiquetas(self) -> None:
@@ -361,3 +365,34 @@ class TestDatosEmpresa:
         html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "Sales rep" in html
         assert "Closer" in html
+
+
+class TestMediosPago:
+    """Payment methods block shows Sharimel primary, Garay secondary."""
+
+    def _html(self, idioma: str = "es") -> str:
+        ctx = _ctx_completo()
+        ctx.factura_idioma = idioma
+        return GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
+
+    def test_cuenta_sharimel_presente_es(self) -> None:
+        assert "09800010350" in self._html("es")
+
+    def test_llave_sharimel_presente_es(self) -> None:
+        assert "@sharimel535" in self._html("es")
+
+    def test_cuenta_garay_presente_secundaria_es(self) -> None:
+        assert "085-043956-43" in self._html("es")
+
+    def test_llave_garay_presente_secundaria_es(self) -> None:
+        assert "@garay58804" in self._html("es")
+
+    def test_sharimel_aparece_antes_que_garay(self) -> None:
+        html = self._html("es")
+        assert html.index("09800010350") < html.index("085-043956-43")
+
+    def test_cuenta_sharimel_presente_en(self) -> None:
+        assert "09800010350" in self._html("en")
+
+    def test_llave_sharimel_presente_en(self) -> None:
+        assert "@sharimel535" in self._html("en")
