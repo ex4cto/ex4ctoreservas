@@ -105,12 +105,14 @@ def _construir_mensaje_privado(
     # Freelancer commissions — omit roles whose amount is zero
     lineas.append("")
     if desglose.vendedor.monto > 0:
+        vendedor_nombre = cmd.participantes.vendedor_nombre or "—"
         lineas.append(
-            f"👤 Vendedor ({snap.porcentaje_vendedor}%): {fmt_cop(desglose.vendedor)}"
+            f"👤 Vendedor — {_esc(vendedor_nombre)} ({snap.porcentaje_vendedor}%): {fmt_cop(desglose.vendedor)}"
         )
     if desglose.cerrador.monto > 0:
+        cerrador_nombre = cmd.participantes.cerrador_nombre or "—"
         lineas.append(
-            f"🔑 Cerrador ({snap.porcentaje_cerrador}%): {fmt_cop(desglose.cerrador)}"
+            f"🔑 Cerrador — {_esc(cerrador_nombre)} ({snap.porcentaje_cerrador}%): {fmt_cop(desglose.cerrador)}"
         )
     if desglose.punto_de_venta.monto > 0:
         pct_punto = snap.porcentaje_capa_punto
