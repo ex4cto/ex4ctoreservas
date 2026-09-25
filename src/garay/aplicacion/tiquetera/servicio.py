@@ -96,6 +96,8 @@ def _construir_mensaje_privado(
         lineas.append(f"📍 Destino: {_esc(', '.join(cmd.servicio_nombres))}")
 
     lineas.append(f"📅 Fecha: {_render_fecha(cmd)}")
+    if cmd.numero_fisico:
+        lineas.append(f"🎫 Ticket: {_esc(cmd.numero_fisico)}")
     lineas.append("")
 
     lineas.append(f"💵 Bruto: {fmt_cop(cmd.valor_venta)}")
@@ -286,7 +288,10 @@ class RegistrarVentaService:
         saldo_pendiente = (
             cmd.valor_venta - cmd.abono if cmd.abono is not None else cmd.valor_venta
         )
-        lineas.append(f"🧾 Saldo pendiente: {fmt_cop(saldo_pendiente)}")
+        saldo_line = f"🧾 Saldo pendiente: {fmt_cop(saldo_pendiente)}"
+        if cmd.abono is None:
+            saldo_line += " (sin abono)"
+        lineas.append(saldo_line)
 
         if cmd.numero_fisico:
             lineas.append(f"🎫 Ticket: {_esc(cmd.numero_fisico)}")
