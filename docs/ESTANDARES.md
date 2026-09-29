@@ -49,6 +49,37 @@ parsear_monto("abc")      # → None
 - Nunca `Decimal(texto)` directo sobre input del usuario.
 - Siempre validar que el resultado no sea `None` antes de construir `Dinero`.
 
+## Roles operativos y contables
+
+Los tres actores siempre presentes en cualquier flujo contable y administrativo del bot:
+
+| Rol | Nombre | Telegram ID | Cédula |
+|-----|--------|-------------|--------|
+| dev | Ryan | `5870211102` | — |
+| admin | Sharimel | `8710698734` | — |
+| propietario | Julio César Garay Manzur | `1379898979` | `1128049588` |
+
+- Estos IDs son los únicos autorizados para operaciones financieras, liquidaciones y reportes contables.
+- Los IDs viven en config/entorno, no hardcodeados. Esta tabla es referencia documental.
+
+### Datos de contacto — Julio César Garay Manzur (propietario)
+
+| Campo | Valor |
+|-------|-------|
+| Cédula | 1128049588 |
+| Teléfono | 3223789349 |
+| Correo | agenciagaraytour1@gmail.com |
+| Dirección | Hotel Marie Real Centro |
+| Cuenta Bancolombia | — (ver cuenta Sharimel) |
+
+### Grupos de Telegram
+
+| Grupo | Variable env | Chat ID actual | Tipo |
+|-------|-------------|----------------|------|
+| Admins (Ryan + Sharimel + Garay) | `GRUPO_ADMINS_ID` | `-5497775663` | Regular — si se convierte a supergrupo el ID cambia a `-1005497775663` |
+
+- Si el bot recibe un update de un chat_id distinto al configurado para este grupo, loguear warning.
+
 ## No hardcoding
 
 - Principio general. Splits, porcentajes, horarios de cupos, montos, IDs de grupos, tokens y
@@ -71,6 +102,13 @@ parsear_monto("abc")      # → None
 ## Commits
 
 - Atomicos. Conventional commits.
+
+## UX de flujos con botones inline (OBLIGATORIO en todos los flujos)
+
+- Todo flujo con pasos intermedios debe tener botón **« Atrás** que regrese al paso anterior.
+- Todo flujo debe tener botón **✖ Cancelar** visible en cada paso, que aborte y limpie el estado.
+- Al finalizar un flujo (éxito o cancelación), **eliminar o editar el mensaje con botones** para que no queden botones colgados sin función.
+- Estas tres reglas aplican sin excepción a todos los handlers con `InlineKeyboardMarkup`.
 
 ## SDD (Spec-Driven Development)
 

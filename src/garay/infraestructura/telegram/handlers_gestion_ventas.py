@@ -190,7 +190,9 @@ async def _notificar_edicion(
                             "Could not persist new mensaje_grupo_id for venta %s", venta.id
                         )
         except Exception:
-            logger.warning("Failed to send updated group message for venta %s", venta.id)
+            logger.warning(
+                "Failed to send updated group message for venta %s", venta.id, exc_info=True
+            )
 
     # Step 4 — DM socios (financial edits only).
     if es_financiero and dm_socios_text:
@@ -318,7 +320,7 @@ def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
                 obtener_mensaje("gestion_ventas.boton_venta").format(
                     vendedor=v.participantes.vendedor_nombre or "—",
                     cerrador=v.participantes.cerrador_nombre or "—",
-                    fecha=f"{v.fecha:%d/%m}",
+                    fecha=f"{(v.registrado_en.date() if v.registrado_en else v.fecha):%d/%m}",
                     monto=v.valor_venta.monto,
                 ),
                 callback_data=f"gv_sel:{v.id}",
@@ -3181,6 +3183,8 @@ async def _handle_confirmar_editar_metodo_pago(
                 campo_label="Método de pago",
                 es_financiero=False,
             )
+        else:
+            await _notificar_grupo(context, mensaje_grupo)
         if update.effective_message:
             await update.effective_message.reply_text(
                 obtener_mensaje("gestion_ventas.metodo_pago_editado"),

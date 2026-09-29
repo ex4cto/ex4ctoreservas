@@ -145,12 +145,16 @@ class SQLAVentaRepository(VentaRepository):
             return [to_domain(r) for r in rows]
 
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Venta]:
+        orden = func.coalesce(
+            func.date(VentaModel.registrado_en), VentaModel.fecha
+        )
         with self._sf.begin() as session:
             stmt = (
                 select(VentaModel)
                 .where(VentaModel.anulada == False)
                 .where(VentaModel.fecha >= desde)
                 .where(VentaModel.fecha <= hasta)
+                .order_by(orden.desc())
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]

@@ -80,8 +80,12 @@ def _fmt_k(monto: int) -> str:
 
 
 def _venta_btn_label(venta: ResumenVentaDetalle) -> str:
-    """Build inline button label: '{dd/mm}  {primer_nombre}  ${k_format}'."""
-    dd_mm = venta.fecha.strftime("%d/%m")
+    """Build inline button label: '{dd/mm}  {primer_nombre}  ${k_format}'.
+
+    dd/mm is the registration date when available; falls back to tour date.
+    """
+    fecha_display = venta.registrado_en.date() if venta.registrado_en else venta.fecha
+    dd_mm = fecha_display.strftime("%d/%m")
     primer_nombre = (venta.vendedor_nombre or "—").split()[0]
     k_label = _fmt_k(int(venta.valor_bruto.monto))
     return f"{dd_mm}  {primer_nombre}  {k_label}"

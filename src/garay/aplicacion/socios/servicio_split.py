@@ -158,6 +158,7 @@ class SplitSociosService:
                     desglose_punto=dp,
                     desglose_agencia=da,
                     split_socios=sale_socios,
+                    registrado_en=venta.registrado_en,
                 )
             )
 

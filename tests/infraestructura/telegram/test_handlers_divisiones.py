@@ -1006,3 +1006,56 @@ class TestAtrasDesdeDrillDown:
         call = cq.edit_message_text.call_args
         markup = call.kwargs.get("reply_markup")
         assert markup is not None
+
+
+# ---------------------------------------------------------------------------
+# Bug Q — _venta_btn_label must show registrado_en date when available
+# ---------------------------------------------------------------------------
+
+
+class TestVentaBtnLabelRegistradoEn:
+    def _make_detalle(
+        self,
+        fecha: datetime.date,
+        registrado_en: datetime.datetime | None,
+    ) -> object:
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
+        from garay.dominio.comun.dinero import Dinero
+
+        return ResumenVentaDetalle(
+            venta_id=__import__("uuid").uuid4(),
+            fecha=fecha,
+            vendedor_nombre="Juan",
+            cerrador_nombre=None,
+            valor_bruto=Dinero(600_000),
+            desglose_vendedor=Dinero(0),
+            desglose_cerrador=Dinero(0),
+            desglose_punto=Dinero(0),
+            desglose_agencia=Dinero(0),
+            split_socios=(),
+            registrado_en=registrado_en,
+        )
+
+    def test_label_uses_registrado_en_date_when_set(self) -> None:
+        """When registrado_en is set, the button label must show that date, not fecha."""
+        from garay.infraestructura.telegram.handlers_divisiones import _venta_btn_label
+
+        fecha = datetime.date(2026, 9, 10)          # tour date: 10/09
+        reg = datetime.datetime(2026, 9, 1, 10, 0)  # registered: 01/09
+
+        detalle = self._make_detalle(fecha=fecha, registrado_en=reg)
+        label = _venta_btn_label(detalle)  # type: ignore[arg-type]
+
+        assert "01/09" in label, f"Expected registration date 01/09 in label, got: {label}"
+        assert "10/09" not in label, f"Tour date 10/09 must NOT appear when registrado_en is set"
+
+    def test_label_falls_back_to_fecha_when_registrado_en_is_none(self) -> None:
+        """When registrado_en is None, the label must fall back to fecha."""
+        from garay.infraestructura.telegram.handlers_divisiones import _venta_btn_label
+
+        fecha = datetime.date(2026, 9, 10)
+
+        detalle = self._make_detalle(fecha=fecha, registrado_en=None)
+        label = _venta_btn_label(detalle)  # type: ignore[arg-type]
+
+        assert "10/09" in label, f"Expected tour date 10/09 as fallback, got: {label}"

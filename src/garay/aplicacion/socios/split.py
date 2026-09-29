@@ -65,6 +65,7 @@ class ResumenVentaDetalle:
     desglose_punto: Dinero
     desglose_agencia: Dinero
     split_socios: tuple[ResumenSocioPeriodo, ...]
+    registrado_en: datetime.datetime | None = None
 
 
 @dataclass(frozen=True)
