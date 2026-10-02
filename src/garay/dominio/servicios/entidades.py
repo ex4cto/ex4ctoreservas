@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal
 
 from garay.dominio.servicios.errores import NombreServicioVacio, NumeroServicioInvalido
+
+
+class TipoImagen(enum.StrEnum):
+    """Audience type for the price-list image.
+
+    StrEnum ensures str(TipoImagen.INTERNA) == "interna".
+    Zero infrastructure imports.
+    """
+
+    INTERNA = "interna"
+    TURISTA = "turista"
 
 
 @dataclass(eq=False)

@@ -1518,6 +1518,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.freelancer_header": {Idioma.ES: "💼 Comisiones freelancers:"},
     "resumen_divisiones.freelancer_item": {Idioma.ES: "   {arbol} {nombre}: {monto}"},
     "resumen_divisiones.btn_atras": {Idioma.ES: "← Atrás"},
+    # --- /lista_precios text command ---
+    "lista_precios.titulo": {
+        Idioma.ES: "🗺️ <b>Lista de precios — Garay Tours</b>"
+    },
+    "lista_precios.categoria_encabezado": {
+        Idioma.ES: "\n<b>{categoria}</b>"
+    },
+    "lista_precios.linea_tour": {
+        Idioma.ES: "  • {nombre}: {precio}"
+    },
+    "lista_precios.nota_nino_adulto": {
+        Idioma.ES: " (niño = adulto)"
+    },
+    "lista_precios.vacio": {
+        Idioma.ES: "No hay tours disponibles con precio público configurado."
+    },
 }
 
 
