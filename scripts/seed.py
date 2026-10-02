@@ -206,6 +206,8 @@ def seed_servicios(session: Session) -> None:
                 precio_neto_nino=_neto_semilla(entry.get("neto_nino")),
                 permite_ninos=bool(entry.get("permite_ninos", True)),
                 categoria=str(entry.get("categoria") or ""),
+                precio_sugerido_adulto=_neto_semilla(entry.get("precio_sugerido_adulto")),
+                precio_sugerido_nino=_neto_semilla(entry.get("precio_sugerido_nino")),
             )
         )
 

@@ -56,11 +56,15 @@ def actualizar_precios(session: Session, entries: list[Any]) -> ResumenActualiza
         nuevo_adulto = _neto_semilla(entry.get("neto_adulto"))
         nuevo_nino = _neto_semilla(entry.get("neto_nino"))
         nuevo_permite = bool(entry.get("permite_ninos", True))
+        nuevo_sugerido_adulto = _neto_semilla(entry.get("precio_sugerido_adulto"))
+        nuevo_sugerido_nino = _neto_semilla(entry.get("precio_sugerido_nino"))
 
         if (
             row.precio_neto_adulto == nuevo_adulto
             and row.precio_neto_nino == nuevo_nino
             and row.permite_ninos == nuevo_permite
+            and row.precio_sugerido_adulto == nuevo_sugerido_adulto
+            and row.precio_sugerido_nino == nuevo_sugerido_nino
         ):
             resumen.sin_cambios.append(numero)
             continue
@@ -68,6 +72,8 @@ def actualizar_precios(session: Session, entries: list[Any]) -> ResumenActualiza
         row.precio_neto_adulto = nuevo_adulto
         row.precio_neto_nino = nuevo_nino
         row.permite_ninos = nuevo_permite
+        row.precio_sugerido_adulto = nuevo_sugerido_adulto
+        row.precio_sugerido_nino = nuevo_sugerido_nino
         resumen.actualizados.append(numero)
     return resumen
 

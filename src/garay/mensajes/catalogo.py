@@ -1139,6 +1139,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Familia: {familia}\n"
             "• Neto adulto: {neto_adulto}\n"
             "• Neto niño: {neto_nino}\n"
+            "• Sugerido adulto: {precio_sugerido_adulto}\n"
             "• Permite niños: {permite_ninos}\n"
             "• Horarios: {horarios}\n"
             "• Estado: {estado}"
@@ -1193,6 +1194,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "tour_neto_invalido": {
         Idioma.ES: "Valor inválido. Ingresa un número positivo o deja vacío para limpiar el campo."
+    },
+    "tour_pide_precio_sugerido_adulto": {
+        Idioma.ES: "Ingresa el nuevo precio sugerido adulto (número positivo):"
+    },
+    "tour_sugerido_invalido": {
+        Idioma.ES: "Valor inválido. El precio sugerido debe ser un número positivo."
     },
     "tour_nombre_vacio": {Idioma.ES: "El nombre no puede estar vacío. Ingresa un nombre válido:"},
     "tour_nueva_familia_prompt": {Idioma.ES: "Escribe el nombre de la nueva familia:"},
