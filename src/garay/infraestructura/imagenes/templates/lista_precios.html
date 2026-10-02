@@ -8,213 +8,349 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0a1628;
+      background: #060d1a;
       font-family: 'Segoe UI', Arial, sans-serif;
       padding: 24px;
-      min-width: 900px;
+      min-width: 1400px;
     }
 
     /* ------------------------------------------------------------------ */
-    /* Header                                                               */
+    /* Outer container                                                      */
     /* ------------------------------------------------------------------ */
     #lista {
+      width: 1360px;
       background: #0d1e38;
       border-radius: 16px;
-      padding: 28px 32px 32px;
-      width: 860px;
+      overflow: hidden;
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Header — banner photo + overlay + logo + title + badge              */
+    /* ------------------------------------------------------------------ */
     .header {
+      position: relative;
+      height: 240px;
+      background-image: url("{{ banner_url }}");
+      background-size: cover;
+      background-position: center;
+      background-color: #071224;
+    }
+
+    .header-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 15, 40, 0.68);
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-      border-bottom: 2px solid #c9a84c;
-      padding-bottom: 16px;
-    }
-
-    .branding h1 {
-      color: #f0c040;
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .branding .subtitle {
-      color: #8fa8c8;
-      font-size: 13px;
-      margin-top: 4px;
+      padding: 28px 36px;
+      gap: 24px;
+      height: 100%;
     }
 
     .logo-img {
-      width: 72px;
-      height: 72px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid #c9a84c;
+      border: 3px solid #c9a84c;
+      flex-shrink: 0;
+    }
+
+    .title-block {
+      flex: 1;
+    }
+
+    .title-block h1 {
+      color: #ffffff;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .title-block p {
+      color: #c9a84c;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .tipo-badge {
+      margin-left: auto;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 24px;
+      white-space: nowrap;
+    }
+
+    .tipo-badge-interna {
+      background: #c62828;
+    }
+
+    .tipo-badge-turista {
+      background: #00796b;
     }
 
     /* ------------------------------------------------------------------ */
-    /* View badge                                                           */
+    /* Body                                                                 */
     /* ------------------------------------------------------------------ */
-    .tipo-badge {
-      display: inline-block;
-      background: #c9a84c;
-      color: #0a1628;
-      font-size: 11px;
+    .body {
+      padding: 24px 32px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Category block                                                       */
+    /* ------------------------------------------------------------------ */
+    .cat-block {
+      margin-bottom: 20px;
+    }
+
+    .cat-header {
+      padding: 10px 16px;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cat-header .emoji {
+      font-size: 18px;
+    }
+
+    .cat-header .cat-name {
+      color: #ffffff;
+      font-size: 13px;
       font-weight: 700;
-      letter-spacing: 2px;
       text-transform: uppercase;
-      padding: 3px 12px;
-      border-radius: 20px;
-      margin-bottom: 18px;
+      letter-spacing: 0.8px;
     }
 
     /* ------------------------------------------------------------------ */
     /* Table                                                                */
     /* ------------------------------------------------------------------ */
-    table {
+    .cat-block table {
       width: 100%;
       border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
     }
 
-    th {
-      background: #162540;
-      color: #c9a84c;
-      font-size: 11px;
+    .cat-block th {
+      background: rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 1px;
       text-transform: uppercase;
-      padding: 8px 10px;
+      letter-spacing: 1px;
+      padding: 6px 12px;
+    }
+
+    .cat-block th.left  { text-align: left; }
+    .cat-block th.right { text-align: right; }
+
+    .cat-block td {
+      padding: 7px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .cat-block tr:last-child td {
+      border-bottom: none;
+    }
+
+    .cat-block tr.even td {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .td-tour {
+      color: #dce8f8;
       text-align: left;
     }
 
-    th.right { text-align: right; }
-
-    .category-row td {
-      background: #1a2e50;
-      color: #c9a84c;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 10px 10px 6px;
-      text-transform: uppercase;
-      border-top: 1px solid #2a4070;
+    .td-neto {
+      color: #8fa8c8;
+      text-align: right;
+      white-space: nowrap;
     }
 
-    .tour-row td {
-      color: #e0eaf8;
-      font-size: 13px;
-      padding: 7px 10px;
-      border-bottom: 1px solid #182d50;
-    }
-
-    .tour-row:last-child td { border-bottom: none; }
-
-    .tour-row .price {
+    .td-price {
       color: #f0c040;
       font-weight: 600;
       text-align: right;
       white-space: nowrap;
     }
 
-    .tour-row .neto {
+    .td-nino {
       color: #8fa8c8;
-      font-size: 12px;
       text-align: right;
       white-space: nowrap;
-    }
-
-    .tour-row .equal-adult {
-      color: #6a8aaa;
-      font-size: 11px;
-      font-style: italic;
     }
 
     /* ------------------------------------------------------------------ */
     /* Footer                                                               */
     /* ------------------------------------------------------------------ */
     .footer {
-      margin-top: 20px;
-      border-top: 1px solid #2a4070;
-      padding-top: 10px;
+      background: #060d1a;
+      padding: 16px 36px;
+      text-align: center;
+    }
+
+    .footer-line1 {
+      color: #8fa8c8;
+      font-size: 12px;
+    }
+
+    .footer-line2 {
       color: #4a6888;
-      font-size: 11px;
-      text-align: right;
+      font-size: 10px;
+      margin-top: 4px;
     }
   </style>
 </head>
 <body>
   <div id="lista">
+
     <!-- Header -->
     <div class="header">
-      <div class="branding">
-        <h1>Garay Tours</h1>
-        <div class="subtitle">Lista de Precios — Cartagena de Indias</div>
+      <div class="header-overlay"></div>
+      <div class="header-content">
+        <img
+          class="logo-img"
+          src="{{ logo_url }}"
+          alt="Logo Garay Tours"
+          onerror="this.style.display='none'"
+        />
+        <div class="title-block">
+          <h1>GARAY TOURS</h1>
+          <p>Lista de Precios &middot; Cartagena de Indias</p>
+        </div>
+        {% if tipo == "interna" %}
+        <span class="tipo-badge tipo-badge-interna">&#x1F512; VISTA INTERNA</span>
+        {% else %}
+        <span class="tipo-badge tipo-badge-turista">&#x1F310; PRECIO TURISTA</span>
+        {% endif %}
       </div>
-      <img
-        class="logo-img"
-        src="{{ logo_url }}"
-        alt="Logo Garay Tours"
-        onerror="this.style.display='none'"
-      />
     </div>
 
-    <!-- View badge -->
-    <span class="tipo-badge">
-      {% if tipo == "interna" %}Vista interna{% else %}Vista turista{% endif %}
-    </span>
+    <!-- Body: one cat-block per category -->
+    <div class="body">
+      {# Category color map #}
+      {% set cat_colors = {
+        "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "#01579b",
+        "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "#006064",
+        "TOURS BAHIA":                                                   "#4a148c",
+        "ISLA DE TIERRA BOMBA  (PUNTA ARENA Y PLAYA LINDA)":            "#0d47a1",
+        "TOURS 4 ISLAS":                                                 "#004d40",
+        "TOURS 5 ISLAS":                                                 "#1a237e",
+        "TOURS 5 ISLAS PREMIUM":                                         "#880e4f",
+        "3 ISLAS PRIVADAS":                                              "#00695c",
+        "TOUR ISLA SAN BERNARDO DEL VIENTO Y PLAYA PRIVADA":            "#006064",
+        "CHOLÓN":                                                        "#e65100",
+        "CITY TOUR CHIVA RUMBERA Y BUS PARTY":                          "#bf360c",
+        "TOUR PALENQUE":                                                 "#4e342e",
+        "TOURS BARRANQUILLA - SANTA MARTA":                              "#283593",
+        "VOLCAN":                                                        "#37474f",
+        "OTROS":                                                         "#37474f"
+      } %}
 
-    <!-- Price table -->
-    <table>
-      <thead>
-        <tr>
-          <th>Tour</th>
-          {% if tipo == "interna" %}
-          <th class="right">Neto adulto</th>
-          <th class="right">Precio público adulto</th>
-          <th class="right">Neto niño</th>
-          {% else %}
-          <th class="right">Precio público adulto</th>
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {# Group services by categoria, ordered by numero ASC within each group #}
-        {% set seen_cats = namespace(cats=[]) %}
-        {% for s in servicios | sort(attribute='numero') %}
-          {% if s.categoria not in seen_cats.cats %}
-            {% set seen_cats.cats = seen_cats.cats + [s.categoria] %}
-            <tr class="category-row">
-              <td colspan="{% if tipo == 'interna' %}4{% else %}2{% endif %}">
-                🗺️ {{ s.categoria }}
-              </td>
-            </tr>
-          {% endif %}
-          <tr class="tour-row">
-            <td>{{ s.nombre }}</td>
-            {% if tipo == "interna" %}
-            <td class="neto">{{ s.precio_neto_adulto | fmt_cop if s.precio_neto_adulto else "—" }}</td>
-            <td class="price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
-            <td class="neto">
-              {% if s.precio_neto_nino %}
-                {{ s.precio_neto_nino | fmt_cop }}
-              {% elif s.permite_ninos %}
-                <span class="equal-adult">= adulto</span>
-              {% else %}
-                —
-              {% endif %}
-            </td>
-            {% else %}
-            <td class="price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
-            {% endif %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+      {# Category emoji map #}
+      {% set cat_emojis = {
+        "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "🏖️",
+        "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "🌴",
+        "TOURS BAHIA":                                                   "🌅",
+        "ISLA DE TIERRA BOMBA  (PUNTA ARENA Y PLAYA LINDA)":            "⚓",
+        "TOURS 4 ISLAS":                                                 "🏝️",
+        "TOURS 5 ISLAS":                                                 "🐚",
+        "TOURS 5 ISLAS PREMIUM":                                         "⭐",
+        "3 ISLAS PRIVADAS":                                              "🗺️",
+        "TOUR ISLA SAN BERNARDO DEL VIENTO Y PLAYA PRIVADA":            "🐢",
+        "CHOLÓN":                                                        "🎉",
+        "CITY TOUR CHIVA RUMBERA Y BUS PARTY":                          "🚌",
+        "TOUR PALENQUE":                                                 "🥁",
+        "TOURS BARRANQUILLA - SANTA MARTA":                              "🏙️",
+        "VOLCAN":                                                        "🌋",
+        "OTROS":                                                         "📍"
+      } %}
 
-    <div class="footer">Precios en COP · Sujeto a cambios sin previo aviso</div>
+      {# Build ordered list of categories preserving first-seen order by numero #}
+      {% set ns = namespace(seen_cats=[], rows_by_cat={}) %}
+      {% for s in servicios | sort(attribute='numero') %}
+        {% if s.categoria not in ns.seen_cats %}
+          {% set ns.seen_cats = ns.seen_cats + [s.categoria] %}
+        {% endif %}
+      {% endfor %}
+
+      {# Render one cat-block per category #}
+      {% for cat in ns.seen_cats %}
+        {% set color = cat_colors.get(cat, "#1565c0") %}
+        {% set emoji = cat_emojis.get(cat, "🗺️") %}
+        <div class="cat-block">
+          <div class="cat-header" style="background: {{ color }};">
+            <span class="emoji">{{ emoji }}</span>
+            <span class="cat-name">{{ cat }}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="left">Tour</th>
+                {% if tipo == "interna" %}
+                <th class="right">Neto Adulto</th>
+                <th class="right">Precio P&uacute;blico</th>
+                <th class="right">Ni&ntilde;o</th>
+                {% else %}
+                <th class="right">Precio Turista</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% set row_ns = namespace(idx=0) %}
+              {% for s in servicios | sort(attribute='numero') %}
+                {% if s.categoria == cat %}
+                  {% set row_class = "even" if row_ns.idx % 2 == 1 else "odd" %}
+                  {% set row_ns.idx = row_ns.idx + 1 %}
+                  <tr class="{{ row_class }}">
+                    <td class="td-tour">{{ s.nombre }}</td>
+                    {% if tipo == "interna" %}
+                    <td class="td-neto">{{ s.precio_neto_adulto | fmt_cop if s.precio_neto_adulto else "—" }}</td>
+                    <td class="td-price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
+                    <td class="td-nino">
+                      {% if s.precio_neto_nino %}
+                        {{ s.precio_neto_nino | fmt_cop }}
+                      {% elif s.permite_ninos %}
+                        <span style="color:#5a7a9a;font-style:italic;font-size:11px">= adulto</span>
+                      {% else %}
+                        <span style="color:#3a5a7a">—</span>
+                      {% endif %}
+                    </td>
+                    {% else %}
+                    <td class="td-price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
+                    {% endif %}
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-line1">
+        &#x1F4DE; 3223789349 &nbsp;&middot;&nbsp; &#x1F4F8; @garaytourscol &nbsp;&middot;&nbsp; &#x2709;&#xFE0F; agenciagaraytour1@gmail.com
+      </div>
+      <div class="footer-line2">
+        Precios en COP &middot; Sujeto a cambios sin previo aviso
+      </div>
+    </div>
+
   </div>
 </body>
 </html>

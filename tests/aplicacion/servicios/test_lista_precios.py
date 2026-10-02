@@ -45,9 +45,7 @@ class FakeGenerador(GeneradorListaPreciosPort):
         self.calls: list[tuple[list[Servicio], TipoImagen]] = []
         self._imagen = imagen
 
-    async def generar_imagen_precios(
-        self, servicios: list[Servicio], tipo: TipoImagen
-    ) -> bytes:
+    async def generar_imagen_precios(self, servicios: list[Servicio], tipo: TipoImagen) -> bytes:
         self.calls.append((servicios, tipo))
         return self._imagen
 
@@ -86,15 +84,14 @@ class TestPublicarListaPreciosServicio:
         svc = PublicarListaPreciosServicio(repo, generador, enviador, "grupo123")
         await svc.publicar()
 
-        # generador must have received only s_ok in both calls
-        assert len(generador.calls) == 2
+        # generador must have received only s_ok in its calls
         for servicios, _ in generador.calls:
             assert len(servicios) == 1
             assert servicios[0] is s_ok
 
     @pytest.mark.asyncio
     async def test_llama_generador_con_interna_y_turista(self) -> None:
-        """publicar() calls generador twice: once INTERNA, once TURISTA."""
+        """publicar() calls generador with INTERNA and TURISTA for the service's group."""
         from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 
         s = _servicio()
@@ -111,7 +108,7 @@ class TestPublicarListaPreciosServicio:
 
     @pytest.mark.asyncio
     async def test_envia_ambas_imagenes_al_grupo(self) -> None:
-        """Both images are sent to grupo_id."""
+        """Both images are sent to grupo_id (single group scenario)."""
         from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 
         s = _servicio()
@@ -156,6 +153,67 @@ class TestPublicarListaPreciosServicio:
 
         assert generador.calls == []
         assert enviador.sent == []
+
+    @pytest.mark.asyncio
+    async def test_genera_cuatro_imagenes_con_ambos_grupos(self) -> None:
+        """When services span both category groups, generador is called 4 times."""
+        from garay.aplicacion.servicios.lista_precios import (
+            _GRUPO_1_CATEGORIAS,
+            PublicarListaPreciosServicio,
+        )
+
+        cat1 = next(iter(_GRUPO_1_CATEGORIAS))
+        s_g1 = _servicio(categoria=cat1, nombre="Tour G1")
+        s_g2 = _servicio(categoria="OTROS", nombre="Tour G2")
+        repo = self._make_repo([s_g1, s_g2])
+        generador = FakeGenerador()
+        enviador = FakeEnviador()
+
+        svc = PublicarListaPreciosServicio(repo, generador, enviador, "grupo123")
+        await svc.publicar()
+
+        assert len(generador.calls) == 4
+        tipos = [tipo for _, tipo in generador.calls]
+        assert tipos.count(TipoImagen.INTERNA) == 2
+        assert tipos.count(TipoImagen.TURISTA) == 2
+
+    @pytest.mark.asyncio
+    async def test_omite_grupo_sin_servicios(self) -> None:
+        """A group with no services produces no calls for that group."""
+        from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
+
+        # categoria="Cartagena" is not in GRUPO_1 → only grupo2 has services → 2 calls
+        s = _servicio(categoria="Cartagena")
+        repo = self._make_repo([s])
+        generador = FakeGenerador()
+        enviador = FakeEnviador()
+
+        svc = PublicarListaPreciosServicio(repo, generador, enviador, "grupo123")
+        await svc.publicar()
+
+        assert len(generador.calls) == 2  # only grupo2: INTERNA + TURISTA
+
+    @pytest.mark.asyncio
+    async def test_envia_cuatro_imagenes_cuando_ambos_grupos_tienen_servicios(self) -> None:
+        """4 images are sent when both groups have services."""
+        from garay.aplicacion.servicios.lista_precios import (
+            _GRUPO_1_CATEGORIAS,
+            PublicarListaPreciosServicio,
+        )
+
+        cat1 = next(iter(_GRUPO_1_CATEGORIAS))
+        s_g1 = _servicio(categoria=cat1)
+        s_g2 = _servicio(categoria="OTROS")
+        repo = self._make_repo([s_g1, s_g2])
+        generador = FakeGenerador(imagen=b"\x89PNG_FAKE")
+        enviador = FakeEnviador()
+
+        svc = PublicarListaPreciosServicio(repo, generador, enviador, "-1001234567")
+        await svc.publicar()
+
+        assert len(enviador.sent) == 4
+        for _img, grupo_id in enviador.sent:
+            assert grupo_id == "-1001234567"
 
 
 # ---------------------------------------------------------------------------
@@ -226,9 +284,9 @@ class TestPublicarSeguro:
         t2 = asyncio.create_task(publicar_seguro(svc))
         await asyncio.gather(t1, t2)
 
-        # t2 was skipped because guard was active; generador was called at most 2 times
-        # (INTERNA + TURISTA for t1 only, not t2)
-        assert call_count <= 2
+        # t2 was skipped because guard was active; generador was called at most 4 times
+        # (INTERNA + TURISTA per group, for t1 only, not t2; up to 4 calls if 2 groups)
+        assert call_count <= 4
 
 
 class TestFiltroNeto:

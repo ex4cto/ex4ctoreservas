@@ -35,8 +35,10 @@ ejemplo_factura.html
 *.jpeg
 *.png
 *.pdf
-# Exception: compressed logo committed to repo for Railway deployment
+# Exceptions: assets committed to repo for Railway deployment
 !assets/logo.png
+!assets/banner-cartagena.jpg
+!assets/Gemini_Generated_Image_liebc8liebc8lieb.jpg
 
 # Tool config (local only)
 .atl/
