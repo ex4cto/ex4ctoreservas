@@ -20,6 +20,8 @@ dependencies = [
     "streamlit>=1.35",
     "plotly>=5.22",
     "openpyxl>=3.1.5",
+    "playwright>=1.44",
+    "jinja2>=3.1",
 ]
 
 [dependency-groups]
@@ -75,6 +77,15 @@ files = ["src", "tests"]
 # openpyxl no publica stubs de tipos; se usa solo en el adaptador de importacion offline.
 [[tool.mypy.overrides]]
 module = "openpyxl.*"
+ignore_missing_imports = true
+
+# playwright and jinja2 do not ship mypy-compatible type stubs.
+[[tool.mypy.overrides]]
+module = "playwright.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jinja2"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
