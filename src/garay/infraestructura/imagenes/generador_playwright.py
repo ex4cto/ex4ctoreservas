@@ -88,7 +88,7 @@ class PlaywrightGeneradorImagen(GeneradorListaPreciosPort):
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
-                page = await browser.new_page(viewport={"width": 1400, "height": 2800})
+                page = await browser.new_page(viewport={"width": 1140, "height": 3200})
                 await page.set_content(html, wait_until="networkidle")
                 png_bytes: bytes = await page.locator("#lista").screenshot(type="png")
             finally:

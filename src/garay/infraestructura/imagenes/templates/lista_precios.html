@@ -2,44 +2,44 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lista de Precios — Garay Tours</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #060d1a;
+      background: #d8e4f0;
       font-family: 'Segoe UI', Arial, sans-serif;
-      padding: 24px;
-      min-width: 1400px;
+      padding: 20px;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Outer container                                                      */
-    /* ------------------------------------------------------------------ */
+    /* ── Outer container ── */
     #lista {
-      width: 1360px;
-      background: #0d1e38;
-      border-radius: 16px;
+      width: 1100px;
+      background: #e8eef6;
+      border-radius: 14px;
       overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Header — banner photo + overlay + logo + title + badge              */
-    /* ------------------------------------------------------------------ */
+    /* ── Header ── */
     .header {
       position: relative;
-      height: 240px;
+      height: 210px;
       background-image: url("{{ banner_url }}");
       background-size: cover;
-      background-position: center;
-      background-color: #071224;
+      background-position: center top;
+      background-color: #0d1e38;
     }
 
     .header-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(5, 15, 40, 0.68);
+      background: linear-gradient(
+        135deg,
+        rgba(5, 15, 50, 0.72) 0%,
+        rgba(10, 30, 70, 0.55) 60%,
+        rgba(5, 15, 50, 0.72) 100%
+      );
     }
 
     .header-content {
@@ -47,170 +47,164 @@
       z-index: 1;
       display: flex;
       align-items: center;
-      padding: 28px 36px;
-      gap: 24px;
+      padding: 22px 32px;
+      gap: 20px;
       height: 100%;
     }
 
     .logo-img {
-      width: 90px;
-      height: 90px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       object-fit: cover;
       border: 3px solid #c9a84c;
       flex-shrink: 0;
     }
 
-    .title-block {
+    .header-text {
       flex: 1;
     }
 
-    .title-block h1 {
+    .header-text h1 {
       color: #ffffff;
-      font-size: 38px;
-      font-weight: 800;
-      letter-spacing: 2px;
+      font-size: 46px;
+      font-weight: 900;
+      letter-spacing: 3px;
       text-transform: uppercase;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
 
-    .title-block p {
-      color: #c9a84c;
-      font-size: 14px;
-      margin-top: 6px;
+    .header-text .subtitle {
+      color: #f0c040;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+
+    .header-text .tagline {
+      color: rgba(255,255,255,0.80);
+      font-size: 13px;
+      font-style: italic;
+      margin-top: 4px;
     }
 
     .tipo-badge {
-      margin-left: auto;
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 13px;
-      padding: 8px 20px;
-      border-radius: 24px;
-      white-space: nowrap;
+      flex-shrink: 0;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 20px;
+    }
+    .tipo-badge-interna  { background: #c62828; }
+    .tipo-badge-turista  { background: #00796b; }
+
+    /* ── Card grid ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
     }
 
-    .tipo-badge-interna {
-      background: #c62828;
+    /* ── Card ── */
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,50,0.10);
     }
 
-    .tipo-badge-turista {
-      background: #00796b;
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Body                                                                 */
-    /* ------------------------------------------------------------------ */
-    .body {
-      padding: 24px 32px;
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Category block                                                       */
-    /* ------------------------------------------------------------------ */
-    .cat-block {
-      margin-bottom: 20px;
-    }
-
-    .cat-header {
-      padding: 10px 16px;
-      border-radius: 8px 8px 0 0;
+    .card-header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      padding: 8px 12px;
     }
 
-    .cat-header .emoji {
-      font-size: 18px;
-    }
+    .card-header .emoji { font-size: 15px; line-height: 1; }
 
-    .cat-header .cat-name {
+    .card-header .cat-name {
       color: #ffffff;
-      font-size: 13px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      line-height: 1.2;
+    }
+
+    /* ── Table ── */
+    .card table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .card thead tr {
+      background: #f0f4f8;
+    }
+
+    .card th {
+      color: #7a8fa8;
+      font-size: 8.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.8px;
+      padding: 5px 10px;
+    }
+    .card th.left  { text-align: left; }
+    .card th.right { text-align: right; }
+
+    .card td {
+      padding: 5px 10px;
+      font-size: 10.5px;
+      border-bottom: 1px solid #f0f3f7;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Table                                                                */
-    /* ------------------------------------------------------------------ */
-    .cat-block table {
-      width: 100%;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 0 0 8px 8px;
-      overflow: hidden;
-    }
+    .card tr:last-child td { border-bottom: none; }
+    .card tr.even td { background: #f7f9fc; }
 
-    .cat-block th {
-      background: rgba(0, 0, 0, 0.3);
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 6px 12px;
-    }
+    .td-tour  { color: #1a2840; text-align: left; }
+    .td-neto  { color: #7a8fa8; text-align: right; white-space: nowrap; }
+    .td-price { color: #b8860b; font-weight: 700; text-align: right; white-space: nowrap; }
+    .td-turista { color: #1565c0; font-weight: 700; text-align: right; white-space: nowrap; }
+    .td-nino  { color: #7a8fa8; text-align: right; white-space: nowrap; font-size: 10px; }
 
-    .cat-block th.left  { text-align: left; }
-    .cat-block th.right { text-align: right; }
-
-    .cat-block td {
-      padding: 7px 12px;
-      font-size: 13px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .cat-block tr:last-child td {
-      border-bottom: none;
-    }
-
-    .cat-block tr.even td {
-      background: rgba(255, 255, 255, 0.025);
-    }
-
-    .td-tour {
-      color: #dce8f8;
-      text-align: left;
-    }
-
-    .td-neto {
-      color: #8fa8c8;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .td-price {
-      color: #f0c040;
-      font-weight: 600;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .td-nino {
-      color: #8fa8c8;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Footer                                                               */
-    /* ------------------------------------------------------------------ */
+    /* ── Footer ── */
     .footer {
-      background: #060d1a;
-      padding: 16px 36px;
-      text-align: center;
+      background: #0d1e38;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .footer-line1 {
+    .footer-contact {
       color: #8fa8c8;
-      font-size: 12px;
+      font-size: 11px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
     }
 
-    .footer-line2 {
+    .footer-contact span { display: flex; align-items: center; gap: 4px; }
+
+    .footer-icons {
+      color: #c9a84c;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      gap: 16px;
+    }
+
+    .footer-note {
       color: #4a6888;
-      font-size: 10px;
-      margin-top: 4px;
+      font-size: 9.5px;
+      text-align: right;
     }
   </style>
 </head>
@@ -221,46 +215,47 @@
     <div class="header">
       <div class="header-overlay"></div>
       <div class="header-content">
-        <img
-          class="logo-img"
-          src="{{ logo_url }}"
-          alt="Logo Garay Tours"
-          onerror="this.style.display='none'"
-        />
-        <div class="title-block">
+        {% if logo_url %}
+        <img class="logo-img" src="{{ logo_url }}" alt="Logo"
+             onerror="this.style.display='none'" />
+        {% endif %}
+        <div class="header-text">
           <h1>GARAY TOURS</h1>
-          <p>Lista de Precios &middot; Cartagena de Indias</p>
+          <div class="subtitle">
+            {% if tipo == "interna" %}Precios Netos y Sugeridos{% else %}Precio Turista{% endif %}
+          </div>
+          <div class="tagline">Vive experiencias inolvidables en Cartagena</div>
         </div>
         {% if tipo == "interna" %}
         <span class="tipo-badge tipo-badge-interna">&#x1F512; VISTA INTERNA</span>
         {% else %}
-        <span class="tipo-badge tipo-badge-turista">&#x1F310; PRECIO TURISTA</span>
+        <span class="tipo-badge tipo-badge-turista">&#x1F310; TURISTA</span>
         {% endif %}
       </div>
     </div>
 
-    <!-- Body: one cat-block per category -->
-    <div class="body">
-      {# Category color map #}
+    <!-- Card grid -->
+    <div class="card-grid">
+
+      {# Category color and emoji maps #}
       {% set cat_colors = {
-        "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "#01579b",
-        "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "#006064",
+        "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "#1565c0",
+        "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "#00695c",
         "TOURS BAHIA":                                                   "#4a148c",
         "ISLA DE TIERRA BOMBA  (PUNTA ARENA Y PLAYA LINDA)":            "#0d47a1",
-        "TOURS 4 ISLAS":                                                 "#004d40",
-        "TOURS 5 ISLAS":                                                 "#1a237e",
-        "TOURS 5 ISLAS PREMIUM":                                         "#880e4f",
+        "TOURS 4 ISLAS":                                                 "#00838f",
+        "TOURS 5 ISLAS":                                                 "#283593",
+        "TOURS 5 ISLAS PREMIUM":                                         "#6a1b9a",
         "3 ISLAS PRIVADAS":                                              "#00695c",
         "TOUR ISLA SAN BERNARDO DEL VIENTO Y PLAYA PRIVADA":            "#006064",
         "CHOLÓN":                                                        "#e65100",
         "CITY TOUR CHIVA RUMBERA Y BUS PARTY":                          "#bf360c",
         "TOUR PALENQUE":                                                 "#4e342e",
-        "TOURS BARRANQUILLA - SANTA MARTA":                              "#283593",
+        "TOURS BARRANQUILLA - SANTA MARTA":                              "#1a237e",
         "VOLCAN":                                                        "#37474f",
-        "OTROS":                                                         "#37474f"
+        "OTROS":                                                         "#455a64"
       } %}
 
-      {# Category emoji map #}
       {% set cat_emojis = {
         "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "🏖️",
         "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "🌴",
@@ -279,20 +274,20 @@
         "OTROS":                                                         "📍"
       } %}
 
-      {# Build ordered list of categories preserving first-seen order by numero #}
-      {% set ns = namespace(seen_cats=[], rows_by_cat={}) %}
+      {# Build ordered category list #}
+      {% set ns = namespace(seen_cats=[]) %}
       {% for s in servicios | sort(attribute='numero') %}
         {% if s.categoria not in ns.seen_cats %}
           {% set ns.seen_cats = ns.seen_cats + [s.categoria] %}
         {% endif %}
       {% endfor %}
 
-      {# Render one cat-block per category #}
+      {# One card per category #}
       {% for cat in ns.seen_cats %}
         {% set color = cat_colors.get(cat, "#1565c0") %}
         {% set emoji = cat_emojis.get(cat, "🗺️") %}
-        <div class="cat-block">
-          <div class="cat-header" style="background: {{ color }};">
+        <div class="card">
+          <div class="card-header" style="background: {{ color }};">
             <span class="emoji">{{ emoji }}</span>
             <span class="cat-name">{{ cat }}</span>
           </div>
@@ -301,11 +296,10 @@
               <tr>
                 <th class="left">Tour</th>
                 {% if tipo == "interna" %}
-                <th class="right">Neto Adulto</th>
-                <th class="right">Precio P&uacute;blico</th>
-                <th class="right">Ni&ntilde;o</th>
+                <th class="right">Neto</th>
+                <th class="right">Sugerido</th>
                 {% else %}
-                <th class="right">Precio Turista</th>
+                <th class="right">Precio</th>
                 {% endif %}
               </tr>
             </thead>
@@ -320,17 +314,8 @@
                     {% if tipo == "interna" %}
                     <td class="td-neto">{{ s.precio_neto_adulto | fmt_cop if s.precio_neto_adulto else "—" }}</td>
                     <td class="td-price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
-                    <td class="td-nino">
-                      {% if s.precio_neto_nino %}
-                        {{ s.precio_neto_nino | fmt_cop }}
-                      {% elif s.permite_ninos %}
-                        <span style="color:#5a7a9a;font-style:italic;font-size:11px">= adulto</span>
-                      {% else %}
-                        <span style="color:#3a5a7a">—</span>
-                      {% endif %}
-                    </td>
                     {% else %}
-                    <td class="td-price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
+                    <td class="td-turista">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
                     {% endif %}
                   </tr>
                 {% endif %}
@@ -339,15 +324,24 @@
           </table>
         </div>
       {% endfor %}
+
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      <div class="footer-line1">
-        &#x1F4DE; 3223789349 &nbsp;&middot;&nbsp; &#x1F4F8; @garaytourscol &nbsp;&middot;&nbsp; &#x2709;&#xFE0F; agenciagaraytour1@gmail.com
+      <div class="footer-contact">
+        <span>📞 3223789349</span>
+        <span>📸 @garaytourscol</span>
+        <span>✉️ agenciagaraytour1@gmail.com</span>
       </div>
-      <div class="footer-line2">
-        Precios en COP &middot; Sujeto a cambios sin previo aviso
+      <div class="footer-icons">
+        <span>☀️ SOL</span>
+        <span>🌊 PLAYA</span>
+        <span>🧭 AVENTURA</span>
+        <span>🎭 CULTURA</span>
+      </div>
+      <div class="footer-note">
+        Precios en COP · Sujeto a cambios<br/>sin previo aviso
       </div>
     </div>
 
