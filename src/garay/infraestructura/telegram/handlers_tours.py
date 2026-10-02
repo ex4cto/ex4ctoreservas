@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import uuid
@@ -838,7 +837,7 @@ async def handle_edt_confirma(
         "publicar_lista_precios_service"
     )
     if _svc_edt is not None:
-        asyncio.create_task(publicar_seguro(_svc_edt))
+        context.application.create_task(publicar_seguro(_svc_edt))
 
     return await _menu_campos(update, context)
 
@@ -1192,7 +1191,7 @@ async def handle_elt_confirma(
         "publicar_lista_precios_service"
     )
     if _svc_elt is not None:
-        asyncio.create_task(publicar_seguro(_svc_elt))
+        context.application.create_task(publicar_seguro(_svc_elt))
 
     return await finalizar_flujo(
         update,
@@ -1744,7 +1743,7 @@ async def handle_nvt_crear(
         "publicar_lista_precios_service"
     )
     if _svc is not None:
-        asyncio.create_task(publicar_seguro(_svc))
+        context.application.create_task(publicar_seguro(_svc))
 
     return await finalizar_flujo(
         update,

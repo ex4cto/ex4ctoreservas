@@ -1,31 +1,26 @@
 """Tests for fire-and-forget lista_precios trigger points in handlers_tours.py.
 
-Verifies that asyncio.create_task(publicar_seguro(...)) is called after:
+Verifies that context.application.create_task(publicar_seguro(...)) is called after:
   - /nuevo_tour create success (handle_nvt_crear)
   - /editar_tour EDF_CONFIRMA success path (handle_edt_confirma)
   - /eliminar_tour (deactivate) success path (handle_elt_confirma)
-
-TDD RED: these tests are written before the trigger code is added.
 """
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.dominio.servicios.entidades import Servicio
 from garay.infraestructura.telegram.handlers_tours import (
-    NVT_CONFIRMA,
     handle_edt_confirma,
     handle_elt_confirma,
     handle_nvt_crear,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -123,11 +118,11 @@ def _make_context_edt(
 
 
 class TestNvtCrearTrigger:
-    """After /nuevo_tour create success, asyncio.create_task(publicar_seguro(...)) fires."""
+    """After /nuevo_tour create success, application.create_task(publicar_seguro(...)) fires."""
 
     @pytest.mark.asyncio
     async def test_nvt_crear_llama_create_task(self) -> None:
-        """handle_nvt_crear calls asyncio.create_task after saving the new tour."""
+        """handle_nvt_crear calls application.create_task after saving the new tour."""
         update = _make_update(callback_data="nvt_crear")
         service = _mock_service()
         ctx = _make_context_nvt(
@@ -141,18 +136,17 @@ class TestNvtCrearTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_nvt_crear(update, ctx)
+        await handle_nvt_crear(update, ctx)
 
-        mock_create_task.assert_called_once()
+        ctx.application.create_task.assert_called_once()
 
 
 class TestEdtConfirmaTrigger:
-    """After EDF_CONFIRMA success (any field), asyncio.create_task(publicar_seguro(...)) fires."""
+    """After EDF_CONFIRMA success, application.create_task(publicar_seguro(...)) fires."""
 
     @pytest.mark.asyncio
     async def test_edt_confirma_nombre_llama_create_task(self) -> None:
-        """handle_edt_confirma calls create_task after confirming a nombre edit."""
+        """handle_edt_confirma calls application.create_task after confirming a nombre edit."""
         s = _servicio("City Tour")
         update = _make_update(callback_data="edt_confirmar")
         service = _mock_service()
@@ -166,14 +160,13 @@ class TestEdtConfirmaTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_edt_confirma(update, ctx)
+        await handle_edt_confirma(update, ctx)
 
-        mock_create_task.assert_called_once()
+        ctx.application.create_task.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_edt_confirma_activo_llama_create_task(self) -> None:
-        """handle_edt_confirma calls create_task after toggling activo."""
+        """handle_edt_confirma calls application.create_task after toggling activo."""
         s = _servicio("City Tour")
         update = _make_update(callback_data="edt_confirmar")
         service = _mock_service()
@@ -187,14 +180,13 @@ class TestEdtConfirmaTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_edt_confirma(update, ctx)
+        await handle_edt_confirma(update, ctx)
 
-        mock_create_task.assert_called_once()
+        ctx.application.create_task.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_edt_confirma_cancelar_no_llama_create_task(self) -> None:
-        """handle_edt_confirma does NOT call create_task when action is 'cancelar'."""
+        """handle_edt_confirma does NOT call application.create_task when action is 'cancelar'."""
         s = _servicio("City Tour")
         update = _make_update(callback_data="edt_cancelar")
         service = _mock_service()
@@ -204,18 +196,17 @@ class TestEdtConfirmaTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_edt_confirma(update, ctx)
+        await handle_edt_confirma(update, ctx)
 
-        mock_create_task.assert_not_called()
+        ctx.application.create_task.assert_not_called()
 
 
 class TestEltConfirmaTrigger:
-    """After deactivate (eliminar tour) success, asyncio.create_task(publicar_seguro(...)) fires."""
+    """After deactivate success, application.create_task(publicar_seguro(...)) fires."""
 
     @pytest.mark.asyncio
     async def test_elt_confirma_llama_create_task(self) -> None:
-        """handle_elt_confirma calls create_task after soft-deleting a tour."""
+        """handle_elt_confirma calls application.create_task after soft-deleting a tour."""
         s = _servicio("Tour a Eliminar")
         update = _make_update(callback_data="elt_confirmar")
         service = _mock_service()
@@ -228,14 +219,13 @@ class TestEltConfirmaTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_elt_confirma(update, ctx)
+        await handle_elt_confirma(update, ctx)
 
-        mock_create_task.assert_called_once()
+        ctx.application.create_task.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_elt_cancelar_no_llama_create_task(self) -> None:
-        """handle_elt_confirma does NOT call create_task when action is 'cancelar'."""
+        """handle_elt_confirma does NOT call application.create_task when action is 'cancelar'."""
         s = _servicio("Tour a Cancelar")
         update = _make_update(callback_data="elt_cancelar")
         service = _mock_service()
@@ -248,7 +238,6 @@ class TestEltConfirmaTrigger:
             service=service,
         )
 
-        with patch("asyncio.create_task") as mock_create_task:
-            await handle_elt_confirma(update, ctx)
+        await handle_elt_confirma(update, ctx)
 
-        mock_create_task.assert_not_called()
+        ctx.application.create_task.assert_not_called()

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+tests/
+.env
+*.local
+logs/
+*.log
+*.db
+.DS_Store
+Thumbs.db
+.atl/
+.claude/
