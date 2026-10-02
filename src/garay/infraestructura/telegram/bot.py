@@ -297,6 +297,7 @@ from garay.infraestructura.telegram.handlers_inicio_venta import (
     handle_inicio_otra_fecha,
     handle_inicio_volver,
 )
+from garay.infraestructura.telegram.handlers_lista_precios import cmd_lista_precios
 from garay.infraestructura.telegram.handlers_propuestas import (
     GEN_CIUDAD,
     GEN_DIRECCION,
@@ -1312,6 +1313,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(nuevo_tour_conv_handler, group=8)
     app.add_handler(propuesta_conv_handler, group=9)
+    app.add_handler(CommandHandler("lista_precios", cmd_lista_precios), group=1)
     app.add_handler(CommandHandler("deudas", cmd_deudas), group=1)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 import uuid
@@ -13,6 +14,10 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
+from garay.aplicacion.servicios.lista_precios import (
+    PublicarListaPreciosServicio,
+    publicar_seguro,
+)
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
@@ -828,6 +833,13 @@ async def handle_edt_confirma(
         for key in ("edt_campo", "edt_valor", "edt_activo_nuevo", "edt_permite_ninos_nuevo"):
             context.user_data.pop(key, None)
 
+    # Fire-and-forget: publish updated price list (non-blocking).
+    _svc_edt: PublicarListaPreciosServicio | None = context.bot_data.get(
+        "publicar_lista_precios_service"
+    )
+    if _svc_edt is not None:
+        asyncio.create_task(publicar_seguro(_svc_edt))
+
     return await _menu_campos(update, context)
 
 
@@ -1174,6 +1186,14 @@ async def handle_elt_confirma(
 
     _refrescar_fsm(context)
     _limpiar_elt(context)
+
+    # Fire-and-forget: publish updated price list (non-blocking).
+    _svc_elt: PublicarListaPreciosServicio | None = context.bot_data.get(
+        "publicar_lista_precios_service"
+    )
+    if _svc_elt is not None:
+        asyncio.create_task(publicar_seguro(_svc_elt))
+
     return await finalizar_flujo(
         update,
         context,
@@ -1718,6 +1738,13 @@ async def handle_nvt_crear(
 
     _refrescar_fsm(context)
     _limpiar_nvt(context)
+
+    # Fire-and-forget: publish updated price list (non-blocking).
+    _svc: PublicarListaPreciosServicio | None = context.bot_data.get(
+        "publicar_lista_precios_service"
+    )
+    if _svc is not None:
+        asyncio.create_task(publicar_seguro(_svc))
 
     return await finalizar_flujo(
         update,

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Precios — Garay Tours</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a1628;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      padding: 24px;
+      min-width: 900px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Header                                                               */
+    /* ------------------------------------------------------------------ */
+    #lista {
+      background: #0d1e38;
+      border-radius: 16px;
+      padding: 28px 32px 32px;
+      width: 860px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      border-bottom: 2px solid #c9a84c;
+      padding-bottom: 16px;
+    }
+
+    .branding h1 {
+      color: #f0c040;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .branding .subtitle {
+      color: #8fa8c8;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .logo-img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #c9a84c;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* View badge                                                           */
+    /* ------------------------------------------------------------------ */
+    .tipo-badge {
+      display: inline-block;
+      background: #c9a84c;
+      color: #0a1628;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 3px 12px;
+      border-radius: 20px;
+      margin-bottom: 18px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Table                                                                */
+    /* ------------------------------------------------------------------ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #162540;
+      color: #c9a84c;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    th.right { text-align: right; }
+
+    .category-row td {
+      background: #1a2e50;
+      color: #c9a84c;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 10px 10px 6px;
+      text-transform: uppercase;
+      border-top: 1px solid #2a4070;
+    }
+
+    .tour-row td {
+      color: #e0eaf8;
+      font-size: 13px;
+      padding: 7px 10px;
+      border-bottom: 1px solid #182d50;
+    }
+
+    .tour-row:last-child td { border-bottom: none; }
+
+    .tour-row .price {
+      color: #f0c040;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .tour-row .neto {
+      color: #8fa8c8;
+      font-size: 12px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .tour-row .equal-adult {
+      color: #6a8aaa;
+      font-size: 11px;
+      font-style: italic;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Footer                                                               */
+    /* ------------------------------------------------------------------ */
+    .footer {
+      margin-top: 20px;
+      border-top: 1px solid #2a4070;
+      padding-top: 10px;
+      color: #4a6888;
+      font-size: 11px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div id="lista">
+    <!-- Header -->
+    <div class="header">
+      <div class="branding">
+        <h1>Garay Tours</h1>
+        <div class="subtitle">Lista de Precios — Cartagena de Indias</div>
+      </div>
+      <img
+        class="logo-img"
+        src="{{ logo_url }}"
+        alt="Logo Garay Tours"
+        onerror="this.style.display='none'"
+      />
+    </div>
+
+    <!-- View badge -->
+    <span class="tipo-badge">
+      {% if tipo == "interna" %}Vista interna{% else %}Vista turista{% endif %}
+    </span>
+
+    <!-- Price table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Tour</th>
+          {% if tipo == "interna" %}
+          <th class="right">Neto adulto</th>
+          <th class="right">Precio público adulto</th>
+          <th class="right">Neto niño</th>
+          {% else %}
+          <th class="right">Precio público adulto</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {# Group services by categoria, ordered by numero ASC within each group #}
+        {% set seen_cats = namespace(cats=[]) %}
+        {% for s in servicios | sort(attribute='numero') %}
+          {% if s.categoria not in seen_cats.cats %}
+            {% set seen_cats.cats = seen_cats.cats + [s.categoria] %}
+            <tr class="category-row">
+              <td colspan="{% if tipo == 'interna' %}4{% else %}2{% endif %}">
+                🗺️ {{ s.categoria }}
+              </td>
+            </tr>
+          {% endif %}
+          <tr class="tour-row">
+            <td>{{ s.nombre }}</td>
+            {% if tipo == "interna" %}
+            <td class="neto">{{ s.precio_neto_adulto | fmt_cop if s.precio_neto_adulto else "—" }}</td>
+            <td class="price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
+            <td class="neto">
+              {% if s.precio_neto_nino %}
+                {{ s.precio_neto_nino | fmt_cop }}
+              {% elif s.permite_ninos %}
+                <span class="equal-adult">= adulto</span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            {% else %}
+            <td class="price">{{ s.precio_sugerido_adulto | fmt_cop if s.precio_sugerido_adulto else "—" }}</td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="footer">Precios en COP · Sujeto a cambios sin previo aviso</div>
+  </div>
+</body>
+</html>

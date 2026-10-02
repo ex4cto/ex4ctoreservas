@@ -1,16 +1,19 @@
-"""Actualizacion quirurgica de precios y permite_ninos de servicios desde el seed JSON.
+"""Sincronizacion quirurgica del catalogo de servicios desde servicios_seed.json.
 
-A diferencia de ``seed_servicios`` (que reescribe nombre, categoria, activo y
-descripcion), este script actualiza UNICAMENTE ``precio_neto_adulto``,
-``precio_neto_nino`` y ``permite_ninos``. No toca ``activo``, ``nombre``,
-``categoria``, ``descripcion`` ni ``horarios``, de modo que las ediciones
-manuales en produccion (desactivaciones, renombres, horarios) sobreviven.
+A diferencia de ``seed_servicios`` (que reescribe todos los campos), este script
+actualiza UNICAMENTE ``nombre``, ``activo`` y ``categoria`` para servicios
+existentes. Para servicios nuevos (numero no en DB) inserta la fila completa con
+valores por defecto para los campos de precio/horarios.
+
+No toca ``horarios``, ``descripcion``, ``precio_neto_adulto``,
+``precio_neto_nino`` ni ``permite_ninos``, de modo que las ediciones manuales
+en produccion (precios, horarios, descripciones) sobreviven.
 
 Empareja por ``numero`` (unico). Es idempotente y seguro de re-ejecutar.
 
 Uso:
-    railway run python -m scripts.actualizar_precios_servicios --dry-run
-    railway run python -m scripts.actualizar_precios_servicios
+    railway run python -m scripts.sincronizar_catalogo --dry-run
+    railway run python -m scripts.sincronizar_catalogo
 """
 
 from __future__ import annotations
@@ -31,55 +34,65 @@ from garay.infraestructura.persistencia.modelos import ServicioModel
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
 from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
-from scripts.seed import SERVICIOS_JSON, _neto_semilla
+from scripts.seed import SERVICIOS_JSON, seed_id
 
 
 @dataclass
-class ResumenActualizacion:
-    """Numeros de servicio agrupados por resultado de la actualizacion."""
+class ResumenSincronizacion:
+    """Numeros de servicio agrupados por resultado de la sincronizacion."""
 
     actualizados: list[int] = field(default_factory=list)
+    insertados: list[int] = field(default_factory=list)
     sin_cambios: list[int] = field(default_factory=list)
-    no_encontrados: list[int] = field(default_factory=list)
 
 
-def actualizar_precios(session: Session, entries: list[Any]) -> ResumenActualizacion:
-    """Aplica precios y permite_ninos del JSON sobre los servicios existentes.
+def sincronizar_catalogo(session: Session, entries: list[Any]) -> ResumenSincronizacion:
+    """Sincroniza nombre, activo y categoria desde las entradas del seed JSON.
 
-    Solo modifica los tres campos de precio/ninos; el resto queda intacto.
+    Para cada entrada:
+    - Si el numero NO existe en DB: inserta con valores por defecto para precio y horarios.
+    - Si el numero YA existe: actualiza solo nombre, activo y categoria.
+    - Si no hubo cambio: registra como sin_cambios.
+
+    Nunca toca horarios, descripcion, precio_neto_adulto, precio_neto_nino ni permite_ninos.
     """
-    resumen = ResumenActualizacion()
+    resumen = ResumenSincronizacion()
     for entry in entries:
         numero = int(entry["numero"])
+        nombre = str(entry["nombre"])
+        activo = bool(entry["activo"])
+        categoria = str(entry.get("categoria") or "")
+
         row = session.execute(
             select(ServicioModel).where(ServicioModel.numero == numero)
         ).scalar_one_or_none()
+
         if row is None:
-            resumen.no_encontrados.append(numero)
+            nuevo = ServicioModel(
+                id=seed_id(f"servicio:{numero}"),
+                numero=numero,
+                nombre=nombre,
+                activo=activo,
+                categoria=categoria,
+                descripcion="",
+                precio_neto_adulto=None,
+                precio_neto_nino=None,
+                permite_ninos=True,
+            )
+            session.add(nuevo)
+            resumen.insertados.append(numero)
             continue
 
-        nuevo_adulto = _neto_semilla(entry.get("neto_adulto"))
-        nuevo_nino = _neto_semilla(entry.get("neto_nino"))
-        nuevo_permite = bool(entry.get("permite_ninos", True))
-        nuevo_sugerido_adulto = _neto_semilla(entry.get("precio_sugerido_adulto"))
-        nuevo_sugerido_nino = _neto_semilla(entry.get("precio_sugerido_nino"))
-
-        if (
-            row.precio_neto_adulto == nuevo_adulto
-            and row.precio_neto_nino == nuevo_nino
-            and row.permite_ninos == nuevo_permite
-            and row.precio_sugerido_adulto == nuevo_sugerido_adulto
-            and row.precio_sugerido_nino == nuevo_sugerido_nino
-        ):
+        # Check for actual changes in the three mutable fields
+        if row.nombre == nombre and row.activo == activo and row.categoria == categoria:
             resumen.sin_cambios.append(numero)
             continue
 
-        row.precio_neto_adulto = nuevo_adulto
-        row.precio_neto_nino = nuevo_nino
-        row.permite_ninos = nuevo_permite
-        row.precio_sugerido_adulto = nuevo_sugerido_adulto
-        row.precio_sugerido_nino = nuevo_sugerido_nino
+        row.nombre = nombre
+        row.activo = activo
+        row.categoria = categoria
         resumen.actualizados.append(numero)
+
     return resumen
 
 
@@ -90,7 +103,7 @@ def cargar_entries() -> list[Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Actualiza precios/permite_ninos de servicios.")
+    parser = argparse.ArgumentParser(description="Sincroniza nombre/activo/categoria de servicios.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -107,7 +120,7 @@ def main() -> None:
     entries = cargar_entries()
 
     with sf() as session:
-        resumen = actualizar_precios(session, entries)
+        resumen = sincronizar_catalogo(session, entries)
         if args.dry_run:
             session.rollback()
             modo = "DRY-RUN (sin cambios persistidos)"
@@ -116,9 +129,9 @@ def main() -> None:
             modo = "APLICADO"
 
     print(f"[{modo}]")
+    print(f"Insertados   : {len(resumen.insertados)} -> {resumen.insertados}")
     print(f"Actualizados : {len(resumen.actualizados)} -> {resumen.actualizados}")
     print(f"Sin cambios  : {len(resumen.sin_cambios)}")
-    print(f"No encontrados: {resumen.no_encontrados}")
 
     if not args.dry_run:
         servicio_repo = SQLAServicioRepository(sf)

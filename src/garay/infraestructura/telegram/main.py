@@ -10,6 +10,7 @@ from pathlib import Path
 from telegram import Update
 
 from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
+from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
 from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
@@ -101,7 +102,9 @@ from garay.infraestructura.persistencia.repositorios.socios import (
 )
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
+from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.telegram.bot import crear_aplicacion
+from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 
 _logger = logging.getLogger(__name__)
@@ -396,6 +399,15 @@ def main() -> None:
             plan_fee=settings.railway_plan_fee,
         )
 
+    generador_imagen = PlaywrightGeneradorImagen()
+    enviador_foto = EnviadorFotoTelegram(token=settings.telegram_bot_token)
+    publicar_lista_precios_service = PublicarListaPreciosServicio(
+        repo=servicio_repo,
+        generador=generador_imagen,
+        enviador_foto=enviador_foto,
+        grupo_id=settings.grupo_id,
+    )
+
     app = crear_aplicacion(settings.telegram_bot_token)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
@@ -446,6 +458,7 @@ def main() -> None:
 
     app.bot_data.update(
         {
+            "publicar_lista_precios_service": publicar_lista_precios_service,
             "hotel_service": hotel_service,
             "obligacion_repo": obligacion_hotel_repo,
             "monitor_infra_service": monitor_infra_service,
