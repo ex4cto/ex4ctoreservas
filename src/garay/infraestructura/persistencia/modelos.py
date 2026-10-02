@@ -59,6 +59,8 @@ class ServicioModel(Base):
     netos_por_horario: Mapped[dict[str, str]] = mapped_column(
         JSON, nullable=False, default=dict, server_default=sa.text("'{}'")
     )
+    precio_sugerido_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    precio_sugerido_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
 
 
 class ClienteModel(Base):

@@ -11,6 +11,7 @@ from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, 
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
@@ -110,6 +111,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("neto_adulto", "Neto adulto"),
     ("neto_nino", "Neto niño"),
     ("neto_por_horario", "Neto por horario"),
+    ("precio_sugerido_adulto", "Precio sugerido adulto"),
     ("permite_ninos", "Permite niños"),
     ("familia", "Familia"),
     ("horarios", "Horarios"),
@@ -119,8 +121,6 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
 
 def _render_ficha(s: Servicio) -> str:
     """Render a tour detail card."""
-    neto_adulto = str(s.precio_neto_adulto) if s.precio_neto_adulto is not None else "—"
-    neto_nino = str(s.precio_neto_nino) if s.precio_neto_nino is not None else "—"
     estado = "Activo" if s.activo else "Inactivo"
     permite_ninos = "Sí" if s.permite_ninos else "No"
     horarios_str = (
@@ -129,8 +129,9 @@ def _render_ficha(s: Servicio) -> str:
     return obtener_mensaje("tour_ficha").format(
         nombre=s.nombre,
         familia=s.categoria or "—",
-        neto_adulto=neto_adulto,
-        neto_nino=neto_nino,
+        neto_adulto=fmt_cop(s.precio_neto_adulto),
+        neto_nino=fmt_cop(s.precio_neto_nino),
+        precio_sugerido_adulto=fmt_cop(s.precio_sugerido_adulto),
         permite_ninos=permite_ninos,
         estado=estado,
         horarios=horarios_str,
@@ -576,6 +577,7 @@ async def handle_edt_ficha(
         "nombre": "Ingresa el nuevo nombre del tour:",
         "neto_adulto": "Ingresa el nuevo neto adulto (número positivo o vacío para limpiar):",
         "neto_nino": "Ingresa el nuevo neto niño (número positivo o vacío para limpiar):",
+        "precio_sugerido_adulto": obtener_mensaje("tour_pide_precio_sugerido_adulto"),
     }
     prompt = prompts.get(campo, "Ingresa el nuevo valor:")
     await update.effective_message.reply_text(prompt)
@@ -639,7 +641,7 @@ async def handle_edt_valor(
             actual = (
                 s.precio_neto_adulto if campo == "neto_adulto" else s.precio_neto_nino
             ) if s else None
-            anterior_str = str(actual) if actual is not None else "—"
+            anterior_str = fmt_cop(actual)
             teclado = InlineKeyboardMarkup(
                 [[
                     InlineKeyboardButton("✅ Confirmar", callback_data="edt_confirmar"),
@@ -663,7 +665,7 @@ async def handle_edt_valor(
         actual_neto = (
             s.precio_neto_adulto if campo == "neto_adulto" else s.precio_neto_nino
         ) if s else None
-        anterior_str = str(actual_neto) if actual_neto is not None else "—"
+        anterior_str = fmt_cop(actual_neto)
         if context.user_data is not None:
             context.user_data["edt_valor"] = valor
         teclado = InlineKeyboardMarkup(
@@ -674,7 +676,39 @@ async def handle_edt_valor(
         )
         await update.effective_message.reply_text(
             obtener_mensaje("tour_confirmar_cambio").format(
-                anterior=anterior_str, nuevo=str(valor)
+                anterior=anterior_str, nuevo=fmt_cop(valor)
+            ),
+            reply_markup=teclado,
+            parse_mode="HTML",
+        )
+        return EDF_CONFIRMA
+
+    if campo == "precio_sugerido_adulto":
+        # Empty or zero/negative → rejected (sugerido must always be a positive value)
+        if not texto:
+            await update.effective_message.reply_text(
+                obtener_mensaje("tour_sugerido_invalido")
+            )
+            return EDF_CAMPO
+        valor_sug = parsear_monto(texto)
+        if valor_sug is None or valor_sug <= Decimal("0"):
+            await update.effective_message.reply_text(
+                obtener_mensaje("tour_sugerido_invalido")
+            )
+            return EDF_CAMPO
+        actual_sug = s.precio_sugerido_adulto if s else None
+        anterior_sug_str = fmt_cop(actual_sug)
+        if context.user_data is not None:
+            context.user_data["edt_valor"] = valor_sug
+        teclado = InlineKeyboardMarkup(
+            [[
+                InlineKeyboardButton("✅ Confirmar", callback_data="edt_confirmar"),
+                InlineKeyboardButton("❌ Cancelar", callback_data="edt_cancelar"),
+            ]]
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_confirmar_cambio").format(
+                anterior=anterior_sug_str, nuevo=fmt_cop(valor_sug)
             ),
             reply_markup=teclado,
             parse_mode="HTML",
@@ -766,6 +800,10 @@ async def handle_edt_confirma(
     elif campo == "neto_nino":
         raw = ud.get("edt_valor")
         s.precio_neto_nino = Decimal(str(raw)) if raw is not None else None
+    elif campo == "precio_sugerido_adulto":
+        raw_sug = ud.get("edt_valor")
+        if raw_sug is not None:
+            s.precio_sugerido_adulto = Decimal(str(raw_sug))
     elif campo in ("familia", "categoria"):
         s.categoria = str(ud.get("edt_valor", s.categoria))
     elif campo == "activo":

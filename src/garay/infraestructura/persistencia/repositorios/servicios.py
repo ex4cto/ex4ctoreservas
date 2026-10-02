@@ -24,6 +24,8 @@ def to_orm(s: Servicio) -> ServicioModel:
         categoria=s.categoria,
         horarios=s.horarios,
         netos_por_horario={k: str(v) for k, v in s.netos_por_horario.items()},
+        precio_sugerido_adulto=s.precio_sugerido_adulto,
+        precio_sugerido_nino=s.precio_sugerido_nino,
     )
 
 
@@ -41,6 +43,8 @@ def to_domain(m: ServicioModel) -> Servicio:
         categoria=m.categoria,
         horarios=list(m.horarios) if m.horarios else [],
         netos_por_horario={k: Decimal(str(v)) for k, v in raw_netos.items()},
+        precio_sugerido_adulto=m.precio_sugerido_adulto,
+        precio_sugerido_nino=m.precio_sugerido_nino,
     )
 
 

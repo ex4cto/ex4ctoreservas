@@ -33,6 +33,9 @@ _TOUR_KEYS = [
     "tour_horarios_pide",
     "tour_horarios_invalido",
     "tour_horarios_duplicado",
+    # imagen-precios (PR1)
+    "tour_pide_precio_sugerido_adulto",
+    "tour_sugerido_invalido",
 ]
 
 
@@ -74,6 +77,7 @@ class TestClavesNuevoTourFormato:
             familia="PLAYERO",
             neto_adulto="100.000",
             neto_nino="—",
+            precio_sugerido_adulto="—",
             permite_ninos="Sí",
             estado="Activo",
             horarios="7:00 AM",

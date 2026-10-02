@@ -26,6 +26,9 @@ class Servicio:
 
     netos_por_horario: dict[str, Decimal] = field(default_factory=dict)
 
+    precio_sugerido_adulto: Decimal | None = field(default=None)
+    precio_sugerido_nino: Decimal | None = field(default=None)
+
     def __post_init__(self) -> None:
         self.horarios = sorted(self.horarios)
         if self.numero < 1:
@@ -37,6 +40,16 @@ class Servicio:
                 raise TypeError(
                     f"netos_por_horario['{key}'] must be Decimal, got {type(val).__name__}"
                 )
+        if self.precio_sugerido_adulto is not None and self.precio_sugerido_adulto <= Decimal("0"):
+            raise ValueError(
+                "precio_sugerido_adulto must be positive when not None, "
+                f"got {self.precio_sugerido_adulto}"
+            )
+        if self.precio_sugerido_nino is not None and self.precio_sugerido_nino <= Decimal("0"):
+            raise ValueError(
+                "precio_sugerido_nino must be positive when not None, "
+                f"got {self.precio_sugerido_nino}"
+            )
 
     def neto_para_horario(self, horario: str | None) -> Decimal | None:
         """Return the net cost for the given departure time.

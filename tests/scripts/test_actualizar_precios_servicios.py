@@ -90,3 +90,79 @@ def test_sin_cambios_no_cuenta_como_actualizado() -> None:
         )
     assert resumen.sin_cambios == [1]
     assert resumen.actualizados == []
+
+
+# ---------------------------------------------------------------------------
+# Tests for precio_sugerido_adulto / precio_sugerido_nino sync (T1.11)
+# ---------------------------------------------------------------------------
+
+
+def test_actualiza_precio_sugerido_adulto_desde_null() -> None:
+    """Script syncs precio_sugerido_adulto from JSON when DB value is NULL."""
+    sf = _sf()
+    with sf.begin() as s:
+        row = _servicio(numero=2)
+        row.precio_sugerido_adulto = None
+        s.add(row)
+
+    with sf.begin() as s:
+        resumen = actualizar_precios(
+            s,
+            [{"numero": 2, "neto_adulto": "85", "precio_sugerido_adulto": 150}],
+        )
+
+    assert resumen.actualizados == [2]
+    with sf.begin() as s:
+        row2 = s.execute(sa.select(ServicioModel).where(ServicioModel.numero == 2)).scalar_one()
+        assert row2.precio_sugerido_adulto == Decimal("150000")
+
+
+def test_actualiza_precio_sugerido_nino_desde_null() -> None:
+    """Script syncs precio_sugerido_nino from JSON when DB value is NULL."""
+    sf = _sf()
+    with sf.begin() as s:
+        row = _servicio(numero=3)
+        row.precio_sugerido_nino = None
+        s.add(row)
+
+    with sf.begin() as s:
+        resumen = actualizar_precios(
+            s,
+            [{"numero": 3, "neto_adulto": "85", "precio_sugerido_nino": 90}],
+        )
+
+    assert resumen.actualizados == [3]
+    with sf.begin() as s:
+        row3 = s.execute(sa.select(ServicioModel).where(ServicioModel.numero == 3)).scalar_one()
+        assert row3.precio_sugerido_nino == Decimal("90000")
+
+
+def test_sin_cambio_sugerido_no_actualiza() -> None:
+    """Script is a no-op when sugerido values already match."""
+    sf = _sf()
+    with sf.begin() as s:
+        row = _servicio(
+            numero=4,
+            precio_neto_adulto=Decimal("85000"),
+            precio_neto_nino=None,
+            permite_ninos=True,
+        )
+        row.precio_sugerido_adulto = Decimal("150000")
+        row.precio_sugerido_nino = None
+        s.add(row)
+
+    with sf.begin() as s:
+        resumen = actualizar_precios(
+            s,
+            [{
+                "numero": 4,
+                "neto_adulto": "85",
+                "neto_nino": None,
+                "permite_ninos": True,
+                "precio_sugerido_adulto": 150,
+                "precio_sugerido_nino": None,
+            }],
+        )
+
+    assert resumen.sin_cambios == [4]
+    assert resumen.actualizados == []

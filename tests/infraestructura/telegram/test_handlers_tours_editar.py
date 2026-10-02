@@ -1081,3 +1081,232 @@ class TestEdhStatesBotWiring:
         assert len(text_handlers) == 1, (
             f"EDH_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
         )
+
+
+# ---------------------------------------------------------------------------
+# T1.16 RED — fmt_cop display + precio_sugerido_adulto editor (imagen-precios)
+# ---------------------------------------------------------------------------
+
+
+def _servicio_sugerido(
+    neto_adulto: object = Decimal("390000"),
+    neto_nino: object = None,
+    sugerido_adulto: object = None,
+    sugerido_nino: object = None,
+) -> Servicio:
+    """Helper that creates a Servicio with sugerido fields for T1.16 tests."""
+    return Servicio(
+        id=__import__("uuid").uuid4(),
+        numero=42,
+        nombre="Test Tour",
+        categoria="Test",
+        activo=True,
+        precio_neto_adulto=neto_adulto,  # type: ignore[arg-type]
+        precio_neto_nino=neto_nino,  # type: ignore[arg-type]
+        permite_ninos=True,
+        precio_sugerido_adulto=sugerido_adulto,  # type: ignore[arg-type]
+        precio_sugerido_nino=sugerido_nino,  # type: ignore[arg-type]
+    )
+
+
+class TestRenderFichaFmtCop:
+    """T1.16 RED — _render_ficha() must use fmt_cop() for monetary values."""
+
+    def test_neto_adulto_usa_formato_cop(self) -> None:
+        """precio_neto_adulto=390000 must render as '$390.000', not '390000' or '390000.00'."""
+        s = _servicio_sugerido(neto_adulto=Decimal("390000"))
+        ficha = _render_ficha(s)
+        assert "$390.000" in ficha, (
+            f"Expected '$390.000' in ficha but got: {ficha!r}. "
+            "_render_ficha must use fmt_cop(), not str()."
+        )
+        assert "390000.00" not in ficha, (
+            f"Raw Decimal string '390000.00' must NOT appear in ficha: {ficha!r}"
+        )
+
+    def test_neto_adulto_none_muestra_guion(self) -> None:
+        """precio_neto_adulto=None must render as '—'."""
+        s = _servicio_sugerido(neto_adulto=None)
+        ficha = _render_ficha(s)
+        assert "—" in ficha
+
+    def test_neto_nino_usa_formato_cop(self) -> None:
+        """precio_neto_nino=50000 must render as '$50.000', not '50000'."""
+        s = _servicio_sugerido(neto_adulto=Decimal("390000"), neto_nino=Decimal("50000"))
+        ficha = _render_ficha(s)
+        assert "$50.000" in ficha, (
+            f"Expected '$50.000' in ficha but got: {ficha!r}"
+        )
+
+    def test_precio_sugerido_adulto_none_muestra_guion(self) -> None:
+        """precio_sugerido_adulto=None must render as '—' in the ficha."""
+        s = _servicio_sugerido(sugerido_adulto=None)
+        ficha = _render_ficha(s)
+        # The ficha must contain the sugerido field label and show —
+        assert "sugerido" in ficha.lower() or "Sugerido" in ficha, (
+            f"_render_ficha must include a 'Sugerido' line but got: {ficha!r}"
+        )
+
+    def test_precio_sugerido_adulto_muestra_formato_cop(self) -> None:
+        """precio_sugerido_adulto=100000 must render as '$100.000' in the ficha."""
+        s = _servicio_sugerido(sugerido_adulto=Decimal("100000"))
+        ficha = _render_ficha(s)
+        assert "$100.000" in ficha, (
+            f"Expected '$100.000' for sugerido_adulto in ficha but got: {ficha!r}"
+        )
+
+
+class TestCamposEditablesSugeridoAdulto:
+    """T1.16 RED — precio_sugerido_adulto must be in _CAMPOS_EDITABLES."""
+
+    def test_precio_sugerido_adulto_en_campos_editables(self) -> None:
+        """'precio_sugerido_adulto' must appear as a key in _CAMPOS_EDITABLES."""
+        from garay.infraestructura.telegram.handlers_tours import _CAMPOS_EDITABLES
+
+        campos = [campo for campo, _label in _CAMPOS_EDITABLES]
+        assert "precio_sugerido_adulto" in campos, (
+            f"'precio_sugerido_adulto' must be in _CAMPOS_EDITABLES but got: {campos}"
+        )
+
+    def test_precio_sugerido_nino_no_en_campos_editables(self) -> None:
+        """'precio_sugerido_nino' must NOT be in _CAMPOS_EDITABLES (not editable via bot)."""
+        from garay.infraestructura.telegram.handlers_tours import _CAMPOS_EDITABLES
+
+        campos = [campo for campo, _label in _CAMPOS_EDITABLES]
+        assert "precio_sugerido_nino" not in campos, (
+            "'precio_sugerido_nino' must NOT be in _CAMPOS_EDITABLES (not a bot-editable field)"
+        )
+
+
+class TestHandleEdtValorSugeridoAdulto:
+    """T1.16 RED — handle_edt_valor must handle campo='precio_sugerido_adulto'."""
+
+    @pytest.mark.asyncio
+    async def test_sugerido_adulto_positivo_acepta(self) -> None:
+        """Valid positive value for precio_sugerido_adulto → EDF_CONFIRMA."""
+        s1 = _servicio_sugerido()
+        update = _make_update(text="120000")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CONFIRMA, (
+            f"Expected EDF_CONFIRMA for valid precio_sugerido_adulto, got {result}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_sugerido_adulto_cero_rechazado(self) -> None:
+        """Zero input for precio_sugerido_adulto → EDF_CAMPO (rejected)."""
+        s1 = _servicio_sugerido()
+        update = _make_update(text="0")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CAMPO
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sugerido_adulto_negativo_rechazado(self) -> None:
+        """Negative input for precio_sugerido_adulto → EDF_CAMPO."""
+        s1 = _servicio_sugerido()
+        update = _make_update(text="-50000")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CAMPO
+        ctx.bot_data["servicio_repo"].guardar.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sugerido_adulto_vacio_rechazado(self) -> None:
+        """Empty input for precio_sugerido_adulto → EDF_CAMPO (must stay positive)."""
+        s1 = _servicio_sugerido()
+        update = _make_update(text="")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CAMPO, (
+            "precio_sugerido_adulto cannot be cleared to None via bot editor — must stay positive"
+        )
+
+    @pytest.mark.asyncio
+    async def test_sugerido_adulto_valor_guardado_en_user_data(self) -> None:
+        """Accepted valor is stored in user_data['edt_valor'] as Decimal."""
+        s1 = _servicio_sugerido()
+        update = _make_update(text="150")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+            },
+        )
+        ctx.bot_data["servicio_repo"].buscar_por_id.return_value = s1
+
+        result = await handle_edt_valor(update, ctx)
+
+        assert result == EDF_CONFIRMA
+        assert ctx.user_data["edt_valor"] == Decimal("150000"), (
+            "Input '150' (miles de pesos) must store Decimal('150000') in edt_valor"
+        )
+
+
+class TestHandleEdtConfirmaSugeridoAdulto:
+    """T1.16 RED — handle_edt_confirma must persist precio_sugerido_adulto."""
+
+    @pytest.mark.asyncio
+    async def test_confirma_sugerido_adulto_guarda_en_entidad(self) -> None:
+        """Confirming precio_sugerido_adulto saves the new Decimal on the entity."""
+        s1 = _servicio_sugerido(sugerido_adulto=None)
+        update = _make_update(callback_data="edt_confirmar")
+        ctx = _make_context(
+            servicios=[s1],
+            user_data={
+                "edt_target_id": str(s1.id),
+                "edt_campo": "precio_sugerido_adulto",
+                "edt_valor": Decimal("120000"),
+            },
+        )
+        repo = ctx.bot_data["servicio_repo"]
+        repo.buscar_por_id.return_value = s1
+        repo.listar_activos.return_value = [s1]
+
+        result = await handle_edt_confirma(update, ctx)
+
+        assert result == EDF_FICHA
+        repo.guardar.assert_called_once()
+        saved = repo.guardar.call_args[0][0]
+        assert saved.precio_sugerido_adulto == Decimal("120000"), (
+            f"Expected precio_sugerido_adulto=Decimal('120000') "
+            f"but got {saved.precio_sugerido_adulto}"
+        )

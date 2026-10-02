@@ -47,7 +47,7 @@ def test_seed_completo_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 137
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 165
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
@@ -74,7 +74,7 @@ def test_seed_idempotente_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 137
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 165
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
@@ -266,3 +266,34 @@ def test_seed_permite_ninos_false_para_tours_sin_ninos() -> None:
         ).all()
     assert filas, "no se encontraron los tours sin niños esperados"
     assert all(permite is False for _numero, permite in filas)
+
+
+# ---------------------------------------------------------------------------
+# Tests for precio_sugerido_adulto / precio_sugerido_nino seed (T1.13)
+# ---------------------------------------------------------------------------
+
+
+def test_seed_servicios_precio_sugerido_adulto_tour_1() -> None:
+    """Service #1 (PLAYA BLANCA X TIERRA) must have precio_sugerido_adulto == 100000."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_servicios(session)
+    with sf.begin() as session:
+        row = session.execute(
+            sa.select(ServicioModel).where(ServicioModel.numero == 1)
+        ).scalar_one()
+    assert row.precio_sugerido_adulto == Decimal("100000"), (
+        f"Expected 100000 for tour #1, got {row.precio_sugerido_adulto}"
+    )
+
+
+def test_seed_servicios_precio_sugerido_nino_none_cuando_no_aplica() -> None:
+    """Service #1 must have precio_sugerido_nino as None (not in seed JSON for tour 1)."""
+    sf = _make_session_factory()
+    with sf.begin() as session:
+        seed_servicios(session)
+    with sf.begin() as session:
+        row = session.execute(
+            sa.select(ServicioModel).where(ServicioModel.numero == 1)
+        ).scalar_one()
+    assert row.precio_sugerido_nino is None
