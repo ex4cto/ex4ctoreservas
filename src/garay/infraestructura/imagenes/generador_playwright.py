@@ -6,6 +6,7 @@ No temp files — returns raw in-memory PNG bytes via locator screenshot.
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,14 @@ _LOGO_FILENAME = "Gemini_Generated_Image_liebc8liebc8lieb.jpg"
 _LOGO_PATH = Path(__file__).parent.parent.parent.parent.parent / "assets" / _LOGO_FILENAME
 _BANNER_FILENAME = "banner-cartagena.jpg"
 _BANNER_PATH = Path(__file__).parent.parent.parent.parent.parent / "assets" / _BANNER_FILENAME
+
+
+def _to_data_uri(path: Path) -> str:
+    """Encode a local image file as a base64 data URI for inline HTML use."""
+    suffix = path.suffix.lower()
+    mime = "image/png" if suffix == ".png" else "image/jpeg"
+    data = base64.b64encode(path.read_bytes()).decode()
+    return f"data:{mime};base64,{data}"
 
 
 def _fmt_cop(value: object) -> str:
@@ -67,8 +76,8 @@ class PlaywrightGeneradorImagen(GeneradorListaPreciosPort):
 
         env = _build_jinja_env()
         template = env.get_template("lista_precios.html")
-        logo_url = _LOGO_PATH.as_uri() if _LOGO_PATH.exists() else ""
-        banner_url = _BANNER_PATH.as_uri() if _BANNER_PATH.exists() else ""
+        logo_url = _to_data_uri(_LOGO_PATH) if _LOGO_PATH.exists() else ""
+        banner_url = _to_data_uri(_BANNER_PATH) if _BANNER_PATH.exists() else ""
         html = template.render(
             servicios=servicios,
             tipo=tipo.value,
