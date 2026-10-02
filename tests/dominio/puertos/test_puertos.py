@@ -213,3 +213,85 @@ class TestExtractorIA:
 
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
+
+
+# ---------------------------------------------------------------------------
+# T2.3 RED — TipoImagen, GeneradorListaPreciosPort, EnviadorFotoPort
+# ---------------------------------------------------------------------------
+
+
+class TestTipoImagen:
+    def test_interna_resuelve_sin_import_error(self) -> None:
+        from garay.dominio.servicios.entidades import TipoImagen
+
+        assert TipoImagen.INTERNA is not None
+
+    def test_turista_resuelve_sin_import_error(self) -> None:
+        from garay.dominio.servicios.entidades import TipoImagen
+
+        assert TipoImagen.TURISTA is not None
+
+    def test_interna_valor_es_string_interna(self) -> None:
+        from garay.dominio.servicios.entidades import TipoImagen
+
+        assert str(TipoImagen.INTERNA) == "interna"
+
+    def test_turista_valor_es_string_turista(self) -> None:
+        from garay.dominio.servicios.entidades import TipoImagen
+
+        assert str(TipoImagen.TURISTA) == "turista"
+
+    def test_tipo_imagen_es_str(self) -> None:
+        from garay.dominio.servicios.entidades import TipoImagen
+
+        assert isinstance(TipoImagen.INTERNA, str)
+        assert isinstance(TipoImagen.TURISTA, str)
+
+
+class TestGeneradorListaPreciosPort:
+    def test_instanciar_sin_implementacion_lanza_type_error(self) -> None:
+        from garay.dominio.puertos.generador_lista_precios import (
+            GeneradorListaPreciosPort,
+        )
+
+        class SinImplementacion(GeneradorListaPreciosPort):
+            pass
+
+        with pytest.raises(TypeError):
+            SinImplementacion()  # type: ignore[abstract]
+
+    def test_implementacion_completa_no_lanza(self) -> None:
+        from garay.dominio.puertos.generador_lista_precios import (
+            GeneradorListaPreciosPort,
+        )
+        from garay.dominio.servicios.entidades import Servicio, TipoImagen
+
+        class Implementado(GeneradorListaPreciosPort):
+            async def generar_imagen_precios(
+                self, servicios: list[Servicio], tipo: TipoImagen
+            ) -> bytes:
+                return b""
+
+        instance = Implementado()
+        assert instance is not None
+
+
+class TestEnviadorFotoPort:
+    def test_instanciar_sin_implementacion_lanza_type_error(self) -> None:
+        from garay.dominio.puertos.servicios_externos import EnviadorFotoPort
+
+        class SinImplementacion(EnviadorFotoPort):
+            pass
+
+        with pytest.raises(TypeError):
+            SinImplementacion()  # type: ignore[abstract]
+
+    def test_implementacion_completa_no_lanza(self) -> None:
+        from garay.dominio.puertos.servicios_externos import EnviadorFotoPort
+
+        class Implementado(EnviadorFotoPort):
+            async def enviar(self, imagen: bytes, grupo_id: str) -> None:
+                return None
+
+        instance = Implementado()
+        assert instance is not None

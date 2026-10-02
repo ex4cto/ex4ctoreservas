@@ -62,3 +62,15 @@ class NotificadorEmail(ABC):
         cuerpo_html: str,
         bcc: str | None = None,
     ) -> None: ...
+
+
+class EnviadorFotoPort(ABC):
+    """Sends an image (PNG bytes) to a Telegram group.
+
+    Concrete implementations live in the infrastructure layer.
+    """
+
+    @abstractmethod
+    async def enviar(self, imagen: bytes, grupo_id: str) -> None:
+        """Send *imagen* (raw PNG bytes) to *grupo_id*."""
+        ...
