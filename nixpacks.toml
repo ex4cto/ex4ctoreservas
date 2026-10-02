@@ -22,11 +22,13 @@ cmds = [
   "pip install --upgrade pip",
   "pip install uv",
   "uv sync --frozen",
-  "PLAYWRIGHT_BROWSERS_PATH=/app/.playwright uv run playwright install chromium",
 ]
 
 [variables]
 PLAYWRIGHT_BROWSERS_PATH = "/app/.playwright"
 
 [phases.build]
-cmds = ["uv run alembic upgrade head"]
+cmds = [
+  "uv run alembic upgrade head",
+  "uv run playwright install chromium",
+]
