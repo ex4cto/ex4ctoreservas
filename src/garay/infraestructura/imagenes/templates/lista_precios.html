@@ -7,39 +7,50 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #d8e4f0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      padding: 20px;
+      background: #c8d8ea;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      padding: 22px;
     }
 
     /* ── Outer container ── */
     #lista {
       width: 1100px;
-      background: #e8eef6;
-      border-radius: 14px;
+      background: #dde6f0;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      box-shadow: 0 8px 40px rgba(0,20,60,0.22), 0 2px 8px rgba(0,0,0,0.10);
     }
 
     /* ── Header ── */
     .header {
       position: relative;
-      height: 210px;
+      height: 230px;
       background-image: url("{{ banner_url }}");
       background-size: cover;
-      background-position: center top;
-      background-color: #0d1e38;
+      background-position: center 30%;
+      background-color: #0a1628;
     }
 
     .header-overlay {
       position: absolute;
       inset: 0;
       background: linear-gradient(
-        135deg,
-        rgba(5, 15, 50, 0.72) 0%,
-        rgba(10, 30, 70, 0.55) 60%,
-        rgba(5, 15, 50, 0.72) 100%
+        to right,
+        rgba(4, 12, 40, 0.82) 0%,
+        rgba(8, 22, 60, 0.58) 50%,
+        rgba(4, 12, 40, 0.70) 100%
       );
+    }
+
+    /* Gold accent line at bottom of header */
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(to right, transparent, #c9a84c, #f0d080, #c9a84c, transparent);
     }
 
     .header-content {
@@ -47,164 +58,244 @@
       z-index: 1;
       display: flex;
       align-items: center;
-      padding: 22px 32px;
-      gap: 20px;
+      padding: 24px 36px;
+      gap: 22px;
       height: 100%;
     }
 
     .logo-img {
-      width: 80px;
-      height: 80px;
+      width: 86px;
+      height: 86px;
       border-radius: 50%;
       object-fit: cover;
       border: 3px solid #c9a84c;
+      box-shadow: 0 0 0 2px rgba(201,168,76,0.3), 0 4px 16px rgba(0,0,0,0.4);
       flex-shrink: 0;
     }
 
-    .header-text {
-      flex: 1;
+    .header-divider {
+      width: 2px;
+      height: 70px;
+      background: linear-gradient(to bottom, transparent, rgba(201,168,76,0.6), transparent);
+      flex-shrink: 0;
     }
+
+    .header-text { flex: 1; }
 
     .header-text h1 {
       color: #ffffff;
-      font-size: 46px;
+      font-size: 50px;
       font-weight: 900;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       text-transform: uppercase;
       line-height: 1;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.6);
     }
 
     .header-text .subtitle {
-      color: #f0c040;
-      font-size: 17px;
+      color: #f0c840;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: 1.5px;
+      letter-spacing: 3px;
       text-transform: uppercase;
-      margin-top: 5px;
+      margin-top: 6px;
     }
 
     .header-text .tagline {
-      color: rgba(255,255,255,0.80);
-      font-size: 13px;
+      color: rgba(255,255,255,0.70);
+      font-size: 12.5px;
       font-style: italic;
-      margin-top: 4px;
+      margin-top: 5px;
+      letter-spacing: 0.3px;
     }
 
     .tipo-badge {
       flex-shrink: 0;
       color: #fff;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      padding: 8px 18px;
+      padding: 7px 16px;
       border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
-    .tipo-badge-interna  { background: #c62828; }
-    .tipo-badge-turista  { background: #00796b; }
+    .tipo-badge-interna {
+      background: linear-gradient(135deg, #c62828, #e53935);
+    }
 
     /* ── Card grid ── */
     .card-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 16px;
+      gap: 13px;
+      padding: 18px;
     }
 
     /* ── Card ── */
     .card {
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,50,0.10);
+      box-shadow:
+        0 1px 3px rgba(0,20,60,0.08),
+        0 4px 14px rgba(0,20,60,0.11);
+      border: 1px solid rgba(0,30,80,0.06);
     }
 
+    /* Card header: solid color from inline style + sheen via ::after */
     .card-header {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
+      gap: 9px;
+      padding: 9px 13px;
+      overflow: hidden;
     }
 
-    .card-header .emoji { font-size: 15px; line-height: 1; }
+    .card-header::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.10), rgba(255,255,255,0.12));
+      pointer-events: none;
+    }
+
+    .card-header .bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.80);
+      flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+      position: relative;
+      z-index: 1;
+    }
 
     .card-header .cat-name {
       color: #ffffff;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      line-height: 1.2;
+      letter-spacing: 0.8px;
+      line-height: 1.25;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.30);
+      position: relative;
+      z-index: 1;
     }
 
     /* ── Table ── */
-    .card table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    .card table { width: 100%; border-collapse: collapse; }
 
-    .card thead tr {
-      background: #f0f4f8;
-    }
+    .card thead tr { background: #f2f6fb; }
 
     .card th {
-      color: #7a8fa8;
-      font-size: 8.5px;
+      color: #8fa8c0;
+      font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      padding: 5px 10px;
+      letter-spacing: 1px;
+      padding: 5px 11px 4px;
+      border-bottom: 1px solid #e4ecf4;
     }
     .card th.left  { text-align: left; }
     .card th.right { text-align: right; }
 
     .card td {
-      padding: 5px 10px;
+      padding: 5px 11px;
       font-size: 10.5px;
-      border-bottom: 1px solid #f0f3f7;
+      border-bottom: 1px solid #f0f4f8;
+      line-height: 1.3;
     }
 
     .card tr:last-child td { border-bottom: none; }
-    .card tr.even td { background: #f7f9fc; }
+    .card tr.even td { background: #f7fafd; }
 
-    .td-tour  { color: #1a2840; text-align: left; }
-    .td-neto  { color: #7a8fa8; text-align: right; white-space: nowrap; }
-    .td-price { color: #b8860b; font-weight: 700; text-align: right; white-space: nowrap; }
-    .td-turista { color: #1565c0; font-weight: 700; text-align: right; white-space: nowrap; }
-    .td-nino  { color: #7a8fa8; text-align: right; white-space: nowrap; font-size: 10px; }
+    .td-tour {
+      color: #1e2e48;
+      text-align: left;
+      font-weight: 500;
+    }
+    .td-neto {
+      color: #9ab0c8;
+      text-align: right;
+      white-space: nowrap;
+      font-size: 10px;
+    }
+    .td-price {
+      color: #9a6f00;
+      font-weight: 700;
+      font-size: 11px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .td-turista {
+      color: #0d47a1;
+      font-weight: 700;
+      font-size: 11px;
+      text-align: right;
+      white-space: nowrap;
+    }
 
     /* ── Footer ── */
+    .footer-accent {
+      height: 2px;
+      background: linear-gradient(to right, transparent, #c9a84c 20%, #c9a84c 80%, transparent);
+    }
+
     .footer {
-      background: #0d1e38;
-      padding: 14px 28px;
+      background: #0a1628;
+      padding: 14px 28px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .footer-contact {
-      color: #8fa8c8;
-      font-size: 11px;
-      display: flex;
-      gap: 20px;
-      align-items: center;
-    }
-
-    .footer-contact span { display: flex; align-items: center; gap: 4px; }
-
-    .footer-icons {
-      color: #c9a84c;
-      font-size: 11px;
-      font-weight: 600;
-      display: flex;
       gap: 16px;
     }
 
+    .footer-col {
+      color: #6a8aaa;
+      font-size: 10.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .footer-col .row { display: flex; align-items: center; gap: 6px; }
+
+    .footer-col .fi {
+      color: #c9a84c;
+      font-size: 13px;
+      width: 16px;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .footer-center {
+      text-align: center;
+      flex: 1;
+    }
+
+    .footer-center .brand {
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 3px;
+    }
+
+    .footer-center .slogan {
+      color: #c9a84c;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
     .footer-note {
-      color: #4a6888;
-      font-size: 9.5px;
-      text-align: right;
+      color: #364d68;
+      font-size: 8.5px;
+      text-align: center;
+      margin-top: 8px;
+      letter-spacing: 0.3px;
     }
   </style>
 </head>
@@ -218,18 +309,17 @@
         {% if logo_url %}
         <img class="logo-img" src="{{ logo_url }}" alt="Logo"
              onerror="this.style.display='none'" />
+        <div class="header-divider"></div>
         {% endif %}
         <div class="header-text">
           <h1>GARAY TOURS</h1>
           <div class="subtitle">
-            {% if tipo == "interna" %}Precios Netos y Sugeridos{% else %}Precio Turista{% endif %}
+            {% if tipo == "interna" %}Precios Netos y Sugeridos{% else %}Tarifas{% endif %}
           </div>
           <div class="tagline">Vive experiencias inolvidables en Cartagena</div>
         </div>
         {% if tipo == "interna" %}
-        <span class="tipo-badge tipo-badge-interna">&#x1F512; VISTA INTERNA</span>
-        {% else %}
-        <span class="tipo-badge tipo-badge-turista">&#x1F310; TURISTA</span>
+        <span class="tipo-badge tipo-badge-interna">VISTA INTERNA</span>
         {% endif %}
       </div>
     </div>
@@ -237,7 +327,6 @@
     <!-- Card grid -->
     <div class="card-grid">
 
-      {# Category color and emoji maps #}
       {% set cat_colors = {
         "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "#1565c0",
         "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "#00695c",
@@ -256,24 +345,6 @@
         "OTROS":                                                         "#455a64"
       } %}
 
-      {% set cat_emojis = {
-        "BARÚ PLAYA BLANCA - PLAYA TRANQUILA":                          "🏖️",
-        "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ":                     "🌴",
-        "TOURS BAHIA":                                                   "🌅",
-        "ISLA DE TIERRA BOMBA  (PUNTA ARENA Y PLAYA LINDA)":            "⚓",
-        "TOURS 4 ISLAS":                                                 "🏝️",
-        "TOURS 5 ISLAS":                                                 "🐚",
-        "TOURS 5 ISLAS PREMIUM":                                         "⭐",
-        "3 ISLAS PRIVADAS":                                              "🗺️",
-        "TOUR ISLA SAN BERNARDO DEL VIENTO Y PLAYA PRIVADA":            "🐢",
-        "CHOLÓN":                                                        "🎉",
-        "CITY TOUR CHIVA RUMBERA Y BUS PARTY":                          "🚌",
-        "TOUR PALENQUE":                                                 "🥁",
-        "TOURS BARRANQUILLA - SANTA MARTA":                              "🏙️",
-        "VOLCAN":                                                        "🌋",
-        "OTROS":                                                         "📍"
-      } %}
-
       {# Build ordered category list #}
       {% set ns = namespace(seen_cats=[]) %}
       {% for s in servicios | sort(attribute='numero') %}
@@ -285,10 +356,9 @@
       {# One card per category #}
       {% for cat in ns.seen_cats %}
         {% set color = cat_colors.get(cat, "#1565c0") %}
-        {% set emoji = cat_emojis.get(cat, "🗺️") %}
         <div class="card">
-          <div class="card-header" style="background: {{ color }};">
-            <span class="emoji">{{ emoji }}</span>
+          <div class="card-header" style="background-color: {{ color }};">
+            <span class="bullet"></span>
             <span class="cat-name">{{ cat }}</span>
           </div>
           <table>
@@ -327,23 +397,30 @@
 
     </div>
 
+    <!-- Footer accent line -->
+    <div class="footer-accent"></div>
+
     <!-- Footer -->
     <div class="footer">
-      <div class="footer-contact">
-        <span>📞 3223789349</span>
-        <span>📸 @garaytourscol</span>
-        <span>✉️ agenciagaraytour1@gmail.com</span>
+
+      <div class="footer-col">
+        <div class="row"><span class="fi">&#9742;</span> 322 378 9349</div>
+        <div class="row"><span class="fi">&#9993;</span> agenciagaraytour1@gmail.com</div>
       </div>
-      <div class="footer-icons">
-        <span>☀️ SOL</span>
-        <span>🌊 PLAYA</span>
-        <span>🧭 AVENTURA</span>
-        <span>🎭 CULTURA</span>
+
+      <div class="footer-center">
+        <div class="brand">GARAY TOURS</div>
+        <div class="slogan">Tu pr&oacute;xima aventura comienza aqu&iacute;</div>
       </div>
-      <div class="footer-note">
-        Precios en COP · Sujeto a cambios<br/>sin previo aviso
+
+      <div class="footer-col" style="text-align: right; align-items: flex-end;">
+        <div class="row"><span class="fi">&#9426;</span> @garaytours</div>
+        <div class="row"><span class="fi">&#9679;</span> Cartagena de Indias</div>
       </div>
+
     </div>
+
+    <div class="footer-note">Precios en COP &middot; Sujeto a cambios sin previo aviso</div>
 
   </div>
 </body>
