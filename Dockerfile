@@ -14,3 +14,5 @@ COPY src/ ./src/
 COPY assets/ ./assets/
 COPY migrations/ ./migrations/
 COPY alembic.ini ./
+COPY dashboard/ ./dashboard/
+COPY scripts/ ./scripts/
