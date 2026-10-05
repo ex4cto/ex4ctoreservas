@@ -259,7 +259,7 @@ async def cmd_dashboard_ventas(
     resumen = servicio.ejecutar(hoy.month, hoy.year)
     texto = _formatear_resumen_ventas(resumen, hoy.month, hoy.year)
     url = obtener_settings().dashboard_url
-    texto += f"\n\n📊 [Ver dashboard completo]({url})"
+    texto += obtener_mensaje("reporte.ventas.ver_dashboard").format(url=url)
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]
@@ -308,6 +308,8 @@ async def cb_dashboard_ventas(
     servicio: ResumenVentasService = context.bot_data["resumen_ventas_service"]
     resumen = servicio.ejecutar(mes, año)
     texto = _formatear_resumen_ventas(resumen, mes, año)
+    url = obtener_settings().dashboard_url
+    texto += obtener_mensaje("reporte.ventas.ver_dashboard").format(url=url)
     user = update.effective_user
     if user is not None and es_propietario(user.id):
         split_service: SplitSociosService = context.bot_data["split_socios_service"]

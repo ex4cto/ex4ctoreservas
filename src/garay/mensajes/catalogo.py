@@ -576,6 +576,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.ventas.vendedor_item": {
         Idioma.ES: "• {nombre}: {ventas} ventas · comisión ${comision}"
     },
+    "reporte.ventas.ver_dashboard": {
+        Idioma.ES: '\n\n📊 <a href="{url}">Ver dashboard completo</a>'
+    },
     "reporte.ventas.metodo_pago_header": {Idioma.ES: "💳 <b>Por método de pago:</b>"},
     "reporte.ventas.metodo_pago_item": {
         Idioma.ES: "  • {metodo}: {ventas} ventas · ${valor}"
