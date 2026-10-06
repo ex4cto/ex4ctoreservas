@@ -91,5 +91,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-ra -q"
+addopts = "-ra -q -m 'not smoke'"
 asyncio_mode = "auto"
+markers = [
+    "smoke: post-deploy service health checks — external, require Railway URLs (deselect with '-m not smoke')",
+]
