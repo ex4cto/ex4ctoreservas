@@ -19,8 +19,9 @@ from garay.infraestructura.telegram.menu import (
 class TestCatalogo:
     """Verify catalog structure and completeness."""
 
-    def test_catalogo_tiene_25_comandos(self) -> None:
-        assert len(CATALOGO_COMANDOS) == 25
+    def test_catalogo_tiene_22_comandos(self) -> None:
+        # Original 25 - 4 removed (flujo_caja, tours, conciliar, pendientes) + 1 added (lista_precios) = 22
+        assert len(CATALOGO_COMANDOS) == 22
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -47,10 +48,6 @@ class TestCatalogo:
         comandos = [c.comando for c in CATALOGO_COMANDOS]
         assert "nueva_venta" in comandos
 
-    def test_catalogo_tiene_flujo_caja(self) -> None:
-        comandos = [c.comando for c in CATALOGO_COMANDOS]
-        assert "flujo_caja" in comandos
-
     def test_catalogo_tiene_editar_freelancer(self) -> None:
         comandos = [c.comando for c in CATALOGO_COMANDOS]
         assert "editar_freelancer" in comandos
@@ -64,10 +61,10 @@ class TestComandosParaTier:
         tiers = {c.tier for c in result}
         assert tiers == {TierComando.FREELANCER}
 
-    def test_freelancer_ve_exactamente_4_comandos(self) -> None:
-        # nueva_venta, mis_ventas, cancelar (VENTAS) + verificar_pago (PAGOS)
+    def test_freelancer_ve_exactamente_5_comandos(self) -> None:
+        # nueva_venta, mis_ventas, lista_precios, cancelar (VENTAS) + verificar_pago (PAGOS)
         result = comandos_para_tier(TierComando.FREELANCER)
-        assert len(result) == 4
+        assert len(result) == 5
 
     def test_freelancer_no_ve_comandos_admin(self) -> None:
         result = comandos_para_tier(TierComando.FREELANCER)
@@ -80,7 +77,7 @@ class TestComandosParaTier:
         result = comandos_para_tier(TierComando.ADMIN)
         freelancer_cmds = [c for c in result if c.tier == TierComando.FREELANCER]
         admin_cmds = [c for c in result if c.tier == TierComando.ADMIN]
-        assert len(freelancer_cmds) == 4
+        assert len(freelancer_cmds) == 5
         assert len(admin_cmds) > 0
 
     def test_admin_no_ve_propietario(self) -> None:
@@ -99,9 +96,9 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "movimientos" in comandos
 
-    def test_propietario_ve_todos_25(self) -> None:
+    def test_propietario_ve_todos_22(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 25
+        assert len(result) == 22
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -121,16 +118,6 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "eliminar_tour" in comandos
 
-    def test_propietario_ve_flujo_caja(self) -> None:
-        result = comandos_para_tier(TierComando.PROPIETARIO)
-        comandos = [c.comando for c in result]
-        assert "flujo_caja" in comandos
-
-    def test_propietario_ve_conciliar_y_pendientes(self) -> None:
-        comandos = [c.comando for c in comandos_para_tier(TierComando.PROPIETARIO)]
-        assert "conciliar" in comandos
-        assert "pendientes" in comandos
-
     def test_admin_no_ve_conciliar_ni_pendientes(self) -> None:
         """conciliar/pendientes are owner-only reconciliation commands."""
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
@@ -148,9 +135,9 @@ class TestComandosParaTier:
 class TestComandosBot:
     """Verify BotCommand list output per tier."""
 
-    def test_freelancer_retorna_4_botcommands(self) -> None:
+    def test_freelancer_retorna_5_botcommands(self) -> None:
         result = comandos_bot(TierComando.FREELANCER)
-        assert len(result) == 4
+        assert len(result) == 5
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_admin_retorna_mas_que_freelancer(self) -> None:
@@ -158,9 +145,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_25_botcommands(self) -> None:
+    def test_propietario_retorna_22_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 25
+        assert len(result) == 22
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:
@@ -185,9 +172,9 @@ class TestRenderMenu:
         text = render_menu(TierComando.FREELANCER)
         assert "editar_freelancer" not in text
 
-    def test_propietario_contiene_flujo_caja(self) -> None:
+    def test_propietario_contiene_liquidar_socio(self) -> None:
         text = render_menu(TierComando.PROPIETARIO)
-        assert "flujo_caja" in text
+        assert "liquidar_socio" in text
 
     def test_propietario_contiene_editar_freelancer(self) -> None:
         text = render_menu(TierComando.PROPIETARIO)
@@ -230,7 +217,7 @@ class TestRenderMenu:
         # The simplest check: every underscore-containing command appears intact
         assert "nueva_venta" in text
         assert "editar_freelancer" in text
-        assert "flujo_caja" in text
+        assert "liquidar_socio" in text
 
 
 class TestRenderSubmenu:

@@ -63,6 +63,8 @@ def _make_update() -> MagicMock:
 
 
 class TestCmdListaPrecios:
+    """Inner-logic tests — use __wrapped__ to bypass @requiere_rol guard."""
+
     @pytest.mark.asyncio
     async def test_lista_solo_activos_con_sugerido(self) -> None:
         """Only active services with precio_sugerido_adulto set appear in reply."""
@@ -77,7 +79,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s_ok1, s_ok2, s_sin_sugerido])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         update.effective_message.reply_text.assert_called_once()
         text = update.effective_message.reply_text.call_args[0][0]
@@ -96,7 +98,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         assert "$150.000" in text
@@ -116,7 +118,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s1, s2, s3])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         # Both categories must appear in the text
@@ -136,7 +138,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         # Handler must reply even on empty
         update.effective_message.reply_text.assert_called_once()
@@ -152,7 +154,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         ctx.bot_data["servicio_repo"].listar_activos.assert_called_once()
 
@@ -167,7 +169,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s_none])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         assert "Tour Excluido" not in text
@@ -181,7 +183,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         assert "Tour Sin Neto" not in text
@@ -195,7 +197,7 @@ class TestCmdListaPrecios:
         ctx = _make_context([s])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         assert "niño = adulto" in text
@@ -209,7 +211,61 @@ class TestCmdListaPrecios:
         ctx = _make_context([s])
         update = _make_update()
 
-        await cmd_lista_precios(update, ctx)
+        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
         assert "niño = adulto" not in text
+
+
+# ---------------------------------------------------------------------------
+# Spec: lista-precios-runtime-guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_lista_precios_bloquea_usuario_no_registrado() -> None:
+    """Unregistered user receives the deny message (via @requiere_rol guard)."""
+    from garay.infraestructura.telegram.handlers_lista_precios import cmd_lista_precios
+
+    freelancer_repo = MagicMock()
+    freelancer_repo.buscar_por_telegram_id.return_value = None  # user not registered
+
+    ctx = MagicMock()
+    ctx.bot_data = {
+        "freelancer_repo": freelancer_repo,
+        "servicio_repo": MagicMock(),
+    }
+
+    update = _make_update()
+
+    # Call the decorated handler (not __wrapped__) to exercise the guard
+    await cmd_lista_precios(update, ctx)
+
+    update.effective_message.reply_text.assert_called_once()
+    msg: str = update.effective_message.reply_text.call_args[0][0]
+    assert "freelancer" in msg.lower()
+
+
+@pytest.mark.asyncio
+async def test_lista_precios_permite_usuario_registrado() -> None:
+    """Registered user (freelancer_repo returns a freelancer) receives the price list."""
+    from garay.infraestructura.telegram.handlers_lista_precios import cmd_lista_precios
+
+    freelancer_repo = MagicMock()
+    freelancer_repo.buscar_por_telegram_id.return_value = MagicMock()  # registered
+
+    servicio_repo = MagicMock()
+    servicio_repo.listar_activos.return_value = [_servicio()]
+
+    ctx = MagicMock()
+    ctx.bot_data = {
+        "freelancer_repo": freelancer_repo,
+        "servicio_repo": servicio_repo,
+    }
+
+    update = _make_update()
+
+    await cmd_lista_precios(update, ctx)
+
+    # The decorated handler should call the inner function and return the price list
+    update.effective_message.reply_text.assert_called_once()

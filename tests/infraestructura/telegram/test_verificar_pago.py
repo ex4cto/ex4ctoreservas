@@ -160,3 +160,40 @@ async def test_verificar_pago_escapa_datos_externos_html() -> None:
     assert (
         update.effective_message.reply_text.call_args.kwargs.get("parse_mode") == "HTML"
     )
+
+
+# ---------------------------------------------------------------------------
+# Spec: verificar-pago-loose-strings-fixed
+# These tests verify that both user-facing strings come from the catalog.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_sin_pagos_usa_clave_catalogo() -> None:
+    """sin_pagos reply text equals obtener_mensaje("verificar_pago.sin_pagos")."""
+    from garay.mensajes.catalogo import obtener_mensaje
+
+    ingreso_repo = MagicMock()
+    ingreso_repo.listar_recientes.return_value = []
+
+    update = _make_update()
+    context = _make_context(ingreso_repo=ingreso_repo)
+
+    await cmd_verificar_pago.__wrapped__(update, context)  # type: ignore[attr-defined]
+
+    msg: str = update.effective_message.reply_text.call_args[0][0]
+    assert msg == obtener_mensaje("verificar_pago.sin_pagos")
+
+
+@pytest.mark.asyncio
+async def test_error_interno_usa_clave_catalogo() -> None:
+    """Missing ingreso_repo reply text equals obtener_mensaje("error_interno")."""
+    from garay.mensajes.catalogo import obtener_mensaje
+
+    update = _make_update()
+    context = _make_context()  # no ingreso_repo
+
+    await cmd_verificar_pago.__wrapped__(update, context)  # type: ignore[attr-defined]
+
+    msg: str = update.effective_message.reply_text.call_args[0][0]
+    assert msg == obtener_mensaje("error_interno")

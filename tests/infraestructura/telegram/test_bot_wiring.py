@@ -228,17 +228,13 @@ def _command_names(app: object) -> set[str]:
 
 
 class TestBotWiringConciliacion:
-    """Regression: /conciliar and /pendientes must be registered.
+    """Spec: /conciliar and /pendientes must NOT be registered (commands deleted)."""
 
-    They were dead code — handlers_conciliacion.registrar_handlers was never
-    called, so the commands never reached the running bot.
-    """
+    def test_conciliar_command_not_registered(self) -> None:
+        assert "conciliar" not in _command_names(_build_app())
 
-    def test_conciliar_command_registered(self) -> None:
-        assert "conciliar" in _command_names(_build_app())
-
-    def test_pendientes_command_registered(self) -> None:
-        assert "pendientes" in _command_names(_build_app())
+    def test_pendientes_command_not_registered(self) -> None:
+        assert "pendientes" not in _command_names(_build_app())
 
 
 def _conv_entry_commands(app: object) -> set[str]:

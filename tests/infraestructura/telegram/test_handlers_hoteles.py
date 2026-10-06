@@ -171,7 +171,6 @@ from garay.infraestructura.telegram.handlers_hoteles import (  # noqa: E402
     HOTEL_PAGO_CONFIRMAR,
     HOTEL_PAGO_FECHA,
     HOTEL_PAGO_MONTO,
-    cmd_deudas,
     handle_hotel_detalle,
     handle_hotel_historial,
     handle_hotel_lista,
@@ -571,58 +570,6 @@ class TestHotelHistorial:
         resultado = await handle_hotel_historial(update, ctx)
 
         assert resultado == HOTEL_DETALLE
-
-
-# ---------------------------------------------------------------------------
-# Tests: cmd_deudas — no FSM, admin-only
-# ---------------------------------------------------------------------------
-
-class TestCmdDeudas:
-    @pytest.mark.asyncio
-    async def test_muestra_resumen_de_deudas(self) -> None:
-        """Shows all hotels with their balances."""
-        hotel = _make_obligacion()
-        svc = _make_hotel_service(hoteles=[hotel])
-        update = _make_update()
-        ctx = _make_context(hotel_service=svc, es_admin=True)
-
-        await cmd_deudas(update, ctx)
-
-        svc.listar_con_saldo.assert_called_once()
-        # The message was sent
-        update.effective_message.reply_text.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_no_admin_no_ve_deudas(self) -> None:
-        """Non-admin cannot see /deudas."""
-        hotel = _make_obligacion()
-        svc = _make_hotel_service(hoteles=[hotel])
-        update = _make_update(user_id=9999)
-        ctx = _make_context(hotel_service=svc, es_admin=False)
-
-        await cmd_deudas(update, ctx)
-
-        # Service was NOT called because guard denied access
-        svc.listar_con_saldo.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_resumen_incluye_total(self) -> None:
-        """The /deudas response includes a total sum."""
-        hotel1 = _make_obligacion(hotel_id=_HOTEL_ID, nombre="Hotel A")
-        hotel2 = _make_obligacion(hotel_id=_HOTEL_ID_2, nombre="Hotel B")
-        svc = MagicMock()
-        svc.listar_con_saldo.return_value = [
-            (hotel1, Dinero(Decimal("2000000"))),
-            (hotel2, Dinero(Decimal("3000000"))),
-        ]
-        update = _make_update()
-        ctx = _make_context(hotel_service=svc, es_admin=True)
-
-        await cmd_deudas(update, ctx)
-
-        text = update.effective_message.reply_text.call_args.args[0]
-        # Should contain both hotel names and amounts
-        assert "Hotel A" in text or "Hotel B" in text
 
 
 # ---------------------------------------------------------------------------

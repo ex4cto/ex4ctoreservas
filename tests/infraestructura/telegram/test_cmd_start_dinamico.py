@@ -110,7 +110,8 @@ class TestCmdStartDinamico:
         assert "editar_freelancer" in text
 
     @pytest.mark.asyncio
-    async def test_admin_no_ve_flujo_caja(self) -> None:
+    async def test_admin_no_ve_liquidar_socio(self) -> None:
+        """Admin does not see propietario-tier commands like liquidar_socio."""
         update = _make_update(uid=888)
         context = _make_context(fl_repo_result=_freelancer(es_admin=True))
         with (
@@ -127,9 +128,11 @@ class TestCmdStartDinamico:
 
         text = update.message.reply_text.call_args[0][0]
         assert "flujo_caja" not in text
+        assert "liquidar_socio" not in text
 
     @pytest.mark.asyncio
-    async def test_propietario_ve_flujo_caja(self) -> None:
+    async def test_propietario_ve_liquidar_socio(self) -> None:
+        """Propietario sees propietario-only commands like liquidar_socio."""
         propietario_uid = 777
         update = _make_update(uid=propietario_uid)
         context = _make_context(fl_repo_result=None)
@@ -150,10 +153,11 @@ class TestCmdStartDinamico:
 
         assert result == ConversationHandler.END
         text = update.message.reply_text.call_args[0][0]
-        assert "flujo_caja" in text
+        assert "liquidar_socio" in text
 
     @pytest.mark.asyncio
-    async def test_dev_ve_flujo_caja(self) -> None:
+    async def test_dev_ve_liquidar_socio(self) -> None:
+        """Dev (propietario-tier) sees propietario-only commands like liquidar_socio."""
         dev_uid = 111
         update = _make_update(uid=dev_uid)
         context = _make_context(fl_repo_result=None)
@@ -170,7 +174,7 @@ class TestCmdStartDinamico:
             await cmd_start(update, context)
 
         text = update.message.reply_text.call_args[0][0]
-        assert "flujo_caja" in text
+        assert "liquidar_socio" in text
 
     @pytest.mark.asyncio
     async def test_refresca_desplegable_del_dev_con_scope_de_chat(self) -> None:
@@ -195,7 +199,7 @@ class TestCmdStartDinamico:
         context.bot.set_my_commands.assert_called_once()
         args, kwargs = context.bot.set_my_commands.call_args
         nombres = {c.command for c in args[0]}
-        assert "flujo_caja" in nombres  # dev sees the full propietario set
+        assert "liquidar_socio" in nombres  # dev sees the full propietario set
         scope = kwargs["scope"]
         assert isinstance(scope, BotCommandScopeChat)
         assert scope.chat_id == dev_uid
@@ -337,7 +341,8 @@ class TestCmdHelp:
         assert "editar_freelancer" not in text
 
     @pytest.mark.asyncio
-    async def test_cmd_help_propietario_ve_flujo_caja(self) -> None:
+    async def test_cmd_help_propietario_ve_liquidar_socio(self) -> None:
+        """Propietario sees propietario-tier commands like liquidar_socio via /help."""
         from garay.infraestructura.telegram.handlers import cmd_help
 
         propietario_uid = 777
@@ -360,4 +365,4 @@ class TestCmdHelp:
 
         assert result == ConversationHandler.END
         text = update.message.reply_text.call_args[0][0]
-        assert "flujo_caja" in text
+        assert "liquidar_socio" in text

@@ -311,8 +311,6 @@ class TestClavesReportesDashboard:
         "reporte.sin_datos",
         "reporte.ventas.encabezado",
         "reporte.ventas.vendedor_item",
-        "reporte.caja.encabezado",
-        "reporte.caja.categoria_item",
         "reporte.nav_anterior",
         "reporte.nav_siguiente",
     ]
@@ -331,16 +329,6 @@ class TestClavesReportesDashboard:
         result = template.format(
             mes="Julio", año=2026, total_ventas=10,
             total_valor="1.000.000", ganancia="200.000",
-        )
-        assert "{" not in result
-
-    def test_reporte_caja_encabezado_tiene_placeholders(self) -> None:
-        template = obtener_mensaje("reporte.caja.encabezado")
-        result = template.format(
-            mes="Julio", año=2026,
-            ingresos="500.000", egresos="300.000",
-            signo="+", balance="200.000",
-            conciliados=3, pendientes=1,
         )
         assert "{" not in result
 

@@ -36,14 +36,17 @@ class TestBotMenusDesdesCatalogo:
         for bc, ex in zip(_COMANDOS_PROPIETARIO, expected, strict=True):
             assert bc.command == ex.command, f"{bc.command!r} != {ex.command!r}"
 
-    def test_freelancer_count_es_4(self) -> None:
-        assert len(_COMANDOS_FREELANCER) == 4
+    def test_freelancer_count_es_5(self) -> None:
+        # +1 lista_precios (FREELANCER) vs original 4
+        assert len(_COMANDOS_FREELANCER) == 5
 
-    def test_admin_count_es_17(self) -> None:
-        assert len(_COMANDOS_ADMIN) == 17
+    def test_admin_count_es_18(self) -> None:
+        # +1 lista_precios (visible at ADMIN); -2 flujo_caja+tours (PR removed); net +1 vs 17
+        assert len(_COMANDOS_ADMIN) == 18
 
-    def test_propietario_count_es_25(self) -> None:
-        assert len(_COMANDOS_PROPIETARIO) == 25
+    def test_propietario_count_es_22(self) -> None:
+        # +1 lista_precios; -2 flujo_caja+tours; -2 conciliar+pendientes; net -3 vs 25 = 22
+        assert len(_COMANDOS_PROPIETARIO) == 22
 
     def test_menus_dict_tiene_propietario_y_admin(self) -> None:
         assert "propietario" in _MENUS
@@ -62,3 +65,64 @@ class TestBotMenusDesdesCatalogo:
         assert len(admin_cmds) == len(expected)
         for bc, ex in zip(admin_cmds, expected, strict=True):
             assert bc.command == ex.command
+
+
+class TestListaPreciosCatalogEntry:
+    """Spec: lista-precios-catalog-entry — /lista_precios must be in CATALOGO_COMANDOS."""
+
+    def test_lista_precios_en_catalogo(self) -> None:
+        """A ComandoMenu with nombre=='lista_precios' exists in CATALOGO_COMANDOS."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        nombres = [c.comando for c in CATALOGO_COMANDOS]
+        assert "lista_precios" in nombres
+
+    def test_lista_precios_tier_freelancer(self) -> None:
+        """The lista_precios entry has tier FREELANCER."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS, TierComando
+
+        entry = next((c for c in CATALOGO_COMANDOS if c.comando == "lista_precios"), None)
+        assert entry is not None
+        assert entry.tier == TierComando.FREELANCER
+
+    def test_lista_precios_grupo_ventas(self) -> None:
+        """The lista_precios entry belongs to the VENTAS group."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS, GrupoComando
+
+        entry = next((c for c in CATALOGO_COMANDOS if c.comando == "lista_precios"), None)
+        assert entry is not None
+        assert entry.grupo == GrupoComando.VENTAS
+
+
+class TestDeletedCommandsNotInCatalog:
+    """Spec: catalog-entry-* (REMOVED) — deleted commands must not appear in catalog."""
+
+    def test_deudas_no_en_catalogo(self) -> None:
+        """deudas was never in CATALOGO_COMANDOS; verify it remains absent."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        assert all(c.comando != "deudas" for c in CATALOGO_COMANDOS)
+
+    def test_flujo_caja_no_en_catalogo(self) -> None:
+        """flujo_caja must not be in CATALOGO_COMANDOS after removal."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        assert all(c.comando != "flujo_caja" for c in CATALOGO_COMANDOS)
+
+    def test_tours_reporte_no_en_catalogo(self) -> None:
+        """tours (report) must not be in CATALOGO_COMANDOS after removal."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        assert all(c.comando != "tours" for c in CATALOGO_COMANDOS)
+
+    def test_conciliar_no_en_catalogo(self) -> None:
+        """conciliar must not be in CATALOGO_COMANDOS after removal."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        assert all(c.comando != "conciliar" for c in CATALOGO_COMANDOS)
+
+    def test_pendientes_no_en_catalogo(self) -> None:
+        """pendientes must not be in CATALOGO_COMANDOS after removal."""
+        from garay.infraestructura.telegram.menu import CATALOGO_COMANDOS
+
+        assert all(c.comando != "pendientes" for c in CATALOGO_COMANDOS)
