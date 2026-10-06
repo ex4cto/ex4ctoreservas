@@ -16,3 +16,5 @@ COPY migrations/ ./migrations/
 COPY alembic.ini ./
 COPY dashboard/ ./dashboard/
 COPY scripts/ ./scripts/
+
+CMD ["/bin/sh", "-c", "uv run streamlit run /app/dashboard/app.py --server.port ${PORT:-8501} --server.headless true --server.address 0.0.0.0"]
