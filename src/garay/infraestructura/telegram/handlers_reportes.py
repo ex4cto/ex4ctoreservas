@@ -14,7 +14,6 @@ from garay.infraestructura.telegram.auth import (
     es_propietario,
     requiere_admin,
     requiere_admin_o_propietario,
-    requiere_propietario,
 )
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
@@ -114,89 +113,6 @@ def _formatear_resumen_ventas(resumen: object, mes: int, año: int) -> str:
     return "\n".join(lineas)
 
 
-def _formatear_flujo_caja(flujo: object, mes: int, año: int) -> str:
-    from garay.aplicacion.reportes.flujo_caja import FlujoCaja
-
-    assert isinstance(flujo, FlujoCaja)
-
-    if flujo.total_ingresos.monto == 0 and flujo.total_egresos.monto == 0:
-        return obtener_mensaje("reporte.sin_datos")
-
-    signo = "+" if flujo.balance.monto >= 0 else "-"
-    lineas = [
-        obtener_mensaje("reporte.caja.encabezado").format(
-            mes=_MESES_ES[mes],
-            año=año,
-            ingresos=f"{flujo.total_ingresos.monto:,.0f}",
-            egresos=f"{flujo.total_egresos.monto:,.0f}",
-            signo=signo,
-            balance=f"{abs(flujo.balance.monto):,.0f}",
-            conciliados=flujo.ingresos_conciliados,
-            pendientes=flujo.ingresos_pendientes,
-        ),
-    ]
-    if flujo.egresos_por_categoria:
-        lineas.append("")
-        lineas.append("📤 <b>Egresos por categoría:</b>")
-        for cat, monto in flujo.egresos_por_categoria:
-            lineas.append(
-                formatear_html(
-                    obtener_mensaje("reporte.caja.categoria_item"),
-                    categoria=cat,
-                    monto=f"{monto.monto:,.0f}",
-                )
-            )
-    return "\n".join(lineas)
-
-
-def _formatear_tours(waterfall: object, ranking: object, reconciliacion: object,
-                     mes: int, año: int) -> str:
-    from garay.aplicacion.reportes.ranking_tour import RankingTour
-    from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
-        ReconciliacionVentasIngresos,
-    )
-    from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentas
-
-    assert isinstance(waterfall, WaterfallVentas)
-    assert isinstance(ranking, RankingTour)
-    assert isinstance(reconciliacion, ReconciliacionVentasIngresos)
-
-    if waterfall.valor_bruto.monto == 0:
-        return obtener_mensaje("reporte.sin_datos")
-
-    lineas = [
-        obtener_mensaje("reporte.tours.encabezado").format(
-            mes=_MESES_ES[mes],
-            año=año,
-            bruto=f"{waterfall.valor_bruto.monto:,.0f}",
-            neto=f"{waterfall.costo_neto.monto:,.0f}",
-            margen=f"{waterfall.margen.monto:,.0f}",
-            comisiones=f"{waterfall.comisiones.monto:,.0f}",
-            agencia=f"{waterfall.ganancia_agencia.monto:,.0f}",
-        ),
-    ]
-    if ranking.filas:
-        lineas.append("")
-        lineas.append("🏝️ <b>Top familias:</b>")
-        for f in ranking.filas[:5]:
-            lineas.append(
-                formatear_html(
-                    obtener_mensaje("reporte.tours.familia_item"),
-                    familia=f.familia,
-                    vendidos=f.vendidos,
-                    margen=f"{f.margen.monto:,.0f}",
-                )
-            )
-    if reconciliacion.total_ingresos_banco.monto > 0:
-        lineas.append("")
-        lineas.append(
-            obtener_mensaje("reporte.tours.conciliacion").format(
-                agencia=f"{reconciliacion.total_agencia_esperada.monto:,.0f}",
-                banco=f"{reconciliacion.total_ingresos_banco.monto:,.0f}",
-                desviacion=f"{reconciliacion.porcentaje_desviacion:.1f}",
-            )
-        )
-    return "\n".join(lineas)
 
 
 _EMOJI_SOCIO: dict[str, str] = {
@@ -239,13 +155,6 @@ def _formatear_split_socios(resumen: object) -> str:
     return "\n".join(lineas)
 
 
-def _tours_para(context: ContextTypes.DEFAULT_TYPE, mes: int, año: int) -> str:
-    waterfall = context.bot_data["waterfall_service"].ejecutar(mes, año)
-    ranking = context.bot_data["ranking_tour_service"].ejecutar(mes, año)
-    reconciliacion = context.bot_data["reconciliacion_service"].ejecutar(mes, año)
-    return _formatear_tours(waterfall, ranking, reconciliacion, mes, año)
-
-
 @requiere_admin
 async def cmd_dashboard_ventas(
     update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -267,23 +176,6 @@ async def cmd_dashboard_ventas(
         if split_resumen.por_socio:
             texto += "\n\n" + _formatear_split_socios(split_resumen)
     teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_v")
-    if update.effective_message:
-        await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="HTML"
-        )
-
-
-@requiere_propietario
-async def cmd_flujo_caja(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
-
-    hoy = date.today()
-    servicio: FlujoCajaService = context.bot_data["flujo_caja_service"]
-    flujo = servicio.ejecutar(hoy.month, hoy.year)
-    texto = _formatear_flujo_caja(flujo, hoy.month, hoy.year)
-    teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_c")
     if update.effective_message:
         await update.effective_message.reply_text(
             texto, reply_markup=teclado, parse_mode="HTML"
@@ -319,54 +211,6 @@ async def cb_dashboard_ventas(
     teclado = _teclado_navegacion(mes, año, "rep_v")
     if query.message:
         await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
-
-
-async def cb_flujo_caja(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
-
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    _, periodo = (query.data or "").split(":", 1)
-    año_str, mes_str = periodo.split("-")
-    mes, año = int(mes_str), int(año_str)
-
-    servicio: FlujoCajaService = context.bot_data["flujo_caja_service"]
-    flujo = servicio.ejecutar(mes, año)
-    texto = _formatear_flujo_caja(flujo, mes, año)
-    teclado = _teclado_navegacion(mes, año, "rep_c")
-    if query.message:
-        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
-
-
-@requiere_propietario
-async def cmd_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    hoy = date.today()
-    texto = _tours_para(context, hoy.month, hoy.year)
-    teclado = _teclado_navegacion(hoy.month, hoy.year, "rep_t")
-    if update.effective_message:
-        await update.effective_message.reply_text(
-            texto, reply_markup=teclado, parse_mode="HTML"
-        )
-
-
-async def cb_tours(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    _, periodo = (query.data or "").split(":", 1)
-    año_str, mes_str = periodo.split("-")
-    mes, año = int(mes_str), int(año_str)
-
-    texto = _tours_para(context, mes, año)
-    teclado = _teclado_navegacion(mes, año, "rep_t")
-    if query.message:
-        await query.edit_message_text(texto, reply_markup=teclado, parse_mode="HTML")
-
 
 
 _BOGOTA = ZoneInfo("America/Bogota")
@@ -455,18 +299,8 @@ def registrar_handlers(app: object) -> None:
 
     assert isinstance(app, Application)
     app.add_handler(CommandHandler("dashboard_ventas", cmd_dashboard_ventas), group=1)
-    app.add_handler(CommandHandler("flujo_caja", cmd_flujo_caja), group=1)
     app.add_handler(
         CallbackQueryHandler(cb_dashboard_ventas, pattern=r"^rep_v:\d{4}-\d{2}$"),
-        group=1,
-    )
-    app.add_handler(
-        CallbackQueryHandler(cb_flujo_caja, pattern=r"^rep_c:\d{4}-\d{2}$"),
-        group=1,
-    )
-    app.add_handler(CommandHandler("tours", cmd_tours), group=1)
-    app.add_handler(
-        CallbackQueryHandler(cb_tours, pattern=r"^rep_t:\d{4}-\d{2}$"),
         group=1,
     )
     app.add_handler(CommandHandler("movimientos", cmd_movimientos), group=1)

@@ -1040,7 +1040,7 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if ingreso_repo is None:
         if update.effective_message:
-            await update.effective_message.reply_text("Error interno. Contactá al administrador.")
+            await update.effective_message.reply_text(obtener_mensaje("error_interno"))
         return
 
     ingresos = await asyncio.to_thread(ingreso_repo.listar_recientes, 5)
@@ -1048,7 +1048,7 @@ async def cmd_verificar_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not ingresos:
         if update.effective_message:
             await update.effective_message.reply_text(
-                "❌ Sin pagos en los últimos 5 minutos.\nPedile al cliente el comprobante."
+                obtener_mensaje("verificar_pago.sin_pagos")
             )
         return
 

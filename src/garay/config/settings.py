@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     # Secret for Forward Email webhook (distinct from Telegram webhook_secret).
     forward_email_secret: str = Field(default="")
 
+    # Gmail address that receives bank transaction notifications (Bancolombia, Nequi, etc.).
+    # Forward Email relays emails arriving here to the /webhook/email endpoint.
+    # env var: GARAY_GMAIL_SHARIMEL | Railway var: GARAY_GMAIL_SHARIMEL
+    gmail_sharimel: str = Field(default="sharimelh@gmail.com")
+
     # --- Base de datos: pool de conexiones SQLAlchemy ---
     # pool_pre_ping verifica la conexion antes de usarla y reconecta si esta muerta;
     # pool_recycle (segundos) recicla conexiones viejas antes de que el servidor las

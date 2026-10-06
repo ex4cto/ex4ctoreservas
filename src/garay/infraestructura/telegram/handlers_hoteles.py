@@ -16,9 +16,6 @@ from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import ObligacionHotel
-from garay.infraestructura.telegram.auth import (
-    requiere_admin,
-)
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
@@ -593,43 +590,3 @@ async def handle_hotel_historial(update: Update, context: ContextTypes.DEFAULT_T
 
     await _reply(update, "\n".join(lineas), teclado)
     return HOTEL_HISTORIAL
-
-
-# ---------------------------------------------------------------------------
-# /deudas — admin-only, no FSM
-# ---------------------------------------------------------------------------
-
-
-@requiere_admin
-async def cmd_deudas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show a summary of all active hotel debts."""
-    svc = context.bot_data.get("hotel_service")
-    if svc is None:
-        logger.error("hotel_service not found in bot_data")
-        if update.effective_message:
-            await update.effective_message.reply_text(
-                obtener_mensaje("error_generico"), parse_mode="HTML"
-            )
-        return
-
-    hoteles_con_saldo: list[tuple[object, Dinero]] = svc.listar_con_saldo()
-
-    total = Dinero(Decimal("0"))
-    filas: list[str] = []
-    for hotel, saldo in hoteles_con_saldo:
-        from garay.dominio.conciliacion.entidades import ObligacionHotel as _OH
-
-        hotel_obj: _OH = hotel  # type: ignore[assignment]
-        filas.append(
-            f"• <b>{hotel_obj.punto_de_venta_nombre}</b> ({hotel_obj.receptor_nombre})"
-            f" — saldo {_fmt_dinero(saldo)}"
-        )
-        total = total + saldo
-
-    texto = formatear_html(
-        obtener_mensaje("deudas.resumen"),
-        filas="\n".join(filas),
-        total=_fmt_dinero(total),
-    )
-    if update.effective_message:
-        await update.effective_message.reply_text(texto, parse_mode="HTML")

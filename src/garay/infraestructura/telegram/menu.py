@@ -63,20 +63,17 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     # ── Ventas ──────────────────────────────────────────────────────────────
     ComandoMenu("nueva_venta", "Registrar una venta", _V, _FL),
     ComandoMenu("mis_ventas", "Mis ventas del período", _V, _FL),
+    ComandoMenu("lista_precios", "Lista de precios de tours", _V, _FL),
     ComandoMenu("gestionar_ventas", "Gestionar ventas (anular, etc.)", _V, _AD),
     ComandoMenu("cancelar", "Cancelar operación actual", _V, _FL),
     # ── Pagos y Egresos ─────────────────────────────────────────────────────
     ComandoMenu("verificar_pago", "Pagos recibidos (últimos 5 min)", _P, _FL),
-    ComandoMenu("conciliar", "Conciliar pagos con ventas", _P, _PR),
-    ComandoMenu("pendientes", "Revisar conciliaciones pendientes", _P, _PR),
     ComandoMenu("liquidar_socio", "Registrar pago a un socio", _P, _PR),
     ComandoMenu("egresos", "Egresos: registrar, gastos fijos y categorías", _P, _AD),
     ComandoMenu("categorias_egreso", "Gestionar categorías de egreso", _P, _AD),
     ComandoMenu("gestionar_egresos", "Editar egresos registrados", _P, _AD),
     # ── Reportes ────────────────────────────────────────────────────────────
     ComandoMenu("dashboard_ventas", "Dashboard de ventas", _R, _AD),
-    ComandoMenu("flujo_caja", "Flujo de caja mensual", _R, _PR),
-    ComandoMenu("tours", "Reporte de tours", _R, _PR),
     ComandoMenu("movimientos", "Movimientos recientes", _R, _AD),
     # ── Administración ──────────────────────────────────────────────────────
     ComandoMenu("listar_freelancers", "Ver freelancers registrados", _A, _AD),

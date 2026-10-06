@@ -54,6 +54,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "verificar_pago.linea": {
         Idioma.ES: "• {monto} — {remitente} ({banco}) — {tiempo}"
     },
+    "verificar_pago.sin_pagos": {
+        Idioma.ES: "❌ Sin pagos en los últimos 5 minutos.\nPedile al cliente el comprobante."
+    },
     "error_interno": {Idioma.ES: "Error interno. Contactá al administrador."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "error.contactar_soporte": {
@@ -549,21 +552,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     # --- Conciliacion ---
     "conciliacion.sin_acceso": {Idioma.ES: "Este comando es solo para el propietario."},
-    "conciliacion.sin_pendientes": {Idioma.ES: "No hay ingresos pendientes de conciliar."},
-    "conciliacion.resumen": {
-        Idioma.ES: (
-            "Conciliación completada:\n"
-            "✅ Matcheados: {matcheados}\n"
-            "❌ Sin match: {sin_match}\n"
-            "⏳ Pendientes: {pendientes}"
-        )
-    },
-    "conciliacion.item_pendiente": {
-        Idioma.ES: "💰 ${monto} de {banco} — {fecha}\nSugerencia: {sugerencia}"
-    },
-    "conciliacion.confirmado": {Idioma.ES: "✅ Ingreso marcado como matcheado."},
-    "conciliacion.marcado_personal": {Idioma.ES: "👤 Ingreso marcado como personal."},
-    "conciliacion.marcado_sin_match": {Idioma.ES: "❓ Ingreso marcado como sin match."},
     # --- Reportes / Dashboards ---
     "reporte.sin_datos": {Idioma.ES: "No hay datos para este período."},
     "reporte.ventas.encabezado": {
@@ -582,35 +570,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "reporte.ventas.metodo_pago_header": {Idioma.ES: "💳 <b>Por método de pago:</b>"},
     "reporte.ventas.metodo_pago_item": {
         Idioma.ES: "  • {metodo}: {ventas} ventas · ${valor}"
-    },
-    "reporte.caja.encabezado": {
-        Idioma.ES: (
-            "💰 <b>Flujo de Caja — {mes} {año}</b>\n"
-            "Ingresos: ${ingresos}\n"
-            "Egresos: ${egresos}\n"
-            "Balance: {signo}${balance}\n"
-            "✅ Conciliados: {conciliados} · ⏳ Pendientes: {pendientes}"
-        )
-    },
-    "reporte.caja.categoria_item": {Idioma.ES: "• {categoria}: ${monto}"},
-    "reporte.tours.encabezado": {
-        Idioma.ES: (
-            "🏝️ <b>Tours — {mes} {año}</b>\n"
-            "Bruto vendido: ${bruto}\n"
-            "Costo operadores: -${neto}\n"
-            "Margen: ${margen}\n"
-            "Comisiones: -${comisiones}\n"
-            "<b>Agencia (Garay): ${agencia}</b>"
-        )
-    },
-    "reporte.tours.familia_item": {Idioma.ES: "• {familia}: {vendidos} vta · margen ${margen}"},
-    "reporte.tours.conciliacion": {
-        Idioma.ES: (
-            "🏦 <b>Conciliación banco:</b>\n"
-            "Agencia esperada: ${agencia}\n"
-            "Ingresos banco: ${banco}\n"
-            "Desviación: {desviacion}%"
-        )
     },
     "reporte.nav_anterior": {Idioma.ES: "◀ {label}"},
     "reporte.nav_siguiente": {Idioma.ES: "{label} ▶"},
@@ -1414,13 +1373,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "hoteles.historial_vacio": {
         Idioma.ES: "No hay pagos registrados para {nombre}."
-    },
-    "deudas.resumen": {
-        Idioma.ES: (
-            "🏨 <b>Deudas hoteles</b>\n\n"
-            "{filas}"
-            "\n<b>Total: {total}</b>"
-        )
     },
     # --- Config socios (configuración de socios) ---
     "config_socios.error_config": {Idioma.ES: "Error de configuración. Contacta al administrador."},

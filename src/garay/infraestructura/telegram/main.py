@@ -9,8 +9,6 @@ from pathlib import Path
 
 from telegram import Update
 
-from garay.aplicacion.conciliacion.conciliar_ingresos import ConciliarIngresosService
-from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
 from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
@@ -30,15 +28,10 @@ from garay.aplicacion.propuestas.contratos import (
 )
 from garay.aplicacion.propuestas.servicio import GenerarPropuestaAudiovisualService
 from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwareService
-from garay.aplicacion.reportes.flujo_caja import FlujoCajaService
 from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
-from garay.aplicacion.reportes.ranking_tour import RankingTourService
-from garay.aplicacion.reportes.reconciliacion_ventas_ingresos import (
-    ReconciliacionVentasIngresosService,
-)
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
-from garay.aplicacion.reportes.waterfall_ventas import WaterfallVentasService
+from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -53,13 +46,13 @@ from garay.aplicacion.ventas.editar_servicio import EditarServicioVentaService
 from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
 from garay.config.settings import obtener_settings
 from garay.dominio.comisiones.motor import MotorComisiones
-from garay.dominio.conciliacion.motor import MotorConciliacion
 from garay.dominio.infraestructura_monitor.costo_railway import PreciosRailway
 from garay.dominio.infraestructura_monitor.entidades import ServicioInfraestructura
 from garay.dominio.puertos.servicios_externos import NotificadorEmail
 from garay.infraestructura.email.adaptador_resend import ResendAdapter
 from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
+from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
@@ -75,9 +68,6 @@ from garay.infraestructura.persistencia.repositorios.categorias_egreso import (
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
-)
-from garay.infraestructura.persistencia.repositorios.conciliaciones import (
-    SQLAConciliacionRepository,
 )
 from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRepository
 from garay.infraestructura.persistencia.repositorios.facturas import SQLAFacturaRepository
@@ -102,7 +92,6 @@ from garay.infraestructura.persistencia.repositorios.socios import (
 )
 from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATiqueteraRepository
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
-from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
@@ -131,7 +120,6 @@ def main() -> None:
     reglas_repo = SQLAReglasComisionRepository(sf)
     tiqueteras_repo = SQLATiqueteraRepository(sf)
     comisiones_repo = SQLAComisionRegistradaRepository(sf)
-    conciliacion_repo = SQLAConciliacionRepository(sf)
     ingreso_repo = SQLAIngresoRepository(sf)
     egreso_repo = SQLAEgresoRepository(sf)
     obligacion_hotel_repo = SQLAObligacionHotelRepository(sf)
@@ -418,44 +406,10 @@ def main() -> None:
         ventas=ventas_repo,
         comisiones=comisiones_repo,
     )
-    flujo_caja_service = FlujoCajaService(
-        ingresos=ingreso_repo,
-        egresos=egreso_repo,
-        conciliaciones=conciliacion_repo,
-    )
     movimientos_service = MovimientosRecientesService(
         ingresos_repo=ingreso_repo,
         egresos_repo=egreso_repo,
     )
-    waterfall_service = WaterfallVentasService(
-        ventas=ventas_repo,
-        comisiones=comisiones_repo,
-    )
-    ranking_tour_service = RankingTourService(
-        ventas=ventas_repo,
-        comisiones=comisiones_repo,
-        servicios=servicio_repo,
-    )
-    reconciliacion_service = ReconciliacionVentasIngresosService(
-        ventas=ventas_repo,
-        comisiones=comisiones_repo,
-        ingresos=ingreso_repo,
-    )
-    motor_conciliacion = MotorConciliacion(
-        tolerancia_pct=settings.conciliacion_tolerancia_pct,
-        ventana_dias=settings.conciliacion_ventana_dias,
-        confianza_auto=settings.conciliacion_confianza_auto,
-        peso_monto=settings.conciliacion_peso_monto,
-        peso_fecha=settings.conciliacion_peso_fecha,
-    )
-    conciliar_service = ConciliarIngresosService(
-        ingresos=ingreso_repo,
-        ventas=ventas_repo,
-        conciliaciones=conciliacion_repo,
-        motor=motor_conciliacion,
-        ventana_dias=settings.conciliacion_ventana_dias,
-    )
-
     app.bot_data.update(
         {
             "publicar_lista_precios_service": publicar_lista_precios_service,
@@ -479,18 +433,12 @@ def main() -> None:
             "categoria_service": gestionar_categorias_service,
             "editar_egreso_service": editar_egreso_service,
             "recurrente_service": gasto_recurrente_repo,
-            "conciliacion_repo": conciliacion_repo,
             "resumen_ventas_service": resumen_ventas_service,
             "mis_ventas_service": mis_ventas_service,
-            "flujo_caja_service": flujo_caja_service,
             "movimientos_service": movimientos_service,
-            "waterfall_service": waterfall_service,
-            "ranking_tour_service": ranking_tour_service,
-            "reconciliacion_service": reconciliacion_service,
             "split_socios_service": split_socios_service,
             "pagos_socio_repo": pago_socio_repo,
             "socios_config_repo": socios_config_repo,
-            "conciliar_service": conciliar_service,
             "factura_service": factura_service,
             "propuesta_audiovisual_service": propuesta_audiovisual_service,
             "propuesta_software_service": propuesta_software_service,

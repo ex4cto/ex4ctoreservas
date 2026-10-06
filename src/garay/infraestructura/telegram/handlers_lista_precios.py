@@ -14,9 +14,11 @@ from telegram.ext import ContextTypes
 from garay.aplicacion.comun.formato import fmt_cop
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
+from garay.infraestructura.telegram.auth import requiere_rol
 from garay.mensajes.catalogo import obtener_mensaje
 
 
+@requiere_rol
 async def cmd_lista_precios(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:

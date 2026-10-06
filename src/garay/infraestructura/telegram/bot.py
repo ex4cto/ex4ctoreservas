@@ -43,7 +43,6 @@ from garay.aplicacion.tiquetera.fsm import EstadoFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import (
-    handlers_conciliacion,
     handlers_config_socios,
     handlers_reportes,
     handlers_socios,
@@ -276,7 +275,6 @@ from garay.infraestructura.telegram.handlers_hoteles import (
     HOTEL_PAGO_FECHA,
     HOTEL_PAGO_MONTO,
     PREFIJO_HOTEL_SEL,
-    cmd_deudas,
     handle_hotel_detalle,
     handle_hotel_historial,
     handle_hotel_lista,
@@ -1314,7 +1312,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(nuevo_tour_conv_handler, group=8)
     app.add_handler(propuesta_conv_handler, group=9)
     app.add_handler(CommandHandler("lista_precios", cmd_lista_precios), group=1)
-    app.add_handler(CommandHandler("deudas", cmd_deudas), group=1)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)
     app.add_handler(CommandHandler("verificar_pago", cmd_verificar_pago), group=1)
@@ -1325,7 +1322,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
-    handlers_conciliacion.registrar_handlers(app)
     handlers_socios.registrar_handlers(app)
     handlers_config_socios.registrar_handlers(app)
     app.add_error_handler(_manejar_error)
