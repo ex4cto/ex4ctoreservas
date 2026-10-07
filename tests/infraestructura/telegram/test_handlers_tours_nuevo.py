@@ -1618,3 +1618,61 @@ class TestNvtHorStatesBotWiring:
         assert len(text_handlers) == 1, (
             f"NVT_HOR_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Bug T — _render_ficha_nuevo: fmt_cop para montos, html.escape en strings
+# ---------------------------------------------------------------------------
+
+
+class TestRenderFichaNuevo:
+    """_render_ficha_nuevo must use fmt_cop and escape user strings."""
+
+    def test_neto_adulto_con_monto_usa_fmt_cop(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import _render_ficha_nuevo
+
+        ud: dict[str, object] = {
+            "nvt_familia": "PLAYERO",
+            "nvt_nombre": "Tour Isla",
+            "nvt_neto_adulto": Decimal("390000"),
+            "nvt_neto_nino": None,
+        }
+        result = _render_ficha_nuevo(ud)
+        assert "$390.000" in result
+
+    def test_neto_nino_con_monto_usa_fmt_cop(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import _render_ficha_nuevo
+
+        ud: dict[str, object] = {
+            "nvt_familia": "PLAYERO",
+            "nvt_nombre": "Tour Isla",
+            "nvt_neto_adulto": None,
+            "nvt_neto_nino": Decimal("200000"),
+        }
+        result = _render_ficha_nuevo(ud)
+        assert "$200.000" in result
+
+    def test_neto_none_muestra_dash(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import _render_ficha_nuevo
+
+        ud: dict[str, object] = {
+            "nvt_familia": "PLAYERO",
+            "nvt_nombre": "Tour Isla",
+            "nvt_neto_adulto": None,
+            "nvt_neto_nino": None,
+        }
+        result = _render_ficha_nuevo(ud)
+        assert result.count("—") >= 2
+
+    def test_html_en_nombre_es_escapado(self) -> None:
+        from garay.infraestructura.telegram.handlers_tours import _render_ficha_nuevo
+
+        ud: dict[str, object] = {
+            "nvt_familia": "PLAYERO",
+            "nvt_nombre": "Tour <Especial> & más",
+            "nvt_neto_adulto": None,
+            "nvt_neto_nino": None,
+        }
+        result = _render_ficha_nuevo(ud)
+        assert "<Especial>" not in result
+        assert "&lt;Especial&gt;" in result

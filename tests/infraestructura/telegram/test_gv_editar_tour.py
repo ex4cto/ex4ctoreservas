@@ -24,12 +24,14 @@ def _make_servicio(
     nombre: str = "Tour Isla",
     categoria: str = "Islas",
     precio_neto_adulto: Decimal | None = Decimal("50000"),
+    numero: int = 1,
 ) -> MagicMock:
     s = MagicMock()
     s.id = servicio_id or uuid.uuid4()
     s.nombre = nombre
     s.categoria = categoria
     s.activo = True
+    s.numero = numero
     s.precio_neto_adulto = precio_neto_adulto
     s.precio_neto_nino = None
     s.neto_para_horario.return_value = precio_neto_adulto
@@ -587,3 +589,51 @@ class TestGvEditTourWiring:
         handlers = conv.states[GV_EDIT_TOUR_VALOR]
         assert any(isinstance(h, CallbackQueryHandler) for h in handlers)
         assert any(isinstance(h, MessageHandler) for h in handlers)
+
+
+# ---------------------------------------------------------------------------
+# Bug I — handle_gv_edit_familia: tours ordenados por numero (igual que FSM)
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGvEditFamiliaTourOrder:
+    """Tours dentro de una familia deben aparecer en orden ascendente de numero."""
+
+    @pytest.mark.asyncio
+    async def test_tours_ordenados_por_numero_ascendente(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_SERVICIO,
+            handle_gv_edit_familia,
+        )
+
+        svc_3 = MagicMock()
+        svc_3.nombre = "Tour C"
+        svc_3.id = uuid.uuid4()
+        svc_3.numero = 3
+
+        svc_1 = MagicMock()
+        svc_1.nombre = "Tour A"
+        svc_1.id = uuid.uuid4()
+        svc_1.numero = 1
+
+        svc_2 = MagicMock()
+        svc_2.nombre = "Tour B"
+        svc_2.id = uuid.uuid4()
+        svc_2.numero = 2
+
+        # Stored in reversed order to verify sorting is applied
+        ud: dict[str, object] = {
+            "gv_familias_tour": {"PLAYERO": [svc_3, svc_1, svc_2]},
+            "gv_familia_seleccionada": None,
+        }
+        ctx = _make_context(user_data=ud)
+        update = _make_update(callback_data="gv_familia_PLAYERO")
+
+        result = await handle_gv_edit_familia(update, ctx)
+
+        assert result == GV_EDIT_SERVICIO
+        call_kwargs = update.callback_query.edit_message_text.call_args
+        markup = call_kwargs.kwargs["reply_markup"]
+        # First 3 rows are tours; last row is the "back" button
+        tour_names = [row[0].text for row in markup.inline_keyboard[:-1]]
+        assert tour_names == ["Tour A", "Tour B", "Tour C"]

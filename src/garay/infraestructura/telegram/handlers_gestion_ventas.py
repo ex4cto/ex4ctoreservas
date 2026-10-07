@@ -1509,7 +1509,7 @@ async def handle_gv_edit_familia(update: Update, context: ContextTypes.DEFAULT_T
             getattr(svc, "nombre", "?"),
             callback_data=f"gv_tour_{getattr(svc, 'id', '')}",
         )]
-        for svc in tours_en_familia
+        for svc in sorted(tours_en_familia, key=lambda s: getattr(s, "numero", 0))
     ]
     keyboard_rows.append([
         InlineKeyboardButton(

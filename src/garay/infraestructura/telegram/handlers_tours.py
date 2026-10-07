@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import html
 import logging
 import uuid
 from decimal import Decimal
@@ -1241,12 +1242,10 @@ def _limpiar_nvt(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def _render_ficha_nuevo(ud: dict[str, object]) -> str:
     """Render the draft tour confirmation sheet from user_data."""
-    familia = str(ud.get("nvt_familia") or "—")
-    nombre = str(ud.get("nvt_nombre") or "—")
+    familia = html.escape(str(ud.get("nvt_familia") or "—"))
+    nombre = html.escape(str(ud.get("nvt_nombre") or "—"))
     neto_adulto_raw = ud.get("nvt_neto_adulto")
     neto_nino_raw = ud.get("nvt_neto_nino")
-    neto_adulto = str(neto_adulto_raw) if neto_adulto_raw is not None else "—"
-    neto_nino = str(neto_nino_raw) if neto_nino_raw is not None else "—"
     _raw_h = ud.get("nvt_horarios")
     nvt_horarios: list[str] = list(_raw_h) if isinstance(_raw_h, list) else []
     horarios_str = (
@@ -1255,8 +1254,8 @@ def _render_ficha_nuevo(ud: dict[str, object]) -> str:
     return obtener_mensaje("tour_nuevo_ficha").format(
         familia=familia,
         nombre=nombre,
-        neto_adulto=neto_adulto,
-        neto_nino=neto_nino,
+        neto_adulto=fmt_cop(neto_adulto_raw),
+        neto_nino=fmt_cop(neto_nino_raw),
         horarios=horarios_str,
     )
 
