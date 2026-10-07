@@ -40,13 +40,15 @@ class TestBotMenusDesdesCatalogo:
         # +1 lista_precios (FREELANCER) vs original 4
         assert len(_COMANDOS_FREELANCER) == 5
 
-    def test_admin_count_es_18(self) -> None:
+    def test_admin_count_es_19(self) -> None:
         # +1 lista_precios (visible at ADMIN); -2 flujo_caja+tours (PR removed); net +1 vs 17
-        assert len(_COMANDOS_ADMIN) == 18
+        # +1 cuenta_cobro (ADMIN) = 19
+        assert len(_COMANDOS_ADMIN) == 19
 
-    def test_propietario_count_es_22(self) -> None:
+    def test_propietario_count_es_23(self) -> None:
         # +1 lista_precios; -2 flujo_caja+tours; -2 conciliar+pendientes; net -3 vs 25 = 22
-        assert len(_COMANDOS_PROPIETARIO) == 22
+        # +1 cuenta_cobro = 23
+        assert len(_COMANDOS_PROPIETARIO) == 23
 
     def test_menus_dict_tiene_propietario_y_admin(self) -> None:
         assert "propietario" in _MENUS

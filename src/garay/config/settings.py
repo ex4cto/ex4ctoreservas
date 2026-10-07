@@ -121,6 +121,19 @@ class Settings(BaseSettings):
     # Monthly base fee for the Railway Hobby plan (the bill is max(plan_fee, usage)).
     railway_plan_fee: float = Field(default=5.0)
 
+    # --- CTG Tours SAS — datos emisor cuenta de cobro ---
+    ctours_empresa: str = Field(default="CTG TOURS SAS")
+    ctours_nit: str = Field(default="901.144.245")
+    # Cuenta bancaria donde pagan la cuenta de cobro (Bancolombia / Nequi).
+    ctours_cuenta_cobro: str = Field(default="")
+
+    # --- Garay Manzur — datos beneficiario cuenta de cobro ---
+    garay_nombre: str = Field(default="Julio César Garay Manzur")
+    garay_cc: str = Field(default="1128049588")
+    garay_tel: str = Field(default="3223789349")
+    garay_email: str = Field(default="agenciagaraytour1@gmail.com")
+    garay_direccion: str = Field(default="Hotel Marie Real Centro")
+
     # --- Socios: split start date (GARAY_SOCIOS_DESDE=2026-09-01) ---
     # Only sales on or after this date count toward the partner split.
     # Set to None to include all-time sales.

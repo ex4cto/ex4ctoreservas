@@ -19,9 +19,10 @@ from garay.infraestructura.telegram.menu import (
 class TestCatalogo:
     """Verify catalog structure and completeness."""
 
-    def test_catalogo_tiene_22_comandos(self) -> None:
-        # Original 25 - 4 removed (flujo_caja, tours, conciliar, pendientes) + 1 added (lista_precios) = 22
-        assert len(CATALOGO_COMANDOS) == 22
+    def test_catalogo_tiene_23_comandos(self) -> None:
+        # Original 25 - 4 removed (flujo_caja, tours, conciliar, pendientes) + 1 added (lista_precios)
+        # + 1 added (cuenta_cobro) = 23
+        assert len(CATALOGO_COMANDOS) == 23
 
     def test_catalogo_cubre_todos_los_grupos(self) -> None:
         grupos = {c.grupo for c in CATALOGO_COMANDOS}
@@ -96,9 +97,9 @@ class TestComandosParaTier:
         comandos = [c.comando for c in comandos_para_tier(TierComando.ADMIN)]
         assert "movimientos" in comandos
 
-    def test_propietario_ve_todos_22(self) -> None:
+    def test_propietario_ve_todos_23(self) -> None:
         result = comandos_para_tier(TierComando.PROPIETARIO)
-        assert len(result) == 22
+        assert len(result) == 23
 
     def test_freelancer_no_ve_editar_tour(self) -> None:
         """Regression: /editar_tour is admin-only and must never reach freelancers."""
@@ -145,9 +146,9 @@ class TestComandosBot:
         ad = comandos_bot(TierComando.ADMIN)
         assert len(ad) > len(fl)
 
-    def test_propietario_retorna_22_botcommands(self) -> None:
+    def test_propietario_retorna_23_botcommands(self) -> None:
         result = comandos_bot(TierComando.PROPIETARIO)
-        assert len(result) == 22
+        assert len(result) == 23
         assert all(isinstance(c, BotCommand) for c in result)
 
     def test_botcommand_tiene_comando_y_descripcion(self) -> None:

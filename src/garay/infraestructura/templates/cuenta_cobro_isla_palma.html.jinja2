@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cuenta de Cobro No {{ "%03d" | format(numero) }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12pt;
+    color: #222;
+    background: #fff;
+  }
+
+  .page {
+    width: 170mm;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #1B3B6B;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .header h1 {
+    font-size: 18pt;
+    color: #1B3B6B;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .header p {
+    font-size: 10pt;
+    color: #555;
+  }
+
+  /* Document title */
+  .titulo-documento {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .titulo-documento h2 {
+    font-size: 14pt;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #1B3B6B;
+    border: 1px solid #1B3B6B;
+    display: inline-block;
+    padding: 6px 20px;
+  }
+  .numero-doc {
+    font-size: 11pt;
+    color: #555;
+    margin-top: 6px;
+  }
+
+  /* Body table */
+  .cuerpo {
+    margin-bottom: 24px;
+    line-height: 1.7;
+  }
+  .cuerpo p {
+    margin-bottom: 8px;
+  }
+  .cuerpo .label {
+    font-weight: bold;
+    color: #1B3B6B;
+    min-width: 120px;
+    display: inline-block;
+  }
+
+  /* Monto destacado */
+  .monto {
+    font-size: 15pt;
+    font-weight: bold;
+    color: #1B3B6B;
+  }
+
+  /* Separador */
+  hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20px 0;
+  }
+
+  /* Firma */
+  .firma-section {
+    margin-top: 30px;
+    text-align: center;
+  }
+  .firma-section img {
+    height: 80px;
+    display: block;
+    margin: 0 auto 4px auto;
+  }
+  .firma-linea {
+    border-top: 1px solid #222;
+    width: 200px;
+    margin: 8px auto 6px auto;
+  }
+  .firma-info {
+    font-size: 10pt;
+    color: #444;
+    line-height: 1.6;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 30px;
+    border-top: 1px solid #1B3B6B;
+    padding-top: 8px;
+    font-size: 9pt;
+    color: #888;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>{{ empresa_nombre }}</h1>
+    <p>NIT: {{ nit }}</p>
+  </div>
+
+  <!-- Document title -->
+  <div class="titulo-documento">
+    <h2>Formato de Cuenta de Cobro</h2>
+    <p class="numero-doc">No <strong>{{ "%03d" | format(numero) }}</strong></p>
+  </div>
+
+  <!-- Body -->
+  <div class="cuerpo">
+    <p>Cartagena, {{ fecha }}</p>
+
+    <br>
+
+    <p>
+      <span class="label">{{ empresa_nombre }}</span> debe a:
+      <strong>{{ garay_nombre }}</strong>
+    </p>
+    <p>
+      <span class="label">C.C.:</span> {{ garay_cc }}
+    </p>
+
+    <br>
+
+    <p>
+      Por concepto de comisiones por ventas el día <strong>{{ fecha }}</strong>
+      por un valor de:
+    </p>
+    <p class="monto">{{ ganancia }} M/CTE</p>
+
+    <br>
+
+    <p>
+      Favor consignar a la cuenta de ahorros Bancolombia o Nequi No.
+      <strong>{{ cuenta_cobro if cuenta_cobro else "— (ver datos de contacto)" }}</strong>
+    </p>
+  </div>
+
+  <hr>
+
+  <!-- Firma -->
+  <div class="firma-section">
+    {% if firma_path %}
+    <img src="file://{{ firma_path }}" alt="Firma">
+    {% endif %}
+    <div class="firma-linea"></div>
+    <div class="firma-info">
+      <strong>{{ garay_nombre }}</strong><br>
+      C.C.: {{ garay_cc }}<br>
+      Tel.: {{ garay_tel }}<br>
+      Email: {{ garay_email }}<br>
+      Dirección: {{ garay_direccion }}
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    {{ empresa_nombre }} · NIT {{ nit }} · Documento generado electrónicamente
+  </div>
+
+</div>
+</body>
+</html>

@@ -32,6 +32,7 @@ from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
+from garay.aplicacion.cuenta_cobro.servicio import GenerarCuentaCobroService
 from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -55,6 +56,7 @@ from garay.infraestructura.ia.extractor_claude import ExtractorClaude
 from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
+from garay.infraestructura.persistencia.contador_cobro_sql import ContadorDocumentoSQLAlchemy
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.auditoria_egresos import (
@@ -392,6 +394,18 @@ def main() -> None:
             plan_fee=settings.railway_plan_fee,
         )
 
+    # Cuenta de cobro — Isla Palma
+    contador_cobro = ContadorDocumentoSQLAlchemy(sf)
+    _assets_root = Path(__file__).parents[4]
+    cuenta_cobro_service = GenerarCuentaCobroService(
+        ventas_repo=ventas_repo,
+        servicio_repo=servicio_repo,
+        contador=contador_cobro,
+        renderer=None,  # Playwright is invoked internally by the service
+        assets_path=_assets_root / "assets",
+        settings=settings,
+    )
+
     generador_imagen = PlaywrightGeneradorImagen()
     enviador_foto = EnviadorFotoTelegram(token=settings.telegram_bot_token)
     publicar_lista_precios_service = PublicarListaPreciosServicio(
@@ -417,6 +431,7 @@ def main() -> None:
     )
     app.bot_data.update(
         {
+            "cuenta_cobro_service": cuenta_cobro_service,
             "publicar_lista_precios_service": publicar_lista_precios_service,
             "hotel_service": hotel_service,
             "obligacion_repo": obligacion_hotel_repo,

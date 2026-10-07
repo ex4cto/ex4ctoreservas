@@ -416,3 +416,12 @@ class PagoSocioModel(Base):
     tipo: Mapped[str] = mapped_column(String, nullable=False)  # "total" | "parcial"
     nota: Mapped[str | None] = mapped_column(Text, nullable=True)
     registrado_en: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+
+
+class ContadorDocumentoModel(Base):
+    """Generic consecutive-number counter for named document types."""
+
+    __tablename__ = "contadores_documento"
+
+    tipo: Mapped[str] = mapped_column(String(100), primary_key=True)
+    ultimo_numero: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

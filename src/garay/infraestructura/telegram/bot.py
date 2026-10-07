@@ -44,6 +44,7 @@ from garay.config.settings import obtener_settings
 from garay.dominio.puertos.repositorios import FreelancerRepository
 from garay.infraestructura.telegram import (
     handlers_config_socios,
+    handlers_cuenta_cobro,
     handlers_reportes,
     handlers_socios,
 )
@@ -1327,5 +1328,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     handlers_reportes.registrar_handlers(app)
     handlers_socios.registrar_handlers(app)
     handlers_config_socios.registrar_handlers(app)
+    handlers_cuenta_cobro.registrar_handlers(app)
     app.add_error_handler(_manejar_error)
     return app
