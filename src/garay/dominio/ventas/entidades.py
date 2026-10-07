@@ -14,6 +14,7 @@ from garay.dominio.ventas.errores import (
     CantidadInvalida,
     DigitalConPuntoDeVenta,
     GananciaNegativa,
+    MismoAbono,
     MismoCanal,
     MismoMetodoPago,
     MismoNeto,
@@ -146,6 +147,22 @@ class Venta:
             self.participantes, punto_de_venta_id=target_punto_id
         )
         self.tipo_cliente = nuevo_tipo
+
+    def cambiar_abono(self, nuevo_abono: Dinero | None) -> None:
+        """Change or clear the abono. Informational edit — no commission recompute.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises MismoAbono if nuevo_abono equals the current abono (including None == None).
+        - Raises AbonoSuperaValorVenta if nuevo_abono > valor_venta.
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el abono de una venta ya anulada.")
+        if nuevo_abono == self.abono:
+            raise MismoAbono("El abono ya tiene ese valor. No se realizó ningún cambio.")
+        if nuevo_abono is not None and nuevo_abono > self.valor_venta:
+            raise AbonoSuperaValorVenta("El abono no puede superar el valor de la venta.")
+        self.abono = nuevo_abono
 
     def cambiar_metodo_pago(self, nuevo: MetodoPago) -> None:
         """Change metodo_pago. Informational edit — no financial limits apply.

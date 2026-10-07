@@ -89,6 +89,15 @@ class EditarServicioVentaComando:
 
 
 @dataclass(frozen=True)
+class EditarAbonoVentaComando:
+    venta_id: uuid.UUID
+    nuevo_abono: Dinero | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
 class EditarMetodoPagoVentaComando:
     venta_id: uuid.UUID
     nuevo_metodo_pago: MetodoPago

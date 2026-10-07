@@ -76,3 +76,7 @@ class MismoServicio(ErrorDeDominio):
 
 class MismoMetodoPago(ErrorDeDominio):
     """Idempotency guard: el nuevo método de pago es idéntico al actual."""
+
+
+class MismoAbono(ErrorDeDominio):
+    """Idempotency guard: el nuevo abono es idéntico al abono actual."""

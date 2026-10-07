@@ -1092,6 +1092,35 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Por: {actor}"
         )
     },
+    "gestion_ventas.campo_abono": {Idioma.ES: "💵 Abono"},
+    "gestion_ventas.pedir_nuevo_abono": {
+        Idioma.ES: (
+            "Abono actual: <b>{actual}</b>\n\n"
+            "Ingresa el nuevo abono, o <b>0</b> para eliminarlo:"
+        )
+    },
+    "gestion_ventas.abono_editado": {Idioma.ES: "✅ Abono actualizado correctamente."},
+    "gestion_ventas.mismo_abono": {
+        Idioma.ES: "El abono ya tiene ese valor. No se realizó ningún cambio."
+    },
+    "gestion_ventas.confirmar_editar_abono": {
+        Idioma.ES: (
+            "¿Confirmas el cambio de abono?\n\n"
+            "💵 Abono: {anterior} → <b>{nuevo}</b>\n"
+            "💬 Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.correccion_edicion_abono": {
+        Idioma.ES: (
+            "✏️ <b>Abono actualizado</b>\n"
+            "Cliente: {cliente}\n"
+            "Tours: {tours}\n"
+            "Abono: {anterior} → <b>{nuevo}</b>\n"
+            "Motivo: {motivo}\n"
+            "Por: {actor}"
+        )
+    },
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},

@@ -27,6 +27,7 @@ from garay.aplicacion.ventas.comandos import (
     AnularVentaComando,
     EditarCanalVentaComando,
     EditarClienteVentaComando,
+    EditarAbonoVentaComando,
     EditarFechaVentaComando,
     EditarMetodoPagoVentaComando,
     EditarNetoVentaComando,
@@ -37,6 +38,7 @@ from garay.aplicacion.ventas.comandos import (
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
+from garay.aplicacion.ventas.editar_abono import EditarAbonoVentaService
 from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaService
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
@@ -61,8 +63,10 @@ from garay.dominio.puertos.repositorios import (
 )
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import (
+    AbonoSuperaValorVenta,
     DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
+    MismoAbono,
     MismoCanal,
     MismoMetodoPago,
     MismoNeto,
@@ -115,6 +119,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_cambiar_valor_venta", None)
         context.user_data.pop("gv_nuevo_metodo_pago", None)
         context.user_data.pop("gv_metodo_pago_anterior", None)
+        context.user_data.pop("gv_nuevo_abono", None)
+        context.user_data.pop("gv_abono_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -251,6 +257,7 @@ GV_EDIT_FAMILIA: int = 234        # user is picking tour category
 GV_EDIT_SERVICIO: int = 235       # user is picking tour within category
 GV_EDIT_TOUR_VALOR: int = 236     # user is answering valor_venta change question
 GV_EDIT_METODO_PAGO: int = 237    # user is picking new payment method
+GV_EDIT_ABONO: int = 238          # user is entering new abono amount
 
 GV_EDIT_METODO_PAGO_PATTERN = "^(gv_metodo_pago:.+|gv_volver_detalle)$"
 
@@ -387,6 +394,7 @@ def _construir_teclado_campos(
     if es_admin:
         rows.append(_btn("gestion_ventas.campo_neto", "gv_campo:neto"))
         rows.append(_btn("gestion_ventas.campo_valor_venta", "gv_campo:valor_venta"))
+        rows.append(_btn("gestion_ventas.campo_abono", "gv_campo:abono"))
         rows.append(_btn("gestion_ventas.campo_tour", "gv_campo:tour"))
     if venta is not None and venta.participantes.vendedor_nombre is not None:
         rows.append(_btn("gestion_ventas.campo_vendedor", "gv_campo:vendedor"))
@@ -1088,6 +1096,22 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return GV_EDIT_METODO_PAGO
 
+    if campo_str == "abono":
+        _user_abono = query.from_user
+        _uid_abono = _user_abono.id if _user_abono else 0
+        if not await es_admin_o_propietario(_uid_abono, context):
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        abono_actual_str = fmt_cop(venta.abono) if venta.abono is not None else "Sin abono"
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_abono"
+            context.user_data["gv_abono_anterior"] = abono_actual_str
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_nuevo_abono").format(actual=abono_actual_str),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_ABONO
+
     try:
         campo = CampoCliente(campo_str)
     except ValueError:
@@ -1717,6 +1741,38 @@ async def handle_gv_edit_metodo_pago(update: Update, context: ContextTypes.DEFAU
 
 
 # ---------------------------------------------------------------------------
+# GV_EDIT_ABONO state — user enters the new abono amount
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_abono(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """GV_EDIT_ABONO state — parse numeric input; 0 means clear the abono."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    valor_decimal = parsear_monto(text.strip())
+    if valor_decimal is None or valor_decimal < Decimal("0"):
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.valor_venta_invalido"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_ABONO
+
+    nuevo_abono: Dinero | None = None if valor_decimal == Decimal("0") else Dinero(valor_decimal)
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_abono"] = nuevo_abono
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
 # GV_MOTIVO state — text input for justification
 # ---------------------------------------------------------------------------
 
@@ -1801,6 +1857,15 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_metodo_pago").format(
             anterior=_anterior_mp,
             nuevo=_nuevo_mp.value if _nuevo_mp is not None else "—",
+            motivo=motivo,
+        )
+    elif gv_accion == "editar_abono":
+        _nuevo_abono_obj = user_data.get("gv_nuevo_abono")
+        _anterior_abono = user_data.get("gv_abono_anterior") or "Sin abono"
+        _nuevo_abono_str = fmt_cop(_nuevo_abono_obj) if _nuevo_abono_obj is not None else "Sin abono"
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_abono").format(
+            anterior=_anterior_abono,
+            nuevo=_nuevo_abono_str,
             motivo=motivo,
         )
     elif gv_accion == "editar_tour":
@@ -1923,6 +1988,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_metodo_pago":
         return await _handle_confirmar_editar_metodo_pago(update, context, user_data, user)
+
+    if gv_accion == "editar_abono":
+        return await _handle_confirmar_editar_abono(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -3312,6 +3380,123 @@ async def _handle_confirmar_anular(
     if update.effective_message:
         await update.effective_message.reply_text(
             obtener_mensaje("gestion_ventas.anulada"),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_abono(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-abono action (informational)."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+
+    if not venta_id_str or not motivo:
+        logger.error("editar_abono confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    # gv_nuevo_abono is Dinero | None — None means clear the abono.
+    nuevo_abono: Dinero | None = user_data.get("gv_nuevo_abono")
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarAbonoVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_abono=nuevo_abono,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarAbonoVentaService | None = context.bot_data.get("editar_abono_venta_service")
+    if service is None:
+        logger.error("editar_abono_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key: str | None = None
+    venta = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoAbono:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.mismo_abono"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+    except AbonoSuperaValorVenta:
+        mensaje_key = "gestion_ventas.valor_venta_invalido"
+    except VentaYaAnulada:
+        mensaje_key = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_abono")
+        mensaje_key = "gestion_ventas.error_generico"
+    else:
+        venta_repo_ab: VentaRepository | None = context.bot_data.get("venta_repo")
+        if venta_repo_ab is not None:
+            venta = await asyncio.to_thread(venta_repo_ab.buscar_por_id, uuid.UUID(venta_id_str))
+
+        anterior_str = user_data.get("gv_abono_anterior") or "Sin abono"
+        nuevo_str = fmt_cop(nuevo_abono) if nuevo_abono is not None else "Sin abono"
+        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_abono").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            anterior=escape(anterior_str, quote=False),
+            nuevo=escape(nuevo_str, quote=False),
+            motivo=escape(motivo, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+        if venta is not None:
+            await _notificar_edicion(
+                context,
+                venta,
+                mensaje_grupo,
+                campo_label="Abono",
+                es_financiero=False,
+            )
+        else:
+            await _notificar_grupo(context, mensaje_grupo)
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.abono_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key),
             parse_mode="HTML",
         )
     _limpiar(context)

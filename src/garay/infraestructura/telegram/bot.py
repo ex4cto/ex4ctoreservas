@@ -215,6 +215,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_CONFIRMAR,
     GV_DETALLE,
     GV_DETALLE_PATTERN,
+    GV_EDIT_ABONO,
     GV_EDIT_CAMPO,
     GV_EDIT_CAMPO_PATTERN,
     GV_EDIT_CANAL_PUNTO,
@@ -240,6 +241,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_capturar_valor_venta,
     handle_gv_confirmar,
     handle_gv_detalle,
+    handle_gv_edit_abono,
     handle_gv_edit_campo,
     handle_gv_edit_canal_punto,
     handle_gv_edit_canal_tipo,
@@ -1098,6 +1100,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_EDIT_METODO_PAGO: [
                 _CB(handle_gv_edit_metodo_pago, pattern=GV_EDIT_METODO_PAGO_PATTERN),
             ],
+            GV_EDIT_ABONO: [MessageHandler(_TEXT, handle_gv_edit_abono)],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),
