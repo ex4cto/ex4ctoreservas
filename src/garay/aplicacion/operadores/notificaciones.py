@@ -11,7 +11,7 @@ from garay.dominio.comun.dinero import Dinero
 _PATRONES: dict[str, list[str]] = {
     "isla_palma": ["ISLA PALMA"],
     "palmarito": ["PALMARITO"],
-    "bonavida": ["BONAVIDA"],
+    "bonavida": ["BONAVIDA", "BONA VIDA"],
 }
 
 

@@ -24,7 +24,11 @@ class TestDetectarOperador:
 
     def test_bonavida(self) -> None:
         from garay.aplicacion.operadores.notificaciones import detectar_operador
-        assert detectar_operador(["BONAVIDA TOUR"]) == "bonavida"
+        assert detectar_operador(["CATAMARAN BONAVIDA"]) == "bonavida"
+
+    def test_bonavida_con_espacio(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import detectar_operador
+        assert detectar_operador(["CATAMARAN BONA VIDA-ISLAS DEL ROSARIO"]) == "bonavida"
 
     def test_no_match_returns_none(self) -> None:
         from garay.aplicacion.operadores.notificaciones import detectar_operador
