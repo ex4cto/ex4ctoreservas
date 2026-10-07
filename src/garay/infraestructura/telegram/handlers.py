@@ -28,7 +28,7 @@ from garay.aplicacion.reportes.mis_ventas import (
     MisVentas,
     MisVentasService,
 )
-from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
+from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando, ResultadoRegistrarVenta
 from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera, SalidaFSM
 from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import Cliente
@@ -759,6 +759,63 @@ async def cmd_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return await _enviar_salida(update, context, salida)
 
 
+async def _notificar_operador_externo(
+    context: ContextTypes.DEFAULT_TYPE,
+    cmd: RegistrarVentaComando,
+    resultado: ResultadoRegistrarVenta,
+) -> None:
+    from garay.aplicacion.operadores.notificaciones import (
+        DatosNotificacion,
+        detectar_operador,
+        formatear_notificacion,
+    )
+
+    operador = detectar_operador(cmd.servicio_nombres)
+    if operador is None:
+        return
+
+    grupo_id: str = context.bot_data.get("grupo_id", "")
+    if not grupo_id:
+        return
+
+    cliente_cedula: str | None = None
+    cliente_repo = context.bot_data.get("cliente_repo")
+    if cliente_repo is not None:
+        try:
+            cliente = await asyncio.to_thread(cliente_repo.buscar_por_id, cmd.cliente_id)
+            if cliente is not None:
+                cliente_cedula = getattr(cliente, "identificacion", None)
+        except Exception:
+            logger.exception(
+                "No se pudo obtener identificacion del cliente para operador externo"
+            )
+
+    datos = DatosNotificacion(
+        servicio_nombres=cmd.servicio_nombres,
+        fecha=cmd.fecha,
+        cliente_nombre=cmd.cliente_nombre,
+        cliente_cedula=cliente_cedula,
+        cliente_telefono=cmd.cliente_telefono,
+        cliente_email=cmd.cliente_email,
+        adultos=cmd.adultos,
+        ninos=cmd.ninos,
+        valor_venta=cmd.valor_venta,
+        abono=cmd.abono,
+        ganancia=resultado.desglose.agencia,
+    )
+
+    mensaje = formatear_notificacion(operador, datos)
+    if mensaje is None:
+        return
+
+    parse_mode: str | None = "HTML" if operador in ("isla_palma", "bonavida") else None
+    await context.bot.send_message(
+        chat_id=grupo_id,
+        text=mensaje,
+        parse_mode=parse_mode,
+    )
+
+
 def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
     """Factory: creates an async handler for a given FSM state."""
 
@@ -825,6 +882,11 @@ def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:
                                 )
                             except Exception:
                                 logger.exception("Error al generar/guardar la factura")
+                        # 10. Best-effort: external operator notification
+                        try:
+                            await _notificar_operador_externo(context, cmd, resultado)
+                        except Exception:
+                            logger.exception("Error al notificar operador externo")
                         registro_exitoso = True
                     except Exception:
                         logger.exception("Error al registrar venta")
