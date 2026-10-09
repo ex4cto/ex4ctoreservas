@@ -2,6 +2,7 @@
 
 States 310-313, group=13, callback prefix rep_s:.
 Provides an inline calendar date-range picker (no external library).
+States 315-316: liquidaciones de freelancers.
 """
 
 from __future__ import annotations
@@ -9,8 +10,9 @@ from __future__ import annotations
 import calendar
 import datetime
 import logging
+import uuid as _uuid_mod
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
@@ -19,11 +21,18 @@ from telegram.ext import (
 )
 
 from garay.aplicacion.comun.formato import fmt_cop
+from garay.aplicacion.liquidaciones.servicio import (
+    LiquidarFreelancerService,
+    RegistrarPagoFreelancerComando,
+    ResultadoCalculoLiquidacion,
+    _dias_solapados,
+)
 from garay.aplicacion.socios.split import (
     ResumenSplitPeriodo,
     ResumenVentaDetalle,
 )
 from garay.dominio.comun.dinero import Dinero
+from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
 from garay.mensajes.catalogo import obtener_mensaje
@@ -39,6 +48,8 @@ DIV_CAL_DESDE: int = 311
 DIV_CAL_HASTA: int = 312
 DIV_RESULT: int = 313
 DIV_VENTA: int = 314
+DIV_LIQ_FREELANCER: int = 315   # Showing freelancer list with their commissions
+DIV_LIQ_CONFIRMAR: int = 316    # Showing confirmation with desglose + overlap warning
 
 # ---------------------------------------------------------------------------
 # Callback prefixes
@@ -49,6 +60,7 @@ _CB_CAL = "rep_s:cal:"         # rep_s:cal:desde:yyyy-mm  or  rep_s:cal:hasta:yy
 _CB_DIA = "rep_s:dia:"         # rep_s:dia:desde:yyyy-mm-dd | rep_s:dia:hasta:yyyy-mm-dd
 _CB_ATRAS = "rep_s:atras:"     # rep_s:atras:menu | rep_s:atras:hasta | rep_s:atras:resultado
 _CB_VENTA = "rep_s:venta:"     # rep_s:venta:{index}
+_CB_LIQ = "rep_s:liq:"         # rep_s:liq:start | rep_s:liq:fl:{uuid} | rep_s:liq:confirmar:{uuid} | rep_s:liq:cancelar | rep_s:liq:atras
 
 # user_data keys
 _KEY_DESDE = "div_desde"           # datetime.date | None
@@ -58,6 +70,10 @@ _KEY_AYER_SEL = "div_ayer_sel"     # bool — Ayer checkbox state
 _KEY_VENTAS = "div_ventas"         # list[ResumenVentaDetalle] — for drill-down
 _KEY_RESULTADO = "div_resultado"   # ResumenSplitPeriodo — cached for Atrás
 _KEY_PERIODO_LABEL = "div_periodo_label"  # str — period label for Atrás
+_KEY_LIQ_DESDE = "div_liq_desde"          # date — liquidation period start
+_KEY_LIQ_HASTA = "div_liq_hasta"          # date — liquidation period end
+_KEY_LIQ_FREELANCERS = "div_liq_fls"      # list[tuple[str, uuid.UUID, Dinero]] — (nombre, id, comision)
+_KEY_LIQ_RESULTADO = "div_liq_resultado"  # ResultadoCalculoLiquidacion
 
 _MESES_ES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -205,7 +221,8 @@ def _teclado_calendario(year: int, month: int, step: str) -> InlineKeyboardMarku
 
 
 def _render_resultado(
-    resultado: ResumenSplitPeriodo, periodo_label: str
+    resultado: ResumenSplitPeriodo,
+    periodo_label: str,
 ) -> tuple[str, InlineKeyboardMarkup | None]:
     """Render the period result as (HTML text, optional InlineKeyboardMarkup).
 
@@ -282,6 +299,14 @@ def _render_resultado(
             ]
             for i, venta in enumerate(resultado.ventas_detalle)
         ]
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    "💸 Pagos pendientes",
+                    callback_data="rep_s:liq:start",
+                )
+            ]
+        )
         rows.append(
             [InlineKeyboardButton(
                 obtener_mensaje("resumen_divisiones.btn_cerrar"),
@@ -508,6 +533,8 @@ async def handle_div_menu(
             context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
             context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
             context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
+            context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
+            context.user_data[_KEY_LIQ_HASTA] = hasta  # type: ignore[index]
             await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
             return DIV_RESULT
 
@@ -622,6 +649,8 @@ async def handle_div_dia(
         context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
         context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
         context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
+        context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
+        context.user_data[_KEY_LIQ_HASTA] = fecha  # type: ignore[index]
         await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
         return DIV_RESULT
 
@@ -725,6 +754,313 @@ async def handle_div_cerrar(
 
 
 # ---------------------------------------------------------------------------
+# Liquidaciones handlers
+# ---------------------------------------------------------------------------
+
+
+def _pax_label(adultos: int, ninos: int) -> str:
+    """Build compact pax string: '2 adultos' or '2 adultos 1 niño'."""
+    partes = [f"{adultos} adulto{'s' if adultos != 1 else ''}"]
+    if ninos:
+        partes.append(f"{ninos} niño{'s' if ninos != 1 else ''}")
+    return " ".join(partes)
+
+
+def _overlap_warning(solapados: list[PagoFreelancer], desde: datetime.date, hasta: datetime.date) -> str:
+    """Build HTML warning text for overlapping payments."""
+    lines: list[str] = []
+    for s in solapados:
+        dias = _dias_solapados(desde, hasta, s.desde, s.hasta)
+        if not dias:
+            continue
+        dias_str = ", ".join(str(d.day) for d in dias[:5])
+        if len(dias) > 5:
+            dias_str += "…"
+        periodo_anterior = f"{s.desde.strftime('%d/%m')} – {s.hasta.strftime('%d/%m')}"
+        lines.append(
+            obtener_mensaje("liquidaciones.advertencia_solapamiento").format(
+                dias=dias_str,
+                periodo_anterior=periodo_anterior,
+            )
+        )
+    return "".join(lines)
+
+
+async def handle_div_liq_start(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """User pressed 💸 Pagos pendientes — show freelancer list with their commissions."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_RESULT
+    await cq.answer()
+
+    resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
+    if resultado is None or not resultado.por_freelancer:
+        await cq.edit_message_text(
+            obtener_mensaje("liquidaciones.sin_freelancers"),
+            parse_mode="HTML",
+        )
+        return ConversationHandler.END
+
+    desde: datetime.date | None = context.user_data.get(_KEY_LIQ_DESDE)  # type: ignore[union-attr]
+    hasta: datetime.date | None = context.user_data.get(_KEY_LIQ_HASTA)  # type: ignore[union-attr]
+
+    if desde is None or hasta is None:
+        logger.error("div_liq_desde/hasta not set in user_data — cannot show liquidaciones")
+        await cq.answer("Error interno: período no disponible.", show_alert=True)
+        return DIV_RESULT
+
+    # Build nombre→freelancer_id lookup
+    freelancer_repo = context.bot_data.get("freelancer_repo")
+    if freelancer_repo is None:
+        logger.error("freelancer_repo not in bot_data")
+        return ConversationHandler.END
+
+    freelancers_activos = freelancer_repo.listar_activos()
+    nombre_a_id: dict[str, _uuid_mod.UUID] = {f.nombre: f.id for f in freelancers_activos}
+
+    # Map por_freelancer entries to (nombre, id, comision)
+    fls: list[tuple[str, _uuid_mod.UUID, Dinero]] = []
+    for fl in resultado.por_freelancer:
+        fl_id = nombre_a_id.get(fl.nombre)
+        if fl_id is not None:
+            fls.append((fl.nombre, fl_id, fl.comision))
+
+    if not fls:
+        await cq.edit_message_text(
+            obtener_mensaje("liquidaciones.sin_freelancers"),
+            parse_mode="HTML",
+        )
+        return ConversationHandler.END
+
+    context.user_data[_KEY_LIQ_FREELANCERS] = fls  # type: ignore[index]
+
+    periodo_label = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
+    titulo = obtener_mensaje("liquidaciones.titulo").format(periodo=periodo_label)
+
+    rows: list[list[InlineKeyboardButton]] = []
+    for nombre, fl_id, comision in fls:
+        label = obtener_mensaje("liquidaciones.freelancer_item").format(
+            nombre=nombre, monto=fmt_cop(comision)
+        )
+        rows.append(
+            [InlineKeyboardButton(label, callback_data=f"rep_s:liq:fl:{fl_id}")]
+        )
+    rows.append([InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras")])
+    rows.append([InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:liq:cancelar")])
+
+    await cq.edit_message_text(
+        titulo, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return DIV_LIQ_FREELANCER
+
+
+async def handle_div_liq_freelancer(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle freelancer selection or navigation in the liquidaciones list."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_LIQ_FREELANCER
+    await cq.answer()
+
+    data: str = cq.data or ""
+
+    if data == "rep_s:liq:cancelar":
+        await cq.edit_message_text(
+            obtener_mensaje("liquidaciones.cancelado"), parse_mode="HTML"
+        )
+        return ConversationHandler.END
+
+    if data == "rep_s:liq:atras":
+        # Go back to result view
+        resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
+        periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
+        if resultado is not None:
+            texto, markup = _render_resultado(resultado, periodo_label)
+            await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
+        return DIV_RESULT
+
+    # data format: rep_s:liq:fl:{uuid}
+    if data.startswith("rep_s:liq:fl:"):
+        fl_id_str = data[len("rep_s:liq:fl:"):]
+        try:
+            fl_id = _uuid_mod.UUID(fl_id_str)
+        except ValueError:
+            return DIV_LIQ_FREELANCER
+
+        liquidar_service = context.bot_data.get("liquidar_service")
+        if not isinstance(liquidar_service, LiquidarFreelancerService):
+            logger.error("liquidar_service not in bot_data")
+            return ConversationHandler.END
+
+        raw_desde = context.user_data.get(_KEY_LIQ_DESDE)  # type: ignore[union-attr]
+        raw_hasta = context.user_data.get(_KEY_LIQ_HASTA)  # type: ignore[union-attr]
+        if not isinstance(raw_desde, datetime.date) or not isinstance(raw_hasta, datetime.date):
+            logger.error("div_liq_desde/hasta missing in user_data for freelancer selection")
+            return ConversationHandler.END
+        desde: datetime.date = raw_desde
+        hasta: datetime.date = raw_hasta
+
+        liq_resultado = liquidar_service.calcular(fl_id, desde, hasta)
+        context.user_data[_KEY_LIQ_RESULTADO] = liq_resultado  # type: ignore[index]
+
+        # Build confirmation message
+        lines: list[str] = [
+            obtener_mensaje("liquidaciones.confirmar_titulo").format(
+                nombre=liq_resultado.freelancer_nombre,
+                desde=desde.strftime("%d/%m/%Y"),
+                hasta=hasta.strftime("%d/%m/%Y"),
+                total=fmt_cop(liq_resultado.comisiones_total),
+            ),
+        ]
+
+        if liq_resultado.desglose:
+            lines.append("")
+            for item in liq_resultado.desglose:
+                pax = _pax_label(item.adultos, item.ninos)
+                lines.append(
+                    obtener_mensaje("liquidaciones.desglose_item").format(
+                        fecha=item.fecha.strftime("%d/%m"),
+                        servicio=item.servicio_nombre,
+                        pax=pax,
+                        monto=fmt_cop(item.comision),
+                    )
+                )
+
+        if liq_resultado.solapados:
+            lines.append(
+                _overlap_warning(liq_resultado.solapados, desde, hasta)
+            )
+
+        texto = "\n".join(lines)
+        rows = [
+            [InlineKeyboardButton("✅ Confirmar", callback_data=f"rep_s:liq:confirmar:{fl_id}")],
+            [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")],
+            [InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:liq:cancelar")],
+        ]
+        await cq.edit_message_text(
+            texto, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(rows)
+        )
+        return DIV_LIQ_CONFIRMAR
+
+    return DIV_LIQ_FREELANCER
+
+
+async def handle_div_liq_confirmar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle confirmation, back, or cancel in the liquidaciones confirmation view."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_LIQ_CONFIRMAR
+    await cq.answer()
+
+    data: str = cq.data or ""
+
+    if data == "rep_s:liq:cancelar":
+        await cq.edit_message_text(
+            obtener_mensaje("liquidaciones.cancelado"), parse_mode="HTML"
+        )
+        return ConversationHandler.END
+
+    if data == "rep_s:liq:atras_confirmar":
+        # Go back to freelancer list
+        return await handle_div_liq_start(update, context)
+
+    # data format: rep_s:liq:confirmar:{uuid}
+    if data.startswith("rep_s:liq:confirmar:"):
+        fl_id_str = data[len("rep_s:liq:confirmar:"):]
+        try:
+            fl_id = _uuid_mod.UUID(fl_id_str)
+        except ValueError:
+            return DIV_LIQ_CONFIRMAR
+
+        liquidar_service_confirmar = context.bot_data.get("liquidar_service")
+        if not isinstance(liquidar_service_confirmar, LiquidarFreelancerService):
+            logger.error("liquidar_service not in bot_data")
+            return ConversationHandler.END
+
+        raw_liq = context.user_data.get(_KEY_LIQ_RESULTADO)  # type: ignore[union-attr]
+        if not isinstance(raw_liq, ResultadoCalculoLiquidacion):
+            logger.error("liq_resultado not in user_data")
+            return ConversationHandler.END
+        liq_resultado: ResultadoCalculoLiquidacion = raw_liq
+
+        raw_desde_conf = context.user_data.get(_KEY_LIQ_DESDE)  # type: ignore[union-attr]
+        raw_hasta_conf = context.user_data.get(_KEY_LIQ_HASTA)  # type: ignore[union-attr]
+        if not isinstance(raw_desde_conf, datetime.date) or not isinstance(raw_hasta_conf, datetime.date):
+            logger.error("div_liq_desde/hasta missing in user_data for confirmar")
+            return ConversationHandler.END
+        desde: datetime.date = raw_desde_conf
+        hasta: datetime.date = raw_hasta_conf
+
+        user = update.effective_user
+        registrado_por_id = user.id if user else 0
+        registrado_por_nombre = user.full_name if user else None
+
+        cmd = RegistrarPagoFreelancerComando(
+            freelancer_id=fl_id,
+            monto=liq_resultado.comisiones_total,
+            desde=desde,
+            hasta=hasta,
+            registrado_por_telegram_id=registrado_por_id,
+            registrado_por_nombre=registrado_por_nombre,
+        )
+        liquidar_service_confirmar.registrar_pago(cmd)
+
+        # Send DM if freelancer has telegram_user_id
+        telegram_id = liq_resultado.freelancer_telegram_id
+        if telegram_id is not None:
+            dm_lines: list[str] = [
+                obtener_mensaje("liquidaciones.dm_titulo"),
+                "",
+                obtener_mensaje("liquidaciones.dm_periodo").format(
+                    desde=desde.strftime("%d/%m"),
+                    hasta=hasta.strftime("%d/%m"),
+                ),
+                obtener_mensaje("liquidaciones.dm_total").format(
+                    total=fmt_cop(liq_resultado.comisiones_total)
+                ),
+            ]
+            if liq_resultado.desglose:
+                dm_lines.append("")
+                dm_lines.append("Detalle:")
+                for item in liq_resultado.desglose:
+                    pax = _pax_label(item.adultos, item.ninos)
+                    dm_lines.append(
+                        obtener_mensaje("liquidaciones.dm_desglose_item").format(
+                            fecha=item.fecha.strftime("%d/%m"),
+                            servicio=item.servicio_nombre,
+                            pax=pax,
+                            monto=fmt_cop(item.comision),
+                        )
+                    )
+            dm_text = "\n".join(dm_lines)
+            try:
+                bot: Bot = context.bot
+                await bot.send_message(
+                    chat_id=telegram_id, text=dm_text, parse_mode="HTML"
+                )
+            except Exception:
+                logger.warning(
+                    "Could not send DM to freelancer telegram_id=%s", telegram_id
+                )
+
+        nombre = liq_resultado.freelancer_nombre
+        if telegram_id is not None:
+            success_msg = obtener_mensaje("liquidaciones.pago_registrado").format(nombre=nombre)
+        else:
+            success_msg = obtener_mensaje("liquidaciones.pago_sin_dm").format(nombre=nombre)
+
+        await cq.edit_message_text(success_msg, parse_mode="HTML")
+        return ConversationHandler.END
+
+    return DIV_LIQ_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
 # ConversationHandler factory
 # ---------------------------------------------------------------------------
 
@@ -753,6 +1089,13 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
                 CallbackQueryHandler(handle_div_venta, pattern=r"^rep_s:venta:"),
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:resultado"),
                 CallbackQueryHandler(handle_div_cerrar, pattern=r"^rep_s:menu:cerrar"),
+                CallbackQueryHandler(handle_div_liq_start, pattern=r"^rep_s:liq:start$"),
+            ],
+            DIV_LIQ_FREELANCER: [
+                CallbackQueryHandler(handle_div_liq_freelancer, pattern=r"^rep_s:liq:"),
+            ],
+            DIV_LIQ_CONFIRMAR: [
+                CallbackQueryHandler(handle_div_liq_confirmar, pattern=r"^rep_s:liq:"),
             ],
         },
         fallbacks=[

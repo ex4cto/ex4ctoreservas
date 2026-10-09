@@ -33,6 +33,7 @@ from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientes
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.cuenta_cobro.servicio import GenerarCuentaCobroService
+from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
 from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -57,6 +58,7 @@ from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
 from garay.infraestructura.persistencia.contador_cobro_sql import ContadorDocumentoSQLAlchemy
+from garay.infraestructura.persistencia.pago_freelancer_sql import PagoFreelancerSQLAlchemy
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
 from garay.infraestructura.persistencia.repositorios.auditoria_egresos import (
@@ -246,6 +248,14 @@ def main() -> None:
         comisiones=comisiones_repo,
         socios_config=socios_config_repo,
         pagos_socio=pago_socio_repo,
+    )
+    pago_freelancer_repo = PagoFreelancerSQLAlchemy(sf)
+    liquidar_service = LiquidarFreelancerService(
+        freelancer_repo=freelancer_repo,
+        ventas_repo=ventas_repo,
+        comisiones_repo=comisiones_repo,
+        servicios_repo=servicio_repo,
+        pago_repo=pago_freelancer_repo,
     )
     servicio = RegistrarVentaService(
         ventas=ventas_repo,
@@ -457,6 +467,7 @@ def main() -> None:
             "mis_ventas_service": mis_ventas_service,
             "movimientos_service": movimientos_service,
             "split_socios_service": split_socios_service,
+            "liquidar_service": liquidar_service,
             "pagos_socio_repo": pago_socio_repo,
             "socios_config_repo": socios_config_repo,
             "factura_service": factura_service,

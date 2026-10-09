@@ -425,3 +425,18 @@ class ContadorDocumentoModel(Base):
 
     tipo: Mapped[str] = mapped_column(String(100), primary_key=True)
     ultimo_numero: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class PagoFreelancerModel(Base):
+    """ORM model for freelancer payment records."""
+
+    __tablename__ = "pagos_freelancers"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    freelancer_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    monto: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
+    desde: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    hasta: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    fecha_pago: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    registrado_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    registrado_por_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)

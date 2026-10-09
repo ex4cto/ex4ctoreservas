@@ -1518,6 +1518,43 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "lista_precios.vacio": {
         Idioma.ES: "No hay tours disponibles con precio público configurado."
     },
+    # --- Liquidaciones de freelancers ---
+    "liquidaciones.titulo": {Idioma.ES: "💸 <b>Pagos pendientes — {periodo}</b>"},
+    "liquidaciones.freelancer_item": {Idioma.ES: "💰 {nombre}  →  {monto}"},
+    "liquidaciones.sin_freelancers": {
+        Idioma.ES: "No hay comisiones de freelancers en este período."
+    },
+    "liquidaciones.confirmar_titulo": {
+        Idioma.ES: (
+            "💸 <b>Confirmar liquidación</b>\n\n"
+            "Freelancer: <b>{nombre}</b>\n"
+            "Período: {desde} – {hasta}\n"
+            "Total: <b>{total}</b>"
+        )
+    },
+    "liquidaciones.desglose_item": {
+        Idioma.ES: "• {fecha}  {servicio}  ({pax})  →  {monto}"
+    },
+    "liquidaciones.advertencia_solapamiento": {
+        Idioma.ES: (
+            "\n⚠️ <b>Solapamiento:</b> los días {dias} ya están en un pago anterior ({periodo_anterior})."
+        )
+    },
+    "liquidaciones.pago_registrado": {
+        Idioma.ES: "✅ Liquidación registrada. DM enviado a {nombre}."
+    },
+    "liquidaciones.pago_sin_dm": {
+        Idioma.ES: (
+            "✅ Liquidación registrada. {nombre} no tiene Telegram configurado — notifica manualmente."
+        )
+    },
+    "liquidaciones.cancelado": {Idioma.ES: "✖ Liquidación cancelada."},
+    "liquidaciones.dm_titulo": {Idioma.ES: "💰 <b>Liquidación recibida</b>"},
+    "liquidaciones.dm_periodo": {Idioma.ES: "Período: {desde} – {hasta}"},
+    "liquidaciones.dm_total": {Idioma.ES: "Total: <b>{total}</b>"},
+    "liquidaciones.dm_desglose_item": {
+        Idioma.ES: "• {fecha}  {servicio}  ({pax})  →  {monto}"
+    },
 }
 
 

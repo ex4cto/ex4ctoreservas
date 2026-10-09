@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 from garay.dominio.clientes.entidades import Cliente
+from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
@@ -397,3 +398,23 @@ class PagoSocioRepository(ABC):
 
     @abstractmethod
     def listar_por_socio(self, nombre_socio: str) -> list[PagoSocio]: ...
+
+
+class PagoFreelancerRepository(ABC):
+    @abstractmethod
+    def guardar(self, pago: PagoFreelancer) -> None: ...
+
+    @abstractmethod
+    def listar_por_freelancer(
+        self, freelancer_id: uuid.UUID, desde: date, hasta: date
+    ) -> list[PagoFreelancer]: ...
+
+    @abstractmethod
+    def buscar_solapados(
+        self, freelancer_id: uuid.UUID, desde: date, hasta: date
+    ) -> list[PagoFreelancer]:
+        """Return pagos whose period overlaps [desde, hasta].
+
+        SQL condition: WHERE desde <= :hasta AND hasta >= :desde
+        """
+        ...
