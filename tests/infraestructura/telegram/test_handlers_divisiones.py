@@ -1572,3 +1572,256 @@ class TestAnularPagoFlow:
         result = await handle_div_liq_confirmar(update, context)
 
         assert result == DIV_LIQ_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
+# Socio payment flow — handle_div_soc_start
+# ---------------------------------------------------------------------------
+
+
+def _make_soc_context(
+    *,
+    user_data: dict | None = None,
+    with_socios: bool = True,
+) -> MagicMock:
+    """Build a context with split_socios_service and pagos_socio_repo in bot_data."""
+    from decimal import Decimal
+    import uuid
+
+    from garay.aplicacion.socios.split import (
+        ResumenSocio,
+        ResumenSocioPeriodo,
+        ResumenSplitPeriodo,
+        ResumenSplitSocios,
+        ResumenVentaDetalle,
+    )
+    from garay.dominio.comun.dinero import Dinero
+
+    socios_periodo = (
+        ResumenSocioPeriodo(nombre="garay", porcentaje=Decimal("50"), acumulado=Dinero(250_000)),
+        ResumenSocioPeriodo(nombre="ryan", porcentaje=Decimal("50"), acumulado=Dinero(250_000)),
+    )
+    venta1 = ResumenVentaDetalle(
+        venta_id=uuid.uuid4(),
+        fecha=datetime.date(2026, 9, 19),
+        vendedor_nombre="Juan",
+        cerrador_nombre=None,
+        valor_bruto=Dinero(600_000),
+        desglose_vendedor=Dinero(60_000),
+        desglose_cerrador=Dinero(0),
+        desglose_punto=Dinero(0),
+        desglose_agencia=Dinero(540_000),
+        split_socios=socios_periodo,
+    )
+    resultado = ResumenSplitPeriodo(
+        por_socio=socios_periodo if with_socios else (),
+        total_agencia=Dinero(540_000),
+        total_bruto=Dinero(600_000),
+        total_comisiones_freelancer=Dinero(60_000),
+        ventas_count=1,
+        ventas_detalle=(venta1,),
+    )
+
+    # ResumenSplitSocios for calcular_acumulado
+    socios_acumulados = (
+        ResumenSocio(
+            nombre="garay",
+            porcentaje=Decimal("50"),
+            acumulado=Dinero(500_000),
+            pagado=Dinero(0),
+            pendiente=Dinero(500_000),
+        ),
+        ResumenSocio(
+            nombre="ryan",
+            porcentaje=Decimal("50"),
+            acumulado=Dinero(500_000),
+            pagado=Dinero(300_000),
+            pendiente=Dinero(200_000),
+        ),
+    )
+    acumulado = ResumenSplitSocios(
+        por_socio=socios_acumulados,
+        total_agencia=Dinero(1_000_000),
+    )
+
+    split_service = MagicMock()
+    split_service.calcular_periodo.return_value = resultado
+    split_service.calcular_acumulado.return_value = acumulado
+
+    pagos_socio_repo = MagicMock()
+
+    default_user_data = {
+        "div_resultado": resultado,
+        "div_periodo_label": "Hoy (19/09/2026)",
+    }
+    if user_data:
+        default_user_data.update(user_data)
+
+    context = MagicMock()
+    context.bot = AsyncMock()
+    context.user_data = default_user_data
+    context.bot_data = {
+        "split_socios_service": split_service,
+        "pagos_socio_repo": pagos_socio_repo,
+    }
+    return context
+
+
+class TestSocioPaymentFlow:
+    """Tests for the socio payment flow within /resumen_divisiones."""
+
+    @pytest.mark.asyncio
+    async def test_soc_start_shows_socio_list(self) -> None:
+        """rep_s:soc:start shows a list of socios with pendiente amounts."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_SOC_SELECCION,
+            handle_div_soc_start,
+        )
+
+        context = _make_soc_context()
+        update = _make_update_cb("rep_s:soc:start")
+
+        result = await handle_div_soc_start(update, context)
+
+        assert result == DIV_SOC_SELECCION
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        markup = cq.edit_message_text.call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        sel_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:soc:sel:")]
+        assert len(sel_btns) == 2  # garay and ryan
+
+    @pytest.mark.asyncio
+    async def test_soc_seleccion_goes_to_desglose(self) -> None:
+        """rep_s:soc:sel:garay shows desglose for garay."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_SOC_CONFIRMAR,
+            handle_div_soc_seleccion,
+        )
+
+        context = _make_soc_context()
+        update = _make_update_cb("rep_s:soc:sel:garay")
+
+        result = await handle_div_soc_seleccion(update, context)
+
+        assert result == DIV_SOC_CONFIRMAR
+        assert context.user_data.get("div_soc_nombre") == "garay"
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_soc_total_registers_payment_and_ends(self) -> None:
+        """rep_s:soc:total registers the full pendiente and returns END."""
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_soc_confirmar
+
+        context = _make_soc_context(user_data={
+            "div_soc_nombre": "garay",
+            "div_soc_monto": None,
+        })
+        update = _make_update_cb("rep_s:soc:total")
+
+        result = await handle_div_soc_confirmar(update, context)
+
+        assert result == ConversationHandler.END
+        assert context.bot_data["pagos_socio_repo"].guardar.called
+        # Verify the saved pago
+        saved_pago = context.bot_data["pagos_socio_repo"].guardar.call_args[0][0]
+        from garay.dominio.comun.dinero import Dinero
+        assert saved_pago.nombre_socio == "garay"
+        assert saved_pago.monto == Dinero(500_000)
+        assert saved_pago.tipo == "total"
+
+    @pytest.mark.asyncio
+    async def test_soc_parcial_asks_for_amount(self) -> None:
+        """rep_s:soc:parcial asks for amount and stays in DIV_SOC_CONFIRMAR."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_SOC_CONFIRMAR,
+            handle_div_soc_confirmar,
+        )
+
+        context = _make_soc_context(user_data={
+            "div_soc_nombre": "ryan",
+            "div_soc_monto": None,
+        })
+        update = _make_update_cb("rep_s:soc:parcial")
+
+        result = await handle_div_soc_confirmar(update, context)
+
+        assert result == DIV_SOC_CONFIRMAR
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_soc_monto_invalido_repregunta(self) -> None:
+        """Invalid amount text stays in DIV_SOC_CONFIRMAR."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_SOC_CONFIRMAR,
+            handle_div_soc_confirmar,
+        )
+
+        context = _make_soc_context(user_data={
+            "div_soc_nombre": "ryan",
+            "div_soc_monto": None,
+        })
+        # Text message with invalid amount
+        update = MagicMock()
+        update.callback_query = None
+        update.message = AsyncMock()
+        update.message.text = "no_es_un_numero"
+
+        result = await handle_div_soc_confirmar(update, context)
+
+        assert result == DIV_SOC_CONFIRMAR
+        assert not context.bot_data["pagos_socio_repo"].guardar.called
+
+    @pytest.mark.asyncio
+    async def test_soc_cancelar_ends_conversation(self) -> None:
+        """rep_s:soc:cancelar ends without registering payment."""
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_soc_confirmar
+
+        context = _make_soc_context(user_data={
+            "div_soc_nombre": "garay",
+            "div_soc_monto": None,
+        })
+        update = _make_update_cb("rep_s:soc:cancelar")
+
+        result = await handle_div_soc_confirmar(update, context)
+
+        assert result == ConversationHandler.END
+        assert not context.bot_data["pagos_socio_repo"].guardar.called
+
+    @pytest.mark.asyncio
+    async def test_soc_confirmar_with_partial_amount_registers_parcial(self) -> None:
+        """rep_s:soc:confirmar with monto set registers a parcial payment."""
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_soc_confirmar
+        from garay.dominio.comun.dinero import Dinero
+
+        context = _make_soc_context(user_data={
+            "div_soc_nombre": "ryan",
+            "div_soc_monto": Dinero(100_000),
+        })
+        update = _make_update_cb("rep_s:soc:confirmar")
+
+        result = await handle_div_soc_confirmar(update, context)
+
+        assert result == ConversationHandler.END
+        assert context.bot_data["pagos_socio_repo"].guardar.called
+        saved_pago = context.bot_data["pagos_socio_repo"].guardar.call_args[0][0]
+        assert saved_pago.monto == Dinero(100_000)
+        assert saved_pago.tipo == "parcial"
+
+    def test_new_state_constants_defined(self) -> None:
+        """DIV_SOC_SELECCION and DIV_SOC_CONFIRMAR are defined with correct values."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_SOC_CONFIRMAR,
+            DIV_SOC_SELECCION,
+        )
+
+        assert DIV_SOC_SELECCION == 317
+        assert DIV_SOC_CONFIRMAR == 318

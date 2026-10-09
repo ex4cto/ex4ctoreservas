@@ -46,7 +46,6 @@ from garay.infraestructura.telegram import (
     handlers_config_socios,
     handlers_cuenta_cobro,
     handlers_reportes,
-    handlers_socios,
 )
 from garay.infraestructura.telegram.alertas_monitor import (
     construir_alerta_costo_railway,
@@ -1329,7 +1328,6 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CommandHandler("cancelar", cmd_cancelar_sin_conv), group=99)
     handlers_reportes.registrar_handlers(app)
-    handlers_socios.registrar_handlers(app)
     handlers_config_socios.registrar_handlers(app)
     handlers_cuenta_cobro.registrar_handlers(app)
     app.add_error_handler(_manejar_error)

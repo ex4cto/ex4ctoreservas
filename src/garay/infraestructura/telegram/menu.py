@@ -68,7 +68,6 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("cancelar", "Cancelar operación actual", _V, _FL),
     # ── Pagos y Egresos ─────────────────────────────────────────────────────
     ComandoMenu("verificar_pago", "Pagos recibidos (últimos 5 min)", _P, _FL),
-    ComandoMenu("liquidar_socio", "Registrar pago a un socio", _P, _PR),
     ComandoMenu("egresos", "Egresos: registrar, gastos fijos y categorías", _P, _AD),
     ComandoMenu("gestionar_egresos", "Editar egresos registrados", _P, _AD),
     ComandoMenu("cuenta_cobro", "Generar cuenta de cobro Isla Palma", _P, _AD),

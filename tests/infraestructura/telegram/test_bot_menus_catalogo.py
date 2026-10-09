@@ -45,8 +45,8 @@ class TestBotMenusDesdesCatalogo:
         assert len(_COMANDOS_ADMIN) == 18
 
     def test_propietario_count_es_22(self) -> None:
-        # 23 - 1 removed (categorias_egreso) = 22
-        assert len(_COMANDOS_PROPIETARIO) == 22
+        # 22 - 1 removed (liquidar_socio — moved into resumen_divisiones flow) = 21
+        assert len(_COMANDOS_PROPIETARIO) == 21
 
     def test_menus_dict_tiene_propietario_y_admin(self) -> None:
         assert "propietario" in _MENUS

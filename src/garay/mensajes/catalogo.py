@@ -1503,6 +1503,17 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.freelancer_header": {Idioma.ES: "💼 Comisiones freelancers:"},
     "resumen_divisiones.freelancer_item": {Idioma.ES: "   {arbol} {nombre}: {monto}"},
     "resumen_divisiones.btn_atras": {Idioma.ES: "← Atrás"},
+    "resumen_divisiones.soc_btn_entrada":     {Idioma.ES: "💵 Pagar a socio"},
+    "resumen_divisiones.soc_item_btn":        {Idioma.ES: "{nombre}  —  {periodo_monto} este período  ·  pendiente: {pendiente}"},
+    "resumen_divisiones.soc_desglose_titulo": {Idioma.ES: "💵 Pagar a <b>{nombre}</b>\nPeríodo: {periodo}"},
+    "resumen_divisiones.soc_desglose_item":   {Idioma.ES: "• {fecha}  Bruto: {bruto}  →  {parte}"},
+    "resumen_divisiones.soc_periodo_total":   {Idioma.ES: "\nEste período:        <b>{monto}</b>"},
+    "resumen_divisiones.soc_pendiente_total": {Idioma.ES: "Total pendiente:  <b>{monto}</b>"},
+    "resumen_divisiones.soc_sin_pendiente":   {Idioma.ES: "✅ Este socio no tiene monto pendiente."},
+    "resumen_divisiones.soc_pedir_monto":     {Idioma.ES: "💬 Ingresa el monto a pagar (ej: 50000 o 50k):"},
+    "resumen_divisiones.soc_monto_invalido":  {Idioma.ES: "⚠️ Monto inválido. Intenta de nuevo:"},
+    "resumen_divisiones.soc_registrado":      {Idioma.ES: "✅ Pago registrado\n<b>{nombre}</b>: {monto}"},
+    "resumen_divisiones.soc_cancelado":       {Idioma.ES: "Pago cancelado."},
     # --- /lista_precios text command ---
     "lista_precios.titulo": {
         Idioma.ES: "🗺️ <b>Lista de precios — Garay Tours</b>"

@@ -12,15 +12,20 @@ import datetime
 import logging
 import uuid as _uuid_mod
 
+import html
+
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
+    MessageHandler,
+    filters,
 )
 
 from garay.aplicacion.comun.formato import fmt_cop
+from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.liquidaciones.servicio import (
     LiquidarFreelancerService,
     RegistrarPagoFreelancerComando,
@@ -28,11 +33,14 @@ from garay.aplicacion.liquidaciones.servicio import (
     _dias_solapados,
 )
 from garay.aplicacion.socios.split import (
+    ResumenSocio,
     ResumenSplitPeriodo,
+    ResumenSplitSocios,
     ResumenVentaDetalle,
 )
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
+from garay.dominio.socios.entidades import PagoSocio
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
 from garay.mensajes.catalogo import obtener_mensaje
@@ -50,6 +58,8 @@ DIV_RESULT: int = 313
 DIV_VENTA: int = 314
 DIV_LIQ_FREELANCER: int = 315   # Showing freelancer list with their commissions
 DIV_LIQ_CONFIRMAR: int = 316    # Showing confirmation with desglose + overlap warning
+DIV_SOC_SELECCION: int = 317   # Socio selection list
+DIV_SOC_CONFIRMAR: int = 318   # Desglose + confirm/monto input
 
 # ---------------------------------------------------------------------------
 # Callback prefixes
@@ -74,6 +84,8 @@ _KEY_LIQ_DESDE = "div_liq_desde"          # date — liquidation period start
 _KEY_LIQ_HASTA = "div_liq_hasta"          # date — liquidation period end
 _KEY_LIQ_FREELANCERS = "div_liq_fls"      # list[tuple[str, uuid.UUID, Dinero]] — (nombre, id, comision)
 _KEY_LIQ_RESULTADO = "div_liq_resultado"  # ResultadoCalculoLiquidacion
+_KEY_SOC_NOMBRE = "div_soc_nombre"   # str — selected socio name
+_KEY_SOC_MONTO  = "div_soc_monto"    # Dinero | None — partial amount entered
 
 _MESES_ES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -307,6 +319,11 @@ def _render_resultado(
                 )
             ]
         )
+        if resultado.por_socio:
+            rows.append([InlineKeyboardButton(
+                obtener_mensaje("resumen_divisiones.soc_btn_entrada"),
+                callback_data="rep_s:soc:start",
+            )])
         rows.append(
             [InlineKeyboardButton(
                 obtener_mensaje("resumen_divisiones.btn_cerrar"),
@@ -1182,6 +1199,284 @@ async def handle_div_liq_confirmar(
 
 
 # ---------------------------------------------------------------------------
+# Socio payment handlers
+# ---------------------------------------------------------------------------
+
+
+async def handle_div_soc_start(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Entry: callback rep_s:soc:start from DIV_RESULT. Shows socio selection list."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_RESULT
+    await cq.answer()
+
+    resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
+    periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
+
+    if resultado is None or not resultado.por_socio:
+        await cq.edit_message_text(
+            obtener_mensaje("resumen_divisiones.soc_cancelado"),
+            parse_mode="HTML",
+        )
+        return ConversationHandler.END
+
+    split_service = context.bot_data.get("split_socios_service")
+    acumulado: ResumenSplitSocios | None = None
+    if split_service is not None:
+        acumulado = split_service.calcular_acumulado()
+
+    rows: list[list[InlineKeyboardButton]] = []
+    for s in resultado.por_socio:
+        nombre = s.nombre
+        periodo_monto = fmt_cop(s.acumulado)
+        pendiente_str = "—"
+        if acumulado is not None:
+            for rs in acumulado.por_socio:
+                if rs.nombre.lower() == nombre.lower():
+                    pendiente_str = fmt_cop(rs.pendiente)
+                    break
+        label = obtener_mensaje("resumen_divisiones.soc_item_btn").format(
+            nombre=nombre.capitalize(),
+            periodo_monto=periodo_monto,
+            pendiente=pendiente_str,
+        )
+        rows.append([InlineKeyboardButton(label, callback_data=f"rep_s:soc:sel:{nombre}")])
+
+    rows.append([InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:soc:cancelar")])
+
+    titulo = obtener_mensaje("resumen_divisiones.soc_desglose_titulo").format(
+        nombre="socios",
+        periodo=periodo_label,
+    )
+    await cq.edit_message_text(
+        titulo,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(rows),
+    )
+    return DIV_SOC_SELECCION
+
+
+def _render_soc_desglose(
+    context: ContextTypes.DEFAULT_TYPE,
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Build the desglose screen for a selected socio."""
+    resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
+    periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
+    nombre: str = context.user_data.get(_KEY_SOC_NOMBRE, "")  # type: ignore[union-attr]
+    monto_parcial: Dinero | None = context.user_data.get(_KEY_SOC_MONTO)  # type: ignore[union-attr]
+
+    # Get accumulated pendiente for this socio
+    split_service = context.bot_data.get("split_socios_service")
+    pendiente = Dinero(0)
+    if split_service is not None:
+        acumulado: ResumenSplitSocios = split_service.calcular_acumulado()
+        for rs in acumulado.por_socio:
+            if rs.nombre.lower() == nombre.lower():
+                pendiente = rs.pendiente
+                break
+
+    # Build desglose lines from ventas_detalle
+    lineas: list[str] = []
+    periodo_total = Dinero(0)
+    if resultado is not None:
+        for venta in resultado.ventas_detalle:
+            for s in venta.split_socios:
+                if s.nombre.lower() == nombre.lower() and s.acumulado > Dinero(0):
+                    fecha_str = venta.fecha.strftime("%d/%m")
+                    lineas.append(
+                        obtener_mensaje("resumen_divisiones.soc_desglose_item").format(
+                            fecha=fecha_str,
+                            bruto=fmt_cop(venta.valor_bruto),
+                            parte=fmt_cop(s.acumulado),
+                        )
+                    )
+                    periodo_total = periodo_total + s.acumulado
+
+    titulo = obtener_mensaje("resumen_divisiones.soc_desglose_titulo").format(
+        nombre=html.escape(nombre.capitalize()),
+        periodo=html.escape(periodo_label),
+    )
+    partes: list[str] = [titulo, ""]
+    if lineas:
+        partes.extend(lineas)
+    partes.append(
+        obtener_mensaje("resumen_divisiones.soc_periodo_total").format(
+            monto=fmt_cop(periodo_total)
+        )
+    )
+    partes.append(
+        obtener_mensaje("resumen_divisiones.soc_pendiente_total").format(
+            monto=fmt_cop(pendiente)
+        )
+    )
+
+    texto = "\n".join(partes)
+
+    # Build buttons
+    rows: list[list[InlineKeyboardButton]] = []
+    if monto_parcial is not None:
+        rows.append([InlineKeyboardButton(
+            f"✅ Confirmar pago ({fmt_cop(monto_parcial)})",
+            callback_data="rep_s:soc:confirmar",
+        )])
+    if pendiente > Dinero(0):
+        rows.append([InlineKeyboardButton(
+            f"✅ Pagar total pendiente ({fmt_cop(pendiente)})",
+            callback_data="rep_s:soc:total",
+        )])
+        rows.append([InlineKeyboardButton(
+            "💰 Ingresar otro monto",
+            callback_data="rep_s:soc:parcial",
+        )])
+    else:
+        partes.append(obtener_mensaje("resumen_divisiones.soc_sin_pendiente"))
+        texto = "\n".join(partes)
+
+    rows.append([InlineKeyboardButton("← Atrás", callback_data="rep_s:soc:atras")])
+    rows.append([InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:soc:cancelar")])
+
+    return texto, InlineKeyboardMarkup(rows)
+
+
+async def handle_div_soc_seleccion(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Entry: callback rep_s:soc:sel:{nombre} from DIV_SOC_SELECCION."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_SOC_SELECCION
+    await cq.answer()
+
+    data: str = cq.data or ""
+    if data.startswith("rep_s:soc:cancelar"):
+        await cq.edit_message_text(
+            obtener_mensaje("resumen_divisiones.soc_cancelado"),
+            parse_mode="HTML",
+        )
+        return ConversationHandler.END
+
+    prefix = "rep_s:soc:sel:"
+    if not data.startswith(prefix):
+        return DIV_SOC_SELECCION
+
+    nombre = data[len(prefix):]
+    context.user_data[_KEY_SOC_NOMBRE] = nombre  # type: ignore[index]
+    context.user_data[_KEY_SOC_MONTO] = None  # type: ignore[index]
+
+    texto, markup = _render_soc_desglose(context)
+    await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
+    return DIV_SOC_CONFIRMAR
+
+
+def _registrar_pago_socio(
+    context: ContextTypes.DEFAULT_TYPE,
+    nombre: str,
+    monto: Dinero,
+) -> PagoSocio:
+    """Create and save a PagoSocio. Returns the saved instance."""
+    import uuid
+    pagos_socio_repo = context.bot_data.get("pagos_socio_repo")
+    pago = PagoSocio(
+        id=uuid.uuid4(),
+        nombre_socio=nombre,
+        monto=monto,
+        fecha=datetime.date.today(),
+        tipo="parcial" if context.user_data.get(_KEY_SOC_MONTO) is not None else "total",
+        nota=None,
+        registrado_en=datetime.datetime.now(datetime.UTC),
+    )
+    if pagos_socio_repo is not None:
+        pagos_socio_repo.guardar(pago)
+    return pago
+
+
+async def handle_div_soc_confirmar(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle all actions in DIV_SOC_CONFIRMAR: callbacks and text amount input."""
+    cq = update.callback_query
+
+    # --- Callback branch ---
+    if cq is not None:
+        await cq.answer()
+        data: str = cq.data or ""
+
+        if data == "rep_s:soc:atras":
+            return await handle_div_soc_start(update, context)
+
+        if data == "rep_s:soc:cancelar":
+            await cq.edit_message_text(
+                obtener_mensaje("resumen_divisiones.soc_cancelado"),
+                parse_mode="HTML",
+            )
+            return ConversationHandler.END
+
+        if data == "rep_s:soc:parcial":
+            await cq.edit_message_text(
+                obtener_mensaje("resumen_divisiones.soc_pedir_monto"),
+                parse_mode="HTML",
+            )
+            return DIV_SOC_CONFIRMAR
+
+        if data == "rep_s:soc:total":
+            nombre: str = context.user_data.get(_KEY_SOC_NOMBRE, "")  # type: ignore[union-attr]
+            split_service = context.bot_data.get("split_socios_service")
+            pendiente = Dinero(0)
+            if split_service is not None:
+                acumulado: ResumenSplitSocios = split_service.calcular_acumulado()
+                for rs in acumulado.por_socio:
+                    if rs.nombre.lower() == nombre.lower():
+                        pendiente = rs.pendiente
+                        break
+            pago = _registrar_pago_socio(context, nombre, pendiente)
+            success_text = obtener_mensaje("resumen_divisiones.soc_registrado").format(
+                nombre=html.escape(nombre.capitalize()),
+                monto=fmt_cop(pago.monto),
+            )
+            await cq.edit_message_text(success_text, parse_mode="HTML")
+            return ConversationHandler.END
+
+        if data == "rep_s:soc:confirmar":
+            monto_parcial: Dinero | None = context.user_data.get(_KEY_SOC_MONTO)  # type: ignore[union-attr]
+            if monto_parcial is None:
+                return DIV_SOC_CONFIRMAR
+            nombre2: str = context.user_data.get(_KEY_SOC_NOMBRE, "")  # type: ignore[union-attr]
+            pago2 = _registrar_pago_socio(context, nombre2, monto_parcial)
+            success_text2 = obtener_mensaje("resumen_divisiones.soc_registrado").format(
+                nombre=html.escape(nombre2.capitalize()),
+                monto=fmt_cop(pago2.monto),
+            )
+            await cq.edit_message_text(success_text2, parse_mode="HTML")
+            return ConversationHandler.END
+
+        return DIV_SOC_CONFIRMAR
+
+    # --- Text message branch (amount input) ---
+    if update.message is None:
+        return DIV_SOC_CONFIRMAR
+
+    texto_input: str = (update.message.text or "").strip()
+    monto_decimal = parsear_monto(texto_input)
+    if monto_decimal is None:
+        await update.message.reply_text(
+            obtener_mensaje("resumen_divisiones.soc_monto_invalido"),
+            parse_mode="HTML",
+        )
+        return DIV_SOC_CONFIRMAR
+
+    context.user_data[_KEY_SOC_MONTO] = Dinero(monto_decimal)  # type: ignore[index]
+    texto_desglose, markup_desglose = _render_soc_desglose(context)
+    await update.message.reply_text(
+        texto_desglose,
+        reply_markup=markup_desglose,
+        parse_mode="HTML",
+    )
+    return DIV_SOC_CONFIRMAR
+
+
+# ---------------------------------------------------------------------------
 # ConversationHandler factory
 # ---------------------------------------------------------------------------
 
@@ -1211,12 +1506,21 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:resultado"),
                 CallbackQueryHandler(handle_div_cerrar, pattern=r"^rep_s:menu:cerrar"),
                 CallbackQueryHandler(handle_div_liq_start, pattern=r"^rep_s:liq:start$"),
+                CallbackQueryHandler(handle_div_soc_start, pattern=r"^rep_s:soc:start$"),
             ],
             DIV_LIQ_FREELANCER: [
                 CallbackQueryHandler(handle_div_liq_freelancer, pattern=r"^rep_s:liq:"),
             ],
             DIV_LIQ_CONFIRMAR: [
                 CallbackQueryHandler(handle_div_liq_confirmar, pattern=r"^rep_s:liq:"),
+            ],
+            DIV_SOC_SELECCION: [
+                CallbackQueryHandler(handle_div_soc_seleccion, pattern=r"^rep_s:soc:sel:"),
+                CallbackQueryHandler(handle_div_soc_confirmar, pattern=r"^rep_s:soc:cancelar$"),
+            ],
+            DIV_SOC_CONFIRMAR: [
+                CallbackQueryHandler(handle_div_soc_confirmar, pattern=r"^rep_s:soc:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_div_soc_confirmar),
             ],
         },
         fallbacks=[

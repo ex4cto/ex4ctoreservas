@@ -131,52 +131,6 @@ class TestCmdStartDinamico:
         assert "liquidar_socio" not in text
 
     @pytest.mark.asyncio
-    async def test_propietario_ve_liquidar_socio(self) -> None:
-        """Propietario sees propietario-only commands like liquidar_socio."""
-        propietario_uid = 777
-        update = _make_update(uid=propietario_uid)
-        context = _make_context(fl_repo_result=None)
-        with (
-            patch(
-                "garay.infraestructura.telegram.handlers.obtener_settings",
-                return_value=MagicMock(
-                    propietario_telegram_ids=str(propietario_uid),
-                    dev_telegram_ids="",
-                ),
-            ),
-            patch(
-                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
-                return_value=set(),
-            ),
-        ):
-            result = await cmd_start(update, context)
-
-        assert result == ConversationHandler.END
-        text = update.message.reply_text.call_args[0][0]
-        assert "liquidar_socio" in text
-
-    @pytest.mark.asyncio
-    async def test_dev_ve_liquidar_socio(self) -> None:
-        """Dev (propietario-tier) sees propietario-only commands like liquidar_socio."""
-        dev_uid = 111
-        update = _make_update(uid=dev_uid)
-        context = _make_context(fl_repo_result=None)
-        with (
-            patch(
-                "garay.infraestructura.telegram.handlers.obtener_settings",
-                return_value=MagicMock(propietario_telegram_ids="", dev_telegram_ids=""),
-            ),
-            patch(
-                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
-                return_value={dev_uid},
-            ),
-        ):
-            await cmd_start(update, context)
-
-        text = update.message.reply_text.call_args[0][0]
-        assert "liquidar_socio" in text
-
-    @pytest.mark.asyncio
     async def test_refresca_desplegable_del_dev_con_scope_de_chat(self) -> None:
         """cmd_start must push the caller's tier commands to their own chat scope."""
         from telegram import BotCommandScopeChat
@@ -199,7 +153,7 @@ class TestCmdStartDinamico:
         context.bot.set_my_commands.assert_called_once()
         args, kwargs = context.bot.set_my_commands.call_args
         nombres = {c.command for c in args[0]}
-        assert "liquidar_socio" in nombres  # dev sees the full propietario set
+        assert "resumen_divisiones" in nombres  # dev sees the full propietario set
         scope = kwargs["scope"]
         assert isinstance(scope, BotCommandScopeChat)
         assert scope.chat_id == dev_uid
@@ -340,29 +294,3 @@ class TestCmdHelp:
         assert "nueva_venta" in text
         assert "editar_freelancer" not in text
 
-    @pytest.mark.asyncio
-    async def test_cmd_help_propietario_ve_liquidar_socio(self) -> None:
-        """Propietario sees propietario-tier commands like liquidar_socio via /help."""
-        from garay.infraestructura.telegram.handlers import cmd_help
-
-        propietario_uid = 777
-        update = _make_update(uid=propietario_uid)
-        context = _make_context(fl_repo_result=None)
-        with (
-            patch(
-                "garay.infraestructura.telegram.handlers.obtener_settings",
-                return_value=MagicMock(
-                    propietario_telegram_ids=str(propietario_uid),
-                    dev_telegram_ids="",
-                ),
-            ),
-            patch(
-                "garay.infraestructura.telegram.handlers.dev_telegram_ids",
-                return_value=set(),
-            ),
-        ):
-            result = await cmd_help(update, context)
-
-        assert result == ConversationHandler.END
-        text = update.message.reply_text.call_args[0][0]
-        assert "liquidar_socio" in text
