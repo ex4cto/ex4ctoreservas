@@ -468,6 +468,7 @@ def main() -> None:
             "movimientos_service": movimientos_service,
             "split_socios_service": split_socios_service,
             "liquidar_service": liquidar_service,
+            "pago_freelancer_repo": pago_freelancer_repo,
             "pagos_socio_repo": pago_socio_repo,
             "socios_config_repo": socios_config_repo,
             "factura_service": factura_service,

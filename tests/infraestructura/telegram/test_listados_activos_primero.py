@@ -11,12 +11,13 @@ import pytest
 from garay.dominio.servicios.entidades import Servicio
 
 
-def _srv(nombre: str, activo: bool, familia: str = "BARU") -> MagicMock:
+def _srv(nombre: str, activo: bool, familia: str = "BARU", numero: int = 1) -> MagicMock:
     s = MagicMock()
     s.nombre = nombre
     s.activo = activo
     s.categoria = familia
     s.id = uuid.uuid4()
+    s.numero = numero
     return s
 
 
@@ -41,10 +42,10 @@ def test_teclado_tours_activos_primero() -> None:
     markup = _teclado_tours(cast("list[Servicio]", servicios), "BARU", "edt_tour:")
     labels = [b.text for row in markup.inline_keyboard for b in row]
     assert len(labels) == 4
-    assert "[inactivo]" not in labels[0]
-    assert "[inactivo]" not in labels[1]
-    assert "[inactivo]" in labels[2]
-    assert "[inactivo]" in labels[3]
+    assert not labels[0].startswith("❌")
+    assert not labels[1].startswith("❌")
+    assert labels[2].startswith("❌")
+    assert labels[3].startswith("❌")
 
 
 @pytest.mark.asyncio

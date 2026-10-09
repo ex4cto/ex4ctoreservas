@@ -1059,3 +1059,353 @@ class TestVentaBtnLabelRegistradoEn:
         label = _venta_btn_label(detalle)  # type: ignore[arg-type]
 
         assert "10/09" in label, f"Expected tour date 10/09 as fallback, got: {label}"
+
+
+# ---------------------------------------------------------------------------
+# Liquidaciones — ✅ marker in freelancer list (Change 1)
+# ---------------------------------------------------------------------------
+
+
+def _make_liq_context(
+    *,
+    user_data: dict | None = None,
+    liquidar_service: MagicMock | None = None,
+    pago_repo: MagicMock | None = None,
+    resultado: object | None = None,
+) -> MagicMock:
+    """Build a context with liquidar_service and pago_freelancer_repo in bot_data."""
+    import uuid
+
+    from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+    from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenSplitPeriodo
+    from garay.dominio.comun.dinero import Dinero
+
+    freelancer_repo = MagicMock()
+    fl_id = uuid.uuid4()
+    mock_fl = MagicMock()
+    mock_fl.nombre = "Ana López"
+    mock_fl.id = fl_id
+    freelancer_repo.listar_activos.return_value = [mock_fl]
+
+    if resultado is None:
+        freelancers = (ResumenFreelancerPeriodo(nombre="Ana López", comision=Dinero(100_000)),)
+        resultado = ResumenSplitPeriodo(
+            por_socio=(),
+            total_agencia=Dinero(500_000),
+            total_bruto=Dinero(600_000),
+            total_comisiones_freelancer=Dinero(100_000),
+            ventas_count=1,
+            ventas_detalle=(),
+            por_freelancer=freelancers,
+        )
+
+    if pago_repo is None:
+        pago_repo = MagicMock()
+        pago_repo.buscar_solapados.return_value = []
+
+    if liquidar_service is None:
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+
+    desde = datetime.date(2026, 9, 1)
+    hasta = datetime.date(2026, 9, 30)
+    default_user_data = {
+        "div_resultado": resultado,
+        "div_liq_desde": desde,
+        "div_liq_hasta": hasta,
+        "div_periodo_label": "Septiembre 2026",
+    }
+    if user_data is not None:
+        default_user_data.update(user_data)
+
+    context = MagicMock()
+    context.bot = AsyncMock()
+    context.user_data = default_user_data
+    context.bot_data = {
+        "split_socios_service": MagicMock(),
+        "freelancer_repo": freelancer_repo,
+        "liquidar_service": liquidar_service,
+        "pago_freelancer_repo": pago_repo,
+    }
+    return context, fl_id  # type: ignore[return-value]
+
+
+def _make_pago_freelancer(
+    fl_id: "uuid.UUID",
+    monto: int = 100_000,
+    fecha_pago: datetime.datetime | None = None,
+    registrado_por_nombre: str | None = "Admin",
+) -> object:
+    import uuid as _uuid
+
+    from garay.dominio.comun.dinero import Dinero
+    from garay.dominio.liquidaciones.entidades import PagoFreelancer
+
+    return PagoFreelancer(
+        id=_uuid.uuid4(),
+        freelancer_id=fl_id,
+        monto=Dinero(monto),
+        desde=datetime.date(2026, 9, 1),
+        hasta=datetime.date(2026, 9, 30),
+        fecha_pago=fecha_pago or datetime.datetime(2026, 9, 15, 10, 0),
+        registrado_por_telegram_id=1,
+        registrado_por_nombre=registrado_por_nombre,
+    )
+
+
+class TestLiqFreelancerListMarker:
+    """handle_div_liq_start adds ✅ prefix when freelancer already has a payment."""
+
+    @pytest.mark.asyncio
+    async def test_freelancer_without_payment_shows_no_checkmark(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_FREELANCER,
+            handle_div_liq_start,
+        )
+
+        context, fl_id = _make_liq_context()
+        # pago_repo returns empty → not yet paid
+        context.bot_data["pago_freelancer_repo"].buscar_solapados.return_value = []
+
+        update = _make_update_cb("rep_s:liq:start")
+        result = await handle_div_liq_start(update, context)
+
+        assert result == DIV_LIQ_FREELANCER
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        markup = cq.edit_message_text.call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        fl_buttons = [
+            btn
+            for row in markup.inline_keyboard
+            for btn in row
+            if btn.callback_data.startswith("rep_s:liq:fl:")
+        ]
+        assert len(fl_buttons) == 1
+        # No checkmark prefix
+        assert not fl_buttons[0].text.startswith("✅ ")
+
+    @pytest.mark.asyncio
+    async def test_freelancer_with_payment_shows_checkmark(self) -> None:
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_FREELANCER,
+            handle_div_liq_start,
+        )
+
+        context, fl_id = _make_liq_context()
+        pago = _make_pago_freelancer(fl_id)
+        context.bot_data["pago_freelancer_repo"].buscar_solapados.return_value = [pago]
+
+        update = _make_update_cb("rep_s:liq:start")
+        result = await handle_div_liq_start(update, context)
+
+        assert result == DIV_LIQ_FREELANCER
+        markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
+        fl_buttons = [
+            btn
+            for row in markup.inline_keyboard
+            for btn in row
+            if btn.callback_data.startswith("rep_s:liq:fl:")
+        ]
+        assert len(fl_buttons) == 1
+        assert fl_buttons[0].text.startswith("✅ ")
+
+    @pytest.mark.asyncio
+    async def test_freelancer_list_works_when_pago_repo_missing(self) -> None:
+        """Graceful degradation: no ✅ marker when pago_freelancer_repo not in bot_data."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_FREELANCER,
+            handle_div_liq_start,
+        )
+
+        context, fl_id = _make_liq_context()
+        del context.bot_data["pago_freelancer_repo"]
+
+        update = _make_update_cb("rep_s:liq:start")
+        result = await handle_div_liq_start(update, context)
+
+        assert result == DIV_LIQ_FREELANCER
+        markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
+        fl_buttons = [
+            btn
+            for row in markup.inline_keyboard
+            for btn in row
+            if btn.callback_data.startswith("rep_s:liq:fl:")
+        ]
+        assert len(fl_buttons) == 1
+        assert not fl_buttons[0].text.startswith("✅ ")
+
+
+# ---------------------------------------------------------------------------
+# Liquidaciones — ya liquidado screen (Change 2)
+# ---------------------------------------------------------------------------
+
+
+def _make_liq_resultado(
+    fl_id: "uuid.UUID",
+    solapados: list | None = None,
+) -> object:
+    import uuid as _uuid
+
+    from garay.aplicacion.liquidaciones.servicio import (
+        ComisionVentaDetalle,
+        ResultadoCalculoLiquidacion,
+    )
+    from garay.dominio.comun.dinero import Dinero
+
+    desglose_item = ComisionVentaDetalle(
+        fecha=datetime.date(2026, 9, 10),
+        servicio_nombre="City Tour",
+        adultos=2,
+        ninos=0,
+        comision=Dinero(100_000),
+    )
+    return ResultadoCalculoLiquidacion(
+        freelancer_id=fl_id,
+        freelancer_nombre="Ana López",
+        freelancer_telegram_id=None,
+        desde=datetime.date(2026, 9, 1),
+        hasta=datetime.date(2026, 9, 30),
+        comisiones_total=Dinero(100_000),
+        desglose=[desglose_item],
+        solapados=solapados if solapados is not None else [],
+    )
+
+
+class TestLiqYaLiquidadoScreen:
+    """handle_div_liq_freelancer shows read-only screen when solapados is non-empty."""
+
+    @pytest.mark.asyncio
+    async def test_con_solapados_muestra_pantalla_ya_liquidado(self) -> None:
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_CONFIRMAR,
+            handle_div_liq_freelancer,
+        )
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(fl_id)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        result = await handle_div_liq_freelancer(update, context)
+
+        assert result == DIV_LIQ_CONFIRMAR
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call_args = cq.edit_message_text.call_args
+        text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
+        assert "ya fue liquidado" in text
+
+    @pytest.mark.asyncio
+    async def test_con_solapados_solo_muestra_boton_atras(self) -> None:
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_liq_freelancer
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(fl_id)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        await handle_div_liq_freelancer(update, context)
+
+        markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        # Only one button — Atrás
+        assert len(all_buttons) == 1
+        assert all_buttons[0].callback_data == "rep_s:liq:atras_confirmar"
+        # No Confirmar button
+        assert not any(btn.callback_data.startswith("rep_s:liq:confirmar:") for btn in all_buttons)
+
+    @pytest.mark.asyncio
+    async def test_con_solapados_muestra_fecha_y_registrador(self) -> None:
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_liq_freelancer
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(
+            fl_id,
+            fecha_pago=datetime.datetime(2026, 9, 15, 10, 0),
+            registrado_por_nombre="María",
+        )
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        await handle_div_liq_freelancer(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
+        assert "15/09/2026" in text
+        assert "María" in text
+
+    @pytest.mark.asyncio
+    async def test_sin_solapados_muestra_pantalla_confirmacion(self) -> None:
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_CONFIRMAR,
+            handle_div_liq_freelancer,
+        )
+
+        fl_id = uuid.uuid4()
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        result = await handle_div_liq_freelancer(update, context)
+
+        assert result == DIV_LIQ_CONFIRMAR
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
+        # Confirmation screen title
+        assert "Confirmar liquidación" in text or "liquidaci" in text.lower()
+
+    @pytest.mark.asyncio
+    async def test_sin_solapados_muestra_boton_confirmar(self) -> None:
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_liq_freelancer
+
+        fl_id = uuid.uuid4()
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        await handle_div_liq_freelancer(update, context)
+
+        markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        confirm_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:confirmar:")]
+        assert len(confirm_btns) == 1

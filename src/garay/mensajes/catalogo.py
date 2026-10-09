@@ -1556,6 +1556,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "liquidaciones.dm_desglose_item": {
         Idioma.ES: "• {fecha}  {servicio}  ({pax})  →  {monto}"
     },
+    "liquidaciones.ya_liquidado_titulo": {
+        Idioma.ES: "✅ Este freelancer ya fue liquidado en este período."
+    },
+    "liquidaciones.ya_liquidado_pago": {
+        Idioma.ES: "💰 {monto} — registrado el {fecha} por {registrado_por}"
+    },
 }
 
 

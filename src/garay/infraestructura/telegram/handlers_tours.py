@@ -176,6 +176,7 @@ def _teclado_familias(servicios: list[Servicio], prefix: str) -> InlineKeyboardM
         [InlineKeyboardButton(fam, callback_data=f"{prefix}{fam}")]
         for fam in familias
     ]
+    botones.append([InlineKeyboardButton("❌ Cancelar", callback_data="edt_cancelar_flujo")])
     return InlineKeyboardMarkup(botones)
 
 
@@ -226,12 +227,12 @@ def _teclado_tours(
     """
     tours = sorted(
         (s for s in servicios if (s.categoria or "") == familia),
-        key=lambda s: not s.activo,
+        key=lambda s: (not s.activo, s.numero if s.numero is not None else 9999),
     )
     botones = [
         [
             InlineKeyboardButton(
-                f"{s.nombre}{' [inactivo]' if not s.activo else ''}",
+                f"{'❌ ' if not s.activo else ''}{s.nombre}",
                 callback_data=f"{prefix}{s.id}",
             )
         ]

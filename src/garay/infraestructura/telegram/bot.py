@@ -1115,6 +1115,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 _CB(handle_edt_familia, pattern="^edt_familia:"),
                 _CB(handle_edt_familia, pattern="^edt_familia_nueva:"),
                 _CB(handle_edt_familia, pattern="^edt_familia_nueva_libre$"),
+                _CB(handle_edt_ficha, pattern="^edt_cancelar_flujo$"),
             ],
             EDF_TOUR: [
                 _CB(handle_edt_tour, pattern="^edt_tour:"),
@@ -1160,7 +1161,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     eliminar_tour_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("eliminar_tour", cmd_eliminar_tour)],
         states={
-            ELT_FAMILIA: [_CB(handle_elt_familia, pattern="^elt_familia:")],
+            ELT_FAMILIA: [
+                _CB(handle_elt_familia, pattern="^elt_familia:"),
+                _CB(handle_edt_ficha, pattern="^edt_cancelar_flujo$"),
+            ],
             ELT_TOUR: [_CB(handle_elt_tour, pattern="^elt_tour:")],
             ELT_CONFIRMA: [_CB(handle_elt_confirma, pattern="^elt_(confirmar|cancelar)$")],
         },

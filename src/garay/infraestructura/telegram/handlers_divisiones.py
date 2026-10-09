@@ -843,14 +843,22 @@ async def handle_div_liq_start(
 
     context.user_data[_KEY_LIQ_FREELANCERS] = fls  # type: ignore[index]
 
+    pago_repo = context.bot_data.get("pago_freelancer_repo")
+
     periodo_label = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
     titulo = obtener_mensaje("liquidaciones.titulo").format(periodo=periodo_label)
 
     rows: list[list[InlineKeyboardButton]] = []
     for nombre, fl_id, comision in fls:
-        label = obtener_mensaje("liquidaciones.freelancer_item").format(
+        ya_pagado = (
+            bool(pago_repo.buscar_solapados(fl_id, desde, hasta))
+            if pago_repo is not None
+            else False
+        )
+        base_label = obtener_mensaje("liquidaciones.freelancer_item").format(
             nombre=nombre, monto=fmt_cop(comision)
         )
+        label = f"✅ {base_label}" if ya_pagado else base_label
         rows.append(
             [InlineKeyboardButton(label, callback_data=f"rep_s:liq:fl:{fl_id}")]
         )
@@ -913,8 +921,33 @@ async def handle_div_liq_freelancer(
         liq_resultado = liquidar_service.calcular(fl_id, desde, hasta)
         context.user_data[_KEY_LIQ_RESULTADO] = liq_resultado  # type: ignore[index]
 
+        # If already paid — show read-only "ya liquidado" screen
+        if liq_resultado.solapados:
+            lines: list[str] = [
+                obtener_mensaje("liquidaciones.ya_liquidado_titulo"),
+                "",
+            ]
+            for pago in liq_resultado.solapados:
+                fecha_pago_str = pago.fecha_pago.strftime("%d/%m/%Y")
+                registrado_por = pago.registrado_por_nombre or "—"
+                lines.append(
+                    obtener_mensaje("liquidaciones.ya_liquidado_pago").format(
+                        monto=fmt_cop(pago.monto),
+                        fecha=fecha_pago_str,
+                        registrado_por=registrado_por,
+                    )
+                )
+            texto_ya_liq = "\n".join(lines)
+            rows_ya_liq = [
+                [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")],
+            ]
+            await cq.edit_message_text(
+                texto_ya_liq, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(rows_ya_liq)
+            )
+            return DIV_LIQ_CONFIRMAR
+
         # Build confirmation message
-        lines: list[str] = [
+        conf_lines: list[str] = [
             obtener_mensaje("liquidaciones.confirmar_titulo").format(
                 nombre=liq_resultado.freelancer_nombre,
                 desde=desde.strftime("%d/%m/%Y"),
@@ -924,10 +957,10 @@ async def handle_div_liq_freelancer(
         ]
 
         if liq_resultado.desglose:
-            lines.append("")
+            conf_lines.append("")
             for item in liq_resultado.desglose:
                 pax = _pax_label(item.adultos, item.ninos)
-                lines.append(
+                conf_lines.append(
                     obtener_mensaje("liquidaciones.desglose_item").format(
                         fecha=item.fecha.strftime("%d/%m"),
                         servicio=item.servicio_nombre,
@@ -936,12 +969,7 @@ async def handle_div_liq_freelancer(
                     )
                 )
 
-        if liq_resultado.solapados:
-            lines.append(
-                _overlap_warning(liq_resultado.solapados, desde, hasta)
-            )
-
-        texto = "\n".join(lines)
+        texto = "\n".join(conf_lines)
         rows = [
             [InlineKeyboardButton("✅ Confirmar", callback_data=f"rep_s:liq:confirmar:{fl_id}")],
             [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")],

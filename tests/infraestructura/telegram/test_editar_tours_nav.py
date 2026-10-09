@@ -23,6 +23,7 @@ def _srv_mock(nombre: str = "Tour Playa", familia: str = "BARU", activo: bool = 
     srv.activo = activo
     srv.nombre = nombre
     srv.id = uuid.uuid4()
+    srv.numero = 1
     return srv
 
 
@@ -94,6 +95,7 @@ async def test_atras_vuelve_a_la_lista_de_tours() -> None:
     srv.activo = True
     srv.nombre = "Tour Playa"
     srv.id = uuid.uuid4()
+    srv.numero = 1
 
     update = MagicMock()
     update.effective_message = AsyncMock()
