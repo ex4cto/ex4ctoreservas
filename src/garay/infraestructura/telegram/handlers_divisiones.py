@@ -41,6 +41,7 @@ from garay.aplicacion.socios.split import (
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.dominio.socios.entidades import PagoSocio
+from garay.config.settings import obtener_settings
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
 from garay.mensajes.catalogo import obtener_mensaje
@@ -1260,7 +1261,9 @@ def _render_soc_desglose(
     split_service = context.bot_data.get("split_socios_service")
     pendiente = Dinero(0)
     if split_service is not None:
-        acumulado: ResumenSplitSocios = split_service.calcular_acumulado()
+        acumulado: ResumenSplitSocios = split_service.calcular_acumulado(
+            desde=obtener_settings().socios_desde
+        )
         for rs in acumulado.por_socio:
             if rs.nombre.lower() == nombre.lower():
                 pendiente = rs.pendiente
@@ -1414,7 +1417,9 @@ async def handle_div_soc_confirmar(
             split_service = context.bot_data.get("split_socios_service")
             pendiente = Dinero(0)
             if split_service is not None:
-                acumulado: ResumenSplitSocios = split_service.calcular_acumulado()
+                acumulado: ResumenSplitSocios = split_service.calcular_acumulado(
+            desde=obtener_settings().socios_desde
+        )
                 for rs in acumulado.por_socio:
                     if rs.nombre.lower() == nombre.lower():
                         pendiente = rs.pendiente

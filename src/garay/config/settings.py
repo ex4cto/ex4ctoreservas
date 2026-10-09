@@ -134,10 +134,10 @@ class Settings(BaseSettings):
     garay_email: str = Field(default="agenciagaraytour1@gmail.com")
     garay_direccion: str = Field(default="Hotel Marie Real Centro")
 
-    # --- Socios: split start date (GARAY_SOCIOS_DESDE=2026-09-01) ---
+    # --- Socios: split start date (GARAY_SOCIOS_DESDE=2026-10-01) ---
     # Only sales on or after this date count toward the partner split.
     # Set to None to include all-time sales.
-    socios_desde: datetime.date | None = Field(default=datetime.date(2026, 9, 1))
+    socios_desde: datetime.date | None = Field(default=datetime.date(2026, 10, 1))
 
     # --- Monitor de cuota Resend (Slice 2: email quota) ---
     # Monthly email cap for the Resend free tier.
