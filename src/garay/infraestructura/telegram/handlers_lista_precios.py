@@ -52,14 +52,16 @@ async def cmd_lista_precios(
     for s in sorted(elegibles, key=lambda x: (x.categoria, x.numero)):
         grupos.setdefault(s.categoria, []).append(s)
 
-    lines: list[str] = [obtener_mensaje("lista_precios.titulo")]
+    titulo = obtener_mensaje("lista_precios.titulo")
 
+    # Build per-category blocks: each block is a list of lines.
+    bloques: list[list[str]] = []
     for categoria, servicios in grupos.items():
-        lines.append(
+        bloque: list[str] = [
             obtener_mensaje("lista_precios.categoria_encabezado").format(
                 categoria=categoria
             )
-        )
+        ]
         for s in servicios:
             precio_str = fmt_cop(s.precio_sugerido_adulto)
             linea = obtener_mensaje("lista_precios.linea_tour").format(
@@ -67,8 +69,26 @@ async def cmd_lista_precios(
             )
             if s.permite_ninos and s.precio_neto_nino is None:
                 linea += obtener_mensaje("lista_precios.nota_nino_adulto")
-            lines.append(linea)
+            bloque.append(linea)
+        bloques.append(bloque)
 
-    text = "\n".join(lines)
+    # Pack blocks into pages ≤ 4096 chars (Telegram limit).
+    _LIMIT = 4000  # leave headroom for the title line
+    paginas: list[str] = []
+    pagina_lines: list[str] = [titulo]
+
+    for bloque in bloques:
+        candidato = "\n".join(pagina_lines + bloque)
+        if len(candidato) > _LIMIT and len(pagina_lines) > 1:
+            # Flush current page and start a new one with this block.
+            paginas.append("\n".join(pagina_lines))
+            pagina_lines = bloque[:]
+        else:
+            pagina_lines.extend(bloque)
+
+    if pagina_lines:
+        paginas.append("\n".join(pagina_lines))
+
     assert update.effective_message is not None
-    await update.effective_message.reply_text(text, parse_mode="HTML")
+    for pagina in paginas:
+        await update.effective_message.reply_text(pagina, parse_mode="HTML")
