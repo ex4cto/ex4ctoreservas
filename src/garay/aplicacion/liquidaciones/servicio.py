@@ -158,10 +158,13 @@ class LiquidarFreelancerService:
                 servicio_nombres.get(servicio_id, "—") if servicio_id else "—"
             )
 
+            # A freelancer can be both vendedor and cerrador on the same sale.
+            # Add both contributions — matches how SplitSociosService aggregates.
+            comision_monto = Dinero(0)
             if es_vendedor:
-                comision_monto = comision.desglose.vendedor
-            else:
-                comision_monto = comision.desglose.cerrador
+                comision_monto = comision_monto + comision.desglose.vendedor
+            if es_cerrador:
+                comision_monto = comision_monto + comision.desglose.cerrador
 
             desglose.append(
                 ComisionVentaDetalle(

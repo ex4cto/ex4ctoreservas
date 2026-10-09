@@ -966,10 +966,9 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
         ],
     )
 
-    # /categorias_egreso conversation handler
+    # categorias_egreso — accessible via /egresos hub only (no standalone command)
     categorias_conv_handler = ConversationHandler(
         entry_points=[
-            CommandHandler("categorias_egreso", cmd_categorias_egreso),
             CallbackQueryHandler(cmd_categorias_egreso, pattern=f"^{CB_HUB_CATEGORIAS}$"),
         ],
         states={
