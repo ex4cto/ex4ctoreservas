@@ -1562,6 +1562,10 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "liquidaciones.ya_liquidado_pago": {
         Idioma.ES: "💰 {monto} — registrado el {fecha} por {registrado_por}"
     },
+    "liquidaciones.anular_confirmar_titulo": {
+        Idioma.ES: "🗑️ ¿Anular este pago?\n\n{monto} — {nombre}\n\nEsta acción no se puede deshacer."
+    },
+    "liquidaciones.anular_ok": {Idioma.ES: "✅ Pago anulado correctamente."},
 }
 
 

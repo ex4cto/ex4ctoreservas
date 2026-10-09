@@ -418,3 +418,7 @@ class PagoFreelancerRepository(ABC):
         SQL condition: WHERE desde <= :hasta AND hasta >= :desde
         """
         ...
+
+    @abstractmethod
+    def eliminar(self, pago_id: uuid.UUID) -> None:
+        """Delete a payment record by id."""

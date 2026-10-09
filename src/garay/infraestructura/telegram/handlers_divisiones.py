@@ -927,6 +927,7 @@ async def handle_div_liq_freelancer(
                 obtener_mensaje("liquidaciones.ya_liquidado_titulo"),
                 "",
             ]
+            rows_ya_liq: list[list[InlineKeyboardButton]] = []
             for pago in liq_resultado.solapados:
                 fecha_pago_str = pago.fecha_pago.strftime("%d/%m/%Y")
                 registrado_por = pago.registrado_por_nombre or "—"
@@ -937,10 +938,13 @@ async def handle_div_liq_freelancer(
                         registrado_por=registrado_por,
                     )
                 )
+                rows_ya_liq.append(
+                    [InlineKeyboardButton("🗑️ Anular pago", callback_data=f"rep_s:liq:anular:{pago.id}")]
+                )
+            rows_ya_liq.append(
+                [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")]
+            )
             texto_ya_liq = "\n".join(lines)
-            rows_ya_liq = [
-                [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")],
-            ]
             await cq.edit_message_text(
                 texto_ya_liq, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(rows_ya_liq)
             )
@@ -1091,6 +1095,88 @@ async def handle_div_liq_confirmar(
 
         await cq.edit_message_text(success_msg, parse_mode="HTML")
         return ConversationHandler.END
+
+    # data format: rep_s:liq:anular:{uuid}
+    if data.startswith("rep_s:liq:anular:"):
+        pago_id_str = data[len("rep_s:liq:anular:"):]
+        try:
+            pago_id = _uuid_mod.UUID(pago_id_str)
+        except ValueError:
+            return DIV_LIQ_CONFIRMAR
+
+        raw_liq_anular = context.user_data.get(_KEY_LIQ_RESULTADO)  # type: ignore[union-attr]
+        if not isinstance(raw_liq_anular, ResultadoCalculoLiquidacion):
+            return DIV_LIQ_CONFIRMAR
+        liq_resultado_anular: ResultadoCalculoLiquidacion = raw_liq_anular
+
+        pago_a_anular = next(
+            (p for p in liq_resultado_anular.solapados if p.id == pago_id), None
+        )
+        nombre_anular = liq_resultado_anular.freelancer_nombre
+        monto_anular = fmt_cop(pago_a_anular.monto) if pago_a_anular else "—"
+
+        texto_anular = obtener_mensaje("liquidaciones.anular_confirmar_titulo").format(
+            monto=monto_anular,
+            nombre=nombre_anular,
+        )
+        rows_anular = [
+            [InlineKeyboardButton("✅ Confirmar", callback_data=f"rep_s:liq:anular_ok:{pago_id}")],
+            [InlineKeyboardButton("← Cancelar", callback_data="rep_s:liq:anular_cancelar")],
+        ]
+        await cq.edit_message_text(
+            texto_anular, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(rows_anular)
+        )
+        return DIV_LIQ_CONFIRMAR
+
+    # data format: rep_s:liq:anular_ok:{uuid}
+    if data.startswith("rep_s:liq:anular_ok:"):
+        pago_id_str = data[len("rep_s:liq:anular_ok:"):]
+        try:
+            pago_id = _uuid_mod.UUID(pago_id_str)
+        except ValueError:
+            return DIV_LIQ_CONFIRMAR
+
+        pago_repo = context.bot_data.get("pago_freelancer_repo")
+        if pago_repo is not None:
+            pago_repo.eliminar(pago_id)
+
+        await cq.edit_message_text(
+            obtener_mensaje("liquidaciones.anular_ok"), parse_mode="HTML"
+        )
+        return await handle_div_liq_start(update, context)
+
+    # rep_s:liq:anular_cancelar — go back to ya_liquidado screen
+    if data == "rep_s:liq:anular_cancelar":
+        raw_liq_cancelar = context.user_data.get(_KEY_LIQ_RESULTADO)  # type: ignore[union-attr]
+        if isinstance(raw_liq_cancelar, ResultadoCalculoLiquidacion):
+            liq_res_cancelar: ResultadoCalculoLiquidacion = raw_liq_cancelar
+            lines_cancelar: list[str] = [
+                obtener_mensaje("liquidaciones.ya_liquidado_titulo"),
+                "",
+            ]
+            rows_cancelar: list[list[InlineKeyboardButton]] = []
+            for pago in liq_res_cancelar.solapados:
+                fecha_pago_str = pago.fecha_pago.strftime("%d/%m/%Y")
+                registrado_por = pago.registrado_por_nombre or "—"
+                lines_cancelar.append(
+                    obtener_mensaje("liquidaciones.ya_liquidado_pago").format(
+                        monto=fmt_cop(pago.monto),
+                        fecha=fecha_pago_str,
+                        registrado_por=registrado_por,
+                    )
+                )
+                rows_cancelar.append(
+                    [InlineKeyboardButton("🗑️ Anular pago", callback_data=f"rep_s:liq:anular:{pago.id}")]
+                )
+            rows_cancelar.append(
+                [InlineKeyboardButton("← Atrás", callback_data="rep_s:liq:atras_confirmar")]
+            )
+            await cq.edit_message_text(
+                "\n".join(lines_cancelar),
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(rows_cancelar),
+            )
+        return DIV_LIQ_CONFIRMAR
 
     return DIV_LIQ_CONFIRMAR
 

@@ -6,7 +6,7 @@ import datetime
 import uuid
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
@@ -90,3 +90,9 @@ class PagoFreelancerSQLAlchemy(PagoFreelancerRepository):
                 .order_by(PagoFreelancerModel.fecha_pago.desc())
             )
             return [_to_domain(m) for m in session.scalars(stmt).all()]
+
+    def eliminar(self, pago_id: uuid.UUID) -> None:
+        with self._sf.begin() as session:
+            session.execute(
+                delete(PagoFreelancerModel).where(PagoFreelancerModel.id == pago_id)
+            )

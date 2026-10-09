@@ -1304,7 +1304,7 @@ class TestLiqYaLiquidadoScreen:
         assert "ya fue liquidado" in text
 
     @pytest.mark.asyncio
-    async def test_con_solapados_solo_muestra_boton_atras(self) -> None:
+    async def test_con_solapados_muestra_boton_anular_y_atras(self) -> None:
         import uuid
 
         from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
@@ -1325,9 +1325,11 @@ class TestLiqYaLiquidadoScreen:
         markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
         assert markup is not None
         all_buttons = [btn for row in markup.inline_keyboard for btn in row]
-        # Only one button — Atrás
-        assert len(all_buttons) == 1
-        assert all_buttons[0].callback_data == "rep_s:liq:atras_confirmar"
+        # One anular button + one Atrás button
+        assert len(all_buttons) == 2
+        anular_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:anular:")]
+        assert len(anular_btns) == 1
+        assert all_buttons[-1].callback_data == "rep_s:liq:atras_confirmar"
         # No Confirmar button
         assert not any(btn.callback_data.startswith("rep_s:liq:confirmar:") for btn in all_buttons)
 
@@ -1409,3 +1411,164 @@ class TestLiqYaLiquidadoScreen:
         all_buttons = [btn for row in markup.inline_keyboard for btn in row]
         confirm_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:confirmar:")]
         assert len(confirm_btns) == 1
+
+    @pytest.mark.asyncio
+    async def test_multiples_solapados_tienen_boton_anular_individual(self) -> None:
+        """Each solapado gets its own anular button row, Atrás is last."""
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_liq_freelancer
+
+        fl_id = uuid.uuid4()
+        pago1 = _make_pago_freelancer(fl_id, monto=100_000)
+        pago2 = _make_pago_freelancer(fl_id, monto=200_000)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago1, pago2])
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+        liquidar_service.calcular.return_value = liq_resultado
+
+        context, _ = _make_liq_context(liquidar_service=liquidar_service)
+        update = _make_update_cb(f"rep_s:liq:fl:{fl_id}")
+
+        await handle_div_liq_freelancer(update, context)
+
+        markup = update.callback_query.edit_message_text.call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        anular_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:anular:")]
+        assert len(anular_btns) == 2
+        # Each anular button references a different pago id
+        pago_ids = {str(pago1.id), str(pago2.id)}
+        for btn in anular_btns:
+            btn_pago_id = btn.callback_data[len("rep_s:liq:anular:"):]
+            assert btn_pago_id in pago_ids
+        # Atrás is last
+        assert all_buttons[-1].callback_data == "rep_s:liq:atras_confirmar"
+
+
+# ---------------------------------------------------------------------------
+# Liquidaciones — anular pago flow
+# ---------------------------------------------------------------------------
+
+
+class TestAnularPagoFlow:
+    """handle_div_liq_confirmar handles anular callbacks correctly."""
+
+    @pytest.mark.asyncio
+    async def test_anular_muestra_pantalla_confirmacion(self) -> None:
+        """rep_s:liq:anular:{uuid} shows confirmation screen with two buttons."""
+        import uuid
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_CONFIRMAR,
+            handle_div_liq_confirmar,
+        )
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(fl_id)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        context, _ = _make_liq_context()
+        context.user_data["div_liq_resultado"] = liq_resultado
+
+        update = _make_update_cb(f"rep_s:liq:anular:{pago.id}")
+        result = await handle_div_liq_confirmar(update, context)
+
+        assert result == DIV_LIQ_CONFIRMAR
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call_args = cq.edit_message_text.call_args
+        text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
+        assert "Anular" in text or "anular" in text.lower()
+        markup = call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        ok_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:anular_ok:")]
+        cancel_btns = [b for b in all_buttons if b.callback_data == "rep_s:liq:anular_cancelar"]
+        assert len(ok_btns) == 1
+        assert len(cancel_btns) == 1
+
+    @pytest.mark.asyncio
+    async def test_anular_ok_llama_eliminar_y_regresa_lista(self) -> None:
+        """rep_s:liq:anular_ok:{uuid} deletes the pago and re-renders the freelancer list."""
+        import uuid
+
+        from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_FREELANCER,
+            handle_div_liq_confirmar,
+        )
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(fl_id)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        pago_repo = MagicMock()
+        pago_repo.buscar_solapados.return_value = []
+
+        liquidar_service = MagicMock(spec=LiquidarFreelancerService)
+
+        context, _ = _make_liq_context(
+            pago_repo=pago_repo, liquidar_service=liquidar_service
+        )
+        context.user_data["div_liq_resultado"] = liq_resultado
+
+        update = _make_update_cb(f"rep_s:liq:anular_ok:{pago.id}")
+        result = await handle_div_liq_confirmar(update, context)
+
+        pago_repo.eliminar.assert_called_once_with(pago.id)
+        assert result == DIV_LIQ_FREELANCER
+
+    @pytest.mark.asyncio
+    async def test_anular_cancelar_regresa_pantalla_ya_liquidado(self) -> None:
+        """rep_s:liq:anular_cancelar re-renders the ya_liquidado screen."""
+        import uuid
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_CONFIRMAR,
+            handle_div_liq_confirmar,
+        )
+
+        fl_id = uuid.uuid4()
+        pago = _make_pago_freelancer(fl_id)
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[pago])
+
+        context, _ = _make_liq_context()
+        context.user_data["div_liq_resultado"] = liq_resultado
+
+        update = _make_update_cb("rep_s:liq:anular_cancelar")
+        result = await handle_div_liq_confirmar(update, context)
+
+        assert result == DIV_LIQ_CONFIRMAR
+        cq = update.callback_query
+        cq.edit_message_text.assert_called_once()
+        call_args = cq.edit_message_text.call_args
+        text = call_args.args[0] if call_args.args else call_args.kwargs.get("text", "")
+        assert "ya fue liquidado" in text
+        markup = call_args.kwargs.get("reply_markup")
+        assert markup is not None
+        all_buttons = [btn for row in markup.inline_keyboard for btn in row]
+        anular_btns = [b for b in all_buttons if b.callback_data.startswith("rep_s:liq:anular:")]
+        assert len(anular_btns) == 1
+        assert all_buttons[-1].callback_data == "rep_s:liq:atras_confirmar"
+
+    @pytest.mark.asyncio
+    async def test_anular_uuid_invalido_retorna_estado_sin_crash(self) -> None:
+        """rep_s:liq:anular:{bad} with invalid UUID returns DIV_LIQ_CONFIRMAR without crashing."""
+        import uuid
+
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_LIQ_CONFIRMAR,
+            handle_div_liq_confirmar,
+        )
+
+        fl_id = uuid.uuid4()
+        liq_resultado = _make_liq_resultado(fl_id, solapados=[])
+        context, _ = _make_liq_context()
+        context.user_data["div_liq_resultado"] = liq_resultado
+
+        update = _make_update_cb("rep_s:liq:anular:not-a-uuid")
+        result = await handle_div_liq_confirmar(update, context)
+
+        assert result == DIV_LIQ_CONFIRMAR
