@@ -1222,28 +1222,17 @@ async def handle_div_soc_start(
         )
         return ConversationHandler.END
 
-    split_service = context.bot_data.get("split_socios_service")
-    acumulado: ResumenSplitSocios | None = None
-    if split_service is not None:
-        acumulado = split_service.calcular_acumulado()
-
     rows: list[list[InlineKeyboardButton]] = []
     for s in resultado.por_socio:
         nombre = s.nombre
         periodo_monto = fmt_cop(s.acumulado)
-        pendiente_str = "—"
-        if acumulado is not None:
-            for rs in acumulado.por_socio:
-                if rs.nombre.lower() == nombre.lower():
-                    pendiente_str = fmt_cop(rs.pendiente)
-                    break
         label = obtener_mensaje("resumen_divisiones.soc_item_btn").format(
             nombre=nombre.capitalize(),
             periodo_monto=periodo_monto,
-            pendiente=pendiente_str,
         )
         rows.append([InlineKeyboardButton(label, callback_data=f"rep_s:soc:sel:{nombre}")])
 
+    rows.append([InlineKeyboardButton("← Atrás", callback_data="rep_s:atras:resultado")])
     rows.append([InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:soc:cancelar")])
 
     titulo = obtener_mensaje("resumen_divisiones.soc_desglose_titulo").format(
@@ -1516,6 +1505,7 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
             ],
             DIV_SOC_SELECCION: [
                 CallbackQueryHandler(handle_div_soc_seleccion, pattern=r"^rep_s:soc:sel:"),
+                CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:resultado$"),
                 CallbackQueryHandler(handle_div_soc_confirmar, pattern=r"^rep_s:soc:cancelar$"),
             ],
             DIV_SOC_CONFIRMAR: [

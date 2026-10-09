@@ -1504,7 +1504,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.freelancer_item": {Idioma.ES: "   {arbol} {nombre}: {monto}"},
     "resumen_divisiones.btn_atras": {Idioma.ES: "← Atrás"},
     "resumen_divisiones.soc_btn_entrada":     {Idioma.ES: "💵 Pagar a socio"},
-    "resumen_divisiones.soc_item_btn":        {Idioma.ES: "{nombre}  —  {periodo_monto} este período  ·  pendiente: {pendiente}"},
+    "resumen_divisiones.soc_item_btn":        {Idioma.ES: "{nombre}  —  {periodo_monto} este período"},
     "resumen_divisiones.soc_desglose_titulo": {Idioma.ES: "💵 Pagar a <b>{nombre}</b>\nPeríodo: {periodo}"},
     "resumen_divisiones.soc_desglose_item":   {Idioma.ES: "• {fecha}  Bruto: {bruto}  →  {parte}"},
     "resumen_divisiones.soc_periodo_total":   {Idioma.ES: "\nEste período:        <b>{monto}</b>"},
