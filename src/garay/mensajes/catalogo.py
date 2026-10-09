@@ -1499,6 +1499,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.detalle_comisiones_header": {Idioma.ES: "💼 Comisiones:"},
     "resumen_divisiones.detalle_comision_item": {Idioma.ES: "   • {nombre}: {monto}"},
     "resumen_divisiones.detalle_agencia": {Idioma.ES: "🏢 Agencia neta: {monto}"},
+    "resumen_divisiones.detalle_saldo_pendiente": {Idioma.ES: "⚠️ Saldo pendiente: {monto}"},
     "resumen_divisiones.freelancer_header": {Idioma.ES: "💼 Comisiones freelancers:"},
     "resumen_divisiones.freelancer_item": {Idioma.ES: "   {arbol} {nombre}: {monto}"},
     "resumen_divisiones.btn_atras": {Idioma.ES: "← Atrás"},

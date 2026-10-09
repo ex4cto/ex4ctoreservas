@@ -159,6 +159,8 @@ class SplitSociosService:
                     desglose_agencia=da,
                     split_socios=sale_socios,
                     registrado_en=venta.registrado_en,
+                    abono=venta.abono,
+                    saldo_pendiente=venta.valor_venta - (venta.abono or Dinero(0)),
                 )
             )
 

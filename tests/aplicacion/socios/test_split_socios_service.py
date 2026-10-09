@@ -666,3 +666,69 @@ class TestCalcularPeriodoVentaDetalle:
         ryan = next(s for s in det.split_socios if s.nombre == "ryan")
         assert empresa.acumulado == Dinero(270_000)
         assert ryan.acumulado == Dinero(270_000)
+
+
+class TestSaldoPendienteEnDetalle:
+    """Feature E — saldo_pendiente field in ResumenVentaDetalle."""
+
+    _DESDE = datetime.date(2026, 9, 1)
+    _HASTA = datetime.date(2026, 9, 30)
+
+    def _make_venta_con_abono(self, valor: int, abono: int | None) -> Venta:
+        return Venta(
+            id=uuid.uuid4(),
+            valor_venta=Dinero(valor),
+            neto=Dinero(valor // 2),
+            servicio_ids=[uuid.uuid4()],
+            cliente_id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            fecha=datetime.date(2026, 9, 19),
+            participantes=Participantes(vendedor_nombre="Carlos"),
+            abono=Dinero(abono) if abono is not None else None,
+        )
+
+    def _make_comision(self, venta_id: uuid.UUID) -> ComisionRegistrada:
+        return ComisionRegistrada(
+            venta_id=venta_id,
+            desglose=DesgloseComision(
+                vendedor=Dinero(60_000),
+                cerrador=Dinero(0),
+                punto_de_venta=Dinero(0),
+                referido=Dinero(0),
+                agencia=Dinero(540_000),
+                snapshot=_make_snapshot(),
+            ),
+            fecha=datetime.date(2026, 9, 19),
+        )
+
+    def _make_service(self, ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> SplitSociosService:
+        repo_ventas = MagicMock()
+        repo_ventas.listar_por_periodo.return_value = ventas
+        repo_comisiones = MagicMock()
+        repo_comisiones.listar_por_venta_ids.return_value = comisiones
+        repo_configs = MagicMock()
+        repo_configs.listar.return_value = []
+        repo_pagos = MagicMock()
+        return SplitSociosService(ventas=repo_ventas, comisiones=repo_comisiones, socios_config=repo_configs, pagos_socio=repo_pagos)
+
+    def test_saldo_pendiente_computed_from_abono(self) -> None:
+        venta = self._make_venta_con_abono(600_000, abono=200_000)
+        com = self._make_comision(venta.id)
+        service = self._make_service([venta], [com])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        det = resultado.ventas_detalle[0]
+        assert det.abono == Dinero(200_000)
+        assert det.saldo_pendiente == Dinero(400_000)
+
+    def test_saldo_pendiente_zero_when_no_abono(self) -> None:
+        venta = self._make_venta_con_abono(600_000, abono=None)
+        com = self._make_comision(venta.id)
+        service = self._make_service([venta], [com])
+
+        resultado = service.calcular_periodo(self._DESDE, self._HASTA)
+
+        det = resultado.ventas_detalle[0]
+        assert det.abono is None
+        assert det.saldo_pendiente == Dinero(600_000)

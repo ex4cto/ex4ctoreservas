@@ -66,6 +66,8 @@ class ResumenVentaDetalle:
     desglose_agencia: Dinero
     split_socios: tuple[ResumenSocioPeriodo, ...]
     registrado_en: datetime.datetime | None = None
+    abono: Dinero | None = None
+    saldo_pendiente: Dinero = field(default_factory=lambda: Dinero(0))
 
 
 @dataclass(frozen=True)

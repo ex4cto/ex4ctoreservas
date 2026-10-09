@@ -367,6 +367,13 @@ def _render_detalle_venta(venta: ResumenVentaDetalle) -> tuple[str, InlineKeyboa
         )
     )
 
+    if venta.saldo_pendiente > Dinero(0):
+        lineas.append(
+            obtener_mensaje("resumen_divisiones.detalle_saldo_pendiente").format(
+                monto=fmt_cop(venta.saldo_pendiente)
+            )
+        )
+
     # Per-sale split
     socios = venta.split_socios
     for i, s in enumerate(socios):
