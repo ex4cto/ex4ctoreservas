@@ -404,7 +404,7 @@
   },
   {
     "numero": 32,
-    "nombre": "5 ISLAS PREMIUM ( BASICO)",
+    "nombre": "5 ISLAS PREMIUM (BASICO)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
     "neto_adulto": "200",
@@ -1066,7 +1066,7 @@
   },
   {
     "numero": 83,
-    "nombre": "IBBIZA",
+    "nombre": "IBBIZA TRADICIONAL",
     "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "IBBIZA",
     "neto_adulto": "280",
@@ -2081,6 +2081,18 @@
     "precio_sugerido_adulto": "290",
     "neto_nino": "80.000 ( 2-3 años)",
     "precio_sugerido_nino": "150",
+    "activo": true,
+    "permite_ninos": true
+  },
+  {
+    "numero": 166,
+    "nombre": "IBBIZA VIP",
+    "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARU",
+    "operador": "IBBIZA",
+    "neto_adulto": "380",
+    "precio_sugerido_adulto": "480",
+    "neto_nino": null,
+    "precio_sugerido_nino": null,
     "activo": true,
     "permite_ninos": true
   }
