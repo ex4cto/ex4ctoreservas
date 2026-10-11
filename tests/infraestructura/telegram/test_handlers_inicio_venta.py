@@ -144,12 +144,11 @@ class TestMostrarSelectorInicio:
     """Tests for tier-aware keyboard shape via handle_iniciar_venta and handle_inicio_volver."""
 
     @pytest.mark.asyncio
-    async def test_sc01_freelancer_oculta_otra_fecha(self) -> None:
-        """SC-01: FREELANCER entry — inicio_otra_fecha absent."""
-        from telegram import InlineKeyboardMarkup
-
+    async def test_sc01_freelancer_salta_pantalla_fecha(self) -> None:
+        """SC-01: FREELANCER entry — date picker skipped, goes directly to METODO_INPUT."""
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM
+        from garay.infraestructura.telegram.estados import ESTADO_PTB
         from garay.infraestructura.telegram.handlers import handle_iniciar_venta
-        from garay.infraestructura.telegram.handlers_inicio_venta import INICIO_VENTA
 
         update = _make_update_command()
         context = _make_context(es_admin=False)
@@ -157,14 +156,7 @@ class TestMostrarSelectorInicio:
         with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
             result = await handle_iniciar_venta(update, context)
 
-        assert result == INICIO_VENTA
-        kwargs = update.message.reply_text.call_args
-        all_args = list(kwargs[0]) + list(kwargs[1].values())
-        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
-        assert markup is not None
-        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
-        assert "inicio_hoy" in flat
-        assert "inicio_otra_fecha" not in flat
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
 
     @pytest.mark.asyncio
     async def test_sc02_admin_muestra_ambos_botones(self) -> None:
@@ -242,14 +234,11 @@ class TestMostrarSelectorInicio:
         assert "fecha_venta_override" not in context.user_data
 
     @pytest.mark.asyncio
-    async def test_sc08_freelancer_atras_oculta_otra_fecha(self) -> None:
-        """SC-08: FREELANCER Atrás — returns INICIO_VENTA, override cleared, hides otra_fecha."""
-        from telegram import InlineKeyboardMarkup
-
-        from garay.infraestructura.telegram.handlers_inicio_venta import (
-            INICIO_VENTA,
-            handle_inicio_volver,
-        )
+    async def test_sc08_freelancer_atras_va_directo_a_metodo(self) -> None:
+        """SC-08: FREELANCER Atrás (stale callback) — override cleared, goes to METODO_INPUT."""
+        from garay.aplicacion.tiquetera.fsm import EstadoFSM
+        from garay.infraestructura.telegram.estados import ESTADO_PTB
+        from garay.infraestructura.telegram.handlers_inicio_venta import handle_inicio_volver
 
         update = _make_update_cb("inicio_volver")
         context = _make_context(
@@ -260,14 +249,8 @@ class TestMostrarSelectorInicio:
         with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=False)):
             result = await handle_inicio_volver(update, context)
 
-        assert result == INICIO_VENTA
+        assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
         assert "fecha_venta_override" not in context.user_data
-        kwargs = update.callback_query.edit_message_text.call_args
-        all_args = list(kwargs[0]) + list(kwargs[1].values())
-        markup = next((a for a in all_args if isinstance(a, InlineKeyboardMarkup)), None)
-        assert markup is not None
-        flat = [b.callback_data for row in markup.inline_keyboard for b in row]
-        assert "inicio_otra_fecha" not in flat
 
     @pytest.mark.asyncio
     async def test_sc09_admin_atras_muestra_ambos_botones(self) -> None:
@@ -585,10 +568,12 @@ class TestIniciVolverLimpiaOverride:
 
         update = _make_update_cb("inicio_volver")
         context = _make_context(
-            user_data_extra={"fecha_venta_override": datetime.datetime(2026, 9, 10)}
+            es_admin=True,
+            user_data_extra={"fecha_venta_override": datetime.datetime(2026, 9, 10)},
         )
 
-        result = await handle_inicio_volver(update, context)
+        with patch(_PATCH_ES_ADMIN, new=AsyncMock(return_value=True)):
+            result = await handle_inicio_volver(update, context)
 
         assert result == INICIO_VENTA
         assert "fecha_venta_override" not in context.user_data

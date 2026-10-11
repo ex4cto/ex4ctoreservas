@@ -69,10 +69,15 @@ async def _mostrar_selector_inicio(
     """Send (or edit) the initial date-choice screen and return INICIO_VENTA."""
     from garay.infraestructura.telegram.auth import es_admin_o_propietario
 
-    texto = "¿Cuándo es la venta?"
     user = update.effective_user
     autorizado = user is not None and await es_admin_o_propietario(user.id, context)
-    markup = _teclado_inicio(mostrar_otra_fecha=autorizado, mostrar_cotizacion=autorizado)
+
+    if not autorizado:
+        from garay.infraestructura.telegram.handlers import _lanzar_flujo_venta
+        return await _lanzar_flujo_venta(update, context)
+
+    texto = "¿Cuándo es la venta?"
+    markup = _teclado_inicio(mostrar_otra_fecha=True, mostrar_cotizacion=True)
     if update.callback_query is not None:
         await update.callback_query.edit_message_text(texto, reply_markup=markup)
     elif update.message is not None:
