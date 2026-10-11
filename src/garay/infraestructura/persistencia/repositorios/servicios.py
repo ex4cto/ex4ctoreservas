@@ -77,7 +77,9 @@ class SQLAServicioRepository(ServicioRepository):
         with self._sf.begin() as session:
             rows = (
                 session.execute(
-                    select(ServicioModel).where(ServicioModel.activo.is_(True))
+                    select(ServicioModel)
+                    .where(ServicioModel.activo.is_(True))
+                    .order_by(ServicioModel.numero)
                 )
                 .scalars()
                 .all()
