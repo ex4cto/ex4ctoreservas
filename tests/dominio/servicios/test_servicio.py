@@ -13,8 +13,8 @@ from garay.dominio.servicios.errores import NombreServicioVacio, NumeroServicioI
 
 class TestServicio:
     def test_creacion_valida(self) -> None:
-        s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Ciudad")
-        assert s.nombre == "Tour Ciudad"
+        s = Servicio(id=uuid.uuid4(), numero=1, nombre="TOUR CIUDAD")
+        assert s.nombre == "TOUR CIUDAD"
 
     def test_nombre_vacio_levanta_error(self) -> None:
         with pytest.raises(NombreServicioVacio):

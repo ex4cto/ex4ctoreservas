@@ -35,8 +35,8 @@ def test_listar_vacio(sf: sessionmaker[Session]) -> None:
 
 def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
-    s1 = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour A", descripcion="", activo=True)
-    s2 = Servicio(id=uuid.uuid4(), numero=2, nombre="Tour B", descripcion="", activo=False)
+    s1 = Servicio(id=uuid.uuid4(), numero=1, nombre="TOUR A", descripcion="", activo=True)
+    s2 = Servicio(id=uuid.uuid4(), numero=2, nombre="TOUR B", descripcion="", activo=False)
     repo.guardar(s1)
     repo.guardar(s2)
     lista = repo.listar()
@@ -73,10 +73,10 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     s = Servicio(id=uuid.uuid4(), numero=1, nombre="City Tour", descripcion="", activo=True)
     repo.guardar(s)
-    resultado = repo.buscar_por_nombre("City Tour")
+    resultado = repo.buscar_por_nombre("CITY TOUR")
     assert resultado is not None
     assert resultado.id == s.id
-    assert resultado.nombre == "City Tour"
+    assert resultado.nombre == "CITY TOUR"
 
 
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
@@ -137,7 +137,7 @@ def test_siguiente_numero_tabla_vacia(sf: sessionmaker[Session]) -> None:
 def test_siguiente_numero_con_tours_existentes(sf: sessionmaker[Session]) -> None:
     """siguiente_numero() returns max(numero) + 1 when tours exist."""
     repo = SQLAServicioRepository(sf)
-    for num, nombre in [(1, "Tour A"), (3, "Tour B"), (5, "Tour C")]:
+    for num, nombre in [(1, "TOUR A"), (3, "TOUR B"), (5, "TOUR C")]:
         repo.guardar(Servicio(id=uuid.uuid4(), numero=num, nombre=nombre))
     assert repo.siguiente_numero() == 6
 

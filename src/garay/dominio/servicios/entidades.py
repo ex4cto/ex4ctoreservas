@@ -42,10 +42,12 @@ class Servicio:
     precio_sugerido_nino: Decimal | None = field(default=None)
 
     def __post_init__(self) -> None:
+        self.nombre = " ".join(self.nombre.upper().split())
+        self.categoria = " ".join(self.categoria.upper().split())
         self.horarios = sorted(self.horarios)
         if self.numero < 1:
             raise NumeroServicioInvalido("El numero del servicio debe ser mayor a cero.")
-        if not self.nombre.strip():
+        if not self.nombre:
             raise NombreServicioVacio("El nombre del servicio no puede estar vacio.")
         for key, val in self.netos_por_horario.items():
             if not isinstance(val, Decimal):

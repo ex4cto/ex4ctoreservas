@@ -49,7 +49,7 @@ class TestNetosHorarioField:
             netos_por_horario={"08:00": Decimal("60000")},
         )
         assert s.precio_neto_adulto == Decimal("50000")
-        assert s.nombre == "City Tour"
+        assert s.nombre == "CITY TOUR"
 
 
 class TestNetoPorHorario:

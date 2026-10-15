@@ -142,7 +142,7 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     assert len(filas) == 1
     fila = filas[0]
     assert fila.cliente_nombre == "Juan Perez"
-    assert fila.servicios == "Tour Islas, City Tour"
+    assert fila.servicios == "TOUR ISLAS, CITY TOUR"
     assert fila.valor == Dinero("500000")
     assert fila.neto == Dinero("300000")
     assert fila.ganancia == Dinero("200000")
@@ -164,8 +164,8 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
     assert fila.cliente_habitacion == "101"
     assert fila.punto_de_venta == "Recepción"
     assert fila.referido == "Pedro"
-    assert "Tour Islas — 12/07/2026 09:00 (mañana)" in fila.fechas_horarios
-    assert "City Tour — 10/07/2026" in fila.fechas_horarios
+    assert "TOUR ISLAS — 12/07/2026 09:00 (mañana)" in fila.fechas_horarios
+    assert "CITY TOUR — 10/07/2026" in fila.fechas_horarios
     # Comisión + factura (PR B)
     assert fila.comision_vendedor == Dinero("50000")
     assert fila.comision_cerrador == Dinero("30000")

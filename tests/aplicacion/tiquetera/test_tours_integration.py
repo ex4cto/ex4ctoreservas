@@ -23,7 +23,7 @@ class TestEditSaveRefreshVisibleToNewSale:
         s1 = Servicio(
             id=uuid.uuid4(),
             numero=1,
-            nombre="City Tour Original",
+            nombre="CITY TOUR ORIGINAL",
             categoria="Cartagena",
             activo=True,
             precio_neto_adulto=Decimal("30000"),
@@ -31,10 +31,10 @@ class TestEditSaveRefreshVisibleToNewSale:
         fsm = _make_fsm([s1])
 
         # _servicios[numero] = (nombre, neto_adulto, neto_nino)
-        assert fsm._servicios[1][0] == "City Tour Original"
+        assert fsm._servicios[1][0] == "CITY TOUR ORIGINAL"
 
         # Simulate edit: rename the tour
-        s1.nombre = "City Tour Actualizado"
+        s1.nombre = "CITY TOUR ACTUALIZADO"
 
         # Refresh FSM with updated data
         tuples = [
@@ -46,7 +46,7 @@ class TestEditSaveRefreshVisibleToNewSale:
         fsm.refrescar_servicios(tuples)
 
         # New sale starts → FSM returns updated name
-        assert fsm._servicios[1][0] == "City Tour Actualizado"
+        assert fsm._servicios[1][0] == "CITY TOUR ACTUALIZADO"
 
 
 class TestDesactivarTourOcultoEnVentas:

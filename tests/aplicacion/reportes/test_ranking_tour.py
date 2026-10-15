@@ -73,13 +73,13 @@ def test_agrupa_por_familia() -> None:
     )
     r = svc.ejecutar(7, 2026)
     filas = {f.familia: f for f in r.filas}
-    assert filas["Islas del Rosario"].vendidos == 2
-    assert filas["Islas del Rosario"].valor == Dinero(1000000)
-    assert filas["Islas del Rosario"].margen == Dinero(250000)
-    assert filas["Islas del Rosario"].agencia == Dinero(100000)
-    assert filas["Playa Tranquila"].vendidos == 1
+    assert filas["ISLAS DEL ROSARIO"].vendidos == 2
+    assert filas["ISLAS DEL ROSARIO"].valor == Dinero(1000000)
+    assert filas["ISLAS DEL ROSARIO"].margen == Dinero(250000)
+    assert filas["ISLAS DEL ROSARIO"].agencia == Dinero(100000)
+    assert filas["PLAYA TRANQUILA"].vendidos == 1
     # ordenado por vendidos desc -> Islas primero
-    assert r.filas[0].familia == "Islas del Rosario"
+    assert r.filas[0].familia == "ISLAS DEL ROSARIO"
 
 
 def test_venta_sin_servicio_es_sin_categoria() -> None:
