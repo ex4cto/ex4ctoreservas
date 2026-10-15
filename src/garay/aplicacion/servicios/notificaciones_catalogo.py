@@ -145,3 +145,32 @@ class NotificarCambioCatalogoServicio:
                 await self._notificador.enviar(tid, msg_confirm)
             except Exception:
                 logger.exception("Error sending confirmation to %s", tid)
+
+    async def generar_forzado(self) -> None:
+        """Publish images unconditionally (no pending changes required).
+
+        Used when images need regeneration after code-level catalog changes
+        (seed updates, deployments) that bypass the bot's edit flow.
+        """
+        if self._tarea_recordatorio is not None and not self._tarea_recordatorio.done():
+            self._tarea_recordatorio.cancel()
+
+        try:
+            await self._publicar_svc.publicar()
+        except Exception as exc:
+            msg_error = obtener_mensaje("catalogo.cambios.error_dev").format(
+                error=str(exc)
+            )
+            for dev_id in self._dev_ids:
+                try:
+                    await self._notificador.enviar(dev_id, msg_error)
+                except Exception:
+                    logger.exception("Error notifying dev %s of image error", dev_id)
+            return
+
+        msg_confirm = obtener_mensaje("catalogo.cambios.confirmacion")
+        for tid in self._destinatarios:
+            try:
+                await self._notificador.enviar(tid, msg_confirm)
+            except Exception:
+                logger.exception("Error sending confirmation to %s", tid)

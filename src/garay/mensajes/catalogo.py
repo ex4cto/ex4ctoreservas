@@ -1586,7 +1586,12 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "liquidaciones.anular_ok": {Idioma.ES: "✅ Pago anulado correctamente."},
     # --- Cambios de catálogo (notificaciones) ---
     "catalogo.cambios.generando": {Idioma.ES: "⏳ Generando imágenes de lista de precios..."},
-    "catalogo.cambios.sin_pendientes": {Idioma.ES: "ℹ️ No hay cambios pendientes en el catálogo."},
+    "catalogo.cambios.sin_pendientes": {
+        Idioma.ES: "ℹ️ No hay cambios pendientes en el catálogo."
+    },
+    "catalogo.cambios.forzando": {
+        Idioma.ES: "🔄 Generando imágenes..."
+    },
     "catalogo.cambios.recordatorio": {
         Idioma.ES: (
             "⚠️ Hay {n} cambio(s) pendiente(s) en el catálogo:\n{items}\n\n"

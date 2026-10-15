@@ -56,8 +56,12 @@ async def cmd_actualizar_imagenes(
     cambios = await asyncio.to_thread(_svc_notificaciones._repo.listar_todos)
     if not cambios:
         if update.effective_message is not None:
+            teclado = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Generar de todas formas", callback_data="cat_generar_forzado"),
+            ]])
             await update.effective_message.reply_text(
-                obtener_mensaje("catalogo.cambios.sin_pendientes")
+                obtener_mensaje("catalogo.cambios.sin_pendientes"),
+                reply_markup=teclado,
             )
         return
     if update.effective_message is not None:
@@ -65,6 +69,24 @@ async def cmd_actualizar_imagenes(
             obtener_mensaje("catalogo.cambios.generando")
         )
     context.application.create_task(_svc_notificaciones.generar_y_confirmar())
+
+
+@requiere_admin
+async def handle_cat_generar_forzado(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Callback for 'cat_generar_forzado' — force image generation without pending changes."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await _limpiar_botones(query)
+    if update.effective_message is None:
+        return
+    assert _svc_notificaciones is not None, "Notification service not configured"
+    await update.effective_message.reply_text(
+        obtener_mensaje("catalogo.cambios.forzando")
+    )
+    context.application.create_task(_svc_notificaciones.generar_forzado())
 
 
 async def _limpiar_botones(query: CallbackQuery) -> None:

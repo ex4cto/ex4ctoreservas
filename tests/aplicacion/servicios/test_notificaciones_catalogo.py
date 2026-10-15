@@ -167,6 +167,23 @@ class TestNotificarCambioCatalogoServicio:
         assert notificador.enviados == []
 
     @pytest.mark.asyncio
+    async def test_generar_forzado_publica_sin_pendientes(self) -> None:
+        """generar_forzado() publishes images even with an empty repo."""
+        from unittest.mock import AsyncMock
+
+        repo = FakeCambiosRepo()  # empty
+        notificador = FakeNotificador()
+        pub_svc = MagicMock()
+        pub_svc.publicar = AsyncMock()
+
+        svc = _make_svc(repo=repo, notificador=notificador, publicar_svc=pub_svc, destinatarios=[111])
+        await svc.generar_forzado()
+
+        pub_svc.publicar.assert_called_once()
+        dest_ids = [cid for cid, _ in notificador.enviados]
+        assert 111 in dest_ids
+
+    @pytest.mark.asyncio
     async def test_descripcion_usa_html_escape(self) -> None:
         """Tour names with HTML chars are escaped in the stored description."""
         repo = FakeCambiosRepo()
