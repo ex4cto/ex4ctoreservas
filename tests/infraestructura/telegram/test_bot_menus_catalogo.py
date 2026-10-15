@@ -42,11 +42,11 @@ class TestBotMenusDesdesCatalogo:
 
     def test_admin_count_es_18(self) -> None:
         # 19 - 1 removed (categorias_egreso — duplicate of egresos submenu) = 18
-        assert len(_COMANDOS_ADMIN) == 18
+        assert len(_COMANDOS_ADMIN) == 19
 
     def test_propietario_count_es_22(self) -> None:
-        # 22 - 1 removed (liquidar_socio — moved into resumen_divisiones flow) = 21
-        assert len(_COMANDOS_PROPIETARIO) == 21
+        # 22 commands total
+        assert len(_COMANDOS_PROPIETARIO) == 22
 
     def test_menus_dict_tiene_propietario_y_admin(self) -> None:
         assert "propietario" in _MENUS

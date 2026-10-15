@@ -86,6 +86,7 @@ CATALOGO_COMANDOS: list[ComandoMenu] = [
     ComandoMenu("nuevo_tour", "Crear un nuevo tour", _T, _AD),
     ComandoMenu("editar_tour", "Editar datos de un tour", _T, _AD),
     ComandoMenu("eliminar_tour", "Desactivar un tour", _T, _AD),
+    ComandoMenu("actualizar_imagenes", "Generar y publicar imágenes de precios", _T, _AD),
 ]
 
 
