@@ -1180,7 +1180,14 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Nombre: {nombre}\n"
             "• Neto adulto: {neto_adulto}\n"
             "• Neto niño: {neto_nino}\n"
+            "• Precio sugerido: {sugerido_adulto}\n"
             "• Horarios: {horarios}"
+        )
+    },
+    "tour_pide_sugerido_adulto_nvt": {
+        Idioma.ES: (
+            "¿Cuál es el precio sugerido al turista (adulto)?\n"
+            "Deja vacío o presiona [Saltar] para omitir."
         )
     },
     "tour_neto_invalido": {

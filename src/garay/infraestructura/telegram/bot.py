@@ -365,6 +365,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     NVT_NETO_NINO,
     NVT_NOMBRE,
     NVT_NUEVA_FAMILIA,
+    NVT_SUGERIDO_ADULTO,
     cmd_actualizar_imagenes,
     cmd_editar_tour,
     cmd_eliminar_tour,
@@ -393,6 +394,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     handle_nvt_neto_nino,
     handle_nvt_nombre,
     handle_nvt_nueva_familia,
+    handle_nvt_sugerido_adulto,
 )
 from garay.infraestructura.telegram.menu import TierComando, comandos_bot
 from garay.mensajes.catalogo import obtener_mensaje
@@ -1194,6 +1196,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             NVT_NETO_NINO: [
                 MessageHandler(_TEXT, handle_nvt_neto_nino),
                 _CB(handle_nvt_neto_nino, pattern="^nvt_saltar_neto_nino$"),
+            ],
+            NVT_SUGERIDO_ADULTO: [
+                MessageHandler(_TEXT, handle_nvt_sugerido_adulto),
+                _CB(handle_nvt_sugerido_adulto, pattern="^nvt_saltar_sugerido_adulto$"),
             ],
             NVT_CONFIRMA: [
                 _CB(handle_nvt_edit, pattern="^nvt_edit:"),

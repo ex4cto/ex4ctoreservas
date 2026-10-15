@@ -770,9 +770,9 @@ class TestHandleNvtNetoNino:
     """handle_nvt_neto_nino: same logic as neto adulto but advances to NVT_CONFIRMA."""
 
     @pytest.mark.asyncio
-    async def test_texto_vacio_skip_avanza_a_confirma(self) -> None:
+    async def test_texto_vacio_skip_avanza_a_sugerido(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import (
-            NVT_CONFIRMA,
+            NVT_SUGERIDO_ADULTO,
             handle_nvt_neto_nino,
         )
 
@@ -785,13 +785,13 @@ class TestHandleNvtNetoNino:
 
         result = await handle_nvt_neto_nino(update, ctx)
 
-        assert result == NVT_CONFIRMA
+        assert result == NVT_SUGERIDO_ADULTO
         assert ctx.user_data.get("nvt_neto_nino") is None
 
     @pytest.mark.asyncio
-    async def test_boton_saltar_avanza_a_confirma(self) -> None:
+    async def test_boton_saltar_avanza_a_sugerido(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import (
-            NVT_CONFIRMA,
+            NVT_SUGERIDO_ADULTO,
             handle_nvt_neto_nino,
         )
 
@@ -803,13 +803,13 @@ class TestHandleNvtNetoNino:
 
         result = await handle_nvt_neto_nino(update, ctx)
 
-        assert result == NVT_CONFIRMA
+        assert result == NVT_SUGERIDO_ADULTO
         assert ctx.user_data.get("nvt_neto_nino") is None
 
     @pytest.mark.asyncio
     async def test_valor_valido_almacena_decimal(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import (
-            NVT_CONFIRMA,
+            NVT_SUGERIDO_ADULTO,
             handle_nvt_neto_nino,
         )
 
@@ -822,7 +822,7 @@ class TestHandleNvtNetoNino:
 
         result = await handle_nvt_neto_nino(update, ctx)
 
-        assert result == NVT_CONFIRMA
+        assert result == NVT_SUGERIDO_ADULTO
         assert ctx.user_data.get("nvt_neto_nino") == Decimal("80000")
 
     @pytest.mark.asyncio

@@ -66,6 +66,7 @@ class TestClavesNuevoTourFormato:
             nombre="City Tour",
             neto_adulto="100.000",
             neto_nino="—",
+            sugerido_adulto="250.000",
             horarios="7:00 AM, 7:00 PM",
         )
         assert "PLAYERO" in msg

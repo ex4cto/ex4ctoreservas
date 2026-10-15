@@ -137,8 +137,9 @@ EDH_NETO_HOR_INGRESAR: int = 243     # text: enter neto amount
 # State constants — /nuevo_tour schedule editor range 240-241
 # ---------------------------------------------------------------------------
 
-NVT_HOR_LISTA: int = 240    # NVT schedule list editor (operates on user_data)
-NVT_HOR_AGREGAR: int = 241  # NVT dedicated text state for horario input
+NVT_HOR_LISTA: int = 240      # NVT schedule list editor (operates on user_data)
+NVT_HOR_AGREGAR: int = 241    # NVT dedicated text state for horario input
+NVT_SUGERIDO_ADULTO: int = 244  # text or skip: suggested adult price
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -1269,6 +1270,7 @@ def _limpiar_nvt(context: ContextTypes.DEFAULT_TYPE) -> None:
             "nvt_nombre_pendiente",
             "nvt_neto_adulto",
             "nvt_neto_nino",
+            "nvt_sugerido_adulto",
             "nvt_editando",
             "nvt_horarios",
         ):
@@ -1281,6 +1283,7 @@ def _render_ficha_nuevo(ud: dict[str, object]) -> str:
     nombre = html.escape(str(ud.get("nvt_nombre") or "—"))
     neto_adulto_raw = ud.get("nvt_neto_adulto")
     neto_nino_raw = ud.get("nvt_neto_nino")
+    sugerido_adulto_raw = ud.get("nvt_sugerido_adulto")
     _raw_h = ud.get("nvt_horarios")
     nvt_horarios: list[str] = list(_raw_h) if isinstance(_raw_h, list) else []
     horarios_str = (
@@ -1291,6 +1294,7 @@ def _render_ficha_nuevo(ud: dict[str, object]) -> str:
         nombre=nombre,
         neto_adulto=fmt_cop(neto_adulto_raw),
         neto_nino=fmt_cop(neto_nino_raw),
+        sugerido_adulto=fmt_cop(sugerido_adulto_raw),
         horarios=horarios_str,
     )
 
@@ -1307,6 +1311,7 @@ def _teclado_ficha_nuevo() -> InlineKeyboardMarkup:
             InlineKeyboardButton("✏️ Neto niño", callback_data="nvt_edit:neto_nino"),
         ],
         [
+            InlineKeyboardButton("✏️ Precio sugerido", callback_data="nvt_edit:sugerido_adulto"),
             InlineKeyboardButton("🕐 Horarios", callback_data="nvt_edit:horarios"),
         ],
         [
@@ -1615,32 +1620,47 @@ async def handle_nvt_neto_nino(
     # Skip via callback button
     if update.callback_query is not None:
         await update.callback_query.answer()
+        ud = context.user_data if context.user_data is not None else {}
+        editando = bool(ud.get("nvt_editando"))
         if context.user_data is not None:
             context.user_data["nvt_neto_nino"] = None
             context.user_data.pop("nvt_editando", None)
         if update.effective_message is None:
+            return NVT_CONFIRMA if editando else NVT_SUGERIDO_ADULTO
+        if editando:
+            ficha = _render_ficha_nuevo(context.user_data or {})
+            await update.effective_message.reply_text(
+                ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+            )
             return NVT_CONFIRMA
-        ud = context.user_data if context.user_data is not None else {}
-        ficha = _render_ficha_nuevo(ud)
         await update.effective_message.reply_text(
-            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+            obtener_mensaje("tour_pide_sugerido_adulto_nvt"),
+            reply_markup=_teclado_saltar("nvt_saltar_sugerido_adulto"),
         )
-        return NVT_CONFIRMA
+        return NVT_SUGERIDO_ADULTO
 
     if update.effective_message is None:
         return NVT_NETO_NINO
 
     texto = (update.effective_message.text or "").strip()
+    ud2 = context.user_data if context.user_data is not None else {}
+    editando2 = bool(ud2.get("nvt_editando"))
 
     if texto == "":
         if context.user_data is not None:
             context.user_data["nvt_neto_nino"] = None
             context.user_data.pop("nvt_editando", None)
-        ficha = _render_ficha_nuevo(context.user_data or {})
+        if editando2:
+            ficha = _render_ficha_nuevo(context.user_data or {})
+            await update.effective_message.reply_text(
+                ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+            )
+            return NVT_CONFIRMA
         await update.effective_message.reply_text(
-            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+            obtener_mensaje("tour_pide_sugerido_adulto_nvt"),
+            reply_markup=_teclado_saltar("nvt_saltar_sugerido_adulto"),
         )
-        return NVT_CONFIRMA
+        return NVT_SUGERIDO_ADULTO
 
     valor = _parse_neto(texto)
     if valor is None or valor <= Decimal("0"):
@@ -1649,6 +1669,62 @@ async def handle_nvt_neto_nino(
 
     if context.user_data is not None:
         context.user_data["nvt_neto_nino"] = valor
+        context.user_data.pop("nvt_editando", None)
+
+    if editando2:
+        ficha = _render_ficha_nuevo(context.user_data or {})
+        await update.effective_message.reply_text(
+            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+        )
+        return NVT_CONFIRMA
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_pide_sugerido_adulto_nvt"),
+        reply_markup=_teclado_saltar("nvt_saltar_sugerido_adulto"),
+    )
+    return NVT_SUGERIDO_ADULTO
+
+
+async def handle_nvt_sugerido_adulto(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle NVT_SUGERIDO_ADULTO: empty/skip → None → NVT_CONFIRMA; valid > 0 → Decimal."""
+    # Skip via callback button
+    if update.callback_query is not None:
+        await update.callback_query.answer()
+        if context.user_data is not None:
+            context.user_data["nvt_sugerido_adulto"] = None
+            context.user_data.pop("nvt_editando", None)
+        if update.effective_message is None:
+            return NVT_CONFIRMA
+        ficha = _render_ficha_nuevo(context.user_data or {})
+        await update.effective_message.reply_text(
+            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+        )
+        return NVT_CONFIRMA
+
+    if update.effective_message is None:
+        return NVT_SUGERIDO_ADULTO
+
+    texto = (update.effective_message.text or "").strip()
+
+    if texto == "":
+        if context.user_data is not None:
+            context.user_data["nvt_sugerido_adulto"] = None
+            context.user_data.pop("nvt_editando", None)
+        ficha = _render_ficha_nuevo(context.user_data or {})
+        await update.effective_message.reply_text(
+            ficha, reply_markup=_teclado_ficha_nuevo(), parse_mode="HTML"
+        )
+        return NVT_CONFIRMA
+
+    valor = parsear_monto(texto)
+    if valor is None or valor <= Decimal("0"):
+        await update.effective_message.reply_text(obtener_mensaje("tour_sugerido_invalido"))
+        return NVT_SUGERIDO_ADULTO
+
+    if context.user_data is not None:
+        context.user_data["nvt_sugerido_adulto"] = valor
         context.user_data.pop("nvt_editando", None)
 
     ficha = _render_ficha_nuevo(context.user_data or {})
@@ -1703,6 +1779,13 @@ async def handle_nvt_edit(
             reply_markup=_teclado_saltar("nvt_saltar_neto_nino"),
         )
         return NVT_NETO_NINO
+
+    if campo == "sugerido_adulto":
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_pide_sugerido_adulto_nvt"),
+            reply_markup=_teclado_saltar("nvt_saltar_sugerido_adulto"),
+        )
+        return NVT_SUGERIDO_ADULTO
 
     if campo == "horarios":
         # Open NVT schedule editor; ensure nvt_horarios exists in user_data
@@ -1760,8 +1843,9 @@ async def handle_nvt_crear(
         nombre=str(ud.get("nvt_nombre", "")),
         descripcion="",
         activo=True,
-        precio_neto_adulto=ud.get("nvt_neto_adulto"),  # Decimal | None stored by handlers
-        precio_neto_nino=ud.get("nvt_neto_nino"),       # Decimal | None stored by handlers
+        precio_neto_adulto=ud.get("nvt_neto_adulto"),
+        precio_neto_nino=ud.get("nvt_neto_nino"),
+        precio_sugerido_adulto=ud.get("nvt_sugerido_adulto"),
         categoria=str(ud.get("nvt_familia", "")),
         horarios=[h for h in ud.get("nvt_horarios") or [] if isinstance(h, str)],
     )
