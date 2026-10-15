@@ -27,7 +27,7 @@
   },
   {
     "numero": 3,
-    "nombre": "BARÚ PLAYA BLANCA + ISLAS X LANCHA DIRECTA",
+    "nombre": "PLAYA BLANCA + ISLAS X LANCHA DIRECTA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JAIR",
     "neto_adulto": "105",
@@ -40,7 +40,7 @@
   },
   {
     "numero": 4,
-    "nombre": "BARÚ PLAYA BLANCA + BAJO DE LA TORTUGA",
+    "nombre": "PLAYA BLANCA + BAJO DE LA TORTUGA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JAIR",
     "neto_adulto": "100",
@@ -53,7 +53,7 @@
   },
   {
     "numero": 5,
-    "nombre": "BARÚ PLAYA BLANCA + ISLAS X TIERRA",
+    "nombre": "PLAYA BLANCA + ISLAS X TIERRA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JAIR",
     "neto_adulto": "85",
@@ -66,7 +66,7 @@
   },
   {
     "numero": 6,
-    "nombre": "BARÚ PLAYA BLANCA + AVIARIO SIN ENTRADA",
+    "nombre": "PLAYA BLANCA + AVIARIO SIN ENTRADA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "MARIA",
     "neto_adulto": "75",
@@ -118,7 +118,7 @@
   },
   {
     "numero": 10,
-    "nombre": "BARÚ PLAYA TRANQUILA X  LANCHA DIRECTA",
+    "nombre": "PLAYA TRANQUILA X LANCHA DIRECTA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JEIDY",
     "neto_adulto": "135",
@@ -131,7 +131,7 @@
   },
   {
     "numero": 11,
-    "nombre": "BARÚ PLAYA TRANQUILA BASICO (BUS Y LANCHA)",
+    "nombre": "PLAYA TRANQUILA BASICO (BUS Y LANCHA)",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "85",
@@ -144,7 +144,7 @@
   },
   {
     "numero": 12,
-    "nombre": "BARÚ PLAYA TRANQUILA  (PLANKTON)",
+    "nombre": "PLAYA TRANQUILA (PLANKTON)",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "125",
@@ -183,7 +183,7 @@
   },
   {
     "numero": 15,
-    "nombre": "BARÚ PLAYA TRANQUILA + ACUARIO",
+    "nombre": "PLAYA TRANQUILA + ACUARIO",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "150",
@@ -196,7 +196,7 @@
   },
   {
     "numero": 16,
-    "nombre": "BARÚ PLAYA TRANQUILA + ACUARIO +PLANKTON",
+    "nombre": "PLAYA TRANQUILA + ACUARIO +PLANKTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -209,7 +209,7 @@
   },
   {
     "numero": 17,
-    "nombre": "BARÚ PLAYA TRANQUILA + MAPACHES + SNORKELING",
+    "nombre": "PLAYA TRANQUILA + MAPACHES + SNORKELING",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -222,7 +222,7 @@
   },
   {
     "numero": 18,
-    "nombre": "BARÚ PLAYA TRANQUILA + MAPACHES + PLANKTON",
+    "nombre": "PLAYA TRANQUILA + MAPACHES + PLANKTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -235,7 +235,7 @@
   },
   {
     "numero": 19,
-    "nombre": "BARÚ PLAYA TRANQUILA X LANCHA  (NO IMPUESTO)",
+    "nombre": "PLAYA TRANQUILA X LANCHA (NO IMPUESTO)",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "135",
@@ -248,7 +248,7 @@
   },
   {
     "numero": 20,
-    "nombre": "BARU PLAYA TRANQUILA +ISLAS X TIERRA Y LANCHA",
+    "nombre": "PLAYA TRANQUILA + ISLAS X TIERRA Y LANCHA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JAIR",
     "neto_adulto": "125",
@@ -261,7 +261,7 @@
   },
   {
     "numero": 21,
-    "nombre": "BARÚ PLAYA TRANQUILA X TIERRA Y LANCHA",
+    "nombre": "PLAYA TRANQUILA X TIERRA Y LANCHA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "SOUTH BEACH",
     "neto_adulto": "85",
@@ -274,7 +274,7 @@
   },
   {
     "numero": 22,
-    "nombre": "BARÚ PLAYA TRANQUILA + BAJO DE LA TORTUGA",
+    "nombre": "PLAYA TRANQUILA + BAJO DE LA TORTUGA",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "JAIR",
     "neto_adulto": "120",
@@ -2087,11 +2087,23 @@
   {
     "numero": 166,
     "nombre": "IBBIZA VIP",
-    "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARU",
+    "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "IBBIZA",
     "neto_adulto": "380",
     "precio_sugerido_adulto": "480",
     "neto_nino": null,
+    "precio_sugerido_nino": null,
+    "activo": true,
+    "permite_ninos": true
+  },
+  {
+    "numero": 167,
+    "nombre": "PLAYA TRANQUILA + MAPACHES",
+    "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
+    "operador": null,
+    "neto_adulto": "150",
+    "precio_sugerido_adulto": "250",
+    "neto_nino": "100",
     "precio_sugerido_nino": null,
     "activo": true,
     "permite_ninos": true

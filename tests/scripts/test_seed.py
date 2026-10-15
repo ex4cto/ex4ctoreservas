@@ -47,7 +47,7 @@ def test_seed_completo_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 165
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 167
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
@@ -74,7 +74,7 @@ def test_seed_idempotente_sqlite() -> None:
 
     with sf.begin() as session:
         assert (
-            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 165
+            session.execute(sa.select(sa.func.count()).select_from(ServicioModel)).scalar() == 167
         )
         assert (
             session.execute(sa.select(sa.func.count()).select_from(PuntoDeVentaModel)).scalar() == 4
