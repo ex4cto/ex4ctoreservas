@@ -77,10 +77,10 @@ def _sync_send(token: str, imagen: bytes, grupo_id: str) -> None:
         RuntimeError: On non-migration Telegram errors.
         urllib.error.URLError: On network errors.
     """
-    url = f"{_API_BASE}/bot{token}/sendPhoto"
+    url = f"{_API_BASE}/bot{token}/sendDocument"
 
     def _post(chat_id: str) -> bytes:
-        body = _build_multipart({"chat_id": chat_id}, "photo", imagen)
+        body = _build_multipart({"chat_id": chat_id}, "document", imagen)
         req = urllib.request.Request(
             url,
             data=body,

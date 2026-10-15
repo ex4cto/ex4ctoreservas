@@ -66,13 +66,13 @@ class TestEnviadorFotoTelegram:
 
         mock_open.assert_called_once()
         req = mock_open.call_args[0][0]
-        # Must target the sendPhoto endpoint
-        assert "sendPhoto" in req.get_full_url()
+        # Must target the sendDocument endpoint (no Telegram compression)
+        assert "sendDocument" in req.get_full_url()
         assert "bot123:TOKEN" in req.get_full_url()
-        # Body must contain the group id and photo data
+        # Body must contain the group id and document data
         data: bytes = req.data
         assert b"-1001234567890" in data
-        assert b"photo" in data
+        assert b"document" in data
 
     @pytest.mark.asyncio
     async def test_supergrupo_migracion_reintenta_con_nuevo_chat_id(self) -> None:
