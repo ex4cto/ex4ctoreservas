@@ -26,6 +26,13 @@ Regla de arranque de sesión: llamar `mem_context` o `mem_search` con `project: 
 - Mensajes siempre en `garay.mensajes.catalogo` — ningún string suelto en la lógica
 - Commits convencionales, sin "Co-Authored-By"
 
+## Telegram IDs (equipo)
+
+- Ryan (dev): `5870211102`
+- Garay (propietario): `1379898979`
+- Sharimel (admin): `8710698734`
+- Railway env var: `GARAY_NOTIFICACION_CATALOGO_IDS=5870211102,1379898979,8710698734`
+
 ## Backlog
 
 El backlog vivo está en engram: `topic: "roadmap/garay-bot-backlog"`, `project: "ex4ctoreservas"`.
