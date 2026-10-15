@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import html
 import logging
 import uuid
 from collections.abc import Callable
@@ -814,6 +815,30 @@ async def _notificar_operador_externo(
         text=mensaje,
         parse_mode=parse_mode,
     )
+
+    # TODO(wa-business-api): Remove once WA Business API sends reservations automatically.
+    from garay.aplicacion.operadores.notificaciones import contacto_wa
+
+    contacto = contacto_wa(cmd.servicio_nombres)
+    if contacto is not None:
+        nombre_contacto, numero_contacto = contacto
+        tours_str = ", ".join(cmd.servicio_nombres) if cmd.servicio_nombres else operador
+        dm_texto = (
+            f"📲 <b>{html.escape(tours_str)}</b> — envíale la reserva a este contacto:\n\n"
+            f"<b>{html.escape(nombre_contacto)}</b>\n"
+            f"<code>{html.escape(numero_contacto)}</code>"
+        )
+        alertas_ids_raw: str = context.bot_data.get("alertas_wa_telegram_ids", "")
+        destinatarios = [int(x.strip()) for x in alertas_ids_raw.split(",") if x.strip()]
+        for telegram_id in destinatarios:
+            try:
+                await context.bot.send_message(
+                    chat_id=telegram_id,
+                    text=dm_texto,
+                    parse_mode="HTML",
+                )
+            except Exception:
+                logger.exception("No se pudo enviar DM de contacto WA a %s", telegram_id)
 
 
 def _make_handler(estado: EstadoFSM) -> Callable[..., Any]:

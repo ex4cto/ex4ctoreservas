@@ -21,8 +21,8 @@ from garay.dominio.servicios.entidades import Servicio
 
 def _servicio(
     numero: int = 1,
-    nombre: str = "City Tour",
-    categoria: str = "Cartagena",
+    nombre: str = "CITY TOUR",
+    categoria: str = "CARTAGENA",
     activo: bool = True,
     precio_sugerido_adulto: Decimal | None = Decimal("150000"),
     precio_neto_adulto: Decimal | None = Decimal("100000"),
@@ -72,9 +72,9 @@ class TestCmdListaPrecios:
             cmd_lista_precios,
         )
 
-        s_ok1 = _servicio(numero=1, nombre="Tour A", precio_sugerido_adulto=Decimal("150000"))
-        s_ok2 = _servicio(numero=2, nombre="Tour B", precio_sugerido_adulto=Decimal("200000"))
-        s_sin_sugerido = _servicio(numero=3, nombre="Tour C", precio_sugerido_adulto=None)
+        s_ok1 = _servicio(numero=1, nombre="TOUR A", precio_sugerido_adulto=Decimal("150000"))
+        s_ok2 = _servicio(numero=2, nombre="TOUR B", precio_sugerido_adulto=Decimal("200000"))
+        s_sin_sugerido = _servicio(numero=3, nombre="TOUR C", precio_sugerido_adulto=None)
 
         ctx = _make_context([s_ok1, s_ok2, s_sin_sugerido])
         update = _make_update()
@@ -83,9 +83,9 @@ class TestCmdListaPrecios:
 
         update.effective_message.reply_text.assert_called_once()
         text = update.effective_message.reply_text.call_args[0][0]
-        assert "Tour A" in text
-        assert "Tour B" in text
-        assert "Tour C" not in text
+        assert "TOUR A" in text
+        assert "TOUR B" in text
+        assert "TOUR C" not in text
 
     @pytest.mark.asyncio
     async def test_fmt_cop_usado_para_precio_sugerido(self) -> None:
@@ -111,9 +111,9 @@ class TestCmdListaPrecios:
             cmd_lista_precios,
         )
 
-        s1 = _servicio(numero=1, nombre="City Tour", categoria="Cartagena")
-        s2 = _servicio(numero=2, nombre="Playa Tour", categoria="Playa")
-        s3 = _servicio(numero=3, nombre="Ciudad Tour 2", categoria="Cartagena")
+        s1 = _servicio(numero=1, nombre="CITY TOUR", categoria="CARTAGENA")
+        s2 = _servicio(numero=2, nombre="PLAYA TOUR", categoria="PLAYA")
+        s3 = _servicio(numero=3, nombre="CIUDAD TOUR 2", categoria="CARTAGENA")
 
         ctx = _make_context([s1, s2, s3])
         update = _make_update()
@@ -122,11 +122,11 @@ class TestCmdListaPrecios:
 
         text = update.effective_message.reply_text.call_args[0][0]
         # Both categories must appear in the text
-        assert "Cartagena" in text
-        assert "Playa" in text
+        assert "CARTAGENA" in text
+        assert "PLAYA" in text
         # Both tour names must appear
-        assert "City Tour" in text
-        assert "Ciudad Tour 2" in text
+        assert "CITY TOUR" in text
+        assert "CIUDAD TOUR 2" in text
 
     @pytest.mark.asyncio
     async def test_vacio_cuando_no_hay_servicios_elegibles(self) -> None:

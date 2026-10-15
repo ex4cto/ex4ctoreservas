@@ -26,8 +26,8 @@ from garay.infraestructura.telegram.handlers_tours import (
 
 
 def _servicio(
-    nombre: str = "City Tour",
-    categoria: str = "Cartagena",
+    nombre: str = "CITY TOUR",
+    categoria: str = "CARTAGENA",
     activo: bool = True,
 ) -> Servicio:
     return Servicio(
@@ -84,8 +84,8 @@ class TestCmdEliminarTour:
     @pytest.mark.asyncio
     async def test_cmd_eliminar_tour_muestra_familias(self) -> None:
         """Entry point shows families (all tours visible, uses listar())."""
-        s_active = _servicio("City Tour", "Cartagena", activo=True)
-        s_inactive = _servicio("Old Tour", "Cartagena", activo=False)
+        s_active = _servicio("CITY TOUR", "CARTAGENA", activo=True)
+        s_inactive = _servicio("OLD TOUR", "CARTAGENA", activo=False)
         update = _make_update()
         ctx = _make_context(servicios=[s_active, s_inactive])
 
@@ -100,8 +100,8 @@ class TestHandleEltFamilia:
     @pytest.mark.asyncio
     async def test_seleccionar_familia_muestra_tours(self) -> None:
         """Family selection returns tour list keyboard."""
-        s1 = _servicio("City Tour", "Cartagena")
-        update = _make_update(callback_data="elt_familia:Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
+        update = _make_update(callback_data="elt_familia:CARTAGENA")
         ctx = _make_context(
             servicios=[s1],
             user_data={"elt_servicios": [s1]},
@@ -120,7 +120,7 @@ class TestHandleEltTour:
     @pytest.mark.asyncio
     async def test_seleccionar_tour_muestra_confirmacion(self) -> None:
         """Tour selection returns confirmation screen."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data=f"elt_tour:{s1.id}")
         ctx = _make_context(
             servicios=[s1],
@@ -133,14 +133,14 @@ class TestHandleEltTour:
         assert result == ELT_CONFIRMA
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
-        assert "City Tour" in msg
+        assert "CITY TOUR" in msg
 
 
 class TestHandleEltConfirma:
     @pytest.mark.asyncio
     async def test_eliminar_confirmar_hace_soft_delete(self) -> None:
         """Confirm → guardar called with activo=False + fsm.refrescar_servicios()."""
-        s1 = _servicio("City Tour", "Cartagena", activo=True)
+        s1 = _servicio("CITY TOUR", "CARTAGENA", activo=True)
         update = _make_update(callback_data="elt_confirmar")
         ctx = _make_context(
             servicios=[s1],
@@ -166,7 +166,7 @@ class TestHandleEltConfirma:
     @pytest.mark.asyncio
     async def test_eliminar_cancelar_no_modifica(self) -> None:
         """Cancel → guardar NOT called."""
-        s1 = _servicio("City Tour", "Cartagena", activo=True)
+        s1 = _servicio("CITY TOUR", "CARTAGENA", activo=True)
         update = _make_update(callback_data="elt_cancelar")
         ctx = _make_context(
             servicios=[s1],

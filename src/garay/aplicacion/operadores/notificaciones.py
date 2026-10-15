@@ -14,6 +14,24 @@ _PATRONES: dict[str, list[str]] = {
     "bonavida": ["BONAVIDA", "BONA VIDA"],
 }
 
+# TODO(wa-business-api): Replace with dynamic lookup once WhatsApp Business API is integrated.
+# More-specific patterns must come before general ones — first match wins.
+_CONTACTOS_WA: list[tuple[str, str, str]] = [
+    ("ISLA PALMA (DIRECTO)", "MARINATOUR CARTAGENA", "3043752759"),
+    ("ISLA PALMA", "RESERVAS CTG TOURS", "3021295767"),
+    ("PALMARITO", "RESERVAS PALMARITO BEACH HOTEL", "3004223695"),
+]
+
+
+def contacto_wa(servicio_nombres: list[str]) -> tuple[str, str] | None:
+    """Return (nombre, numero) for the primary WA contact for these services, or None."""
+    for nombre in servicio_nombres:
+        upper = nombre.upper()
+        for patron, contacto, numero in _CONTACTOS_WA:
+            if patron in upper:
+                return (contacto, numero)
+    return None
+
 
 def detectar_operador(servicio_nombres: list[str]) -> str | None:
     for nombre in servicio_nombres:

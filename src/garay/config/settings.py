@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     # GARAY_DEV_TELEGRAM_IDS="123456789,987654321" (comma-separated)
     dev_telegram_ids: str = Field(default="")
 
+    # Recipients for WA contact DMs when an operator reservation is registered.
+    # TODO(wa-business-api): Remove once WA Business API sends these automatically.
+    # GARAY_ALERTAS_WA_TELEGRAM_IDS="5870211102,8710698734"
+    alertas_wa_telegram_ids: str = Field(default="")
+
     # Streamlit dashboard URL — sent alongside /dashboard_ventas reply.
     dashboard_url: str = Field(default="http://localhost:8501")
 
@@ -120,6 +125,10 @@ class Settings(BaseSettings):
     railway_precio_volumen_gb_min: float = Field(default=0.000003)
     # Monthly base fee for the Railway Hobby plan (the bill is max(plan_fee, usage)).
     railway_plan_fee: float = Field(default=5.0)
+
+    # Catalog change notification recipients (comma-separated Telegram IDs).
+    # GARAY_NOTIFICACION_CATALOGO_IDS="123,456,8710698734"
+    notificacion_catalogo_ids: str = Field(default="")
 
     # --- CTG Tours SAS — datos emisor cuenta de cobro ---
     ctours_empresa: str = Field(default="CTG TOURS SAS")

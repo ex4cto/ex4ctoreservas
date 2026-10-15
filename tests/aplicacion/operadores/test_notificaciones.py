@@ -123,3 +123,33 @@ class TestFormatearNotificacion:
         from garay.aplicacion.operadores.notificaciones import formatear_notificacion
         datos = _make_datos()
         assert formatear_notificacion("desconocido", datos) is None
+
+
+class TestContactoWA:
+    def test_palmarito_returns_contact(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        result = contacto_wa(["DAY TOUR PALMARITO"])
+        assert result == ("RESERVAS PALMARITO BEACH HOTEL", "3004223695")
+
+    def test_isla_palma_tierra_y_lancha_returns_ctg_tours(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        result = contacto_wa(["ISLA PALMA (TIERRA Y LANCHA) TEMP BAJA"])
+        assert result == ("RESERVAS CTG TOURS", "3021295767")
+
+    def test_isla_palma_directo_returns_marinatour(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        result = contacto_wa(["ISLA PALMA (DIRECTO)"])
+        assert result == ("MARINATOUR CARTAGENA", "3043752759")
+
+    def test_bonavida_returns_none(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        assert contacto_wa(["CATAMARAN BONAVIDA"]) is None
+
+    def test_unknown_service_returns_none(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        assert contacto_wa(["SAN BERNARDO TOUR"]) is None
+
+    def test_case_insensitive_match(self) -> None:
+        from garay.aplicacion.operadores.notificaciones import contacto_wa
+        result = contacto_wa(["day tour palmarito"])
+        assert result == ("RESERVAS PALMARITO BEACH HOTEL", "3004223695")

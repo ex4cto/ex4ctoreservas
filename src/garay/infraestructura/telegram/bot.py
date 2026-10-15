@@ -365,6 +365,7 @@ from garay.infraestructura.telegram.handlers_tours import (
     NVT_NETO_NINO,
     NVT_NOMBRE,
     NVT_NUEVA_FAMILIA,
+    cmd_actualizar_imagenes,
     cmd_editar_tour,
     cmd_eliminar_tour,
     cmd_nuevo_tour,
@@ -1317,6 +1318,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
     app.add_handler(eliminar_tour_conv_handler, group=8)
     app.add_handler(nuevo_tour_conv_handler, group=8)
     app.add_handler(propuesta_conv_handler, group=9)
+    app.add_handler(CommandHandler("actualizar_imagenes", cmd_actualizar_imagenes), group=1)
     app.add_handler(CommandHandler("lista_precios", cmd_lista_precios), group=1)
     app.add_handler(CommandHandler("listar_freelancers", cmd_listar_freelancers), group=1)
     app.add_handler(CommandHandler("mis_ventas", cmd_mis_ventas), group=1)

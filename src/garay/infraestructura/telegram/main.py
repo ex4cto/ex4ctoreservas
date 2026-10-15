@@ -11,6 +11,7 @@ from telegram import Update
 
 from garay.aplicacion.conciliacion.servicio_hoteles import ServicioHoteles
 from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
+from garay.aplicacion.cuenta_cobro.servicio import GenerarCuentaCobroService
 from garay.aplicacion.egresos.editar_egreso import EditarEgresoService
 from garay.aplicacion.egresos.gestionar_categorias import GestionarCategoriasService
 from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManualService
@@ -22,6 +23,7 @@ from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaRe
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
+from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
 from garay.aplicacion.propuestas.contratos import (
     GenerarContratoAudiovisualService,
     GenerarContratoSoftwareService,
@@ -32,8 +34,7 @@ from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
-from garay.aplicacion.cuenta_cobro.servicio import GenerarCuentaCobroService
-from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
 from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -58,14 +59,17 @@ from garay.infraestructura.ia.extractor_reserva import ExtractorReservaFoto
 from garay.infraestructura.imagenes.generador_playwright import PlaywrightGeneradorImagen
 from garay.infraestructura.monitor.proveedor_uso_railway_http import ProveedorUsoRailwayHTTP
 from garay.infraestructura.persistencia.contador_cobro_sql import ContadorDocumentoSQLAlchemy
-from garay.infraestructura.persistencia.pago_freelancer_sql import PagoFreelancerSQLAlchemy
 from garay.infraestructura.persistencia.contador_facturas_sql import ContadorFacturasSQLAlchemy
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.pago_freelancer_sql import PagoFreelancerSQLAlchemy
 from garay.infraestructura.persistencia.repositorios.auditoria_egresos import (
     SQLAAuditoriaEgresoRepository,
 )
 from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
     SQLAAuditoriaVentaRepository,
+)
+from garay.infraestructura.persistencia.repositorios.cambios_imagen_repo import (
+    CambioPendienteRepositorioSqlAlchemy,
 )
 from garay.infraestructura.persistencia.repositorios.categorias_egreso import (
     SQLACategoriaEgresoRepository,
@@ -99,7 +103,9 @@ from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATique
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
+from garay.infraestructura.telegram.handlers_tours import configurar_notificaciones_catalogo
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
+from garay.infraestructura.telegram.notificador_telegram import NotificadorTelegramTexto
 
 _logger = logging.getLogger(__name__)
 
@@ -425,7 +431,23 @@ def main() -> None:
         grupo_id=settings.grupo_id,
     )
 
+    # Catalog change notification service.
+    def _parse_ids(ids_str: str) -> list[int]:
+        return [int(x.strip()) for x in ids_str.split(",") if x.strip()]
+
     app = crear_aplicacion(settings.telegram_bot_token)
+
+    cambios_repo = CambioPendienteRepositorioSqlAlchemy(sf)
+    notificador_texto = NotificadorTelegramTexto(app.bot)
+    svc_notificaciones = NotificarCambioCatalogoServicio(
+        cambios_repo=cambios_repo,
+        notificador=notificador_texto,
+        publicar_svc=publicar_lista_precios_service,
+        destinatarios=_parse_ids(settings.notificacion_catalogo_ids),
+        dev_ids=_parse_ids(settings.dev_telegram_ids),
+        grupo_id=settings.grupo_id,
+    )
+    configurar_notificaciones_catalogo(svc_notificaciones)
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
         comisiones=comisiones_repo,
@@ -496,6 +518,7 @@ def main() -> None:
             "grupo_id": settings.grupo_id,
             "propietario_telegram_ids": settings.propietario_telegram_ids,
             "monitor_infra_telegram_ids": settings.dev_telegram_ids,
+            "alertas_wa_telegram_ids": settings.alertas_wa_telegram_ids,
         }
     )
 

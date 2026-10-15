@@ -84,8 +84,14 @@ class PublicarListaPreciosServicio:
         if not filtrados:
             return
 
-        grupo1 = [s for s in filtrados if s.categoria in _GRUPO_1_CATEGORIAS]
-        grupo2 = [s for s in filtrados if s.categoria not in _GRUPO_1_CATEGORIAS]
+        grupo1 = sorted(
+            (s for s in filtrados if s.categoria in _GRUPO_1_CATEGORIAS),
+            key=lambda s: (s.categoria, s.numero),
+        )
+        grupo2 = sorted(
+            (s for s in filtrados if s.categoria not in _GRUPO_1_CATEGORIAS),
+            key=lambda s: (s.categoria, s.numero),
+        )
 
         imagenes: list[bytes] = []
         for grupo in (grupo1, grupo2):

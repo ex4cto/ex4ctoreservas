@@ -440,3 +440,15 @@ class PagoFreelancerModel(Base):
     fecha_pago: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registrado_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     registrado_por_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+
+class CambioPendienteModel(Base):
+    """ORM model for pending catalog image change records."""
+
+    __tablename__ = "cambios_imagen_pendiente"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    descripcion: Mapped[str] = mapped_column(String(1000), nullable=False)
+    creado_en: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )

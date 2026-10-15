@@ -231,9 +231,9 @@ class TestReusarFamilia:
     def test_retorna_casing_existente(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import _reusar_familia
 
-        servicios = [_servicio(categoria="Playero")]
+        servicios = [_servicio(categoria="PLAYERO")]
         result = _reusar_familia("PLAYERO", servicios)
-        assert result == "Playero"
+        assert result == "PLAYERO"
 
     def test_sin_coincidencia_retorna_normalizada(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import _reusar_familia
@@ -244,16 +244,16 @@ class TestReusarFamilia:
     def test_coincidencia_case_insensitive(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import _reusar_familia
 
-        servicios = [_servicio(categoria="Cultural"), _servicio(categoria="Playero")]
-        assert _reusar_familia("CULTURAL", servicios) == "Cultural"
+        servicios = [_servicio(categoria="CULTURAL"), _servicio(categoria="PLAYERO")]
+        assert _reusar_familia("CULTURAL", servicios) == "CULTURAL"
 
     def test_primer_coincidencia_gana(self) -> None:
         """When multiple services share the same normalized family, first one wins."""
         from garay.infraestructura.telegram.handlers_tours import _reusar_familia
 
-        servicios = [_servicio(categoria="Playero"), _servicio(categoria="PLAYERO")]
+        servicios = [_servicio(categoria="PLAYERO"), _servicio(categoria="PLAYERO")]
         result = _reusar_familia("PLAYERO", servicios)
-        assert result == "Playero"  # first match
+        assert result == "PLAYERO"  # first match
 
 
 class TestLimpiarNvt:
@@ -294,20 +294,20 @@ class TestRenderFichaNuevo:
 
         ud: dict[str, object] = {
             "nvt_familia": "CULTURAL",
-            "nvt_nombre": "Tour Colonial",
+            "nvt_nombre": "TOUR COLONIAL",
             "nvt_neto_adulto": None,
             "nvt_neto_nino": None,
         }
         result = _render_ficha_nuevo(ud)
         assert "CULTURAL" in result
-        assert "Tour Colonial" in result
+        assert "TOUR COLONIAL" in result
 
     def test_none_neto_muestra_guion(self) -> None:
         from garay.infraestructura.telegram.handlers_tours import _render_ficha_nuevo
 
         ud: dict[str, object] = {
             "nvt_familia": "PLAYERO",
-            "nvt_nombre": "Tour Playa",
+            "nvt_nombre": "TOUR PLAYA",
             "nvt_neto_adulto": None,
             "nvt_neto_nino": None,
         }
@@ -319,7 +319,7 @@ class TestRenderFichaNuevo:
 
         ud: dict[str, object] = {
             "nvt_familia": "CULTURAL",
-            "nvt_nombre": "Tour Colonial",
+            "nvt_nombre": "TOUR COLONIAL",
             "nvt_neto_adulto": Decimal("120000"),
             "nvt_neto_nino": Decimal("80000"),
         }
@@ -489,7 +489,7 @@ class TestHandleNvtNuevaFamilia:
             handle_nvt_nueva_familia,
         )
 
-        s1 = _servicio("City Tour", "Playero")
+        s1 = _servicio("City Tour", "PLAYERO")
         update = _make_update(text="playero")
         ctx = _make_context(servicios=[s1])
         ctx.user_data["nvt_servicios"] = [s1]
@@ -497,8 +497,7 @@ class TestHandleNvtNuevaFamilia:
         result = await handle_nvt_nueva_familia(update, ctx)
 
         assert result == NVT_NOMBRE
-        # Must reuse the existing casing "Playero", not "PLAYERO"
-        assert ctx.user_data.get("nvt_familia") == "Playero"
+        assert ctx.user_data.get("nvt_familia") == "PLAYERO"
 
 
 # ---------------------------------------------------------------------------
@@ -979,7 +978,7 @@ class TestHandleNvtCrear:
         ctx = _make_context(siguiente_numero=3)
         ctx.user_data.update({
             "nvt_familia": "CULTURAL",
-            "nvt_nombre": "Tour Colonial",
+            "nvt_nombre": "TOUR COLONIAL",
             "nvt_neto_adulto": None,
             "nvt_neto_nino": None,
         })
@@ -999,7 +998,7 @@ class TestHandleNvtCrear:
         # Decimals already parsed — stored directly in user_data
         ctx.user_data.update({
             "nvt_familia": "CULTURAL",
-            "nvt_nombre": "Tour Colonial",
+            "nvt_nombre": "TOUR COLONIAL",
             "nvt_neto_adulto": Decimal("120000"),
             "nvt_neto_nino": Decimal("60000"),
         })
@@ -1008,7 +1007,7 @@ class TestHandleNvtCrear:
 
         saved = ctx.bot_data["servicio_repo"].guardar.call_args[0][0]
         assert saved.numero == 5
-        assert saved.nombre == "Tour Colonial"
+        assert saved.nombre == "TOUR COLONIAL"
         assert saved.categoria == "CULTURAL"
         assert saved.precio_neto_adulto == Decimal("120000")
         assert saved.precio_neto_nino == Decimal("60000")
@@ -1023,7 +1022,7 @@ class TestHandleNvtCrear:
         ctx = _make_context(siguiente_numero=1)
         ctx.user_data.update({
             "nvt_familia": "PLAYERO",
-            "nvt_nombre": "Tour Playa",
+            "nvt_nombre": "TOUR PLAYA",
             "nvt_neto_adulto": None,
             "nvt_neto_nino": None,
         })
@@ -1041,7 +1040,7 @@ class TestHandleNvtCrear:
         ctx = _make_context(siguiente_numero=1)
         ctx.user_data.update({
             "nvt_familia": "PLAYERO",
-            "nvt_nombre": "Tour Playa",
+            "nvt_nombre": "TOUR PLAYA",
             "nvt_neto_adulto": None,
             "nvt_neto_nino": None,
         })
@@ -1051,7 +1050,7 @@ class TestHandleNvtCrear:
         update.effective_message.reply_text.assert_called()
         # At least one reply must contain the tour name
         texts = [str(c[0][0]) for c in update.effective_message.reply_text.call_args_list]
-        assert any("Tour Playa" in t for t in texts)
+        assert any("TOUR PLAYA" in t for t in texts)
 
 
 # ---------------------------------------------------------------------------

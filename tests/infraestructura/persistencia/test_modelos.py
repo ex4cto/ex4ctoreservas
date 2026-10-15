@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (  # noqa: F401
     AuditoriaVentaModel,
+    CambioPendienteModel,
     CategoriaEgresoModel,
     ClienteModel,
     ComisionRegistradaModel,
@@ -53,6 +54,7 @@ _EXPECTED_TABLES = {
     "obligaciones_hotel",
     "contadores_documento",
     "pagos_freelancers",
+    "cambios_imagen_pendiente",
 }
 
 

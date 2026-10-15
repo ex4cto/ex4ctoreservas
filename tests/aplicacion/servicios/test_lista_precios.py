@@ -306,3 +306,5 @@ class TestFiltroNeto:
 
         assert generador.calls == []
         assert enviador.sent == []
+
+

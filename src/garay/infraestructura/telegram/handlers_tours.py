@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import html
 import logging
@@ -14,15 +15,12 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
-from garay.aplicacion.servicios.lista_precios import (
-    PublicarListaPreciosServicio,
-    publicar_seguro,
-)
+from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
 from garay.dominio.servicios.horarios import agregar_horario, formato_display, quitar_horario
-from garay.infraestructura.telegram.auth import requiere_admin_conv
+from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
 from garay.infraestructura.telegram.handlers import (
     cerrar_flujo,
     finalizar_flujo,
@@ -32,6 +30,41 @@ from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Catalog notification service — injected via configurar_notificaciones_catalogo
+# ---------------------------------------------------------------------------
+
+_svc_notificaciones: NotificarCambioCatalogoServicio | None = None
+
+
+def configurar_notificaciones_catalogo(svc: NotificarCambioCatalogoServicio) -> None:
+    """Wire the catalog notification service into this module.
+
+    Called once from main.py during application startup.
+    """
+    global _svc_notificaciones
+    _svc_notificaciones = svc
+
+
+@requiere_admin
+async def cmd_actualizar_imagenes(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handler for /actualizar_imagenes — regenerate price-list images if changes pending."""
+    assert _svc_notificaciones is not None, "Notification service not configured"
+    cambios = await asyncio.to_thread(_svc_notificaciones._repo.listar_todos)
+    if not cambios:
+        if update.effective_message is not None:
+            await update.effective_message.reply_text(
+                obtener_mensaje("catalogo.cambios.sin_pendientes")
+            )
+        return
+    if update.effective_message is not None:
+        await update.effective_message.reply_text(
+            obtener_mensaje("catalogo.cambios.generando")
+        )
+    context.application.create_task(_svc_notificaciones.generar_y_confirmar())
 
 
 async def _limpiar_botones(query: CallbackQuery) -> None:
@@ -834,12 +867,13 @@ async def handle_edt_confirma(
         for key in ("edt_campo", "edt_valor", "edt_activo_nuevo", "edt_permite_ninos_nuevo"):
             context.user_data.pop(key, None)
 
-    # Fire-and-forget: publish updated price list (non-blocking).
-    _svc_edt: PublicarListaPreciosServicio | None = context.bot_data.get(
-        "publicar_lista_precios_service"
-    )
-    if _svc_edt is not None:
-        context.application.create_task(publicar_seguro(_svc_edt))
+    # Fire-and-forget: register catalog change and trigger debounced reminder.
+    if _svc_notificaciones is not None:
+        usuario = update.effective_user.full_name if update.effective_user else "Sistema"
+        accion = ("activado" if s.activo else "desactivado") if campo == "activo" else "editado"
+        context.application.create_task(
+            _svc_notificaciones.registrar_cambio(accion, usuario, s.nombre)
+        )
 
     return await _menu_campos(update, context)
 
@@ -1188,12 +1222,12 @@ async def handle_elt_confirma(
     _refrescar_fsm(context)
     _limpiar_elt(context)
 
-    # Fire-and-forget: publish updated price list (non-blocking).
-    _svc_elt: PublicarListaPreciosServicio | None = context.bot_data.get(
-        "publicar_lista_precios_service"
-    )
-    if _svc_elt is not None:
-        context.application.create_task(publicar_seguro(_svc_elt))
+    # Fire-and-forget: register catalog change and trigger debounced reminder.
+    if _svc_notificaciones is not None:
+        usuario = update.effective_user.full_name if update.effective_user else "Sistema"
+        context.application.create_task(
+            _svc_notificaciones.registrar_cambio("desactivado", usuario, nombre)
+        )
 
     return await finalizar_flujo(
         update,
@@ -1738,12 +1772,12 @@ async def handle_nvt_crear(
     _refrescar_fsm(context)
     _limpiar_nvt(context)
 
-    # Fire-and-forget: publish updated price list (non-blocking).
-    _svc: PublicarListaPreciosServicio | None = context.bot_data.get(
-        "publicar_lista_precios_service"
-    )
-    if _svc is not None:
-        context.application.create_task(publicar_seguro(_svc))
+    # Fire-and-forget: register catalog change and trigger debounced reminder.
+    if _svc_notificaciones is not None:
+        usuario = update.effective_user.full_name if update.effective_user else "Sistema"
+        context.application.create_task(
+            _svc_notificaciones.registrar_cambio("creado", usuario, nuevo.nombre)
+        )
 
     return await finalizar_flujo(
         update,

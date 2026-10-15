@@ -17,8 +17,8 @@ from garay.dominio.servicios.entidades import Servicio
 
 
 def _servicio(
-    nombre: str = "City Tour",
-    categoria: str = "Cartagena",
+    nombre: str = "CITY TOUR",
+    categoria: str = "CARTAGENA",
     activo: bool = True,
     neto_adulto: Decimal | None = Decimal("30000"),
     neto_nino: Decimal | None = None,
@@ -100,8 +100,8 @@ class TestCmdEditarTour:
     @pytest.mark.asyncio
     async def test_cmd_editar_tour_muestra_familias(self) -> None:
         """Entry point returns family inline keyboard (requires admin; mocks repo.listar())."""
-        s1 = _servicio("City Tour", "Cartagena")
-        s2 = _servicio("Islas", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
+        s2 = _servicio("Islas", "CARTAGENA")
         s3 = _servicio("Desierto", "Guajira")
         update = _make_update()
         ctx = _make_context(servicios=[s1, s2, s3])
@@ -119,8 +119,8 @@ class TestHandleEdtFamilia:
     @pytest.mark.asyncio
     async def test_seleccionar_familia_muestra_tours(self) -> None:
         """Family selection returns tour list keyboard."""
-        s1 = _servicio("City Tour", "Cartagena")
-        s2 = _servicio("Islas", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
+        s2 = _servicio("Islas", "CARTAGENA")
         update = _make_update(callback_data="edt_familia:Cartagena")
         ctx = _make_context(
             servicios=[s1, s2],
@@ -141,7 +141,7 @@ class TestHandleEdtTour:
     @pytest.mark.asyncio
     async def test_seleccionar_tour_muestra_ficha(self) -> None:
         """Tour selection returns detail screen with edit buttons."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data=f"edt_tour:{s1.id}")
         ctx = _make_context(
             servicios=[s1],
@@ -159,7 +159,7 @@ class TestHandleEdtCampoNombre:
     @pytest.mark.asyncio
     async def test_editar_nombre_muestra_confirmacion_antes_despues(self) -> None:
         """Name edit shows before→after screen."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(text="Nuevo City Tour")
         ctx = _make_context(
             servicios=[s1],
@@ -175,13 +175,13 @@ class TestHandleEdtCampoNombre:
         assert result == EDF_CONFIRMA
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
-        assert "City Tour" in msg or "Nuevo City Tour" in msg
+        assert "CITY TOUR" in msg or "Nuevo City Tour" in msg
 
     @pytest.mark.asyncio
     async def test_editar_nombre_noop_guard(self) -> None:
         """Same name → no save, notifica sin cambio, returns to ficha."""
-        s1 = _servicio("City Tour", "Cartagena")
-        update = _make_update(text="City Tour")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
+        update = _make_update(text="CITY TOUR")
         ctx = _make_context(
             servicios=[s1],
             user_data={
@@ -199,7 +199,7 @@ class TestHandleEdtCampoNombre:
     @pytest.mark.asyncio
     async def test_editar_nombre_vacio_rechazado(self) -> None:
         """Empty name → error, stays in EDF_CAMPO state."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(text="   ")
         ctx = _make_context(
             servicios=[s1],
@@ -218,7 +218,7 @@ class TestHandleEdtCampoNombre:
     @pytest.mark.asyncio
     async def test_editar_nombre_guarda_y_refresca_fsm(self) -> None:
         """Confirm → servicio_repo.guardar() called + fsm.refrescar_servicios() called."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data="edt_confirmar")
         ctx = _make_context(
             servicios=[s1],
@@ -338,7 +338,7 @@ class TestHandleEdtFamiliaReasign:
     @pytest.mark.asyncio
     async def test_editar_familia_existente(self) -> None:
         """Selecting existing family button → before→after confirm."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data="edt_familia_nueva:Guajira")
         ctx = _make_context(
             servicios=[s1],
@@ -356,7 +356,7 @@ class TestHandleEdtFamiliaReasign:
     @pytest.mark.asyncio
     async def test_editar_familia_nueva_libre(self) -> None:
         """'Nueva familia' button → text prompt, returns EDF_NUEVA_FAMILIA (Option B fix)."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data="edt_familia_nueva_libre")
         ctx = _make_context(
             servicios=[s1],
@@ -377,7 +377,7 @@ class TestHandleEdtNuevaFamiliaTexto:
     @pytest.mark.asyncio
     async def test_nueva_familia_libre_texto_muestra_confirmacion(self) -> None:
         """Free-text new family name → before→after confirm."""
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(text="San Andres")
         ctx = _make_context(
             servicios=[s1],
@@ -594,7 +594,7 @@ class TestEdtCampoRoutingNuevaFamilia:
         handled by handle_edt_nueva_familia_texto, which returns EDF_CONFIRMA.
         We verify by calling the handler that PTB would actually invoke.
         """
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(text="San Andres")
         ctx = _make_context(
             servicios=[s1],
@@ -629,7 +629,7 @@ class TestEdtCampoRoutingNuevaFamilia:
         the wrong handler (handle_edt_valor) was being dispatched by PTB for
         'nueva familia' text input because both were registered under EDF_CAMPO.
         """
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(text="San Andres")
         ctx = _make_context(
             servicios=[s1],
@@ -671,7 +671,7 @@ class TestEdtCampoRoutingNuevaFamilia:
         """
         from garay.infraestructura.telegram.handlers_tours import EDF_NUEVA_FAMILIA
 
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
         update = _make_update(callback_data="edt_familia_nueva_libre")
         ctx = _make_context(
             servicios=[s1],
@@ -699,7 +699,7 @@ class TestEdtNuevaFamiliaEndToEnd:
         End-to-end: admin writes new family name → confirm → service saved with
         new categoria and FSM refreshed.  Verifies no 'neto inválido' error in path.
         """
-        s1 = _servicio("City Tour", "Cartagena")
+        s1 = _servicio("CITY TOUR", "CARTAGENA")
 
         # Step 1: tap 'Nueva familia' → must go to EDF_NUEVA_FAMILIA
         update_cb = _make_update(callback_data="edt_familia_nueva_libre")

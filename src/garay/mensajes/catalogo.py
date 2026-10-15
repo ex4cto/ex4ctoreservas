@@ -1577,6 +1577,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "🗑️ ¿Anular este pago?\n\n{monto} — {nombre}\n\nEsta acción no se puede deshacer."
     },
     "liquidaciones.anular_ok": {Idioma.ES: "✅ Pago anulado correctamente."},
+    # --- Cambios de catálogo (notificaciones) ---
+    "catalogo.cambios.generando": {Idioma.ES: "⏳ Generando imágenes de lista de precios..."},
+    "catalogo.cambios.sin_pendientes": {Idioma.ES: "ℹ️ No hay cambios pendientes en el catálogo."},
+    "catalogo.cambios.recordatorio": {
+        Idioma.ES: (
+            "⚠️ Hay {n} cambio(s) pendiente(s) en el catálogo:\n{items}\n\n"
+            "Ejecuta /actualizar_imagenes para regenerar."
+        )
+    },
+    "catalogo.cambios.grupo": {Idioma.ES: "📋 Lista de precios actualizada.\n{items}"},
+    "catalogo.cambios.confirmacion": {Idioma.ES: "✅ Lista de precios actualizada. Sin cambios pendientes."},
+    "catalogo.cambios.error_dev": {Idioma.ES: "❌ Error al generar imágenes:\n{error}"},
+    "catalogo.cambios.editado": {Idioma.ES: "• {usuario} editó <i>{nombre}</i>"},
+    "catalogo.cambios.creado": {Idioma.ES: "• {usuario} creó <i>{nombre}</i>"},
+    "catalogo.cambios.activado": {Idioma.ES: "• {usuario} activó <i>{nombre}</i>"},
+    "catalogo.cambios.desactivado": {Idioma.ES: "• {usuario} desactivó <i>{nombre}</i>"},
 }
 
 
