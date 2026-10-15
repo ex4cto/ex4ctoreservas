@@ -13,7 +13,6 @@ import json
 import logging
 import urllib.error
 import urllib.request
-from email.mime.multipart import MIMEMultipart
 
 from garay.dominio.puertos.servicios_externos import EnviadorFotoPort
 
@@ -23,13 +22,19 @@ _BOUNDARY = "GarayToursPhotoUpload"
 logger = logging.getLogger(__name__)
 
 
-def _build_multipart(fields: dict[str, str], file_field: str, file_bytes: bytes) -> bytes:
+def _build_multipart(
+    fields: dict[str, str],
+    file_field: str,
+    file_bytes: bytes,
+    filename: str = "lista_precios.png",
+) -> bytes:
     """Build raw multipart/form-data body.
 
     Args:
         fields: string key-value fields (e.g. {"chat_id": "-100..."}).
-        file_field: name of the file field (e.g. "photo").
+        file_field: name of the file field (e.g. "document").
         file_bytes: raw PNG bytes.
+        filename: filename shown to Telegram clients on download.
 
     Returns:
         Raw bytes body for the multipart POST.
@@ -47,7 +52,7 @@ def _build_multipart(fields: dict[str, str], file_field: str, file_bytes: bytes)
     # File part
     body.write(sep)
     body.write(
-        f'Content-Disposition: form-data; name="{file_field}"; filename="lista_precios.png"\r\n'.encode()
+        f'Content-Disposition: form-data; name="{file_field}"; filename="{filename}"\r\n'.encode()
     )
     body.write(b"Content-Type: image/png\r\n\r\n")
     body.write(file_bytes)
@@ -67,8 +72,10 @@ def _extraer_migrate_id(body: bytes) -> int | None:
     return mig if isinstance(mig, int) else None
 
 
-def _sync_send(token: str, imagen: bytes, grupo_id: str) -> None:
-    """Synchronous urllib POST to sendPhoto.
+def _sync_send(
+    token: str, imagen: bytes, grupo_id: str, filename: str = "lista_precios.png"
+) -> None:
+    """Synchronous urllib POST to sendDocument.
 
     Handles supergroup migration: on 400 with migrate_to_chat_id, retries once
     with the new chat_id.
@@ -80,7 +87,7 @@ def _sync_send(token: str, imagen: bytes, grupo_id: str) -> None:
     url = f"{_API_BASE}/bot{token}/sendDocument"
 
     def _post(chat_id: str) -> bytes:
-        body = _build_multipart({"chat_id": chat_id}, "document", imagen)
+        body = _build_multipart({"chat_id": chat_id}, "document", imagen, filename)
         req = urllib.request.Request(
             url,
             data=body,
@@ -126,10 +133,15 @@ class EnviadorFotoTelegram(EnviadorFotoPort):
     def __init__(self, token: str) -> None:
         self._token = token
 
-    async def enviar(self, imagen: bytes, grupo_id: str) -> None:
-        """Send *imagen* (PNG bytes) to *grupo_id* via sendPhoto.
+    async def enviar(
+        self,
+        imagen: bytes,
+        grupo_id: str,
+        filename: str = "lista_precios.png",
+    ) -> None:
+        """Send *imagen* (PNG bytes) to *grupo_id* via sendDocument.
 
         Uses asyncio's default executor to keep the event loop non-blocking.
         """
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _sync_send, self._token, imagen, grupo_id)
+        await loop.run_in_executor(None, _sync_send, self._token, imagen, grupo_id, filename)

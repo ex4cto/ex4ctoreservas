@@ -93,17 +93,19 @@ class PublicarListaPreciosServicio:
             key=lambda s: (s.categoria, s.numero),
         )
 
-        imagenes: list[bytes] = []
+        imagenes: list[tuple[bytes, str]] = []
+        n = 0
         for grupo in (grupo1, grupo2):
             if not grupo:
                 continue
             for tipo in (TipoImagen.INTERNA, TipoImagen.TURISTA):
+                n += 1
                 img = await self._generador.generar_imagen_precios(grupo, tipo)
-                imagenes.append(img)
+                imagenes.append((img, f"lista_precios_{n}.png"))
 
         if self._grupo_id:
-            for img in imagenes:
-                await self._enviador_foto.enviar(img, self._grupo_id)
+            for img, filename in imagenes:
+                await self._enviador_foto.enviar(img, self._grupo_id, filename)
 
 
 async def publicar_seguro(service: PublicarListaPreciosServicio) -> None:

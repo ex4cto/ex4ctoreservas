@@ -71,6 +71,11 @@ class EnviadorFotoPort(ABC):
     """
 
     @abstractmethod
-    async def enviar(self, imagen: bytes, grupo_id: str) -> None:
-        """Send *imagen* (raw PNG bytes) to *grupo_id*."""
+    async def enviar(
+        self,
+        imagen: bytes,
+        grupo_id: str,
+        filename: str = "lista_precios.png",
+    ) -> None:
+        """Send *imagen* (raw PNG bytes) to *grupo_id* with the given *filename*."""
         ...

@@ -52,10 +52,12 @@ class FakeGenerador(GeneradorListaPreciosPort):
 
 class FakeEnviador(EnviadorFotoPort):
     def __init__(self) -> None:
-        self.sent: list[tuple[bytes, str]] = []
+        self.sent: list[tuple[bytes, str, str]] = []
 
-    async def enviar(self, imagen: bytes, grupo_id: str) -> None:
-        self.sent.append((imagen, grupo_id))
+    async def enviar(
+        self, imagen: bytes, grupo_id: str, filename: str = "lista_precios.png"
+    ) -> None:
+        self.sent.append((imagen, grupo_id, filename))
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +122,7 @@ class TestPublicarListaPreciosServicio:
         await svc.publicar()
 
         assert len(enviador.sent) == 2
-        for _img, grupo_id in enviador.sent:
+        for _img, grupo_id, _fname in enviador.sent:
             assert grupo_id == "-1001234567"
 
     @pytest.mark.asyncio
@@ -212,8 +214,34 @@ class TestPublicarListaPreciosServicio:
         await svc.publicar()
 
         assert len(enviador.sent) == 4
-        for _img, grupo_id in enviador.sent:
+        for _img, grupo_id, _fname in enviador.sent:
             assert grupo_id == "-1001234567"
+
+    @pytest.mark.asyncio
+    async def test_filenames_numerados_1_al_4(self) -> None:
+        """Each image is sent with a unique filename lista_precios_N.png (1-4)."""
+        from garay.aplicacion.servicios.lista_precios import (
+            _GRUPO_1_CATEGORIAS,
+            PublicarListaPreciosServicio,
+        )
+
+        cat1 = next(iter(_GRUPO_1_CATEGORIAS))
+        s_g1 = _servicio(categoria=cat1)
+        s_g2 = _servicio(categoria="OTROS")
+        repo = self._make_repo([s_g1, s_g2])
+        generador = FakeGenerador()
+        enviador = FakeEnviador()
+
+        svc = PublicarListaPreciosServicio(repo, generador, enviador, "grupo123")
+        await svc.publicar()
+
+        fnames = [fname for _img, _gid, fname in enviador.sent]
+        assert fnames == [
+            "lista_precios_1.png",
+            "lista_precios_2.png",
+            "lista_precios_3.png",
+            "lista_precios_4.png",
+        ]
 
 
 # ---------------------------------------------------------------------------
