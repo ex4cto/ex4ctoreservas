@@ -352,7 +352,7 @@
   },
   {
     "numero": 28,
-    "nombre": "5 ISLAS  VIP (OCEANARIO + PLANKTON)",
+    "nombre": "5 ISLAS VIP (OCEANARIO + PLANKTON)",
     "categoria": "TOURS 5 ISLAS VIP",
     "operador": "E- TRIPS",
     "neto_adulto": null,
@@ -586,7 +586,7 @@
   },
   {
     "numero": 46,
-    "nombre": "4 ISLAS  PLAYAS PUBLICAS  CON DESAYUNO (SIN PLANCTON)",
+    "nombre": "4 ISLAS PLAYAS PUBLICAS CON DESAYUNO (SIN PLANCTON)",
     "categoria": "TOURS 4 ISLAS",
     "operador": "DYKTOURVIP",
     "neto_adulto": "135",
@@ -599,7 +599,7 @@
   },
   {
     "numero": 47,
-    "nombre": "4 ISLAS  PLAYAS PUBLICAS  CON DESAYUNO (CON PLANCTON)",
+    "nombre": "4 ISLAS PLAYAS PUBLICAS CON DESAYUNO (CON PLANCTON)",
     "categoria": "TOURS 4 ISLAS",
     "operador": "DYKTOURVIP",
     "neto_adulto": "155",
@@ -859,7 +859,7 @@
   },
   {
     "numero": 67,
-    "nombre": "ISLA PALMA  (DIRECTO)",
+    "nombre": "ISLA PALMA (DIRECTO)",
     "categoria": "TOUR ISLA SAN BERNARDO DEL VIENTO Y PLAYA PRIVADA",
     "operador": "MARINA TOUR",
     "neto_adulto": "410",
@@ -1196,7 +1196,7 @@
   },
   {
     "numero": 93,
-    "nombre": "ISLA DEL PIRATA  PREMIUN  ( BARRA LIBRE)",
+    "nombre": "ISLA DEL PIRATA PREMIUN ( BARRA LIBRE)",
     "categoria": "PLAYAS PRIVADAS ISLAS DEL ROSARIO - BARÚ",
     "operador": "ISLA DEL PIRATA",
     "neto_adulto": "340",
@@ -1313,7 +1313,7 @@
   },
   {
     "numero": 102,
-    "nombre": "CENA  4 TIEMPOS SIBARITA",
+    "nombre": "CENA 4 TIEMPOS SIBARITA",
     "categoria": "TOURS BAHIA",
     "operador": "SIBARITA",
     "neto_adulto": "245",
@@ -1376,7 +1376,7 @@
   },
   {
     "numero": 107,
-    "nombre": "TOUR BAHIA  BARCO BEQUIA",
+    "nombre": "BARCO BEQUIA",
     "categoria": "TOURS BAHIA",
     "operador": "GESTION TURISTICA",
     "neto_adulto": "100",
@@ -1389,7 +1389,7 @@
   },
   {
     "numero": 108,
-    "nombre": "TOUR BAHIA BARCO PHANTON",
+    "nombre": "BARCO PHANTON",
     "categoria": "TOURS BAHIA",
     "operador": "BARCO PHANTON",
     "neto_adulto": "60",
@@ -1402,7 +1402,7 @@
   },
   {
     "numero": 109,
-    "nombre": "TOUR BAHIA EN BOTE 5:00, 7:00 Y 9:00 PM",
+    "nombre": "EN BOTE 5:00, 7:00 Y 9:00 PM",
     "categoria": "TOURS BAHIA",
     "operador": "E- TRIPS",
     "neto_adulto": "40",
@@ -1415,7 +1415,7 @@
   },
   {
     "numero": 110,
-    "nombre": "TOUR BAHIA EN BOTE TARDE Y NOCHE",
+    "nombre": "EN BOTE TARDE Y NOCHE",
     "categoria": "TOURS BAHIA",
     "operador": "BRAILY",
     "neto_adulto": "40",
@@ -1428,7 +1428,7 @@
   },
   {
     "numero": 111,
-    "nombre": "TOUR BAHIA YATE",
+    "nombre": "YATE",
     "categoria": "TOURS BAHIA",
     "operador": "NELSON",
     "neto_adulto": "60",
@@ -1441,7 +1441,7 @@
   },
   {
     "numero": 112,
-    "nombre": "TOUR BAHIA CATAMARAN ISABELLA",
+    "nombre": "CATAMARAN ISABELLA",
     "categoria": "TOURS BAHIA",
     "operador": "ISABELLA T.CATAMARAN",
     "neto_adulto": "90",
@@ -1454,7 +1454,7 @@
   },
   {
     "numero": 113,
-    "nombre": "TOUR BAHIA CATAMARAN FLAMANTE SUNSET",
+    "nombre": "CATAMARAN FLAMANTE SUNSET",
     "categoria": "TOURS BAHIA",
     "operador": "FLAMANTE",
     "neto_adulto": "130",
@@ -1467,7 +1467,7 @@
   },
   {
     "numero": 114,
-    "nombre": "TOUR BAHIA CATAMARAN FLAMANTE ANOCHECER",
+    "nombre": "CATAMARAN FLAMANTE ANOCHECER",
     "categoria": "TOURS BAHIA",
     "operador": "FLAMANTE",
     "neto_adulto": "220",
@@ -1493,7 +1493,7 @@
   },
   {
     "numero": 116,
-    "nombre": "TOUR BAHIA BARCO CARROUCEL (TRADICIONAL)",
+    "nombre": "BARCO CARROUCEL (TRADICIONAL)",
     "categoria": "TOURS BAHIA",
     "operador": "CARROUCEL",
     "neto_adulto": "100",
@@ -1506,7 +1506,7 @@
   },
   {
     "numero": 117,
-    "nombre": "TOUR BAHIA BARCO CARROUCEL (BARRA LIBRE)",
+    "nombre": "BARCO CARROUCEL (BARRA LIBRE)",
     "categoria": "TOURS BAHIA",
     "operador": "CARROUCEL",
     "neto_adulto": "115",
@@ -1753,7 +1753,7 @@
   },
   {
     "numero": 136,
-    "nombre": "WALA PASADIA BEACH CLUB  BOCAGRANDE",
+    "nombre": "WALA PASADIA BEACH CLUB BOCAGRANDE",
     "categoria": "OTROS",
     "operador": "WALA BEACH CLUB",
     "neto_adulto": "290",
@@ -1834,7 +1834,7 @@
   },
   {
     "numero": 143,
-    "nombre": "TOUR BAHIA BARCO PIRATA BERGANTIN",
+    "nombre": "BARCO PIRATA BERGANTIN",
     "categoria": "TOURS BAHIA",
     "operador": null,
     "neto_adulto": "70",
@@ -2019,7 +2019,7 @@
   },
   {
     "numero": 160,
-    "nombre": "TOUR BAHIA CATAMARAN NELSON",
+    "nombre": "CATAMARAN NELSON",
     "categoria": "TOURS BAHIA",
     "operador": "CATAMARAN NELSON",
     "neto_adulto": "90",
@@ -2030,7 +2030,7 @@
   },
   {
     "numero": 161,
-    "nombre": "TOUR BAHIA CATAMARAN SAN JUAN",
+    "nombre": "CATAMARAN SAN JUAN",
     "categoria": "TOURS BAHIA",
     "operador": "CATAMARAN SAN JUAN",
     "neto_adulto": "100",

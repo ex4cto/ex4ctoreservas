@@ -86,11 +86,11 @@ class PublicarListaPreciosServicio:
 
         grupo1 = sorted(
             (s for s in filtrados if s.categoria in _GRUPO_1_CATEGORIAS),
-            key=lambda s: (s.categoria, s.numero),
+            key=lambda s: (s.categoria, s.nombre),
         )
         grupo2 = sorted(
             (s for s in filtrados if s.categoria not in _GRUPO_1_CATEGORIAS),
-            key=lambda s: (s.categoria, s.numero),
+            key=lambda s: (s.categoria, s.nombre),
         )
 
         imagenes: list[tuple[bytes, str]] = []
