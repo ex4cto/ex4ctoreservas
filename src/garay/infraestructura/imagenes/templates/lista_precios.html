@@ -345,9 +345,9 @@
         "OTROS":                                                         "#455a64"
       } %}
 
-      {# Build ordered category list #}
+      {# Build ordered category list — preserve Python's sort order #}
       {% set ns = namespace(seen_cats=[]) %}
-      {% for s in servicios | sort(attribute='numero') %}
+      {% for s in servicios %}
         {% if s.categoria not in ns.seen_cats %}
           {% set ns.seen_cats = ns.seen_cats + [s.categoria] %}
         {% endif %}
@@ -375,7 +375,7 @@
             </thead>
             <tbody>
               {% set row_ns = namespace(idx=0) %}
-              {% for s in servicios | sort(attribute='numero') %}
+              {% for s in servicios %}
                 {% if s.categoria == cat %}
                   {% set row_class = "even" if row_ns.idx % 2 == 1 else "odd" %}
                   {% set row_ns.idx = row_ns.idx + 1 %}
