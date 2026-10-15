@@ -79,7 +79,7 @@
   },
   {
     "numero": 7,
-    "nombre": "PLAYA BLANCA ATARDECER + PLANKTON",
+    "nombre": "PLAYA BLANCA ATARDECER + PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "NEXX TOUR",
     "neto_adulto": "95",
@@ -92,7 +92,7 @@
   },
   {
     "numero": 8,
-    "nombre": "PLAYA BLANCA ATARDECER +CENA + PLANKTON",
+    "nombre": "PLAYA BLANCA ATARDECER +CENA + PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "NEXX TOUR",
     "neto_adulto": "160",
@@ -105,7 +105,7 @@
   },
   {
     "numero": 9,
-    "nombre": "PLAYA BLANCA ATARDECER + CENA +PLANKTON",
+    "nombre": "PLAYA BLANCA ATARDECER + CENA +PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E-TRIPS",
     "neto_adulto": "120",
@@ -144,7 +144,7 @@
   },
   {
     "numero": 12,
-    "nombre": "PLAYA TRANQUILA (PLANKTON)",
+    "nombre": "PLAYA TRANQUILA (PLANCTON)",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "125",
@@ -170,7 +170,7 @@
   },
   {
     "numero": 14,
-    "nombre": "PLAYA TRANQUILA + ISLAS DEL ROSARIO + PLANKTON",
+    "nombre": "PLAYA TRANQUILA + ISLAS DEL ROSARIO + PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -196,7 +196,7 @@
   },
   {
     "numero": 16,
-    "nombre": "PLAYA TRANQUILA + ACUARIO +PLANKTON",
+    "nombre": "PLAYA TRANQUILA + ACUARIO +PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -222,7 +222,7 @@
   },
   {
     "numero": 18,
-    "nombre": "PLAYA TRANQUILA + MAPACHES + PLANKTON",
+    "nombre": "PLAYA TRANQUILA + MAPACHES + PLANCTON",
     "categoria": "BARÚ PLAYA BLANCA - PLAYA TRANQUILA",
     "operador": "E- TRIPS",
     "neto_adulto": "170",
@@ -352,7 +352,7 @@
   },
   {
     "numero": 28,
-    "nombre": "5 ISLAS VIP (OCEANARIO + PLANKTON)",
+    "nombre": "5 ISLAS VIP (OCEANARIO + PLANCTON)",
     "categoria": "TOURS 5 ISLAS VIP",
     "operador": "E- TRIPS",
     "neto_adulto": null,
@@ -365,7 +365,7 @@
   },
   {
     "numero": 29,
-    "nombre": "5 ISLAS VIP (PLANKTON)",
+    "nombre": "5 ISLAS VIP (PLANCTON)",
     "categoria": "TOURS 5 ISLAS VIP",
     "operador": "E- TRIPS",
     "neto_adulto": null,
@@ -378,7 +378,7 @@
   },
   {
     "numero": 30,
-    "nombre": "5 ISLAS VIP ( OPEN BAR + OCEANARIO + PLANKTON)",
+    "nombre": "5 ISLAS VIP ( OPEN BAR + OCEANARIO + PLANCTON)",
     "categoria": "TOURS 5 ISLAS VIP",
     "operador": "E- TRIPS",
     "neto_adulto": null,
@@ -391,7 +391,7 @@
   },
   {
     "numero": 31,
-    "nombre": "5 ISLAS VIP (OPEN BAR + PLANKTON)",
+    "nombre": "5 ISLAS VIP (OPEN BAR + PLANCTON)",
     "categoria": "TOURS 5 ISLAS VIP",
     "operador": "E- TRIPS",
     "neto_adulto": null,
@@ -456,7 +456,7 @@
   },
   {
     "numero": 36,
-    "nombre": "5 ISLAS PREMIUM (PLANKTON)",
+    "nombre": "5 ISLAS PREMIUM (PLANCTON)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
     "neto_adulto": "230",
@@ -469,7 +469,7 @@
   },
   {
     "numero": 37,
-    "nombre": "5 ISLAS PREMIUM (OCEANARIO + OPEN BAR + PLANKTON)",
+    "nombre": "5 ISLAS PREMIUM (OCEANARIO + OPEN BAR + PLANCTON)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
     "neto_adulto": "270",
@@ -482,7 +482,7 @@
   },
   {
     "numero": 38,
-    "nombre": "5 ISLAS PREMIUM (OPEN BAR +PLANKTON)",
+    "nombre": "5 ISLAS PREMIUM (OPEN BAR +PLANCTON)",
     "categoria": "TOURS 5 ISLAS PREMIUM",
     "operador": "E- TRIPS",
     "neto_adulto": "240",
@@ -638,7 +638,7 @@
   },
   {
     "numero": 50,
-    "nombre": "4 ISLAS (PLANKTON)",
+    "nombre": "4 ISLAS (PLANCTON)",
     "categoria": "TOURS 4 ISLAS",
     "operador": "E- TRIPS",
     "neto_adulto": "150",
@@ -651,7 +651,7 @@
   },
   {
     "numero": 51,
-    "nombre": "4 ISLAS (PLANKTON +ACUARIO)",
+    "nombre": "4 ISLAS (PLANCTON +ACUARIO)",
     "categoria": "TOURS 4 ISLAS",
     "operador": "E- TRIPS",
     "neto_adulto": "180",
@@ -1209,7 +1209,7 @@
   },
   {
     "numero": 94,
-    "nombre": "TOP 3 ISLAS",
+    "nombre": "TOP 3 ISLAS (BORA BORA + PAO PAO + ISLA VELA)",
     "categoria": "3 ISLAS PRIVADAS",
     "operador": "BORA BORA BEACH CLUB",
     "neto_adulto": "400",
@@ -1235,7 +1235,7 @@
   },
   {
     "numero": 96,
-    "nombre": "3 ISLAS PRIVADAS PLANKTON",
+    "nombre": "3 ISLAS PRIVADAS PLANCTON",
     "categoria": "3 ISLAS PRIVADAS",
     "operador": "E- TRIPS",
     "neto_adulto": "290",
@@ -1261,7 +1261,7 @@
   },
   {
     "numero": 98,
-    "nombre": "3 ISLAS PRIVADAS +OCEANARIO+PLANKTON",
+    "nombre": "3 ISLAS PRIVADAS +OCEANARIO+PLANCTON",
     "categoria": "3 ISLAS PRIVADAS",
     "operador": "E- TRIPS",
     "neto_adulto": "320",
@@ -2074,7 +2074,7 @@
   },
   {
     "numero": 165,
-    "nombre": "FAMILY PLAN + PLANKTON",
+    "nombre": "FAMILY PLAN + PLANCTON",
     "categoria": "TOURS 4 ISLAS",
     "operador": "E-TRIPS",
     "neto_adulto": "180",
