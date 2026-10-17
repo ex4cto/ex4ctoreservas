@@ -31,6 +31,8 @@ def _build_service(**kwargs: object) -> RegistrarVentaService:
         grupo_id="grupo-test",
         comisiones_repo=MagicMock(),
         socios_config=MagicMock(),
+        freelancers=MagicMock(),
+        servicios=MagicMock(),
     )
     defaults.update(kwargs)
     return RegistrarVentaService(**defaults)

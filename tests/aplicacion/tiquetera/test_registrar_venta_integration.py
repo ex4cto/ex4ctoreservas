@@ -155,6 +155,8 @@ def _build_real_service(sf: sessionmaker[Session]) -> RegistrarVentaService:
         grupo_id="test-group",
         comisiones_repo=SQLAComisionRegistradaRepository(sf),
         socios_config=MagicMock(),
+        freelancers=MagicMock(),
+        servicios=MagicMock(),
     )
 
 

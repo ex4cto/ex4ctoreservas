@@ -41,6 +41,9 @@ class Servicio:
     precio_sugerido_adulto: Decimal | None = field(default=None)
     precio_sugerido_nino: Decimal | None = field(default=None)
 
+    info_tour: str | None = field(default=None)
+    observaciones: str | None = field(default=None)
+
     def __post_init__(self) -> None:
         self.nombre = " ".join(self.nombre.upper().split())
         self.categoria = " ".join(self.categoria.upper().split())

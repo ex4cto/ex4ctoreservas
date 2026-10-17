@@ -62,6 +62,9 @@ class ServicioModel(Base):
     precio_sugerido_adulto: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     precio_sugerido_nino: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
 
+    info_tour: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
 class ClienteModel(Base):
     __tablename__ = "clientes"
@@ -162,9 +165,7 @@ class VentaModel(Base):
         String, nullable=False, server_default="es", default="es"
     )
     metodo_pago: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    mensaje_grupo_id: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True, default=None
-    )
+    mensaje_grupo_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None)
 
 
 class TiqueteraModel(Base):
@@ -326,9 +327,7 @@ class CorreoNoParseadoModel(Base):
     """ORM model for quarantined emails that could not be parsed into an Ingreso/Egreso."""
 
     __tablename__ = "correos_no_parseados"
-    __table_args__ = (
-        sa.UniqueConstraint("referencia", name="uq_correos_no_parseados_referencia"),
-    )
+    __table_args__ = (sa.UniqueConstraint("referencia", name="uq_correos_no_parseados_referencia"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     banco: Mapped[str] = mapped_column(String, nullable=False)
@@ -345,9 +344,7 @@ class CorreoNoParseadoModel(Base):
     procesado: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=sa.text("false")
     )
-    intentos: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default=sa.text("0")
-    )
+    intentos: Mapped[int] = mapped_column(Integer, nullable=False, server_default=sa.text("0"))
     error_ultimo: Mapped[str] = mapped_column(String, nullable=False, default="")
 
 

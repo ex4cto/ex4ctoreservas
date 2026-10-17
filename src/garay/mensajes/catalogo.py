@@ -57,6 +57,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "verificar_pago.sin_pagos": {
         Idioma.ES: "❌ Sin pagos en los últimos 5 minutos.\nPedile al cliente el comprobante."
     },
+    "dm_freelancer_titulo": {Idioma.ES: "📋 <b>{nombre_tour}</b>"},
+    "dm_freelancer_observaciones_header": {Idioma.ES: "⚠️ <b>Observaciones:</b>"},
     "error_interno": {Idioma.ES: "Error interno. Contactá al administrador."},
     "error_generico": {Idioma.ES: "Ocurrio un error. Intenta de nuevo."},
     "error.contactar_soporte": {

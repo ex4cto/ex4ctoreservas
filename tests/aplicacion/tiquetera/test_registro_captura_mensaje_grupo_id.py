@@ -38,6 +38,8 @@ def _build_service(
         grupo_id=_GRUPO_ID,
         comisiones_repo=MagicMock(),
         socios_config=MagicMock(),
+        freelancers=MagicMock(),
+        servicios=MagicMock(),
     )
 
 

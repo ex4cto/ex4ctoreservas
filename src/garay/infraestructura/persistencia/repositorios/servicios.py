@@ -26,6 +26,8 @@ def to_orm(s: Servicio) -> ServicioModel:
         netos_por_horario={k: str(v) for k, v in s.netos_por_horario.items()},
         precio_sugerido_adulto=s.precio_sugerido_adulto,
         precio_sugerido_nino=s.precio_sugerido_nino,
+        info_tour=s.info_tour,
+        observaciones=s.observaciones,
     )
 
 
@@ -45,6 +47,8 @@ def to_domain(m: ServicioModel) -> Servicio:
         netos_por_horario={k: Decimal(str(v)) for k, v in raw_netos.items()},
         precio_sugerido_adulto=m.precio_sugerido_adulto,
         precio_sugerido_nino=m.precio_sugerido_nino,
+        info_tour=m.info_tour,
+        observaciones=m.observaciones,
     )
 
 
@@ -88,7 +92,5 @@ class SQLAServicioRepository(ServicioRepository):
 
     def siguiente_numero(self) -> int:
         with self._sf.begin() as session:
-            maximo = session.execute(
-                select(func.max(ServicioModel.numero))
-            ).scalar_one()
+            maximo = session.execute(select(func.max(ServicioModel.numero))).scalar_one()
             return int(maximo) + 1 if maximo is not None else 1

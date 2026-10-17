@@ -273,6 +273,8 @@ def main() -> None:
         grupo_id=settings.grupo_id,
         comisiones_repo=comisiones_repo,
         socios_config=socios_config_repo,
+        freelancers=freelancer_repo,
+        servicios=servicio_repo,
     )
 
     logo_url = settings.factura_logo_url

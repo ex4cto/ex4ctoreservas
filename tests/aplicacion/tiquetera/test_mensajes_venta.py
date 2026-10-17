@@ -77,6 +77,8 @@ def _build_service() -> tuple[RegistrarVentaService, MagicMock]:
         grupo_id="grupo-test",
         comisiones_repo=MagicMock(),
         socios_config=MagicMock(listar=MagicMock(return_value=[])),
+        freelancers=MagicMock(),
+        servicios=MagicMock(),
     )
     return svc, notificador
 

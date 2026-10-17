@@ -913,6 +913,8 @@ class TestDParidadLiveVsExcel:
             grupo_id="test",
             comisiones_repo=live_comisiones,
             socios_config=MagicMock(),
+            freelancers=MagicMock(),
+            servicios=MagicMock(),
         )
         live_cmd = RegistrarVentaComando(
             valor_venta=valor,

@@ -41,6 +41,8 @@ def _build_service(
         grupo_id=_GRUPO_ID,
         comisiones_repo=MagicMock(),
         socios_config=MagicMock(),
+        freelancers=MagicMock(),
+        servicios=MagicMock(),
     )
 
 
@@ -115,6 +117,8 @@ class TestRegistrarVentaConFechasPorServicio:
             grupo_id=_GRUPO_ID,
             comisiones_repo=comisiones_repo,
             socios_config=MagicMock(),
+            freelancers=MagicMock(),
+            servicios=MagicMock(),
         )
         service.ejecutar(_cmd_con_fechas(fechas))
 

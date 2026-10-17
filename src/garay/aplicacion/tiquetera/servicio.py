@@ -17,8 +17,10 @@ from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
+    FreelancerRepository,
     PuntoDeVentaRepository,
     ReglasComisionRepository,
+    ServicioRepository,
     SocioConfigRepository,
     TiqueteraRepository,
     VentaRepository,
@@ -30,9 +32,9 @@ from garay.dominio.socios.servicio import calcular_split_venta
 from garay.dominio.tiquetera.entidades import Tiquetera
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
+from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
-
 
 
 def _esc(v: object) -> str:
@@ -43,6 +45,30 @@ def _esc(v: object) -> str:
     into the message; the intentional <b> title tags stay literal.
     """
     return html.escape(str(v), quote=False)
+
+
+def _construir_dm_freelancer(
+    nombre_tour: str,
+    info_tour: str | None,
+    observaciones: str | None,
+) -> str | None:
+    """Build an informational DM for a freelancer participant of a sold tour.
+
+    Returns None when both fields are empty or whitespace-only — no DM is sent.
+    Uses catalog keys for all user-facing section headers.
+    """
+    info = (info_tour or "").strip()
+    obs = (observaciones or "").strip()
+    if not info and not obs:
+        return None
+    titulo = obtener_mensaje("dm_freelancer_titulo").format(nombre_tour=_esc(nombre_tour))
+    lineas: list[str] = [titulo, ""]
+    if info:
+        lineas += [_esc(info), ""]
+    if obs:
+        obs_header = obtener_mensaje("dm_freelancer_observaciones_header")
+        lineas += [obs_header, _esc(obs)]
+    return "\n".join(lineas).rstrip()
 
 
 def _render_fecha(cmd: RegistrarVentaComando) -> str:
@@ -120,9 +146,7 @@ def _construir_mensaje_privado(
         )
     if desglose.punto_de_venta.monto > 0:
         pct_punto = f"{snap.porcentaje_capa_punto.normalize():f}"
-        lineas.append(
-            f"🏪 Punto de venta ({pct_punto}%): {fmt_cop(desglose.punto_de_venta)}"
-        )
+        lineas.append(f"🏪 Punto de venta ({pct_punto}%): {fmt_cop(desglose.punto_de_venta)}")
 
     lineas.append(f"🏢 Agencia neta: {fmt_cop(agencia_neta)}")
 
@@ -130,9 +154,7 @@ def _construir_mensaje_privado(
     lineas.append("")
     for s in socios:
         cantidad = split.get(s.nombre, Dinero(0))
-        lineas.append(
-            f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {fmt_cop(cantidad)}"
-        )
+        lineas.append(f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {fmt_cop(cantidad)}")
 
     lineas.append("")
     lineas.append(f"✅ Tu parte: {fmt_cop(monto)}")
@@ -155,6 +177,8 @@ class RegistrarVentaService:
         grupo_id: str,
         comisiones_repo: ComisionRegistradaRepository,
         socios_config: SocioConfigRepository,
+        freelancers: FreelancerRepository,
+        servicios: ServicioRepository,
     ) -> None:
         self._ventas = ventas
         self._reglas_repo = reglas_repo
@@ -165,6 +189,8 @@ class RegistrarVentaService:
         self._grupo_id = grupo_id
         self._comisiones_repo = comisiones_repo
         self._socios_config = socios_config
+        self._freelancers = freelancers
+        self._servicios = servicios
 
     def ejecutar(self, cmd: RegistrarVentaComando) -> ResultadoRegistrarVenta:
         # 1. Create the Venta aggregate
@@ -285,9 +311,7 @@ class RegistrarVentaService:
             valor_line += f" | Abono: {fmt_cop(cmd.abono)}"
         lineas.append(valor_line)
 
-        saldo_pendiente = (
-            cmd.valor_venta - cmd.abono if cmd.abono is not None else cmd.valor_venta
-        )
+        saldo_pendiente = cmd.valor_venta - cmd.abono if cmd.abono is not None else cmd.valor_venta
         saldo_line = f"🧾 Saldo pendiente: {fmt_cop(saldo_pendiente)}"
         if cmd.abono is None:
             saldo_line += " (sin abono)"
@@ -350,6 +374,38 @@ class RegistrarVentaService:
                     logger.exception(
                         "No se pudo enviar DM de split al socio %s (venta %s ya registrada)",
                         socio.nombre,
+                        venta.id,
+                    )
+
+        # 10. Send per-tour informational DM to each distinct participating freelancer
+        #     whose tour has content (best-effort — never blocks or rolls back the sale).
+        for sid, nombre in zip(cmd.servicio_ids, cmd.servicio_nombres, strict=False):
+            servicio_obj = self._servicios.buscar_por_id(sid)
+            if servicio_obj is None:
+                continue
+            msg_dm = _construir_dm_freelancer(
+                nombre, servicio_obj.info_tour, servicio_obj.observaciones
+            )
+            if msg_dm is None:
+                continue
+            # Deduplicate participants: ordered set, filtering out None values.
+            seen_ids: set[uuid.UUID] = set()
+            participant_ids: list[uuid.UUID] = []
+            for raw_pid in (cmd.participantes.vendedor_id, cmd.participantes.cerrador_id):
+                if raw_pid is not None and raw_pid not in seen_ids:
+                    seen_ids.add(raw_pid)
+                    participant_ids.append(raw_pid)
+            for pid in participant_ids:
+                freelancer = self._freelancers.buscar_por_id(pid)
+                if freelancer is None or freelancer.telegram_user_id is None:
+                    continue
+                try:
+                    self._notificador.notificar(msg_dm, str(freelancer.telegram_user_id))
+                except Exception:
+                    logger.exception(
+                        "No se pudo enviar DM de tour %s al freelancer %s (venta %s registrada)",
+                        nombre,
+                        pid,
                         venta.id,
                     )
 
