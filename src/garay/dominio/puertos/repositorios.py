@@ -438,6 +438,7 @@ class AuditoriaEntidadesRepository(ABC):
         *,
         entidad_tipo: str | None = None,
         por_telegram_id: int | None = None,
+        actor_nombre: str | None = None,
         desde: date | None = None,
         hasta: date | None = None,
     ) -> list[RegistroAuditoria]: ...

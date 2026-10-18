@@ -157,6 +157,31 @@ class TestListarFiltros:
         assert rows[0].entidad_tipo == "servicio"
         assert rows[0].realizada_por_telegram_id == 111
 
+    def test_filtro_por_actor_nombre_exacto(self, sf: sessionmaker[Session]) -> None:
+        repo = SQLAAuditoriaEntidadesRepository(sf)
+        repo.guardar(_registro(actor_nombre="Ryan"))
+        repo.guardar(_registro(actor_nombre="Sharimel"))
+        rows = repo.listar(actor_nombre="Ryan")
+        assert len(rows) == 1
+        assert rows[0].realizada_por_nombre == "Ryan"
+
+    def test_filtro_por_actor_nombre_parcial(self, sf: sessionmaker[Session]) -> None:
+        repo = SQLAAuditoriaEntidadesRepository(sf)
+        repo.guardar(_registro(actor_nombre="Ryan Dev"))
+        repo.guardar(_registro(actor_nombre="Sharimel"))
+        rows = repo.listar(actor_nombre="Ryan")
+        assert len(rows) == 1
+        assert rows[0].realizada_por_nombre == "Ryan Dev"
+
+    def test_filtro_por_actor_nombre_none_retorna_todos(
+        self, sf: sessionmaker[Session]
+    ) -> None:
+        repo = SQLAAuditoriaEntidadesRepository(sf)
+        repo.guardar(_registro(actor_nombre="Ryan"))
+        repo.guardar(_registro(actor_nombre="Sharimel"))
+        rows = repo.listar(actor_nombre=None)
+        assert len(rows) == 2
+
     def test_listar_vacio(self, sf: sessionmaker[Session]) -> None:
         repo = SQLAAuditoriaEntidadesRepository(sf)
         assert repo.listar() == []

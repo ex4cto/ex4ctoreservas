@@ -1586,6 +1586,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "🗑️ ¿Anular este pago?\n\n{monto} — {nombre}\n\nEsta acción no se puede deshacer."
     },
     "liquidaciones.anular_ok": {Idioma.ES: "✅ Pago anulado correctamente."},
+    # --- Auditoría de entidades (dashboard) ---
+    "auditoria.titulo": {Idioma.ES: "Auditoría de entidades"},
+    "auditoria.filtro_tipo": {Idioma.ES: "Tipo de entidad"},
+    "auditoria.filtro_actor": {Idioma.ES: "Actor"},
+    "auditoria.filtro_desde": {Idioma.ES: "Desde"},
+    "auditoria.filtro_hasta": {Idioma.ES: "Hasta"},
+    "auditoria.sin_registros": {Idioma.ES: "No hay registros de auditoría para los filtros seleccionados."},
+    "auditoria.col_fecha": {Idioma.ES: "Fecha / hora"},
+    "auditoria.col_actor_nombre": {Idioma.ES: "Actor"},
+    "auditoria.col_actor_id": {Idioma.ES: "Actor (Telegram ID)"},
+    "auditoria.col_entidad_tipo": {Idioma.ES: "Tipo entidad"},
+    "auditoria.col_entidad_id": {Idioma.ES: "ID entidad"},
+    "auditoria.col_entidad_clave": {Idioma.ES: "Clave entidad"},
+    "auditoria.col_campo": {Idioma.ES: "Campo"},
+    "auditoria.col_valor_anterior": {Idioma.ES: "Valor anterior"},
+    "auditoria.col_valor_nuevo": {Idioma.ES: "Valor nuevo"},
     # --- Cambios de catálogo (notificaciones) ---
     "catalogo.cambios.generando": {Idioma.ES: "⏳ Generando imágenes de lista de precios..."},
     "catalogo.cambios.sin_pendientes": {

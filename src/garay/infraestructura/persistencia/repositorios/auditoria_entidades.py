@@ -59,6 +59,7 @@ class SQLAAuditoriaEntidadesRepository(AuditoriaEntidadesRepository):
         *,
         entidad_tipo: str | None = None,
         por_telegram_id: int | None = None,
+        actor_nombre: str | None = None,
         desde: datetime.date | None = None,
         hasta: datetime.date | None = None,
     ) -> list[RegistroAuditoria]:
@@ -69,6 +70,10 @@ class SQLAAuditoriaEntidadesRepository(AuditoriaEntidadesRepository):
             if por_telegram_id is not None:
                 stmt = stmt.where(
                     AuditoriaEntidadModel.realizada_por_telegram_id == por_telegram_id
+                )
+            if actor_nombre is not None:
+                stmt = stmt.where(
+                    AuditoriaEntidadModel.realizada_por_nombre.ilike(f"%{actor_nombre}%")
                 )
             if desde is not None:
                 # Use timezone-naive start-of-day for compatibility with both
