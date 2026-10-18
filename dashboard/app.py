@@ -67,6 +67,9 @@ from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
+from garay.infraestructura.persistencia.repositorios.auditoria_entidades import (
+    SQLAAuditoriaEntidadesRepository,
+)
 from garay.infraestructura.persistencia.repositorios.socios import (
     SQLAPagoSocioRepository,
     SQLASocioConfigRepository,
@@ -131,7 +134,7 @@ mes_sel = st.sidebar.selectbox(
 
 pagina = st.sidebar.radio(
     "Vista",
-    options=["Ventas", "Tours", "Flujo de caja", "Consultas"],
+    options=["Ventas", "Tours", "Flujo de caja", "Consultas", "Auditoría"],
     index=0,
 )
 
@@ -1180,6 +1183,107 @@ def pagina_consultas() -> None:
         _tab_socios()
 
 
+# ── Auditoría ─────────────────────────────────────────────────────────────────
+
+_AUD_TIPOS = ["servicio", "freelancer", "reglas_comision", "socio_config", "punto_de_venta"]
+
+
+@st.cache_data(ttl=15, max_entries=16)
+def cargar_auditoria(
+    entidad_tipo: str | None,
+    desde: date | None,
+    hasta: date | None,
+) -> list[object]:  # returns RegistroAuditoria; list[object] satisfies cache covariance
+    sf = _get_session_factory()
+    repo = SQLAAuditoriaEntidadesRepository(sf)
+    result: list[object] = list(repo.listar(
+        entidad_tipo=entidad_tipo,
+        desde=desde,
+        hasta=hasta,
+    ))
+    return result
+
+
+def pagina_auditoria() -> None:
+    from garay.dominio.auditoria.entidades import RegistroAuditoria
+
+    st.title(obtener_mensaje("auditoria.titulo"))
+
+    # Date and entity-type filters (server-side)
+    col_tipo, col_desde, col_hasta = st.columns(3)
+    with col_tipo:
+        sel_tipos = st.multiselect(
+            obtener_mensaje("auditoria.filtro_tipo"), _AUD_TIPOS, key="aud_tipo"
+        )
+    with col_desde:
+        desde_aud = st.date_input(
+            obtener_mensaje("auditoria.filtro_desde"), value=None, key="aud_desde"
+        )
+    with col_hasta:
+        hasta_aud = st.date_input(
+            obtener_mensaje("auditoria.filtro_hasta"), value=None, key="aud_hasta"
+        )
+
+    # Query — one request per tipo selected (or one unfiltered if none selected)
+    desde_param = desde_aud if isinstance(desde_aud, date) else None
+    hasta_param = hasta_aud if isinstance(hasta_aud, date) else None
+
+    filas: list[RegistroAuditoria] = []
+    if sel_tipos:
+        for tipo in sel_tipos:
+            filas.extend(
+                cargar_auditoria(  # type: ignore[arg-type]
+                    entidad_tipo=tipo,
+                    desde=desde_param,
+                    hasta=hasta_param,
+                )
+            )
+        # Re-sort combined results by date DESC
+        filas.sort(key=lambda r: r.realizada_at, reverse=True)
+    else:
+        filas = cargar_auditoria(  # type: ignore[assignment]
+            entidad_tipo=None,
+            desde=desde_param,
+            hasta=hasta_param,
+        )
+
+    if not filas:
+        st.info(obtener_mensaje("auditoria.sin_registros"))
+        return
+
+    # Actor filter — client-side multiselect populated from fetched data
+    actores_disponibles = sorted(
+        {r.realizada_por_nombre for r in filas if r.realizada_por_nombre}
+    )
+    sel_actores = st.multiselect(
+        obtener_mensaje("auditoria.filtro_actor"),
+        actores_disponibles,
+        key="aud_actor",
+    )
+    if sel_actores:
+        filas = [r for r in filas if r.realizada_por_nombre in sel_actores]
+
+    if not filas:
+        st.info(obtener_mensaje("auditoria.sin_registros"))
+        return
+
+    st.dataframe(
+        {
+            obtener_mensaje("auditoria.col_fecha"): [r.realizada_at for r in filas],
+            obtener_mensaje("auditoria.col_actor_nombre"): [r.realizada_por_nombre or "—" for r in filas],
+            obtener_mensaje("auditoria.col_actor_id"): [r.realizada_por_telegram_id for r in filas],
+            obtener_mensaje("auditoria.col_entidad_tipo"): [r.entidad_tipo for r in filas],
+            obtener_mensaje("auditoria.col_entidad_id"): [str(r.entidad_id) if r.entidad_id else "—" for r in filas],
+            obtener_mensaje("auditoria.col_entidad_clave"): [r.entidad_clave or "—" for r in filas],
+            obtener_mensaje("auditoria.col_campo"): [r.campo for r in filas],
+            obtener_mensaje("auditoria.col_valor_anterior"): [r.valor_anterior or "—" for r in filas],
+            obtener_mensaje("auditoria.col_valor_nuevo"): [r.valor_nuevo or "—" for r in filas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 if pagina == "Ventas":
@@ -1188,5 +1292,7 @@ elif pagina == "Tours":
     pagina_tours(mes_sel, año_sel)
 elif pagina == "Consultas":
     pagina_consultas()
+elif pagina == "Auditoría":
+    pagina_auditoria()
 else:
     pagina_flujo(mes_sel, año_sel)

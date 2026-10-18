@@ -7,6 +7,7 @@ import sqlalchemy as sa
 
 from garay.infraestructura.persistencia.base import Base
 from garay.infraestructura.persistencia.modelos import (  # noqa: F401
+    AuditoriaEntidadModel,
     AuditoriaVentaModel,
     CambioPendienteModel,
     CategoriaEgresoModel,
@@ -49,6 +50,7 @@ _EXPECTED_TABLES = {
     "correos_no_parseados",
     "auditoria_ventas",
     "auditoria_egresos",
+    "auditoria_entidades",
     "socios_config",
     "pagos_socios",
     "obligaciones_hotel",

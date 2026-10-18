@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -85,6 +87,11 @@ class SQLAReglasComisionRepository(ReglasComisionRepository):
                     ReglasComisionModel.numero_personas.is_(None),
                 )
             ).scalar_one_or_none()
+            return to_domain(row) if row is not None else None
+
+    def buscar_por_id(self, id: uuid.UUID) -> ReglasComision | None:
+        with self._sf.begin() as session:
+            row = session.get(ReglasComisionModel, id)
             return to_domain(row) if row is not None else None
 
     def buscar_por_tipo_cliente(self, tipo: TipoCliente) -> ReglasComision | None:

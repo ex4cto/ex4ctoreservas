@@ -10,6 +10,7 @@ from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, 
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
+from garay.aplicacion.freelancers.editar_freelancer import EditarFreelancerService
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.freelancers.errores import CedulaInvalida, EmailInvalido
 from garay.dominio.freelancers.validaciones import (
@@ -27,6 +28,21 @@ from garay.infraestructura.telegram.menu import GrupoComando
 from garay.mensajes.catalogo import obtener_mensaje
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Edit-freelancer audit service — injected via configurar_editar_freelancer
+# ---------------------------------------------------------------------------
+
+_svc_editar_freelancer: EditarFreelancerService | None = None
+
+
+def configurar_editar_freelancer(svc: EditarFreelancerService) -> None:
+    """Wire the edit-freelancer audit service into this module.
+
+    Called once from main.py during application startup.
+    """
+    global _svc_editar_freelancer
+    _svc_editar_freelancer = svc
 
 
 def _refrescar_freelancers_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -850,25 +866,59 @@ async def handle_edf_confirmar(
             update, context, obtener_mensaje("freelancer.cancelado"), GrupoComando.ADMINISTRACION
         )
 
-    # Mutate exactly one field
+    # Mutate exactly one field.
+    # Audited fields (nombre, activo) go through EditarFreelancerService;
+    # non-money identity fields (nombre_completo, cedula, email, telegram_id)
+    # use direct repo mutation.
+    actor_id: int | None = update.effective_user.id if update.effective_user else None
+    actor_nombre: str | None = (
+        update.effective_user.full_name if update.effective_user else None
+    )
+
     if campo == "nombre_completo":
         nuevo_nc: str = str(ud.get("edf_valor", ""))
         f.nombre_completo = nuevo_nc
         f.display = nuevo_nc
+        if repo:
+            repo.guardar(f)
+            _refrescar_freelancers_fsm(context)
     elif campo == "cedula":
         f.cedula = str(ud.get("edf_valor", "")) or None
+        if repo:
+            repo.guardar(f)
+            _refrescar_freelancers_fsm(context)
     elif campo == "email":
         f.email = str(ud.get("edf_valor", "")) or None
+        if repo:
+            repo.guardar(f)
+            _refrescar_freelancers_fsm(context)
     elif campo == "nombre":
-        f.nombre = str(ud.get("edf_valor", ""))
+        nuevo_nombre = str(ud.get("edf_valor", ""))
+        if _svc_editar_freelancer is not None and actor_id is not None:
+            f = _svc_editar_freelancer.editar(
+                f.id, nombre=nuevo_nombre,
+                por_telegram_id=actor_id, por_nombre=actor_nombre,
+            )
+        elif repo:
+            f.nombre = nuevo_nombre
+            repo.guardar(f)
+        _refrescar_freelancers_fsm(context)
     elif campo == "telegram_id":
         raw_tg = ud.get("edf_valor")
         f.telegram_user_id = int(raw_tg) if isinstance(raw_tg, int) else None
+        if repo:
+            repo.guardar(f)
+            _refrescar_freelancers_fsm(context)
     elif campo == "activo":
-        f.activo = bool(ud.get("edf_activo", f.activo))
-
-    if repo:
-        repo.guardar(f)
+        nuevo_activo = bool(ud.get("edf_activo", f.activo))
+        if _svc_editar_freelancer is not None and actor_id is not None:
+            f = _svc_editar_freelancer.editar(
+                f.id, activo=nuevo_activo,
+                por_telegram_id=actor_id, por_nombre=actor_nombre,
+            )
+        elif repo:
+            f.activo = nuevo_activo
+            repo.guardar(f)
         _refrescar_freelancers_fsm(context)
 
     await update.effective_message.reply_text(obtener_mensaje("freelancer.editado"))

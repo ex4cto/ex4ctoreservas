@@ -20,12 +20,29 @@ from telegram.ext import (
     filters,
 )
 
+from garay.aplicacion.socios.editar_socio import EditarSocioConfigService
 from garay.dominio.socios.entidades import SocioConfig
 from garay.infraestructura.telegram.auth import requiere_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
 from garay.mensajes.catalogo import formatear_html, obtener_mensaje
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Edit-socio audit service — injected via configurar_editar_socio_config
+# ---------------------------------------------------------------------------
+
+_svc_editar_socio: EditarSocioConfigService | None = None
+
+
+def configurar_editar_socio_config(svc: EditarSocioConfigService) -> None:
+    """Wire the edit-socio-config audit service into this module.
+
+    Called once from main.py during application startup.
+    """
+    global _svc_editar_socio
+    _svc_editar_socio = svc
+
 
 # ---------------------------------------------------------------------------
 # State constants — range 260-264
@@ -280,16 +297,28 @@ async def handle_cs_porc_input(update: Update, context: ContextTypes.DEFAULT_TYP
 
     socios: list[SocioConfig] = socios_config_repo.listar()
 
-    # Apply new percentages positionally (empresa=0, garay=1, ryan=2)
-    # If there are exactly 3 socios, map by position; otherwise fall back
+    # Apply new percentages positionally (empresa=0, garay=1, ryan=2).
+    # Audited via EditarSocioConfigService when the service is wired.
+    actor_id: int | None = update.effective_user.id if update.effective_user else None
+    actor_nombre_porc: str | None = (
+        update.effective_user.full_name if update.effective_user else None
+    )
     for i, socio in enumerate(socios):
         if i < len(decimals):
-            nuevo = SocioConfig(
-                nombre=socio.nombre,
-                porcentaje=decimals[i],
-                telegram_id=socio.telegram_id,
-            )
-            socios_config_repo.guardar(nuevo)
+            if _svc_editar_socio is not None and actor_id is not None:
+                _svc_editar_socio.editar(
+                    socio.nombre,
+                    porcentaje=decimals[i],
+                    por_telegram_id=actor_id,
+                    por_nombre=actor_nombre_porc,
+                )
+            else:
+                nuevo = SocioConfig(
+                    nombre=socio.nombre,
+                    porcentaje=decimals[i],
+                    telegram_id=socio.telegram_id,
+                )
+                socios_config_repo.guardar(nuevo)
 
     # Build summary line
     partes_fmt = " | ".join(
