@@ -15,6 +15,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from garay.aplicacion.comun.formato import fmt_cop
 from garay.aplicacion.comun.montos import parsear_monto
+from garay.aplicacion.servicios.editar_servicio import EditarServicioService
 from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
 from garay.dominio.puertos.repositorios import ServicioRepository
 from garay.dominio.servicios.entidades import Servicio
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _svc_notificaciones: NotificarCambioCatalogoServicio | None = None
+_svc_editar_servicio: EditarServicioService | None = None
 
 
 def configurar_notificaciones_catalogo(svc: NotificarCambioCatalogoServicio) -> None:
@@ -45,6 +47,15 @@ def configurar_notificaciones_catalogo(svc: NotificarCambioCatalogoServicio) -> 
     """
     global _svc_notificaciones
     _svc_notificaciones = svc
+
+
+def configurar_editar_servicio(svc: EditarServicioService) -> None:
+    """Wire the edit-servicio audit service into this module.
+
+    Called once from main.py during application startup.
+    """
+    global _svc_editar_servicio
+    _svc_editar_servicio = svc
 
 
 @requiere_admin
@@ -853,32 +864,81 @@ async def handle_edt_confirma(
             update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
         )
 
-    # Apply mutation
+    # Apply mutation — audited fields go through EditarServicioService;
+    # non-money fields (familia, permite_ninos) use direct repo mutation.
+    actor_id: int | None = update.effective_user.id if update.effective_user else None
+    actor_nombre: str | None = (
+        update.effective_user.full_name if update.effective_user else None
+    )
+
     if campo == "nombre":
-        s.nombre = str(ud.get("edt_valor", s.nombre))
+        nuevo_nombre = str(ud.get("edt_valor", s.nombre))
+        if _svc_editar_servicio is not None and actor_id is not None:
+            s = _svc_editar_servicio.editar(
+                s.id, nombre=nuevo_nombre,
+                por_telegram_id=actor_id, por_nombre=actor_nombre,
+            )
+        elif repo:
+            s.nombre = nuevo_nombre
+            repo.guardar(s)
     elif campo == "neto_adulto":
         raw = ud.get("edt_valor")
-        s.precio_neto_adulto = Decimal(str(raw)) if raw is not None else None
+        nuevo_neto = Decimal(str(raw)) if raw is not None else None
+        if _svc_editar_servicio is not None and actor_id is not None:
+            s = _svc_editar_servicio.editar(
+                s.id, precio_neto_adulto=nuevo_neto,
+                por_telegram_id=actor_id, por_nombre=actor_nombre,
+            )
+        elif repo:
+            s.precio_neto_adulto = nuevo_neto
+            repo.guardar(s)
     elif campo == "neto_nino":
         raw = ud.get("edt_valor")
-        s.precio_neto_nino = Decimal(str(raw)) if raw is not None else None
+        nuevo_neto_n = Decimal(str(raw)) if raw is not None else None
+        if _svc_editar_servicio is not None and actor_id is not None:
+            s = _svc_editar_servicio.editar(
+                s.id, precio_neto_nino=nuevo_neto_n,
+                por_telegram_id=actor_id, por_nombre=actor_nombre,
+            )
+        elif repo:
+            s.precio_neto_nino = nuevo_neto_n
+            repo.guardar(s)
     elif campo == "precio_sugerido_adulto":
         raw_sug = ud.get("edt_valor")
         if raw_sug is not None:
-            s.precio_sugerido_adulto = Decimal(str(raw_sug))
+            nuevo_sug = Decimal(str(raw_sug))
+            if _svc_editar_servicio is not None and actor_id is not None:
+                s = _svc_editar_servicio.editar(
+                    s.id, precio_sugerido_adulto=nuevo_sug,
+                    por_telegram_id=actor_id, por_nombre=actor_nombre,
+                )
+            elif repo:
+                s.precio_sugerido_adulto = nuevo_sug
+                repo.guardar(s)
     elif campo in ("familia", "categoria"):
+        # Not audited — direct mutation
         s.categoria = str(ud.get("edt_valor", s.categoria))
+        if repo:
+            repo.guardar(s)
     elif campo == "activo":
         new_val = ud.get("edt_activo_nuevo")
         if new_val is not None:
-            s.activo = bool(new_val)
+            nuevo_activo = bool(new_val)
+            if _svc_editar_servicio is not None and actor_id is not None:
+                s = _svc_editar_servicio.editar(
+                    s.id, activo=nuevo_activo,
+                    por_telegram_id=actor_id, por_nombre=actor_nombre,
+                )
+            elif repo:
+                s.activo = nuevo_activo
+                repo.guardar(s)
     elif campo == "permite_ninos":
+        # Not audited — direct mutation
         new_permite = ud.get("edt_permite_ninos_nuevo")
         if new_permite is not None:
             s.permite_ninos = bool(new_permite)
-
-    if repo:
-        repo.guardar(s)
+            if repo:
+                repo.guardar(s)
 
     _refrescar_fsm(context)
 
@@ -1081,7 +1141,6 @@ async def handle_edh_neto_hor_ingresar(
     netos = dict(s.netos_por_horario)
     if texto in ("0", ""):
         netos.pop(horario, None)
-        s.netos_por_horario = netos
     else:
         monto = parsear_monto(texto)
         if monto is None or monto <= Decimal("0"):
@@ -1090,9 +1149,18 @@ async def handle_edh_neto_hor_ingresar(
             )
             return EDH_NETO_HOR_INGRESAR
         netos[horario] = monto
-        s.netos_por_horario = netos
 
-    if repo:
+    actor_id_neto: int | None = update.effective_user.id if update.effective_user else None
+    actor_nombre_neto: str | None = (
+        update.effective_user.full_name if update.effective_user else None
+    )
+    if _svc_editar_servicio is not None and actor_id_neto is not None:
+        s = _svc_editar_servicio.editar(
+            s.id, netos_por_horario=netos,
+            por_telegram_id=actor_id_neto, por_nombre=actor_nombre_neto,
+        )
+    elif repo:
+        s.netos_por_horario = netos
         repo.guardar(s)
     _refrescar_fsm(context)
 

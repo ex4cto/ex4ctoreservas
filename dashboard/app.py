@@ -67,6 +67,9 @@ from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
+from garay.infraestructura.persistencia.repositorios.auditoria_entidades import (
+    SQLAAuditoriaEntidadesRepository,
+)
 from garay.infraestructura.persistencia.repositorios.socios import (
     SQLAPagoSocioRepository,
     SQLASocioConfigRepository,
@@ -131,7 +134,7 @@ mes_sel = st.sidebar.selectbox(
 
 pagina = st.sidebar.radio(
     "Vista",
-    options=["Ventas", "Tours", "Flujo de caja", "Consultas"],
+    options=["Ventas", "Tours", "Flujo de caja", "Consultas", "Auditoría"],
     index=0,
 )
 
@@ -1180,6 +1183,108 @@ def pagina_consultas() -> None:
         _tab_socios()
 
 
+# ── Auditoría ─────────────────────────────────────────────────────────────────
+
+# Column labels for the audit trail dataframe (Spanish for readability).
+_AUD_COL_ENTIDAD_TIPO = "Tipo entidad"
+_AUD_COL_ENTIDAD_ID = "ID entidad"
+_AUD_COL_ENTIDAD_CLAVE = "Clave entidad"
+_AUD_COL_CAMPO = "Campo"
+_AUD_COL_ANTERIOR = "Valor anterior"
+_AUD_COL_NUEVO = "Valor nuevo"
+_AUD_COL_ACTOR_ID = "Actor (Telegram ID)"
+_AUD_COL_ACTOR_NOMBRE = "Actor"
+_AUD_COL_FECHA = "Fecha / hora"
+
+_AUD_TIPOS = ["servicio", "freelancer", "reglas_comision", "socio_config", "punto_de_venta"]
+
+
+@st.cache_data(ttl=15, max_entries=16)
+def cargar_auditoria(
+    entidad_tipo: str | None,
+    por_telegram_id: int | None,
+    desde: date | None,
+    hasta: date | None,
+) -> list[object]:  # returns RegistroAuditoria; list[object] satisfies cache covariance
+    sf = _get_session_factory()
+    repo = SQLAAuditoriaEntidadesRepository(sf)
+    result: list[object] = list(repo.listar(
+        entidad_tipo=entidad_tipo,
+        por_telegram_id=por_telegram_id,
+        desde=desde,
+        hasta=hasta,
+    ))
+    return result
+
+
+def pagina_auditoria() -> None:
+    st.title("Auditoría de entidades")
+
+    # Filters
+    col_tipo, col_actor, col_desde, col_hasta = st.columns(4)
+    with col_tipo:
+        sel_tipos = st.multiselect("Tipo de entidad", _AUD_TIPOS, key="aud_tipo")
+    with col_actor:
+        sel_actor_str = st.text_input(
+            "Actor (Telegram ID, opcional)", value="", key="aud_actor"
+        )
+    with col_desde:
+        desde_aud = st.date_input("Desde", value=None, key="aud_desde")
+    with col_hasta:
+        hasta_aud = st.date_input("Hasta", value=None, key="aud_hasta")
+
+    actor_id_filtro: int | None = None
+    if sel_actor_str.strip():
+        try:
+            actor_id_filtro = int(sel_actor_str.strip())
+        except ValueError:
+            st.warning("El Telegram ID del actor debe ser un número entero.")
+
+    # Query — one request per tipo selected (or one unfiltered if none selected)
+    from garay.dominio.auditoria.entidades import RegistroAuditoria
+
+    filas: list[RegistroAuditoria] = []
+    if sel_tipos:
+        for tipo in sel_tipos:
+            filas.extend(
+                cargar_auditoria(  # type: ignore[arg-type]
+                    entidad_tipo=tipo,
+                    por_telegram_id=actor_id_filtro,
+                    desde=desde_aud if isinstance(desde_aud, date) else None,
+                    hasta=hasta_aud if isinstance(hasta_aud, date) else None,
+                )
+            )
+        # Re-sort combined results by date DESC
+        filas.sort(key=lambda r: r.realizada_at, reverse=True)
+    else:
+        filas = cargar_auditoria(  # type: ignore[assignment]
+            entidad_tipo=None,
+            por_telegram_id=actor_id_filtro,
+            desde=desde_aud if isinstance(desde_aud, date) else None,
+            hasta=hasta_aud if isinstance(hasta_aud, date) else None,
+        )
+
+    if not filas:
+        st.info("No hay registros de auditoría para los filtros seleccionados.")
+        return
+
+    st.dataframe(
+        {
+            _AUD_COL_FECHA: [r.realizada_at for r in filas],
+            _AUD_COL_ACTOR_NOMBRE: [r.realizada_por_nombre or "—" for r in filas],
+            _AUD_COL_ACTOR_ID: [r.realizada_por_telegram_id for r in filas],
+            _AUD_COL_ENTIDAD_TIPO: [r.entidad_tipo for r in filas],
+            _AUD_COL_ENTIDAD_ID: [str(r.entidad_id) if r.entidad_id else "—" for r in filas],
+            _AUD_COL_ENTIDAD_CLAVE: [r.entidad_clave or "—" for r in filas],
+            _AUD_COL_CAMPO: [r.campo for r in filas],
+            _AUD_COL_ANTERIOR: [r.valor_anterior or "—" for r in filas],
+            _AUD_COL_NUEVO: [r.valor_nuevo or "—" for r in filas],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 if pagina == "Ventas":
@@ -1188,5 +1293,7 @@ elif pagina == "Tours":
     pagina_tours(mes_sel, año_sel)
 elif pagina == "Consultas":
     pagina_consultas()
+elif pagina == "Auditoría":
+    pagina_auditoria()
 else:
     pagina_flujo(mes_sel, año_sel)

@@ -33,8 +33,11 @@ from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwa
 from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
+from garay.aplicacion.freelancers.editar_freelancer import EditarFreelancerService
+from garay.aplicacion.servicios.editar_servicio import EditarServicioService
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
+from garay.aplicacion.socios.editar_socio import EditarSocioConfigService
 from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -64,6 +67,9 @@ from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica
 from garay.infraestructura.persistencia.pago_freelancer_sql import PagoFreelancerSQLAlchemy
 from garay.infraestructura.persistencia.repositorios.auditoria_egresos import (
     SQLAAuditoriaEgresoRepository,
+)
+from garay.infraestructura.persistencia.repositorios.auditoria_entidades import (
+    SQLAAuditoriaEntidadesRepository,
 )
 from garay.infraestructura.persistencia.repositorios.auditoria_ventas import (
     SQLAAuditoriaVentaRepository,
@@ -103,7 +109,14 @@ from garay.infraestructura.persistencia.repositorios.tiqueteras import SQLATique
 from garay.infraestructura.persistencia.repositorios.ventas import SQLAVentaRepository
 from garay.infraestructura.telegram.bot import crear_aplicacion
 from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
-from garay.infraestructura.telegram.handlers_tours import configurar_notificaciones_catalogo
+from garay.infraestructura.telegram.handlers_config_socios import (
+    configurar_editar_socio_config,
+)
+from garay.infraestructura.telegram.handlers_freelancers import configurar_editar_freelancer
+from garay.infraestructura.telegram.handlers_tours import (
+    configurar_editar_servicio,
+    configurar_notificaciones_catalogo,
+)
 from garay.infraestructura.telegram.notificador import NotificadorGrupoTelegram
 from garay.infraestructura.telegram.notificador_telegram import NotificadorTelegramTexto
 
@@ -136,6 +149,7 @@ def main() -> None:
     obligacion_hotel_repo = SQLAObligacionHotelRepository(sf)
     categoria_egreso_repo = SQLACategoriaEgresoRepository(sf)
     auditoria_egreso_repo = SQLAAuditoriaEgresoRepository(sf)
+    auditoria_entidades_repo = SQLAAuditoriaEntidadesRepository(sf)
     gasto_recurrente_repo = SQLAGastoRecurrenteRepository(sf)
     factura_repo = SQLAFacturaRepository(sf)
 
@@ -450,6 +464,24 @@ def main() -> None:
         grupo_id=settings.grupo_id,
     )
     configurar_notificaciones_catalogo(svc_notificaciones)
+
+    # Wire entity-edit audit services into their respective handler modules.
+    editar_servicio_audit_service = EditarServicioService(
+        servicios=servicio_repo,
+        auditoria=auditoria_entidades_repo,
+    )
+    editar_freelancer_audit_service = EditarFreelancerService(
+        freelancers=freelancer_repo,
+        auditoria=auditoria_entidades_repo,
+    )
+    editar_socio_config_audit_service = EditarSocioConfigService(
+        socios=socios_config_repo,
+        auditoria=auditoria_entidades_repo,
+    )
+    configurar_editar_servicio(editar_servicio_audit_service)
+    configurar_editar_freelancer(editar_freelancer_audit_service)
+    configurar_editar_socio_config(editar_socio_config_audit_service)
+
     resumen_ventas_service = ResumenVentasService(
         ventas=ventas_repo,
         comisiones=comisiones_repo,
