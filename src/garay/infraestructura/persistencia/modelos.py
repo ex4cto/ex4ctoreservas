@@ -20,6 +20,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     Sequence,
@@ -390,6 +391,25 @@ class AuditoriaEgresoModel(Base):
     campo: Mapped[str] = mapped_column(String, nullable=False)
     valor_anterior: Mapped[str] = mapped_column(Text, nullable=False)
     valor_nuevo: Mapped[str] = mapped_column(Text, nullable=False)
+    realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AuditoriaEntidadModel(Base):
+    __tablename__ = "auditoria_entidades"
+    __table_args__ = (
+        Index("ix_auditoria_entidades_tipo_id", "entidad_tipo", "entidad_id"),
+        Index("ix_auditoria_entidades_realizada_at", "realizada_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    entidad_tipo: Mapped[str] = mapped_column(String, nullable=False)
+    entidad_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    entidad_clave: Mapped[str | None] = mapped_column(String, nullable=True)
+    campo: Mapped[str] = mapped_column(String, nullable=False)
+    valor_anterior: Mapped[str | None] = mapped_column(Text, nullable=True)
+    valor_nuevo: Mapped[str | None] = mapped_column(Text, nullable=True)
     realizada_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     realizada_por_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     realizada_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)

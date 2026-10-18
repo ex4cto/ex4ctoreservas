@@ -10,6 +10,7 @@ from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.auditoria.entidades import RegistroAuditoria
 from garay.dominio.conciliacion.auditoria_egreso import AuditoriaEgreso
 from garay.dominio.conciliacion.entidades import (
     CategoriaEgreso,
@@ -422,3 +423,18 @@ class PagoFreelancerRepository(ABC):
     @abstractmethod
     def eliminar(self, pago_id: uuid.UUID) -> None:
         """Delete a payment record by id."""
+
+
+class AuditoriaEntidadesRepository(ABC):
+    @abstractmethod
+    def guardar(self, registro: RegistroAuditoria) -> None: ...
+
+    @abstractmethod
+    def listar(
+        self,
+        *,
+        entidad_tipo: str | None = None,
+        por_telegram_id: int | None = None,
+        desde: date | None = None,
+        hasta: date | None = None,
+    ) -> list[RegistroAuditoria]: ...
