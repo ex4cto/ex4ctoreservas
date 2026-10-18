@@ -328,6 +328,9 @@ class ReglasComisionRepository(ABC):
         ...
 
     @abstractmethod
+    def buscar_por_id(self, id: uuid.UUID) -> ReglasComision | None: ...
+
+    @abstractmethod
     def guardar(self, reglas: ReglasComision) -> None: ...
 
 
