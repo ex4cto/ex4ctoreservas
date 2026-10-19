@@ -440,9 +440,10 @@ class TestVerResumen:
 
     @pytest.mark.asyncio
     async def test_ver_resumen_hoy_only_calls_calcular_with_today_today(self) -> None:
-        from telegram.ext import ConversationHandler
-
-        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_menu,
+        )
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _resultado_con_datos()
@@ -454,15 +455,16 @@ class TestVerResumen:
 
         result = await handle_div_menu(update, context)
 
-        assert result == ConversationHandler.END
+        assert result == DIV_RESULT
         today = datetime.date.today()
         split_service.calcular_periodo.assert_called_once_with(today, today)
 
     @pytest.mark.asyncio
     async def test_ver_resumen_ayer_only_calls_calcular_with_yesterday_yesterday(self) -> None:
-        from telegram.ext import ConversationHandler
-
-        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_menu,
+        )
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _empty_resultado()
@@ -474,15 +476,16 @@ class TestVerResumen:
 
         result = await handle_div_menu(update, context)
 
-        assert result == ConversationHandler.END
+        assert result == DIV_RESULT
         ayer = datetime.date.today() - datetime.timedelta(days=1)
         split_service.calcular_periodo.assert_called_once_with(ayer, ayer)
 
     @pytest.mark.asyncio
     async def test_ver_resumen_both_selected_calls_calcular_with_yesterday_today(self) -> None:
-        from telegram.ext import ConversationHandler
-
-        from garay.infraestructura.telegram.handlers_divisiones import handle_div_menu
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_menu,
+        )
 
         split_service = MagicMock()
         split_service.calcular_periodo.return_value = _resultado_con_datos()
@@ -494,7 +497,7 @@ class TestVerResumen:
 
         result = await handle_div_menu(update, context)
 
-        assert result == ConversationHandler.END
+        assert result == DIV_RESULT
         today = datetime.date.today()
         ayer = today - datetime.timedelta(days=1)
         split_service.calcular_periodo.assert_called_once_with(ayer, today)
@@ -1825,3 +1828,286 @@ class TestSocioPaymentFlow:
 
         assert DIV_SOC_SELECCION == 317
         assert DIV_SOC_CONFIRMAR == 318
+
+
+# ---------------------------------------------------------------------------
+# Fix 1: ✖ Cancelar button in calendar screens
+# ---------------------------------------------------------------------------
+
+
+class TestCalendarioCancelar:
+    """Calendar screens must have a ✖ Cancelar button below ← Atrás."""
+
+    def test_teclado_calendario_has_cancelar_button(self) -> None:
+        """_teclado_calendario must include a button with callback_data='rep_s:cal:cancelar'."""
+        from garay.infraestructura.telegram.handlers_divisiones import _teclado_calendario
+
+        markup = _teclado_calendario(2026, 9, "desde")
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        cancelar_btns = [b for b in flat if b.callback_data == "rep_s:cal:cancelar"]
+        assert len(cancelar_btns) == 1, (
+            "Expected exactly one button with callback_data='rep_s:cal:cancelar'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_cal_cancelar_ends_conversation(self) -> None:
+        """Pressing rep_s:cal:cancelar in handle_div_cal returns END and calls edit_message_text."""
+        from telegram.ext import ConversationHandler
+
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_cal
+
+        context = _make_context(user_data={"div_mes": "2026-09"})
+        update = _make_update_cb("rep_s:cal:cancelar")
+
+        result = await handle_div_cal(update, context)
+
+        assert result == ConversationHandler.END
+        update.callback_query.edit_message_text.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Fix 2: ← Atrás in result screen — _render_resultado always returns markup
+# ---------------------------------------------------------------------------
+
+
+class TestResultadoAtrasMenu:
+    """_render_resultado must always return a non-None InlineKeyboardMarkup."""
+
+    def test_render_resultado_markup_has_atras_button(self) -> None:
+        """With data: markup has rep_s:atras:menu button."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_detalle(), "Hoy")
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        atras_btns = [b for b in flat if b.callback_data == "rep_s:atras:menu"]
+        assert len(atras_btns) == 1, "Expected rep_s:atras:menu button in result markup"
+
+    def test_render_resultado_sin_datos_markup_has_atras_button(self) -> None:
+        """With no data: markup still has rep_s:atras:menu button (not None)."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_empty_resultado(), "Hoy")
+
+        assert markup is not None, "_render_resultado must return non-None markup for sin datos"
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        atras_btns = [b for b in flat if b.callback_data == "rep_s:atras:menu"]
+        assert len(atras_btns) == 1, "Expected rep_s:atras:menu button in sin datos markup"
+
+    @pytest.mark.asyncio
+    async def test_atras_menu_desde_resultado_regresa_menu(self) -> None:
+        """handle_div_atras with rep_s:atras:menu returns DIV_MENU and calls edit_message_text."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_MENU,
+            handle_div_atras,
+        )
+
+        context = _make_context(user_data={
+            "div_hoy_sel": True,
+            "div_ayer_sel": False,
+        })
+        update = _make_update_cb("rep_s:atras:menu")
+
+        result = await handle_div_atras(update, context)
+
+        assert result == DIV_MENU
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_sin_datos_returns_div_result_not_end(self) -> None:
+        """handle_div_menu with empty result must return DIV_RESULT, not END."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_menu,
+        )
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _empty_resultado()
+        context = _make_context(
+            split_service=split_service,
+            user_data={"div_hoy_sel": True, "div_ayer_sel": False},
+        )
+        update = _make_update_cb("rep_s:menu:ver")
+
+        result = await handle_div_menu(update, context)
+
+        assert result == DIV_RESULT, (
+            f"Empty result must return DIV_RESULT={DIV_RESULT}, got {result}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fix 3: Toggle ⬜/✅ Solo pendientes (Feature E)
+# ---------------------------------------------------------------------------
+
+
+def _resultado_con_pendientes() -> "ResumenSplitPeriodo":
+    """Two ventas: one paid (saldo_pendiente=0), one pending (saldo_pendiente=200_000)."""
+    import uuid
+
+    from garay.aplicacion.socios.split import ResumenVentaDetalle
+
+    socios = (
+        ResumenSocioPeriodo(nombre="garay", porcentaje=Decimal("50"), acumulado=Dinero(300_000)),
+    )
+    venta_pagada = ResumenVentaDetalle(
+        venta_id=uuid.uuid4(),
+        fecha=datetime.date(2026, 9, 10),
+        vendedor_nombre="Ana",
+        cerrador_nombre=None,
+        valor_bruto=Dinero(600_000),
+        desglose_vendedor=Dinero(60_000),
+        desglose_cerrador=Dinero(0),
+        desglose_punto=Dinero(0),
+        desglose_agencia=Dinero(540_000),
+        split_socios=socios,
+        saldo_pendiente=Dinero(0),
+    )
+    venta_pendiente = ResumenVentaDetalle(
+        venta_id=uuid.uuid4(),
+        fecha=datetime.date(2026, 9, 15),
+        vendedor_nombre="Luis",
+        cerrador_nombre=None,
+        valor_bruto=Dinero(800_000),
+        desglose_vendedor=Dinero(80_000),
+        desglose_cerrador=Dinero(0),
+        desglose_punto=Dinero(0),
+        desglose_agencia=Dinero(720_000),
+        split_socios=socios,
+        saldo_pendiente=Dinero(200_000),
+    )
+    from garay.aplicacion.socios.split import ResumenSplitPeriodo as _RSP
+    return _RSP(
+        por_socio=socios,
+        total_agencia=Dinero(1_260_000),
+        total_bruto=Dinero(1_400_000),
+        total_comisiones_freelancer=Dinero(0),
+        ventas_count=2,
+        ventas_detalle=(venta_pagada, venta_pendiente),
+    )
+
+
+class TestToggleSoloPendientes:
+    """Feature E: toggle ⬜/✅ Solo pendientes in the result view."""
+
+    def test_render_resultado_markup_has_filtro_toggle(self) -> None:
+        """markup has a button with callback_data='rep_s:filtro:toggle'."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_detalle(), "Hoy")
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        filtro_btns = [b for b in flat if b.callback_data == "rep_s:filtro:toggle"]
+        assert len(filtro_btns) == 1, "Expected rep_s:filtro:toggle button in markup"
+
+    def test_filtro_false_shows_unchecked_icon(self) -> None:
+        """When solo_pendientes=False, toggle button text contains '⬜'."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_detalle(), "Hoy", solo_pendientes=False)
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        toggle_btn = next(b for b in flat if b.callback_data == "rep_s:filtro:toggle")
+        assert "⬜" in toggle_btn.text, f"Expected '⬜' in toggle btn text, got: {toggle_btn.text}"
+
+    def test_filtro_true_shows_checked_icon(self) -> None:
+        """When solo_pendientes=True, toggle button text contains '✅'."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_detalle(), "Hoy", solo_pendientes=True)
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        toggle_btn = next(b for b in flat if b.callback_data == "rep_s:filtro:toggle")
+        assert "✅" in toggle_btn.text, f"Expected '✅' in toggle btn text, got: {toggle_btn.text}"
+
+    def test_filtro_false_shows_all_ventas(self) -> None:
+        """With _resultado_con_pendientes() and solo_pendientes=False, shows 2 venta buttons."""
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_pendientes(), "Hoy", solo_pendientes=False)
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        venta_btns = [b for b in flat if b.callback_data.startswith("rep_s:venta:")]
+        assert len(venta_btns) == 2, f"Expected 2 venta buttons, got {len(venta_btns)}"
+
+    def test_filtro_true_shows_only_pending_ventas(self) -> None:
+        """With _resultado_con_pendientes() and solo_pendientes=True:
+        only 1 venta button with callback_data='rep_s:venta:1' (original index of venta_pendiente).
+        """
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_pendientes(), "Hoy", solo_pendientes=True)
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        venta_btns = [b for b in flat if b.callback_data.startswith("rep_s:venta:")]
+        assert len(venta_btns) == 1, f"Expected 1 venta button, got {len(venta_btns)}"
+        assert venta_btns[0].callback_data == "rep_s:venta:1", (
+            f"Expected callback 'rep_s:venta:1' (original index), got {venta_btns[0].callback_data}"
+        )
+
+    def test_filtro_true_sin_pendientes_shows_noop_message(self) -> None:
+        """_resultado_con_detalle() has no pending ventas; solo_pendientes=True:
+        0 venta buttons, at least 1 noop button with the 'no hay pendientes' message.
+        """
+        from garay.infraestructura.telegram.handlers_divisiones import _render_resultado
+
+        _, markup = _render_resultado(_resultado_con_detalle(), "Hoy", solo_pendientes=True)
+
+        assert markup is not None
+        flat = [btn for row in markup.inline_keyboard for btn in row]
+        venta_btns = [b for b in flat if b.callback_data.startswith("rep_s:venta:")]
+        assert len(venta_btns) == 0, "Expected 0 venta buttons when no pending and filtro=True"
+        noop_btns = [b for b in flat if b.callback_data == "rep_s:noop"]
+        assert len(noop_btns) >= 1, "Expected at least one noop button with 'no hay pendientes'"
+
+    @pytest.mark.asyncio
+    async def test_handle_div_filtro_toggles_and_rerenders(self) -> None:
+        """Pressing toggle changes div_filtro False→True, calls edit_message_text, returns DIV_RESULT."""
+        from garay.infraestructura.telegram.handlers_divisiones import (
+            DIV_RESULT,
+            handle_div_filtro,
+        )
+
+        split_service = MagicMock()
+        split_service.calcular_periodo.return_value = _resultado_con_detalle()
+        context = _make_context(
+            split_service=split_service,
+            user_data={
+                "div_filtro": False,
+                "div_resultado": _resultado_con_detalle(),
+                "div_periodo_label": "Hoy",
+            },
+        )
+        update = _make_update_cb("rep_s:filtro:toggle")
+
+        result = await handle_div_filtro(update, context)
+
+        assert result == DIV_RESULT
+        assert context.user_data["div_filtro"] is True
+        update.callback_query.edit_message_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cmd_resumen_divisiones_initializes_filtro_false(self) -> None:
+        """cmd_resumen_divisiones sets context.user_data['div_filtro'] = False."""
+        from unittest.mock import patch
+
+        from garay.infraestructura.telegram.handlers_divisiones import cmd_resumen_divisiones
+
+        update = _make_update_command()
+        context = _make_context()
+
+        with patch(
+            "garay.infraestructura.telegram.auth.obtener_settings",
+            return_value=_make_settings_patch("99999"),
+        ):
+            await cmd_resumen_divisiones(update, context)
+
+        assert context.user_data.get("div_filtro") is False, (
+            "cmd_resumen_divisiones must initialize div_filtro=False"
+        )

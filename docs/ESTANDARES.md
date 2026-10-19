@@ -110,6 +110,13 @@ Los tres actores siempre presentes en cualquier flujo contable y administrativo 
 - Al finalizar un flujo (éxito o cancelación), **eliminar o editar el mensaje con botones** para que no queden botones colgados sin función.
 - Estas tres reglas aplican sin excepción a todos los handlers con `InlineKeyboardMarkup`.
 
+## Scripts temporales
+
+- Todos los scripts de uso único (migraciones manuales, cruces de datos, importaciones puntuales) van en `scripts/`.
+- Nombrarlos con prefijo `tmp_`: `tmp_cruce_csv.py`, `tmp_importar_info_tour.py`.
+- No deben importarse desde ningún módulo del proyecto.
+- Una vez ejecutados y verificados en producción, pueden eliminarse o dejarse como referencia histórica — pero siempre en `scripts/`, nunca en la raíz ni en módulos de dominio/aplicación.
+
 ## SDD (Spec-Driven Development)
 
 - Modo de ejecucion predeterminado: **interactivo**.

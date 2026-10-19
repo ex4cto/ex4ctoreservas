@@ -1523,6 +1523,8 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "resumen_divisiones.soc_monto_invalido":  {Idioma.ES: "⚠️ Monto inválido. Intenta de nuevo:"},
     "resumen_divisiones.soc_registrado":      {Idioma.ES: "✅ Pago registrado\n<b>{nombre}</b>: {monto}"},
     "resumen_divisiones.soc_cancelado":       {Idioma.ES: "Pago cancelado."},
+    "resumen_divisiones.btn_solo_pendientes": {Idioma.ES: "Solo pendientes"},
+    "resumen_divisiones.sin_pendientes":      {Idioma.ES: "No hay ventas con saldo pendiente."},
     # --- /lista_precios text command ---
     "lista_precios.titulo": {
         Idioma.ES: "🗺️ <b>Lista de precios — Garay Tours</b>"

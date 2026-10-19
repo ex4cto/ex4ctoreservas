@@ -72,6 +72,7 @@ _CB_DIA = "rep_s:dia:"         # rep_s:dia:desde:yyyy-mm-dd | rep_s:dia:hasta:yy
 _CB_ATRAS = "rep_s:atras:"     # rep_s:atras:menu | rep_s:atras:hasta | rep_s:atras:resultado
 _CB_VENTA = "rep_s:venta:"     # rep_s:venta:{index}
 _CB_LIQ = "rep_s:liq:"         # rep_s:liq:start | rep_s:liq:fl:{uuid} | rep_s:liq:confirmar:{uuid} | rep_s:liq:cancelar | rep_s:liq:atras
+_CB_FILTRO = "rep_s:filtro:"   # rep_s:filtro:toggle
 
 # user_data keys
 _KEY_DESDE = "div_desde"           # datetime.date | None
@@ -87,6 +88,7 @@ _KEY_LIQ_FREELANCERS = "div_liq_fls"      # list[tuple[str, uuid.UUID, Dinero]] 
 _KEY_LIQ_RESULTADO = "div_liq_resultado"  # ResultadoCalculoLiquidacion
 _KEY_SOC_NOMBRE = "div_soc_nombre"   # str — selected socio name
 _KEY_SOC_MONTO  = "div_soc_monto"    # Dinero | None — partial amount entered
+_KEY_FILTRO = "div_filtro"           # bool — True = show only ventas with saldo_pendiente > 0
 
 _MESES_ES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -225,6 +227,11 @@ def _teclado_calendario(year: int, month: int, step: str) -> InlineKeyboardMarku
         [InlineKeyboardButton("← Atrás", callback_data=f"rep_s:atras:{back_target}")]
     )
 
+    # Cancel button
+    rows.append(
+        [InlineKeyboardButton("✖ Cancelar", callback_data="rep_s:cal:cancelar")]
+    )
+
     return InlineKeyboardMarkup(rows)
 
 
@@ -236,14 +243,33 @@ def _teclado_calendario(year: int, month: int, step: str) -> InlineKeyboardMarku
 def _render_resultado(
     resultado: ResumenSplitPeriodo,
     periodo_label: str,
-) -> tuple[str, InlineKeyboardMarkup | None]:
-    """Render the period result as (HTML text, optional InlineKeyboardMarkup).
+    solo_pendientes: bool = False,
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Render the period result as (HTML text, InlineKeyboardMarkup).
 
-    The markup contains one button per sale when ventas_detalle is present.
-    Returns (sin_datos_text, None) when there are no sales.
+    Always returns a non-None markup. When there are no sales, returns a markup
+    with only ← Atrás and ✖ Cerrar buttons.
+
+    When solo_pendientes=True, only shows sale buttons for ventas with
+    saldo_pendiente > Dinero(0), using the ORIGINAL index from ventas_detalle
+    as the callback_data value (rep_s:venta:{original_index}).
     """
     if resultado.ventas_count == 0:
-        return obtener_mensaje("resumen_divisiones.sin_datos"), None
+        texto = obtener_mensaje("resumen_divisiones.sin_datos")
+        filtro_icon = "✅" if solo_pendientes else "⬜"
+        filtro_label = f"{filtro_icon} {obtener_mensaje('resumen_divisiones.btn_solo_pendientes')}"
+        sin_datos_rows: list[list[InlineKeyboardButton]] = [
+            [InlineKeyboardButton(filtro_label, callback_data="rep_s:filtro:toggle")],
+            [InlineKeyboardButton(
+                obtener_mensaje("resumen_divisiones.btn_atras"),
+                callback_data="rep_s:atras:menu",
+            )],
+            [InlineKeyboardButton(
+                obtener_mensaje("resumen_divisiones.btn_cerrar"),
+                callback_data="rep_s:menu:cerrar",
+            )],
+        ]
+        return texto, InlineKeyboardMarkup(sin_datos_rows)
 
     titulo = obtener_mensaje("resumen_divisiones.titulo").format(periodo=periodo_label)
     ventas_row = obtener_mensaje("resumen_divisiones.ventas_row").format(
@@ -300,18 +326,41 @@ def _render_resultado(
 
     texto = "\n".join(lineas)
 
-    # Build per-sale buttons if detail available
-    markup: InlineKeyboardMarkup | None = None
+    # Build per-sale buttons using original indices for callback_data
+    rows: list[list[InlineKeyboardButton]] = []
     if resultado.ventas_detalle:
-        rows = [
-            [
-                InlineKeyboardButton(
-                    _venta_btn_label(venta),
-                    callback_data=f"rep_s:venta:{i}",
-                )
+        if solo_pendientes:
+            # Only show ventas with saldo_pendiente > 0 using original indices
+            pending_ventas = [
+                (i, venta)
+                for i, venta in enumerate(resultado.ventas_detalle)
+                if venta.saldo_pendiente > Dinero(0)
             ]
-            for i, venta in enumerate(resultado.ventas_detalle)
-        ]
+            if pending_ventas:
+                for orig_idx, venta in pending_ventas:
+                    rows.append([
+                        InlineKeyboardButton(
+                            _venta_btn_label(venta),
+                            callback_data=f"rep_s:venta:{orig_idx}",
+                        )
+                    ])
+            else:
+                # No pending ventas — show a noop informational button
+                rows.append([
+                    InlineKeyboardButton(
+                        obtener_mensaje("resumen_divisiones.sin_pendientes"),
+                        callback_data="rep_s:noop",
+                    )
+                ])
+        else:
+            for i, venta in enumerate(resultado.ventas_detalle):
+                rows.append([
+                    InlineKeyboardButton(
+                        _venta_btn_label(venta),
+                        callback_data=f"rep_s:venta:{i}",
+                    )
+                ])
+
         rows.append(
             [
                 InlineKeyboardButton(
@@ -325,15 +374,23 @@ def _render_resultado(
                 obtener_mensaje("resumen_divisiones.soc_btn_entrada"),
                 callback_data="rep_s:soc:start",
             )])
-        rows.append(
-            [InlineKeyboardButton(
-                obtener_mensaje("resumen_divisiones.btn_cerrar"),
-                callback_data="rep_s:menu:cerrar",
-            )]
-        )
-        markup = InlineKeyboardMarkup(rows)
 
-    return texto, markup
+    # Toggle ⬜/✅ Solo pendientes
+    filtro_icon = "✅" if solo_pendientes else "⬜"
+    filtro_label = f"{filtro_icon} {obtener_mensaje('resumen_divisiones.btn_solo_pendientes')}"
+    rows.append([InlineKeyboardButton(filtro_label, callback_data="rep_s:filtro:toggle")])
+
+    # ← Atrás and ✖ Cerrar
+    rows.append([InlineKeyboardButton(
+        obtener_mensaje("resumen_divisiones.btn_atras"),
+        callback_data="rep_s:atras:menu",
+    )])
+    rows.append([InlineKeyboardButton(
+        obtener_mensaje("resumen_divisiones.btn_cerrar"),
+        callback_data="rep_s:menu:cerrar",
+    )])
+
+    return texto, InlineKeyboardMarkup(rows)
 
 
 def _render_detalle_venta(venta: ResumenVentaDetalle) -> tuple[str, InlineKeyboardMarkup]:
@@ -454,6 +511,7 @@ async def cmd_resumen_divisiones(
     """Entry point: show the toggle-checkbox menu."""
     context.user_data[_KEY_HOY_SEL] = False  # type: ignore[index]
     context.user_data[_KEY_AYER_SEL] = False  # type: ignore[index]
+    context.user_data[_KEY_FILTRO] = False  # type: ignore[index]
 
     keyboard = _teclado_menu(False, False)
     if update.effective_message:
@@ -551,20 +609,17 @@ async def handle_div_menu(
             return ConversationHandler.END
 
         resultado = split_service.calcular_periodo(desde, hasta)
-        texto, markup = _render_resultado(resultado, periodo_label)
+        solo_pendientes: bool = bool(context.user_data.get(_KEY_FILTRO, False))  # type: ignore[union-attr]
+        texto, markup = _render_resultado(resultado, periodo_label, solo_pendientes)
 
-        if markup is not None:
-            # Store data for drill-down
-            context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
-            context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
-            context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
-            context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
-            context.user_data[_KEY_LIQ_HASTA] = hasta  # type: ignore[index]
-            await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
-            return DIV_RESULT
-
-        await cq.edit_message_text(texto, parse_mode="HTML")
-        return ConversationHandler.END
+        # Always store data and return DIV_RESULT
+        context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
+        context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
+        context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
+        context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
+        context.user_data[_KEY_LIQ_HASTA] = hasta  # type: ignore[index]
+        await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
+        return DIV_RESULT
 
     return DIV_MENU
 
@@ -579,6 +634,15 @@ async def handle_div_cal(
     await cq.answer()
 
     data: str = cq.data or ""
+
+    # Cancel from calendar
+    if data == "rep_s:cal:cancelar":
+        await cq.edit_message_text(
+            obtener_mensaje("resumen_divisiones.cancelado"),
+            parse_mode="HTML",
+        )
+        return ConversationHandler.END
+
     # data format: rep_s:cal:desde:yyyy-mm  or  rep_s:cal:hasta:yyyy-mm
     parts = data.split(":")
     # parts: ["rep_s", "cal", step, "yyyy-mm"]
@@ -668,19 +732,17 @@ async def handle_div_dia(
 
     resultado = split_service.calcular_periodo(desde, fecha)
     periodo_label = _periodo_label_rango(desde, fecha)
-    texto, markup = _render_resultado(resultado, periodo_label)
+    solo_pendientes_dia: bool = bool(context.user_data.get(_KEY_FILTRO, False))  # type: ignore[union-attr]
+    texto, markup = _render_resultado(resultado, periodo_label, solo_pendientes_dia)
 
-    if markup is not None:
-        context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
-        context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
-        context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
-        context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
-        context.user_data[_KEY_LIQ_HASTA] = fecha  # type: ignore[index]
-        await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
-        return DIV_RESULT
-
-    await cq.edit_message_text(texto, parse_mode="HTML")
-    return ConversationHandler.END
+    # Always store data and return DIV_RESULT
+    context.user_data[_KEY_VENTAS] = list(resultado.ventas_detalle)  # type: ignore[index]
+    context.user_data[_KEY_RESULTADO] = resultado  # type: ignore[index]
+    context.user_data[_KEY_PERIODO_LABEL] = periodo_label  # type: ignore[index]
+    context.user_data[_KEY_LIQ_DESDE] = desde  # type: ignore[index]
+    context.user_data[_KEY_LIQ_HASTA] = fecha  # type: ignore[index]
+    await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
+    return DIV_RESULT
 
 
 async def handle_div_atras(
@@ -702,7 +764,8 @@ async def handle_div_atras(
         resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
         periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
         if resultado is not None:
-            texto, markup = _render_resultado(resultado, periodo_label)
+            atras_solo_pendientes: bool = bool(context.user_data.get(_KEY_FILTRO, False))  # type: ignore[union-attr]
+            texto, markup = _render_resultado(resultado, periodo_label, atras_solo_pendientes)
             await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
         return DIV_RESULT
 
@@ -760,6 +823,29 @@ async def handle_div_venta(
     venta = ventas[index]
     texto, atras_markup = _render_detalle_venta(venta)
     await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=atras_markup)
+    return DIV_RESULT
+
+
+async def handle_div_filtro(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle rep_s:filtro:toggle — toggle div_filtro bool and re-render result view."""
+    cq = update.callback_query
+    if cq is None:
+        return DIV_RESULT
+    await cq.answer()
+
+    # Toggle the filter
+    current_filtro: bool = bool(context.user_data.get(_KEY_FILTRO, False))  # type: ignore[union-attr]
+    context.user_data[_KEY_FILTRO] = not current_filtro  # type: ignore[index]
+    new_filtro: bool = context.user_data[_KEY_FILTRO]  # type: ignore[index]
+
+    resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
+    periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
+    if resultado is not None:
+        texto, markup = _render_resultado(resultado, periodo_label, new_filtro)
+        await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
+
     return DIV_RESULT
 
 
@@ -911,7 +997,8 @@ async def handle_div_liq_freelancer(
         resultado: ResumenSplitPeriodo | None = context.user_data.get(_KEY_RESULTADO)  # type: ignore[union-attr]
         periodo_label: str = context.user_data.get(_KEY_PERIODO_LABEL, "")  # type: ignore[union-attr]
         if resultado is not None:
-            texto, markup = _render_resultado(resultado, periodo_label)
+            liq_solo_pendientes: bool = bool(context.user_data.get(_KEY_FILTRO, False))  # type: ignore[union-attr]
+            texto, markup = _render_resultado(resultado, periodo_label, liq_solo_pendientes)
             await cq.edit_message_text(texto, parse_mode="HTML", reply_markup=markup)
         return DIV_RESULT
 
@@ -1487,17 +1574,21 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
             ],
             DIV_CAL_DESDE: [
                 CallbackQueryHandler(handle_div_cal, pattern=r"^rep_s:cal:desde:"),
+                CallbackQueryHandler(handle_div_cal, pattern=r"^rep_s:cal:cancelar$"),
                 CallbackQueryHandler(handle_div_dia, pattern=r"^rep_s:dia:desde:"),
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:"),
             ],
             DIV_CAL_HASTA: [
                 CallbackQueryHandler(handle_div_cal, pattern=r"^rep_s:cal:hasta:"),
+                CallbackQueryHandler(handle_div_cal, pattern=r"^rep_s:cal:cancelar$"),
                 CallbackQueryHandler(handle_div_dia, pattern=r"^rep_s:dia:hasta:"),
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:"),
             ],
             DIV_RESULT: [
                 CallbackQueryHandler(handle_div_venta, pattern=r"^rep_s:venta:"),
                 CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:resultado"),
+                CallbackQueryHandler(handle_div_atras, pattern=r"^rep_s:atras:menu$"),
+                CallbackQueryHandler(handle_div_filtro, pattern=r"^rep_s:filtro:"),
                 CallbackQueryHandler(handle_div_cerrar, pattern=r"^rep_s:menu:cerrar"),
                 CallbackQueryHandler(handle_div_liq_start, pattern=r"^rep_s:liq:start$"),
                 CallbackQueryHandler(handle_div_soc_start, pattern=r"^rep_s:soc:start$"),
