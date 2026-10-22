@@ -1,0 +1,20 @@
+app = "garay-dashboard"
+primary_region = "gru"
+
+[build]
+
+[processes]
+  dashboard = "sh scripts/start_dashboard.sh"
+
+[http_service]
+  internal_port        = 8501
+  force_https          = true
+  auto_stop_machines   = "stop"
+  auto_start_machines  = true
+  min_machines_running = 0
+  processes            = ["dashboard"]
+
+[[vm]]
+  size      = "shared-cpu-1x"
+  memory    = "512mb"
+  processes = ["dashboard"]
