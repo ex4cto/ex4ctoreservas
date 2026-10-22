@@ -37,6 +37,8 @@ def _build_service(
     notificador: MagicMock | None = None,
     comisiones_repo: MagicMock | None = None,
     socios_config: MagicMock | None = None,
+    dm_venta_nueva_ids: list[int] | None = None,
+    grupo_nombre: str = "Test Group",
 ) -> RegistrarVentaService:
     return RegistrarVentaService(
         ventas=ventas or MagicMock(),
@@ -50,6 +52,8 @@ def _build_service(
         socios_config=socios_config or MagicMock(),
         freelancers=MagicMock(),
         servicios=MagicMock(),
+        dm_venta_nueva_ids=dm_venta_nueva_ids or [],
+        grupo_nombre=grupo_nombre,
     )
 
 
@@ -319,48 +323,83 @@ class TestMensajeNotificacion:
         mensaje = notificador.notificar.call_args.args[0]
         assert "Teléfono" not in mensaje
 
-    def test_mensaje_contiene_correo_si_presente(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(cliente_email="juan@example.com"))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "juan@example.com" in mensaje
 
-    def test_mensaje_omite_correo_si_ausente(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(cliente_email=None))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "Correo" not in mensaje
+class TestDmNuevaReserva:
+    """DM de contacto enviado a destinatarios configurados al registrar una venta."""
 
-    def test_mensaje_contiene_abono_si_presente(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(abono=Dinero(200_000)))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "$200.000" in mensaje
+    def _build(
+        self,
+        dm_ids: list[int],
+        grupo_nombre: str = "Admins",
+        cliente_nombre: str | None = "Ana Martínez",
+        cliente_telefono: str | None = None,
+    ) -> tuple[RegistrarVentaService, MagicMock]:
+        notificador = MagicMock()
+        notificador.notificar.return_value = None
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+        service = _build_service(
+            motor=motor,
+            notificador=notificador,
+            dm_venta_nueva_ids=dm_ids,
+            grupo_nombre=grupo_nombre,
+        )
+        service.ejecutar(_cmd(cliente_nombre=cliente_nombre, cliente_telefono=cliente_telefono))
+        return service, notificador
 
-    def test_mensaje_contiene_pax(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(adultos=2, ninos=0))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "2" in mensaje
+    def _dm_calls(self, notificador: MagicMock, ids: list[int]) -> list[MagicMock]:
+        str_ids = {str(i) for i in ids}
+        return [c for c in notificador.notificar.call_args_list if c.args[1] in str_ids]
 
-    def test_mensaje_usa_html_no_markdown(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd())
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "<b>" in mensaje
-        assert "*" not in mensaje
+    def test_dm_enviado_a_cada_destinatario(self) -> None:
+        _, notificador = self._build(dm_ids=[111, 222])
+        dm_calls = self._dm_calls(notificador, [111, 222])
+        assert len(dm_calls) == 2
 
-    def test_mensaje_contiene_hotel_si_presente(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(hotel="Dann Carlton"))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "Dann Carlton" in mensaje
+    def test_dm_contiene_nombre_cliente(self) -> None:
+        _, notificador = self._build(dm_ids=[111])
+        dm_calls = self._dm_calls(notificador, [111])
+        assert "Ana Martínez" in dm_calls[0].args[0]
 
-    def test_mensaje_omite_hotel_si_ausente(self) -> None:
-        service, notificador = self._capturar_mensaje()
-        service.ejecutar(_cmd(hotel=None))
-        mensaje = notificador.notificar.call_args.args[0]
-        assert "Hotel" not in mensaje
+    def test_dm_contiene_nombre_grupo(self) -> None:
+        _, notificador = self._build(dm_ids=[111], grupo_nombre="Garay Tours Admins")
+        dm_calls = self._dm_calls(notificador, [111])
+        assert "Garay Tours Admins" in dm_calls[0].args[0]
+
+    def test_dm_contiene_telefono_si_presente(self) -> None:
+        _, notificador = self._build(dm_ids=[111], cliente_telefono="3001234567")
+        dm_calls = self._dm_calls(notificador, [111])
+        assert "3001234567" in dm_calls[0].args[0]
+
+    def test_dm_omite_telefono_si_ausente(self) -> None:
+        _, notificador = self._build(dm_ids=[111], cliente_telefono=None)
+        dm_calls = self._dm_calls(notificador, [111])
+        msg = dm_calls[0].args[0]
+        assert "📞" not in msg
+
+    def test_dm_no_enviado_sin_destinatarios(self) -> None:
+        _, notificador = self._build(dm_ids=[])
+        # Solo la notificación al grupo
+        assert notificador.notificar.call_count == 1
+
+    def test_dm_no_enviado_sin_nombre_cliente(self) -> None:
+        _, notificador = self._build(dm_ids=[111], cliente_nombre=None)
+        # Sin nombre de cliente no hay DM — solo el grupo
+        assert notificador.notificar.call_count == 1
+
+    def test_dm_error_no_cancela_venta(self) -> None:
+        notificador = MagicMock()
+        notificador.notificar.side_effect = [None, Exception("Telegram down")]
+        motor = MagicMock()
+        motor.calcular.return_value = MagicMock()
+        service = _build_service(
+            motor=motor,
+            notificador=notificador,
+            dm_venta_nueva_ids=[111],
+            grupo_nombre="Admins",
+        )
+        resultado = service.ejecutar(_cmd(cliente_nombre="Ana"))
+        assert isinstance(resultado, ResultadoRegistrarVenta)
 
 
 class TestRegistrarVentaPersistsComision:

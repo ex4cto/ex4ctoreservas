@@ -163,6 +163,29 @@ def _construir_mensaje_privado(
     return "\n".join(lineas)
 
 
+def _construir_dm_nueva_reserva(
+    cliente_nombre: str,
+    cliente_telefono: str | None,
+    grupo_nombre: str,
+) -> str:
+    lineas: list[str] = [
+        obtener_mensaje("venta.dm_nueva_reserva.titulo"),
+        f"👤 {_esc(cliente_nombre)}",
+    ]
+    if cliente_telefono:
+        lineas.append(
+            obtener_mensaje("venta.dm_nueva_reserva.telefono").format(
+                tel=_esc(cliente_telefono)
+            )
+        )
+    lineas.append(
+        obtener_mensaje("venta.dm_nueva_reserva.grupo").format(
+            grupo=html.escape(grupo_nombre)
+        )
+    )
+    return "\n".join(lineas)
+
+
 class RegistrarVentaService:
     """Orchestrates sale registration: creates the aggregate, calculates
     commissions, persists, optionally creates a tiquetera, and notifies."""
@@ -180,6 +203,8 @@ class RegistrarVentaService:
         socios_config: SocioConfigRepository,
         freelancers: FreelancerRepository,
         servicios: ServicioRepository,
+        dm_venta_nueva_ids: list[int] | None = None,
+        grupo_nombre: str = "",
     ) -> None:
         self._ventas = ventas
         self._reglas_repo = reglas_repo
@@ -192,6 +217,8 @@ class RegistrarVentaService:
         self._socios_config = socios_config
         self._freelancers = freelancers
         self._servicios = servicios
+        self._dm_venta_nueva_ids = dm_venta_nueva_ids or []
+        self._grupo_nombre = grupo_nombre
 
     def ejecutar(self, cmd: RegistrarVentaComando) -> ResultadoRegistrarVenta:
         # 1. Create the Venta aggregate
@@ -407,6 +434,21 @@ class RegistrarVentaService:
                         "No se pudo enviar DM de tour %s al freelancer %s (venta %s registrada)",
                         nombre,
                         pid,
+                        venta.id,
+                    )
+
+        # 11. Send contact DM to designated recipients (best-effort, temporary until WA API)
+        if self._dm_venta_nueva_ids and cmd.cliente_nombre:
+            msg_dm_contacto = _construir_dm_nueva_reserva(
+                cmd.cliente_nombre, cmd.cliente_telefono, self._grupo_nombre
+            )
+            for tid in self._dm_venta_nueva_ids:
+                try:
+                    self._notificador.notificar(msg_dm_contacto, str(tid))
+                except Exception:
+                    logger.exception(
+                        "No se pudo enviar DM de contacto al destinatario %s (venta %s registrada)",
+                        tid,
                         venta.id,
                     )
 

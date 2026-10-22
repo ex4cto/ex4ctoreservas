@@ -18,6 +18,7 @@ from garay.aplicacion.egresos.registrar_egreso_manual import RegistrarEgresoManu
 from garay.aplicacion.factura.generar_y_guardar import GenerarYGuardarFacturaService
 from garay.aplicacion.factura.regenerar_factura import RegenerarFacturaService
 from garay.aplicacion.factura.servicio import GenerarFacturaService
+from garay.aplicacion.freelancers.editar_freelancer import EditarFreelancerService
 from garay.aplicacion.infraestructura_monitor.costo_railway import MonitorCostoRailwayService
 from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaResendService
 from garay.aplicacion.infraestructura_monitor.servicio import (
@@ -33,7 +34,6 @@ from garay.aplicacion.propuestas.servicio_software import GenerarPropuestaSoftwa
 from garay.aplicacion.reportes.mis_ventas import MisVentasService
 from garay.aplicacion.reportes.movimientos_recientes import MovimientosRecientesService
 from garay.aplicacion.reportes.resumen_ventas import ResumenVentasService
-from garay.aplicacion.freelancers.editar_freelancer import EditarFreelancerService
 from garay.aplicacion.servicios.editar_servicio import EditarServicioService
 from garay.aplicacion.servicios.lista_precios import PublicarListaPreciosServicio
 from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
@@ -289,6 +289,12 @@ def main() -> None:
         socios_config=socios_config_repo,
         freelancers=freelancer_repo,
         servicios=servicio_repo,
+        dm_venta_nueva_ids=[
+            int(x.strip())
+            for x in settings.notificacion_venta_nueva_ids.split(",")
+            if x.strip()
+        ],
+        grupo_nombre=settings.grupo_nombre,
     )
 
     logo_url = settings.factura_logo_url
