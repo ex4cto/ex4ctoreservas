@@ -1023,6 +1023,41 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "🙍 Por: {actor}"
         )
     },
+    # --- Gestión de ventas: editar pax ---
+    "gestion_ventas.campo_pax": {Idioma.ES: "👥 Adultos / Niños"},
+    "gestion_ventas.pedir_adultos": {
+        Idioma.ES: "Adultos actuales: <b>{adultos}</b> · Niños actuales: <b>{ninos}</b>\n\n¿Cuántos adultos? (mínimo 1)"
+    },
+    "gestion_ventas.pedir_ninos": {
+        Idioma.ES: (
+            "Adultos: <b>{adultos}</b>\n\n"
+            "¿Cuántos niños?\n"
+            "<i>Niños ≤ 4 años. Los mayores de 4 cuentan como adultos.</i>"
+        )
+    },
+    "gestion_ventas.adultos_invalido": {
+        Idioma.ES: "Número inválido. Ingresa un entero mayor a 0:"
+    },
+    "gestion_ventas.ninos_invalido": {
+        Idioma.ES: "Número inválido. Ingresa un entero ≥ 0:"
+    },
+    "gestion_ventas.confirmar_editar_pax": {
+        Idioma.ES: (
+            "¿Confirmas el cambio de pax?\n\n"
+            "👥 Adultos: {adultos_anterior} → <b>{adultos_nuevo}</b>\n"
+            "🧒 Niños: {ninos_anterior} → <b>{ninos_nuevo}</b>\n"
+            "💲 Neto recalculado: <b>{neto_nuevo}</b>\n"
+            "💬 Motivo: {motivo}\n\n"
+            "¿Confirmas?"
+        )
+    },
+    "gestion_ventas.pax_editado": {Idioma.ES: "✅ Pax actualizado correctamente."},
+    "gestion_ventas.pax_sin_precio": {
+        Idioma.ES: (
+            "⚠️ Este tour no tiene precio registrado en el catálogo. "
+            "No se puede recalcular el neto automáticamente."
+        )
+    },
     # --- Gestión de ventas: editar tour ---
     "gestion_ventas.campo_tour": {Idioma.ES: "🗺️ Tour"},
     "gestion_ventas.seleccionar_familia_tour": {

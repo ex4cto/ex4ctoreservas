@@ -104,3 +104,13 @@ class EditarMetodoPagoVentaComando:
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarPaxVentaComando:
+    venta_id: uuid.UUID
+    adultos: int
+    ninos: int
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
