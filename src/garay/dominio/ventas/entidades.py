@@ -325,6 +325,24 @@ class Venta:
         if nuevo_valor_venta is not None:
             self.valor_venta = nuevo_valor_venta
 
+    def cambiar_pax(self, adultos: int, ninos: int) -> None:
+        """Update adultos and ninos, reusing the same validation logic as __post_init__.
+
+        Rules:
+        - Raises VentaYaAnulada if the venta is already anulada.
+        - Raises CantidadInvalida if adultos < 1.
+        - Raises CantidadInvalida if ninos < 0.
+        - No idempotency guard — same values are accepted (the caller recomputes neto anyway).
+        """
+        if self.anulada:
+            raise VentaYaAnulada("No se puede editar el pax de una venta ya anulada.")
+        if adultos < 1:
+            raise CantidadInvalida("Debe haber al menos 1 adulto.")
+        if ninos < 0:
+            raise CantidadInvalida("El número de niños no puede ser negativo.")
+        self.adultos = adultos
+        self.ninos = ninos
+
     @property
     def ganancia(self) -> Dinero:
         return self.valor_venta - self.neto
