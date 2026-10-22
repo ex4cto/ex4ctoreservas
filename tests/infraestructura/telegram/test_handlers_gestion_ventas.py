@@ -2302,3 +2302,273 @@ class TestHandleGvConfirmarEditarParticipante:
 
         # Notification now goes via _notificar_edicion → bot.send_message.
         ctx.bot.send_message.assert_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Feature I: handle_gv_edit_adultos / handle_gv_edit_ninos / confirmar editar_pax
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGvEditAdultos:
+    @pytest.mark.asyncio
+    async def test_texto_no_entero_stays_en_estado(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_ADULTOS,
+            handle_gv_edit_adultos,
+        )
+
+        update = _make_update(text="abc")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_adultos(update, ctx)
+
+        assert result == GV_EDIT_ADULTOS
+
+    @pytest.mark.asyncio
+    async def test_cero_invalido_stays_en_estado(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_ADULTOS,
+            handle_gv_edit_adultos,
+        )
+
+        update = _make_update(text="0")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_adultos(update, ctx)
+
+        assert result == GV_EDIT_ADULTOS
+
+    @pytest.mark.asyncio
+    async def test_negativo_invalido_stays_en_estado(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_ADULTOS,
+            handle_gv_edit_adultos,
+        )
+
+        update = _make_update(text="-1")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_adultos(update, ctx)
+
+        assert result == GV_EDIT_ADULTOS
+
+    @pytest.mark.asyncio
+    async def test_adultos_valido_guarda_y_va_a_gv_edit_ninos(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_NINOS,
+            handle_gv_edit_adultos,
+        )
+
+        update = _make_update(text="3")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_adultos(update, ctx)
+
+        assert result == GV_EDIT_NINOS
+        assert ctx.user_data.get("gv_nuevo_adultos") == 3
+
+    @pytest.mark.asyncio
+    async def test_adultos_valido_muestra_pedir_ninos(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            handle_gv_edit_adultos,
+        )
+
+        update = _make_update(text="2")
+        ctx = _make_context()
+
+        await handle_gv_edit_adultos(update, ctx)
+
+        called_text = update.effective_message.reply_text.call_args.args[0]
+        assert "2" in called_text  # adultos count reflected in prompt
+
+
+class TestHandleGvEditNinos:
+    @pytest.mark.asyncio
+    async def test_texto_no_entero_stays_en_estado(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_NINOS,
+            handle_gv_edit_ninos,
+        )
+
+        update = _make_update(text="abc")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_ninos(update, ctx)
+
+        assert result == GV_EDIT_NINOS
+
+    @pytest.mark.asyncio
+    async def test_negativo_invalido_stays_en_estado(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_EDIT_NINOS,
+            handle_gv_edit_ninos,
+        )
+
+        update = _make_update(text="-1")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_ninos(update, ctx)
+
+        assert result == GV_EDIT_NINOS
+
+    @pytest.mark.asyncio
+    async def test_cero_es_valido_y_va_a_gv_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_ninos,
+        )
+
+        update = _make_update(text="0")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_ninos(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_nuevo_ninos") == 0
+
+    @pytest.mark.asyncio
+    async def test_ninos_positivo_guarda_y_va_a_gv_motivo(self) -> None:
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            GV_MOTIVO,
+            handle_gv_edit_ninos,
+        )
+
+        update = _make_update(text="2")
+        ctx = _make_context()
+
+        result = await handle_gv_edit_ninos(update, ctx)
+
+        assert result == GV_MOTIVO
+        assert ctx.user_data.get("gv_nuevo_ninos") == 2
+
+
+class TestHandleGvConfirmarEditarPax:
+    @pytest.mark.asyncio
+    async def test_confirmar_llama_servicio_editar_pax(self) -> None:
+        """On confirm with gv_accion=editar_pax, service.ejecutar is called once."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Cambio de grupo"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        ctx.user_data["gv_nuevo_adultos"] = 3
+        ctx.user_data["gv_nuevo_ninos"] = 1
+
+        service_mock = MagicMock()
+        ctx.bot_data["editar_pax_venta_service"] = service_mock
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        service_mock.ejecutar.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_confirmar_pax_envia_mensaje_exito(self) -> None:
+        """After successful pax edit, user receives pax_editado message."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Cambio de grupo"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        ctx.user_data["gv_nuevo_adultos"] = 2
+        ctx.user_data["gv_nuevo_ninos"] = 0
+
+        service_mock = MagicMock()
+        ctx.bot_data["editar_pax_venta_service"] = service_mock
+
+        await handle_gv_confirmar(update, ctx)
+
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.pax_editado") in calls
+
+    @pytest.mark.asyncio
+    async def test_estado_incompleto_termina_con_error_generico(self) -> None:
+        """Missing gv_nuevo_adultos causes error_generico reply and END."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Cambio"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        # gv_nuevo_adultos intentionally absent
+
+        ctx.bot_data["editar_pax_venta_service"] = MagicMock()
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.error_generico") in calls
+
+    @pytest.mark.asyncio
+    async def test_cantidad_invalida_muestra_adultos_invalido(self) -> None:
+        """CantidadInvalida from service results in adultos_invalido message."""
+        from garay.dominio.ventas.errores import CantidadInvalida
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Error test"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        ctx.user_data["gv_nuevo_adultos"] = 0
+        ctx.user_data["gv_nuevo_ninos"] = 0
+
+        service_mock = MagicMock()
+        service_mock.ejecutar.side_effect = CantidadInvalida("invalid")
+        ctx.bot_data["editar_pax_venta_service"] = service_mock
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.adultos_invalido") in calls
+
+    @pytest.mark.asyncio
+    async def test_servicio_sin_precio_muestra_pax_sin_precio(self) -> None:
+        """ServicioNoEncontrado from service results in pax_sin_precio message."""
+        from garay.aplicacion.ventas.errores import ServicioNoEncontrado
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Recalculo"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        ctx.user_data["gv_nuevo_adultos"] = 2
+        ctx.user_data["gv_nuevo_ninos"] = 0
+
+        service_mock = MagicMock()
+        service_mock.ejecutar.side_effect = ServicioNoEncontrado("no price")
+        ctx.bot_data["editar_pax_venta_service"] = service_mock
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.pax_sin_precio") in calls
+
+    @pytest.mark.asyncio
+    async def test_servicio_ausente_de_bot_data_termina_end(self) -> None:
+        """If editar_pax_venta_service is missing from bot_data, END with error."""
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(uuid.uuid4())
+        ctx.user_data["gv_motivo"] = "Test"
+        ctx.user_data["gv_accion"] = "editar_pax"
+        ctx.user_data["gv_nuevo_adultos"] = 2
+        ctx.user_data["gv_nuevo_ninos"] = 1
+        # editar_pax_venta_service intentionally absent from bot_data
+
+        result = await handle_gv_confirmar(update, ctx)
+
+        assert result == ConversationHandler.END
+        calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
+        assert obtener_mensaje("gestion_ventas.error_generico") in calls

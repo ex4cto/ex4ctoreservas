@@ -25,29 +25,31 @@ from garay.aplicacion.factura.regenerar_factura import (
 from garay.aplicacion.ventas.anular_venta import AnularVentaService
 from garay.aplicacion.ventas.comandos import (
     AnularVentaComando,
+    EditarAbonoVentaComando,
     EditarCanalVentaComando,
     EditarClienteVentaComando,
-    EditarAbonoVentaComando,
     EditarFechaVentaComando,
     EditarMetodoPagoVentaComando,
     EditarNetoVentaComando,
     EditarParticipantesVentaComando,
+    EditarPaxVentaComando,
     EditarServicioVentaComando,
     EditarValorVentaComando,
 )
+from garay.aplicacion.ventas.editar_abono import EditarAbonoVentaService
 from garay.aplicacion.ventas.editar_canal import EditarCanalVentaService
 from garay.aplicacion.ventas.editar_cliente_venta import EditarClienteVentaService
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
-from garay.aplicacion.ventas.editar_abono import EditarAbonoVentaService
 from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaService
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
+from garay.aplicacion.ventas.editar_pax_venta import EditarPaxVentaService
 from garay.aplicacion.ventas.editar_servicio import (
     EditarServicioVentaService,
     calcular_neto_tour,
 )
 from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
-from garay.aplicacion.ventas.errores import ServicioSinPrecio
+from garay.aplicacion.ventas.errores import ServicioNoEncontrado, ServicioSinPrecio
 from garay.config.settings import obtener_settings
 from garay.dominio.clientes.entidades import CampoCliente
 from garay.dominio.clientes.errores import ClienteNoEncontrado
@@ -64,6 +66,7 @@ from garay.dominio.puertos.repositorios import (
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.errores import (
     AbonoSuperaValorVenta,
+    CantidadInvalida,
     DigitalConPuntoDeVenta,
     LimiteEdicionesAlcanzado,
     MismoAbono,
@@ -121,6 +124,11 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_metodo_pago_anterior", None)
         context.user_data.pop("gv_nuevo_abono", None)
         context.user_data.pop("gv_abono_anterior", None)
+        context.user_data.pop("gv_nuevo_adultos", None)
+        context.user_data.pop("gv_nuevo_ninos", None)
+        context.user_data.pop("gv_adultos_anterior", None)
+        context.user_data.pop("gv_ninos_anterior", None)
+        context.user_data.pop("gv_neto_nuevo_pax", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -258,6 +266,8 @@ GV_EDIT_SERVICIO: int = 235       # user is picking tour within category
 GV_EDIT_TOUR_VALOR: int = 236     # user is answering valor_venta change question
 GV_EDIT_METODO_PAGO: int = 237    # user is picking new payment method
 GV_EDIT_ABONO: int = 238          # user is entering new abono amount
+GV_EDIT_ADULTOS: int = 239        # user is entering new adultos count
+GV_EDIT_NINOS: int = 240          # user is entering new ninos count
 
 GV_EDIT_METODO_PAGO_PATTERN = "^(gv_metodo_pago:.+|gv_volver_detalle)$"
 
@@ -396,6 +406,7 @@ def _construir_teclado_campos(
         rows.append(_btn("gestion_ventas.campo_valor_venta", "gv_campo:valor_venta"))
         rows.append(_btn("gestion_ventas.campo_abono", "gv_campo:abono"))
         rows.append(_btn("gestion_ventas.campo_tour", "gv_campo:tour"))
+        rows.append(_btn("gestion_ventas.campo_pax", "gv_campo:pax"))
     if venta is not None and venta.participantes.vendedor_nombre is not None:
         rows.append(_btn("gestion_ventas.campo_vendedor", "gv_campo:vendedor"))
     if venta is not None and venta.participantes.cerrador_nombre is not None:
@@ -1112,6 +1123,26 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return GV_EDIT_ABONO
 
+    if campo_str == "pax":
+        # Financial field — admin/propietario/dev only.
+        _user_pax = query.from_user
+        _uid_pax = _user_pax.id if _user_pax else 0
+        if not await es_admin_o_propietario(_uid_pax, context):
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_pax"
+            context.user_data["gv_adultos_anterior"] = str(venta.adultos)
+            context.user_data["gv_ninos_anterior"] = str(venta.ninos)
+        await query.edit_message_text(
+            obtener_mensaje("gestion_ventas.pedir_adultos").format(
+                adultos=venta.adultos,
+                ninos=venta.ninos,
+            ),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_ADULTOS
+
     try:
         campo = CampoCliente(campo_str)
     except ValueError:
@@ -1773,6 +1804,67 @@ async def handle_gv_edit_abono(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 # ---------------------------------------------------------------------------
+# GV_EDIT_ADULTOS / GV_EDIT_NINOS states — pax capture
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_edit_adultos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """GV_EDIT_ADULTOS state — parse integer input >= 1 for adultos, then ask ninos."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    try:
+        adultos = int(text.strip())
+        if adultos < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.adultos_invalido"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_ADULTOS
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_adultos"] = adultos
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_ninos").format(adultos=adultos),
+        parse_mode="HTML",
+    )
+    return GV_EDIT_NINOS
+
+
+async def handle_gv_edit_ninos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """GV_EDIT_NINOS state — parse integer input >= 0 for ninos, then ask motivo."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    try:
+        ninos = int(text.strip())
+        if ninos < 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.ninos_invalido"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_NINOS
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_ninos"] = ninos
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+# ---------------------------------------------------------------------------
 # GV_MOTIVO state — text input for justification
 # ---------------------------------------------------------------------------
 
@@ -1867,6 +1959,45 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             anterior=_anterior_abono,
             nuevo=_nuevo_abono_str,
             motivo=motivo,
+        )
+    elif gv_accion == "editar_pax":
+        _adultos_nuevo: int = user_data.get("gv_nuevo_adultos", 0)
+        _ninos_nuevo: int = user_data.get("gv_nuevo_ninos", 0)
+        _adultos_ant: str = user_data.get("gv_adultos_anterior") or "—"
+        _ninos_ant: str = user_data.get("gv_ninos_anterior") or "—"
+
+        # Pre-calculate new neto to show in confirmation.
+        _neto_nuevo_str = "—"
+        _venta_repo_pax: VentaRepository | None = context.bot_data.get("venta_repo")
+        _venta_id_str_pax: str | None = user_data.get("gv_venta_id")
+        if _venta_repo_pax is not None and _venta_id_str_pax:
+            _venta_pax = await asyncio.to_thread(
+                _venta_repo_pax.buscar_por_id, uuid.UUID(_venta_id_str_pax)
+            )
+            if _venta_pax is not None and _venta_pax.servicio_ids:
+                _svc_repo_pax: ServicioRepository | None = context.bot_data.get("servicio_repo")
+                if _svc_repo_pax is not None:
+                    _svc_id_pax = _venta_pax.servicio_ids[0]
+                    _horario_pax: str | None = None
+                    if _venta_pax.horarios_por_servicio is not None:
+                        _horario_pax = _venta_pax.horarios_por_servicio.get(_svc_id_pax)
+                    _svc_pax = await asyncio.to_thread(_svc_repo_pax.buscar_por_id, _svc_id_pax)
+                    if _svc_pax is not None:
+                        _neto_calculado = calcular_neto_tour(
+                            _svc_pax, _adultos_nuevo, _ninos_nuevo, _horario_pax
+                        )
+                        if _neto_calculado is not None:
+                            if context.user_data is not None:
+                                context.user_data["gv_neto_nuevo_pax"] = _neto_calculado
+                            _neto_nuevo_str = fmt_cop(_neto_calculado)
+
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_pax").format(
+            adultos_anterior=escape(_adultos_ant, quote=False),
+            adultos_nuevo=_adultos_nuevo,
+            ninos_anterior=escape(_ninos_ant, quote=False),
+            ninos_nuevo=_ninos_nuevo,
+            neto_nuevo=_neto_nuevo_str,
+            motivo=escape(motivo, quote=False),
         )
     elif gv_accion == "editar_tour":
         # Build confirmation text for tour edit.
@@ -1991,6 +2122,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_abono":
         return await _handle_confirmar_editar_abono(update, context, user_data, user)
+
+    if gv_accion == "editar_pax":
+        return await _handle_confirmar_editar_pax(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -3497,6 +3631,125 @@ async def _handle_confirmar_editar_abono(
     if update.effective_message and mensaje_key:
         await update.effective_message.reply_text(
             obtener_mensaje(mensaje_key),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+async def _handle_confirmar_editar_pax(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-pax action (financial — recomputes neto)."""
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    nuevo_adultos: int | None = user_data.get("gv_nuevo_adultos")
+    nuevo_ninos: int | None = user_data.get("gv_nuevo_ninos")
+
+    if not venta_id_str or not motivo or nuevo_adultos is None or nuevo_ninos is None:
+        logger.error("editar_pax confirm: incomplete state")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarPaxVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        adultos=nuevo_adultos,
+        ninos=nuevo_ninos,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarPaxVentaService | None = context.bot_data.get("editar_pax_venta_service")
+    if service is None:
+        logger.error("editar_pax_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    mensaje_key_pax: str | None = None
+    venta_pax = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except (ServicioNoEncontrado, ServicioSinPrecio):
+        mensaje_key_pax = "gestion_ventas.pax_sin_precio"
+    except CantidadInvalida:
+        mensaje_key_pax = "gestion_ventas.adultos_invalido"
+    except NetoIgualOSuperaValorVenta:
+        mensaje_key_pax = "gestion_ventas.neto_supera_valor"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key_pax = "gestion_ventas.limite_ediciones"
+    except VentaYaAnulada:
+        mensaje_key_pax = "gestion_ventas.ya_anulada"
+    except VentaNoEncontrada:
+        mensaje_key_pax = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key_pax = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_pax")
+        mensaje_key_pax = "gestion_ventas.error_generico"
+    else:
+        venta_repo_pax_c: VentaRepository | None = context.bot_data.get("venta_repo")
+        if venta_repo_pax_c is not None:
+            venta_pax = await asyncio.to_thread(
+                venta_repo_pax_c.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+
+        _adultos_ant = user_data.get("gv_adultos_anterior") or "0"
+        _ninos_ant = user_data.get("gv_ninos_anterior") or "0"
+
+        dm_admin_text = obtener_mensaje("gestion_ventas.dm_admin_edicion").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            campo_label=obtener_mensaje("gestion_ventas.campo_pax"),
+            anterior=f"{_adultos_ant} adultos / {_ninos_ant} niños",
+            nuevo=f"{nuevo_adultos} adultos / {nuevo_ninos} niños",
+            actor=escape(nombre or "—", quote=False),
+        )
+
+        if venta_pax is not None:
+            await _notificar_edicion(
+                context,
+                venta_pax,
+                dm_admin_text,
+                campo_label=obtener_mensaje("gestion_ventas.campo_pax"),
+                es_financiero=True,
+                dm_admins_text=dm_admin_text,
+            )
+        else:
+            await _notificar_grupo(context, dm_admin_text)
+
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.pax_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key_pax:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key_pax),
             parse_mode="HTML",
         )
     _limpiar(context)
