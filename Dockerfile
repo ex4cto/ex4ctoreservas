@@ -8,6 +8,7 @@ RUN pip install --upgrade pip uv
 # Install Python dependencies (layer cached by uv.lock)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
+RUN uv run playwright install chromium
 
 # Application source
 COPY src/ ./src/
