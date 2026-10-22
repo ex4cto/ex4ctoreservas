@@ -4,7 +4,7 @@ import datetime
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.comun.tipos import EstadoVenta, MetodoPago, TipoCliente
@@ -175,3 +175,13 @@ class SQLAVentaRepository(VentaRepository):
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]
+
+    def actualizar_mensaje_grupo_id(self, venta_id: uuid.UUID, mensaje_id: int) -> None:
+        """Narrow UPDATE — sets only mensaje_grupo_id without touching any other field."""
+        with self._sf.begin() as session:
+            stmt = (
+                update(VentaModel)
+                .where(VentaModel.id == venta_id)
+                .values(mensaje_grupo_id=mensaje_id)
+            )
+            session.execute(stmt)

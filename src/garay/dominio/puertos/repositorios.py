@@ -68,6 +68,16 @@ class VentaRepository(ABC):
         """
         ...
 
+    @abstractmethod
+    def actualizar_mensaje_grupo_id(self, venta_id: uuid.UUID, mensaje_id: int) -> None:
+        """Narrow UPDATE — sets only mensaje_grupo_id without touching any other field.
+
+        Safe to call after a service has already committed domain changes because it
+        issues a targeted SQL UPDATE instead of a full object merge.
+        No-op (no error) when venta_id does not exist.
+        """
+        ...
+
 
 class IngresoRepository(ABC):
     @abstractmethod

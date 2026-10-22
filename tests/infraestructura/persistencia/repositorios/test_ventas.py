@@ -716,6 +716,46 @@ def test_buscar_por_id_still_returns_anulada(sf: sessionmaker[Session]) -> None:
     assert resultado.anulada is True
 
 
+# ---------------------------------------------------------------------------
+# Fix 1 — actualizar_mensaje_grupo_id narrow update (RED → GREEN)
+# ---------------------------------------------------------------------------
+
+
+def test_actualizar_mensaje_grupo_id_only_updates_that_field(sf: sessionmaker[Session]) -> None:
+    """actualizar_mensaje_grupo_id persists the new id WITHOUT touching any other field."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    v = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero("500000"),
+        neto=Dinero("450000"),
+        servicio_ids=[uuid.uuid4()],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 8, 1),
+        participantes=Participantes(vendedor_nombre="Ana", cerrador_nombre="Luis"),
+        mensaje_grupo_id=100,
+    )
+    repo.guardar(v)
+
+    repo.actualizar_mensaje_grupo_id(v.id, 999)
+
+    resultado = repo.buscar_por_id(v.id)
+    assert resultado is not None
+    assert resultado.mensaje_grupo_id == 999
+    # Other fields must remain untouched
+    assert resultado.participantes.vendedor_nombre == "Ana"
+    assert resultado.participantes.cerrador_nombre == "Luis"
+    assert resultado.valor_venta == Dinero("500000")
+
+
+def test_actualizar_mensaje_grupo_id_noop_on_missing_venta(sf: sessionmaker[Session]) -> None:
+    """actualizar_mensaje_grupo_id on a non-existent id must not raise."""
+    repo = SQLAVentaRepository(sf)
+    # Should complete silently without raising an exception
+    repo.actualizar_mensaje_grupo_id(uuid.uuid4(), 42)
+
+
 def test_listar_por_freelancer_y_periodo_still_filters_on_scalar_fecha(
     sf: sessionmaker[Session],
 ) -> None:

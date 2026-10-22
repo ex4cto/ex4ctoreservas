@@ -43,6 +43,9 @@ class TestVentaRepository:
             def listar_para_gestion(self, desde: date) -> list[Venta]:
                 return []
 
+            def actualizar_mensaje_grupo_id(self, venta_id: uuid.UUID, mensaje_id: int) -> None:
+                pass
+
         assert isinstance(_Impl(), VentaRepository)
 
     def test_sin_implementar_no_se_puede_instanciar(self) -> None:
