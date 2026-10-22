@@ -2304,13 +2304,11 @@ class TestHandleGvConfirmarEditarParticipante:
         ctx.bot.send_message.assert_awaited()
 
     @pytest.mark.asyncio
-    async def test_bug2_guardar_usa_venta_fresca_no_stale(self) -> None:
-        """Bug 2: _notificar_edicion must persist the reloaded venta, not the stale one.
+    async def test_bug2_narrow_update_not_guardar(self) -> None:
+        """Fix 2: _notificar_edicion must use actualizar_mensaje_grupo_id, NOT guardar(venta).
 
-        The stale venta has vendedor_nombre="Ana".  After service.ejecutar() the DB
-        has vendedor_nombre="Pedro".  The second buscar_por_id call returns a fresh
-        venta with vendedor_nombre="Pedro".  We verify that venta_repo.guardar is
-        called with the fresh object (vendedor_nombre=="Pedro"), NOT the stale one.
+        guardar(venta) would overwrite all domain fields with the in-memory object,
+        risking silent data loss.  The narrow update only sets mensaje_grupo_id.
         """
         stale_venta = _make_venta()
         stale_venta.mensaje_grupo_id = 42
@@ -2345,15 +2343,10 @@ class TestHandleGvConfirmarEditarParticipante:
         ):
             await handle_gv_confirmar(update, ctx)
 
-        # guardar must have been called with the fresh venta (vendedor_nombre="Pedro"),
-        # not the stale one (vendedor_nombre="Ana").
-        guardar_calls = ctx.bot_data["venta_repo"].guardar.call_args_list
-        assert guardar_calls, "venta_repo.guardar was never called"
-        saved_venta = guardar_calls[-1].args[0]
-        assert saved_venta.participantes.vendedor_nombre == "Pedro", (
-            f"Expected 'Pedro' but got '{saved_venta.participantes.vendedor_nombre}' "
-            "— guardar was called with the stale pre-service venta"
-        )
+        # guardar must NOT be called — it would overwrite domain fields with stale data.
+        ctx.bot_data["venta_repo"].guardar.assert_not_called()
+        # actualizar_mensaje_grupo_id IS called to persist the new message id.
+        ctx.bot_data["venta_repo"].actualizar_mensaje_grupo_id.assert_called()
 
     @pytest.mark.asyncio
     async def test_bug1_mensaje_grupo_contiene_resumen_completo(self) -> None:
@@ -2678,3 +2671,142 @@ class TestHandleGvConfirmarEditarPax:
         assert result == ConversationHandler.END
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.error_generico") in calls
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 — _notificar_edicion uses narrow actualizar_mensaje_grupo_id
+# Fix 3 — _anterior_nombre captured BEFORE reload
+# ---------------------------------------------------------------------------
+
+
+class TestNotificarEdicionNarrowUpdate:
+    """_notificar_edicion must call actualizar_mensaje_grupo_id, NOT guardar(venta)."""
+
+    @pytest.mark.asyncio
+    async def test_notificar_edicion_calls_actualizar_not_guardar(self) -> None:
+        """After sending the group message, only actualizar_mensaje_grupo_id is called.
+
+        guardar(venta) must NOT be called because it would overwrite all domain
+        fields with whatever is in the in-memory venta object at that point,
+        risking silent overwrite of changes the service just committed.
+        """
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            _notificar_edicion,
+        )
+
+        venta = _make_venta()
+        venta.id = uuid.uuid4()
+        venta.mensaje_grupo_id = 10
+
+        venta_repo = MagicMock()
+        venta_repo.actualizar_mensaje_grupo_id = MagicMock()
+
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"] = venta_repo
+        ctx.bot.send_message = AsyncMock(return_value=MagicMock(message_id=999))
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await _notificar_edicion(
+                ctx,
+                venta,
+                "Mensaje de prueba",
+                campo_label="Vendedor",
+                es_financiero=False,
+            )
+
+        # guardar must NOT have been called
+        venta_repo.guardar.assert_not_called()
+        # actualizar_mensaje_grupo_id MUST have been called with the new message_id
+        venta_repo.actualizar_mensaje_grupo_id.assert_called_once_with(venta.id, 999)
+
+    @pytest.mark.asyncio
+    async def test_notificar_edicion_no_crash_if_actualizar_raises(self) -> None:
+        """If actualizar_mensaje_grupo_id raises, _notificar_edicion swallows the error."""
+        from garay.infraestructura.telegram.handlers_gestion_ventas import (
+            _notificar_edicion,
+        )
+
+        venta = _make_venta()
+        venta.id = uuid.uuid4()
+        venta.mensaje_grupo_id = None
+
+        venta_repo = MagicMock()
+        venta_repo.actualizar_mensaje_grupo_id.side_effect = RuntimeError("db down")
+
+        ctx = _make_context()
+        ctx.bot_data["venta_repo"] = venta_repo
+        ctx.bot.send_message = AsyncMock(return_value=MagicMock(message_id=777))
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            # Must NOT raise
+            await _notificar_edicion(
+                ctx,
+                venta,
+                "Texto",
+                campo_label="Campo",
+                es_financiero=False,
+            )
+
+
+class TestAnteriorNombreCapturedBeforeReload:
+    """_anterior_nombre must reflect the OLD name (before service.ejecutar runs)."""
+
+    @pytest.mark.asyncio
+    async def test_anterior_nombre_es_el_viejo_no_el_nuevo(self) -> None:
+        """The group/admin DM must contain the OLD participant name, not the new one.
+
+        stale_venta.participantes.vendedor_nombre = "Ana" (old)
+        fresh_venta.participantes.vendedor_nombre = "Pedro" (new, after service)
+
+        The admin DM text sent via bot.send_message should contain "Ana" (old)
+        because that is the 'anterior' shown in the edit notification.
+        """
+        stale_venta = _make_venta()
+        stale_venta.mensaje_grupo_id = None
+        stale_venta.participantes.vendedor_id = uuid.uuid4()
+        stale_venta.participantes.vendedor_nombre = "Ana"  # OLD name
+        stale_venta.participantes.cerrador_id = uuid.uuid4()
+        stale_venta.participantes.cerrador_nombre = "Luis"
+
+        fresh_venta = _make_venta()
+        fresh_venta.id = stale_venta.id
+        fresh_venta.mensaje_grupo_id = None
+        fresh_venta.participantes.vendedor_id = stale_venta.participantes.vendedor_id
+        fresh_venta.participantes.vendedor_nombre = "Pedro"  # NEW name
+        fresh_venta.participantes.cerrador_id = stale_venta.participantes.cerrador_id
+        fresh_venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        # First call → stale (before service); second call → fresh (after service)
+        ctx.bot_data["venta_repo"].buscar_por_id.side_effect = [stale_venta, fresh_venta]
+        ctx.user_data["gv_venta_id"] = str(stale_venta.id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids="123"),
+        ):
+            await handle_gv_confirmar(update, ctx)
+
+        # The admin DM is the last send_message call (after the group message).
+        # It should contain "Ana" (the OLD name) in the 'anterior' field.
+        all_texts = [
+            call.kwargs.get("text", "") or (call.args[0] if call.args else "")
+            for call in ctx.bot.send_message.call_args_list
+        ]
+        combined = " ".join(all_texts)
+        assert "Ana" in combined, (
+            f"OLD participant name 'Ana' not found in notification texts.\n"
+            f"Texts sent: {all_texts!r}"
+        )

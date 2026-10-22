@@ -152,8 +152,12 @@ class TestNotificarEdicion:
         assert call_kwargs is not None
 
     @pytest.mark.asyncio
-    async def test_persists_new_mensaje_grupo_id_to_venta(self) -> None:
-        """After sending, should update venta.mensaje_grupo_id and call venta_repo.guardar."""
+    async def test_persists_new_mensaje_grupo_id_via_narrow_update(self) -> None:
+        """After sending, actualizar_mensaje_grupo_id is called with the new id.
+
+        guardar(venta) must NOT be called — the narrow update avoids overwriting
+        domain fields that the service may have just committed.
+        """
         from garay.infraestructura.telegram.handlers_gestion_ventas import (
             _notificar_edicion,
         )
@@ -181,8 +185,10 @@ class TestNotificarEdicion:
             es_financiero=False,
         )
 
-        assert venta.mensaje_grupo_id == 555
-        venta_repo.guardar.assert_called_once_with(venta)
+        # narrow update must have been called with venta.id and new message_id
+        venta_repo.actualizar_mensaje_grupo_id.assert_called_once_with(venta.id, 555)
+        # guardar must NOT be called — it would overwrite domain fields
+        venta_repo.guardar.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_delete_failure_does_not_raise(self) -> None:

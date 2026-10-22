@@ -191,14 +191,13 @@ async def _notificar_edicion(
             sent = await context.bot.send_message(
                 chat_id=grupo_id, text=mensaje_grupo, parse_mode="HTML"
             )
-            # Step 3 — persist new message_id onto the venta.
+            # Step 3 — persist new message_id via narrow UPDATE (safe after service commit).
             new_id: int | None = getattr(sent, "message_id", None)
             if new_id is not None:
-                venta.mensaje_grupo_id = new_id
                 venta_repo = context.bot_data.get("venta_repo")
                 if venta_repo is not None:
                     try:
-                        venta_repo.guardar(venta)
+                        venta_repo.actualizar_mensaje_grupo_id(venta.id, new_id)
                     except Exception:
                         logger.warning(
                             "Could not persist new mensaje_grupo_id for venta %s", venta.id
@@ -2647,20 +2646,19 @@ async def _handle_confirmar_editar_participante(
         mensaje_key = "gestion_ventas.error_generico"
     else:
         rol_label = "Vendedor" if es_vendedor else "Cerrador"
-        # Bug 2 fix: reload venta from DB after service.ejecutar() so we have the
-        # updated participantes (new vendedor/cerrador names) instead of the stale
-        # object loaded before the service ran.
-        if venta_repo is not None:
-            _fresh = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
-            if _fresh is not None:
-                venta = _fresh
-        # Bug 1 fix: build the full group message (with prices and commissions) the same
-        # way financial edits do, so the group always sees the complete sale summary.
+        # Fix 3: capture the OLD name BEFORE the reload so 'anterior' in the
+        # notification reflects what was there before the service committed.
         _anterior_nombre: str = (
             venta.participantes.vendedor_nombre
             if es_vendedor
             else venta.participantes.cerrador_nombre
         ) or "—"
+        # Reload from DB after service.ejecutar() so the group message reflects
+        # the updated participantes (new vendedor/cerrador names).
+        if venta_repo is not None:
+            _fresh = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+            if _fresh is not None:
+                venta = _fresh
         mensaje_grupo, _dm_socios, dm_admins_text = await _construir_textos_edicion_financiera(
             context,
             venta,
