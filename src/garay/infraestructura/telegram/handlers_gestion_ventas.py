@@ -2647,17 +2647,32 @@ async def _handle_confirmar_editar_participante(
         mensaje_key = "gestion_ventas.error_generico"
     else:
         rol_label = "Vendedor" if es_vendedor else "Cerrador"
-        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            rol=escape(rol_label, quote=False),
-            nuevo=escape(nuevo_fl_nombre, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
+        # Bug 2 fix: reload venta from DB after service.ejecutar() so we have the
+        # updated participantes (new vendedor/cerrador names) instead of the stale
+        # object loaded before the service ran.
+        if venta_repo is not None:
+            _fresh = await asyncio.to_thread(venta_repo.buscar_por_id, uuid.UUID(venta_id_str))
+            if _fresh is not None:
+                venta = _fresh
+        # Bug 1 fix: build the full group message (with prices and commissions) the same
+        # way financial edits do, so the group always sees the complete sale summary.
+        _anterior_nombre: str = (
+            venta.participantes.vendedor_nombre
+            if es_vendedor
+            else venta.participantes.cerrador_nombre
+        ) or "—"
+        mensaje_grupo, _dm_socios, dm_admins_text = await _construir_textos_edicion_financiera(
+            context,
+            venta,
+            campo_label=rol_label,
+            anterior=_anterior_nombre,
+            nuevo=nuevo_fl_nombre,
+            motivo=motivo,
+            actor=nombre or "—",
         )
-        # venta is already loaded above — participante edit does not change mensaje_grupo_id.
         await _notificar_edicion(
-            context, venta, mensaje_grupo, campo_label=rol_label, es_financiero=False
+            context, venta, mensaje_grupo, campo_label=rol_label, es_financiero=False,
+            dm_admins_text=dm_admins_text,
         )
         if update.effective_message:
             await update.effective_message.reply_text(
