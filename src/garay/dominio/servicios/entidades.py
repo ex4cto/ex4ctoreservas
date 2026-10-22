@@ -10,6 +10,14 @@ from decimal import Decimal
 from garay.dominio.servicios.errores import NombreServicioVacio, NumeroServicioInvalido
 
 
+@dataclass(frozen=True)
+class ContactoReserva:
+    """Operador de contacto al que se envía la reserva de un tour."""
+
+    nombre: str
+    numero: str
+
+
 class TipoImagen(enum.StrEnum):
     """Audience type for the price-list image.
 
@@ -43,6 +51,7 @@ class Servicio:
 
     info_tour: str | None = field(default=None)
     observaciones: str | None = field(default=None)
+    contactos_reserva: list[ContactoReserva] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.nombre = " ".join(self.nombre.upper().split())

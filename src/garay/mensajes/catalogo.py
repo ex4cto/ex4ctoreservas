@@ -135,7 +135,6 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     },
     "venta.dm_nueva_reserva.titulo": {Idioma.ES: "📋 <b>Nueva reserva — contacto</b>"},
     "venta.dm_nueva_reserva.telefono": {Idioma.ES: "📞 {tel}"},
-    "venta.dm_nueva_reserva.grupo": {Idioma.ES: "➡️ Enviar al grupo: <b>{grupo}</b>"},
     "cancelar_sin_operacion": {
         Idioma.ES: "No hay ninguna operación activa. Escribí /start para comenzar."
     },

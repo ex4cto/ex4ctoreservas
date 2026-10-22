@@ -294,7 +294,6 @@ def main() -> None:
             for x in settings.notificacion_venta_nueva_ids.split(",")
             if x.strip()
         ],
-        grupo_nombre=settings.grupo_nombre,
     )
 
     logo_url = settings.factura_logo_url

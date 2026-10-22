@@ -15,6 +15,7 @@ from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.servicios.entidades import ContactoReserva, Servicio
 from garay.dominio.socios.entidades import SocioConfig
 from garay.dominio.ventas.valor_objetos import Participantes
 
@@ -38,8 +39,13 @@ def _build_service(
     comisiones_repo: MagicMock | None = None,
     socios_config: MagicMock | None = None,
     dm_venta_nueva_ids: list[int] | None = None,
-    grupo_nombre: str = "Test Group",
+    servicios: MagicMock | None = None,
 ) -> RegistrarVentaService:
+    if servicios is None:
+        servicios_mock: MagicMock = MagicMock()
+        servicios_mock.buscar_por_id.return_value = None
+    else:
+        servicios_mock = servicios
     return RegistrarVentaService(
         ventas=ventas or MagicMock(),
         reglas_repo=reglas_repo or MagicMock(),
@@ -51,9 +57,8 @@ def _build_service(
         comisiones_repo=comisiones_repo or MagicMock(),
         socios_config=socios_config or MagicMock(),
         freelancers=MagicMock(),
-        servicios=MagicMock(),
+        servicios=servicios_mock,
         dm_venta_nueva_ids=dm_venta_nueva_ids or [],
-        grupo_nombre=grupo_nombre,
     )
 
 
@@ -324,25 +329,36 @@ class TestMensajeNotificacion:
         assert "Teléfono" not in mensaje
 
 
+def _servicio_con_contactos(contactos: list[ContactoReserva]) -> Servicio:
+    return Servicio(
+        id=_SERVICIO_ID,
+        numero=1,
+        nombre="TOUR TEST",
+        contactos_reserva=contactos,
+    )
+
+
 class TestDmNuevaReserva:
     """DM de contacto enviado a destinatarios configurados al registrar una venta."""
 
     def _build(
         self,
         dm_ids: list[int],
-        grupo_nombre: str = "Admins",
         cliente_nombre: str | None = "Ana Martínez",
         cliente_telefono: str | None = None,
+        servicio: Servicio | None = None,
     ) -> tuple[RegistrarVentaService, MagicMock]:
         notificador = MagicMock()
         notificador.notificar.return_value = None
         motor = MagicMock()
         motor.calcular.return_value = MagicMock()
+        servicios_mock = MagicMock()
+        servicios_mock.buscar_por_id.return_value = servicio
         service = _build_service(
             motor=motor,
             notificador=notificador,
             dm_venta_nueva_ids=dm_ids,
-            grupo_nombre=grupo_nombre,
+            servicios=servicios_mock,
         )
         service.ejecutar(_cmd(cliente_nombre=cliente_nombre, cliente_telefono=cliente_telefono))
         return service, notificador
@@ -361,30 +377,48 @@ class TestDmNuevaReserva:
         dm_calls = self._dm_calls(notificador, [111])
         assert "Ana Martínez" in dm_calls[0].args[0]
 
-    def test_dm_contiene_nombre_grupo(self) -> None:
-        _, notificador = self._build(dm_ids=[111], grupo_nombre="Garay Tours Admins")
-        dm_calls = self._dm_calls(notificador, [111])
-        assert "Garay Tours Admins" in dm_calls[0].args[0]
-
-    def test_dm_contiene_telefono_si_presente(self) -> None:
+    def test_dm_contiene_telefono_cliente_si_presente(self) -> None:
         _, notificador = self._build(dm_ids=[111], cliente_telefono="3001234567")
         dm_calls = self._dm_calls(notificador, [111])
         assert "3001234567" in dm_calls[0].args[0]
 
-    def test_dm_omite_telefono_si_ausente(self) -> None:
+    def test_dm_omite_telefono_cliente_si_ausente(self) -> None:
         _, notificador = self._build(dm_ids=[111], cliente_telefono=None)
-        dm_calls = self._dm_calls(notificador, [111])
-        msg = dm_calls[0].args[0]
+        msg = self._dm_calls(notificador, [111])[0].args[0]
         assert "📞" not in msg
+
+    def test_dm_contiene_contacto_del_tour(self) -> None:
+        sv = _servicio_con_contactos([ContactoReserva("LEIDIS FUENTES", "3004260091")])
+        _, notificador = self._build(dm_ids=[111], servicio=sv)
+        msg = self._dm_calls(notificador, [111])[0].args[0]
+        assert "LEIDIS FUENTES" in msg
+        assert "3004260091" in msg
+
+    def test_dm_lista_contactos_en_orden(self) -> None:
+        sv = _servicio_con_contactos([
+            ContactoReserva("LUIS JEFE", "3107028952"),
+            ContactoReserva("PIPE", "3113663265"),
+            ContactoReserva("Jose Buo", "3115881379"),
+        ])
+        _, notificador = self._build(dm_ids=[111], servicio=sv)
+        msg = self._dm_calls(notificador, [111])[0].args[0]
+        pos_luis = msg.index("LUIS JEFE")
+        pos_pipe = msg.index("PIPE")
+        pos_jose = msg.index("Jose Buo")
+        assert pos_luis < pos_pipe < pos_jose
+
+    def test_dm_sin_contactos_no_incluye_seccion_operador(self) -> None:
+        sv = _servicio_con_contactos([])
+        _, notificador = self._build(dm_ids=[111], servicio=sv)
+        msg = self._dm_calls(notificador, [111])[0].args[0]
+        assert "LEIDIS" not in msg
 
     def test_dm_no_enviado_sin_destinatarios(self) -> None:
         _, notificador = self._build(dm_ids=[])
-        # Solo la notificación al grupo
         assert notificador.notificar.call_count == 1
 
     def test_dm_no_enviado_sin_nombre_cliente(self) -> None:
         _, notificador = self._build(dm_ids=[111], cliente_nombre=None)
-        # Sin nombre de cliente no hay DM — solo el grupo
         assert notificador.notificar.call_count == 1
 
     def test_dm_error_no_cancela_venta(self) -> None:
@@ -396,7 +430,6 @@ class TestDmNuevaReserva:
             motor=motor,
             notificador=notificador,
             dm_venta_nueva_ids=[111],
-            grupo_nombre="Admins",
         )
         resultado = service.ejecutar(_cmd(cliente_nombre="Ana"))
         assert isinstance(resultado, ResultadoRegistrarVenta)

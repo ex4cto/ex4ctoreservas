@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.puertos.repositorios import ServicioRepository
-from garay.dominio.servicios.entidades import Servicio
+from garay.dominio.servicios.entidades import ContactoReserva, Servicio
 from garay.infraestructura.persistencia.modelos import ServicioModel
 
 
@@ -28,6 +28,7 @@ def to_orm(s: Servicio) -> ServicioModel:
         precio_sugerido_nino=s.precio_sugerido_nino,
         info_tour=s.info_tour,
         observaciones=s.observaciones,
+        contactos_reserva=[{"nombre": c.nombre, "numero": c.numero} for c in s.contactos_reserva],
     )
 
 
@@ -49,6 +50,10 @@ def to_domain(m: ServicioModel) -> Servicio:
         precio_sugerido_nino=m.precio_sugerido_nino,
         info_tour=m.info_tour,
         observaciones=m.observaciones,
+        contactos_reserva=[
+            ContactoReserva(nombre=d["nombre"], numero=d["numero"])
+            for d in (m.contactos_reserva or [])
+        ],
     )
 
 

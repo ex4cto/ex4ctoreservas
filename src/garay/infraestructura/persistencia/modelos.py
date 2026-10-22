@@ -65,6 +65,9 @@ class ServicioModel(Base):
 
     info_tour: Mapped[str | None] = mapped_column(Text, nullable=True)
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contactos_reserva: Mapped[list[Any]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=sa.text("'[]'")
+    )
 
 
 class ClienteModel(Base):

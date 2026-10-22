@@ -26,6 +26,7 @@ from garay.dominio.puertos.repositorios import (
     VentaRepository,
 )
 from garay.dominio.puertos.servicios_externos import NotificadorGrupo
+from garay.dominio.servicios.entidades import ContactoReserva, Servicio
 from garay.dominio.servicios.horarios import render_horarios
 from garay.dominio.socios.entidades import SocioConfig
 from garay.dominio.socios.servicio import calcular_split_venta
@@ -166,23 +167,32 @@ def _construir_mensaje_privado(
 def _construir_dm_nueva_reserva(
     cliente_nombre: str,
     cliente_telefono: str | None,
-    grupo_nombre: str,
+    service_contacts: list[tuple[str, list[ContactoReserva]]],
 ) -> str:
-    lineas: list[str] = [
-        obtener_mensaje("venta.dm_nueva_reserva.titulo"),
-        f"👤 {_esc(cliente_nombre)}",
-    ]
+    lineas: list[str] = [obtener_mensaje("venta.dm_nueva_reserva.titulo")]
+
+    destinos = ", ".join(n for n, _ in service_contacts) if service_contacts else ""
+    if destinos:
+        lineas.append(f"📍 {_esc(destinos)}")
+
+    cliente_line = f"👤 {_esc(cliente_nombre)}"
     if cliente_telefono:
-        lineas.append(
-            obtener_mensaje("venta.dm_nueva_reserva.telefono").format(
-                tel=_esc(cliente_telefono)
-            )
-        )
-    lineas.append(
-        obtener_mensaje("venta.dm_nueva_reserva.grupo").format(
-            grupo=html.escape(grupo_nombre)
-        )
-    )
+        cliente_line += f" · {_esc(cliente_telefono)}"
+    lineas.append(cliente_line)
+
+    all_contacts = [(n, cs) for n, cs in service_contacts if cs]
+    if all_contacts:
+        lineas.append("")
+        if len(all_contacts) == 1:
+            _, contactos = all_contacts[0]
+            for i, c in enumerate(contactos, 1):
+                lineas.append(f"{i}. {_esc(c.nombre)} — {_esc(c.numero)}")
+        else:
+            for nombre_s, contactos in all_contacts:
+                lineas.append(f"<b>{_esc(nombre_s)}:</b>")
+                for i, c in enumerate(contactos, 1):
+                    lineas.append(f"  {i}. {_esc(c.nombre)} — {_esc(c.numero)}")
+
     return "\n".join(lineas)
 
 
@@ -204,7 +214,6 @@ class RegistrarVentaService:
         freelancers: FreelancerRepository,
         servicios: ServicioRepository,
         dm_venta_nueva_ids: list[int] | None = None,
-        grupo_nombre: str = "",
     ) -> None:
         self._ventas = ventas
         self._reglas_repo = reglas_repo
@@ -218,7 +227,6 @@ class RegistrarVentaService:
         self._freelancers = freelancers
         self._servicios = servicios
         self._dm_venta_nueva_ids = dm_venta_nueva_ids or []
-        self._grupo_nombre = grupo_nombre
 
     def ejecutar(self, cmd: RegistrarVentaComando) -> ResultadoRegistrarVenta:
         # 1. Create the Venta aggregate
@@ -405,10 +413,15 @@ class RegistrarVentaService:
                         venta.id,
                     )
 
+        # Pre-fetch services once — used by steps 10 and 11.
+        servicios_cache: dict[uuid.UUID, Servicio | None] = {
+            sid: self._servicios.buscar_por_id(sid) for sid in cmd.servicio_ids
+        }
+
         # 10. Send per-tour informational DM to each distinct participating freelancer
         #     whose tour has content (best-effort — never blocks or rolls back the sale).
         for sid, nombre in zip(cmd.servicio_ids, cmd.servicio_nombres, strict=False):
-            servicio_obj = self._servicios.buscar_por_id(sid)
+            servicio_obj = servicios_cache.get(sid)
             if servicio_obj is None:
                 continue
             msg_dm = _construir_dm_freelancer(
@@ -439,8 +452,13 @@ class RegistrarVentaService:
 
         # 11. Send contact DM to designated recipients (best-effort, temporary until WA API)
         if self._dm_venta_nueva_ids and cmd.cliente_nombre:
+            service_contacts: list[tuple[str, list[ContactoReserva]]] = []
+            for sid in cmd.servicio_ids:
+                obj = servicios_cache.get(sid)
+                if obj is not None:
+                    service_contacts.append((obj.nombre, obj.contactos_reserva))
             msg_dm_contacto = _construir_dm_nueva_reserva(
-                cmd.cliente_nombre, cmd.cliente_telefono, self._grupo_nombre
+                cmd.cliente_nombre, cmd.cliente_telefono, service_contacts
             )
             for tid in self._dm_venta_nueva_ids:
                 try:

@@ -39,7 +39,6 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(default="")
     webhook_secret: str = Field(default="")
     grupo_id: str = Field(default="")
-    grupo_nombre: str = Field(default="Garay Tours Admins")
 
     # Telegram IDs (comma-separated) to receive a DM with client contact on each new sale.
     notificacion_venta_nueva_ids: str = Field(default="")
