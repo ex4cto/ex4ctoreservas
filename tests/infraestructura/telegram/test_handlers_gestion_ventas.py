@@ -2303,6 +2303,112 @@ class TestHandleGvConfirmarEditarParticipante:
         # Notification now goes via _notificar_edicion → bot.send_message.
         ctx.bot.send_message.assert_awaited()
 
+    @pytest.mark.asyncio
+    async def test_bug2_guardar_usa_venta_fresca_no_stale(self) -> None:
+        """Bug 2: _notificar_edicion must persist the reloaded venta, not the stale one.
+
+        The stale venta has vendedor_nombre="Ana".  After service.ejecutar() the DB
+        has vendedor_nombre="Pedro".  The second buscar_por_id call returns a fresh
+        venta with vendedor_nombre="Pedro".  We verify that venta_repo.guardar is
+        called with the fresh object (vendedor_nombre=="Pedro"), NOT the stale one.
+        """
+        stale_venta = _make_venta()
+        stale_venta.mensaje_grupo_id = 42
+        stale_venta.participantes.vendedor_id = uuid.uuid4()
+        stale_venta.participantes.vendedor_nombre = "Ana"  # old value
+        stale_venta.participantes.cerrador_id = uuid.uuid4()
+        stale_venta.participantes.cerrador_nombre = "Luis"
+
+        fresh_venta = _make_venta()
+        fresh_venta.id = stale_venta.id
+        fresh_venta.mensaje_grupo_id = 42
+        fresh_venta.participantes.vendedor_id = stale_venta.participantes.vendedor_id
+        fresh_venta.participantes.vendedor_nombre = "Pedro"  # new value after service
+        fresh_venta.participantes.cerrador_id = stale_venta.participantes.cerrador_id
+        fresh_venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+
+        # First call returns stale; second call (after service) returns fresh.
+        ctx.bot_data["venta_repo"].buscar_por_id.side_effect = [stale_venta, fresh_venta]
+        ctx.user_data["gv_venta_id"] = str(stale_venta.id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
+
+        # guardar must have been called with the fresh venta (vendedor_nombre="Pedro"),
+        # not the stale one (vendedor_nombre="Ana").
+        guardar_calls = ctx.bot_data["venta_repo"].guardar.call_args_list
+        assert guardar_calls, "venta_repo.guardar was never called"
+        saved_venta = guardar_calls[-1].args[0]
+        assert saved_venta.participantes.vendedor_nombre == "Pedro", (
+            f"Expected 'Pedro' but got '{saved_venta.participantes.vendedor_nombre}' "
+            "— guardar was called with the stale pre-service venta"
+        )
+
+    @pytest.mark.asyncio
+    async def test_bug1_mensaje_grupo_contiene_resumen_completo(self) -> None:
+        """Bug 1: the group message must contain the full sale summary, not just the
+        short correction note.
+
+        We check that the text sent to the group chat (bot.send_message) includes
+        the new participant name AND other sale details (e.g. valor_venta), which
+        only appear in the full _construir_textos_edicion_financiera summary, NOT
+        in the short correccion_edicion_participante template.
+        """
+        from garay.mensajes.catalogo import obtener_mensaje
+
+        stale_venta = _make_venta()
+        stale_venta.mensaje_grupo_id = None  # no prior message → straight send
+        stale_venta.participantes.vendedor_id = uuid.uuid4()
+        stale_venta.participantes.vendedor_nombre = "Ana"
+        stale_venta.participantes.cerrador_id = uuid.uuid4()
+        stale_venta.participantes.cerrador_nombre = "Luis"
+
+        fresh_venta = _make_venta()
+        fresh_venta.id = stale_venta.id
+        fresh_venta.mensaje_grupo_id = None
+        fresh_venta.participantes.vendedor_id = stale_venta.participantes.vendedor_id
+        fresh_venta.participantes.vendedor_nombre = "Pedro"
+        fresh_venta.participantes.cerrador_id = stale_venta.participantes.cerrador_id
+        fresh_venta.participantes.cerrador_nombre = "Luis"
+
+        nuevo_fl_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context_participantes()
+        ctx.bot_data["venta_repo"].buscar_por_id.side_effect = [stale_venta, fresh_venta]
+        ctx.user_data["gv_venta_id"] = str(stale_venta.id)
+        ctx.user_data["gv_motivo"] = "Corrección"
+        ctx.user_data["gv_accion"] = "editar_vendedor"
+        ctx.user_data["gv_nuevo_freelancer_id"] = str(nuevo_fl_id)
+        ctx.user_data["gv_nuevo_freelancer_nombre"] = "Pedro"
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
+
+        # The message sent to the group must include the new participant name AND
+        # a price/value indicator from the full summary (e.g. "$" from fmt_cop).
+        # The short correccion_edicion_participante message does NOT include prices.
+        assert ctx.bot.send_message.await_count >= 1, "No message sent to group"
+        sent_text = ctx.bot.send_message.call_args_list[0].kwargs.get("text", "")
+        assert "Pedro" in sent_text, f"New participant name missing from group message: {sent_text!r}"
+        assert "$" in sent_text, (
+            "Full sale summary (with prices) was not sent to the group — "
+            "only the short correction note was sent"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Feature I: handle_gv_edit_adultos / handle_gv_edit_ninos / confirmar editar_pax
