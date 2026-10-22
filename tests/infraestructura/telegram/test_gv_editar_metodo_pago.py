@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import datetime
 import re
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.tipos import TipoCliente
 from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_CAMPO_PATTERN,
     GV_EDIT_METODO_PAGO,
@@ -25,6 +28,19 @@ def _make_venta_mp(mensaje_grupo_id: int | None = 42000) -> MagicMock:
     v = MagicMock()
     v.id = uuid.uuid4()
     v.mensaje_grupo_id = mensaje_grupo_id
+    v.valor_venta = Dinero(300_000)
+    v.abono = None
+    v.fecha = datetime.date(2026, 1, 15)
+    v.ninos = 0
+    v.adultos = 2
+    v.tipo_cliente = TipoCliente.EXTERNO
+    v.metodo_pago = None
+    v.neto = Dinero(250_000)
+    v.ganancia = Dinero(50_000)
+    v.participantes = MagicMock()
+    v.participantes.vendedor_nombre = None
+    v.participantes.cerrador_nombre = None
+    v.servicio_ids = []
     return v
 
 

@@ -129,6 +129,7 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_adultos_anterior", None)
         context.user_data.pop("gv_ninos_anterior", None)
         context.user_data.pop("gv_neto_nuevo_pax", None)
+        context.user_data.pop("gv_canal_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -974,6 +975,8 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
         actual_label = _TIPO_CLIENTE_LABEL.get(
             venta.tipo_cliente, venta.tipo_cliente.value
         )
+        if context.user_data is not None:
+            context.user_data["gv_canal_anterior"] = actual_label
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(
                 obtener_mensaje("gestion_ventas.canal_interno"),
@@ -2498,14 +2501,6 @@ async def _handle_confirmar_editar_canal(
                     punto_line_grupo = (
                         f"🏠 Punto: {escape(pdv_obj.nombre, quote=False)}\n"
                     )
-        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_canal").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            canal=escape(canal_label, quote=False),
-            punto_line=punto_line_grupo,
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
-        )
         _venta_repo_canal: VentaRepository | None = context.bot_data.get("venta_repo")
         _venta_canal = None
         if _venta_repo_canal is not None:
@@ -2513,11 +2508,28 @@ async def _handle_confirmar_editar_canal(
                 _venta_repo_canal.buscar_por_id, uuid.UUID(venta_id_str)
             )
         if _venta_canal is not None:
+            _anterior_canal = user_data.get("gv_canal_anterior") or "—"
+            mensaje_grupo, _dm_socios, dm_admins_text = await _construir_textos_edicion_financiera(
+                context, _venta_canal,
+                campo_label="Canal",
+                anterior=_anterior_canal,
+                nuevo=canal_label,
+                motivo=motivo,
+                actor=nombre or "—",
+            )
             await _notificar_edicion(
                 context, _venta_canal, mensaje_grupo, campo_label="Canal",
-                es_financiero=True,
+                es_financiero=True, dm_admins_text=dm_admins_text,
             )
         else:
+            mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_canal").format(
+                cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+                tours=escape(user_data.get("gv_tours") or "—", quote=False),
+                canal=escape(canal_label, quote=False),
+                punto_line=punto_line_grupo,
+                motivo=escape(motivo, quote=False),
+                actor=escape(nombre or "—", quote=False),
+            )
             await _notificar_grupo(context, mensaje_grupo)
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -3382,23 +3394,28 @@ async def _handle_confirmar_editar_metodo_pago(
             venta = await asyncio.to_thread(venta_repo_mp.buscar_por_id, uuid.UUID(venta_id_str))
 
         anterior_str = user_data.get("gv_metodo_pago_anterior") or "Sin método"
-        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_metodo_pago").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            anterior=escape(anterior_str, quote=False),
-            nuevo=escape(nuevo_metodo.value, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
-        )
         if venta is not None:
-            await _notificar_edicion(
-                context,
-                venta,
-                mensaje_grupo,
+            mensaje_grupo, _dm_socios, dm_admins_text = await _construir_textos_edicion_financiera(
+                context, venta,
                 campo_label="Método de pago",
-                es_financiero=False,
+                anterior=anterior_str,
+                nuevo=nuevo_metodo.value,
+                motivo=motivo,
+                actor=nombre or "—",
+            )
+            await _notificar_edicion(
+                context, venta, mensaje_grupo, campo_label="Método de pago",
+                es_financiero=False, dm_admins_text=dm_admins_text,
             )
         else:
+            mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_metodo_pago").format(
+                cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+                tours=escape(user_data.get("gv_tours") or "—", quote=False),
+                anterior=escape(anterior_str, quote=False),
+                nuevo=escape(nuevo_metodo.value, quote=False),
+                motivo=escape(motivo, quote=False),
+                actor=escape(nombre or "—", quote=False),
+            )
             await _notificar_grupo(context, mensaje_grupo)
         if update.effective_message:
             await update.effective_message.reply_text(
@@ -3615,23 +3632,28 @@ async def _handle_confirmar_editar_abono(
 
         anterior_str = user_data.get("gv_abono_anterior") or "Sin abono"
         nuevo_str = fmt_cop(nuevo_abono) if nuevo_abono is not None else "Sin abono"
-        mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_abono").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            anterior=escape(anterior_str, quote=False),
-            nuevo=escape(nuevo_str, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
-        )
         if venta is not None:
-            await _notificar_edicion(
-                context,
-                venta,
-                mensaje_grupo,
+            mensaje_grupo, _dm_socios, dm_admins_text = await _construir_textos_edicion_financiera(
+                context, venta,
                 campo_label="Abono",
-                es_financiero=False,
+                anterior=anterior_str,
+                nuevo=nuevo_str,
+                motivo=motivo,
+                actor=nombre or "—",
+            )
+            await _notificar_edicion(
+                context, venta, mensaje_grupo, campo_label="Abono",
+                es_financiero=False, dm_admins_text=dm_admins_text,
             )
         else:
+            mensaje_grupo = obtener_mensaje("gestion_ventas.correccion_edicion_abono").format(
+                cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+                tours=escape(user_data.get("gv_tours") or "—", quote=False),
+                anterior=escape(anterior_str, quote=False),
+                nuevo=escape(nuevo_str, quote=False),
+                motivo=escape(motivo, quote=False),
+                actor=escape(nombre or "—", quote=False),
+            )
             await _notificar_grupo(context, mensaje_grupo)
         if update.effective_message:
             await update.effective_message.reply_text(

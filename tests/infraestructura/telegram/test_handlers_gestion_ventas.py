@@ -1703,6 +1703,7 @@ def _make_context_canal(
     ctx.bot_data["pdv_repo"] = pdv_repo
     editar_canal_service = MagicMock()
     ctx.bot_data["editar_canal_venta_service"] = editar_canal_service
+    ctx.bot_data["venta_repo"].buscar_por_id.return_value = _make_venta()
     return ctx
 
 
