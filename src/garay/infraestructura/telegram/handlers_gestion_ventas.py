@@ -2356,14 +2356,6 @@ async def _handle_confirmar_editar_cliente(
             if campo_str
             else campo_str or "—"
         )
-        mensaje_grupo_c = obtener_mensaje("gestion_ventas.correccion_edicion_participante").format(
-            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
-            tours=escape(user_data.get("gv_tours") or "—", quote=False),
-            rol=campo_label_c,
-            nuevo=escape(nuevo_valor, quote=False),
-            motivo=escape(motivo, quote=False),
-            actor=escape(nombre or "—", quote=False),
-        )
         _venta_repo_c: VentaRepository | None = context.bot_data.get("venta_repo")
         _venta_c = None
         if _venta_repo_c is not None:
@@ -2371,11 +2363,32 @@ async def _handle_confirmar_editar_cliente(
                 _venta_repo_c.buscar_por_id, uuid.UUID(venta_id_str)
             )
         if _venta_c is not None:
+            _anterior_c = user_data.get("gv_valor_anterior") or "—"
+            mensaje_grupo_c, _dm_socios_c, dm_admins_text_c = (
+                await _construir_textos_edicion_financiera(
+                    context, _venta_c,
+                    campo_label=campo_label_c,
+                    anterior=_anterior_c,
+                    nuevo=nuevo_valor,
+                    motivo=motivo,
+                    actor=nombre or "—",
+                )
+            )
             await _notificar_edicion(
                 context, _venta_c, mensaje_grupo_c, campo_label=campo_label_c,
-                es_financiero=False,
+                es_financiero=False, dm_admins_text=dm_admins_text_c,
             )
         else:
+            mensaje_grupo_c = obtener_mensaje(
+                "gestion_ventas.correccion_edicion_participante"
+            ).format(
+                cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+                tours=escape(user_data.get("gv_tours") or "—", quote=False),
+                rol=campo_label_c,
+                nuevo=escape(nuevo_valor, quote=False),
+                motivo=escape(motivo, quote=False),
+                actor=escape(nombre or "—", quote=False),
+            )
             await _notificar_grupo(context, mensaje_grupo_c)
         if update.effective_message:
             await update.effective_message.reply_text(

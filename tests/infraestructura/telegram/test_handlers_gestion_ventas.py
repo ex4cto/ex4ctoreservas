@@ -111,6 +111,7 @@ def _make_context(
     ventas_list = ventas or []
     venta_repo.listar_para_gestion.return_value = ventas_list
     venta_repo.listar_por_periodo.return_value = ventas_list
+    venta_repo.buscar_por_id.return_value = _make_venta()
 
     freelancer_repo = MagicMock()
     freelancer_repo.buscar_por_telegram_id.return_value = freelancer or _make_admin_freelancer()
@@ -1610,6 +1611,37 @@ class TestHandleGvConfirmarEditarCliente:
         assert result == ConversationHandler.END
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.limite_ediciones") in calls
+
+    @pytest.mark.asyncio
+    async def test_confirmar_editar_cliente_sends_full_group_message(self) -> None:
+        """On success, full venta summary (not a short one-liner) is sent to the group."""
+        venta_id = uuid.uuid4()
+        update = _make_update(callback_data="gv_confirmar", user_id=123)
+        ctx = _make_context()
+        ctx.user_data["gv_venta_id"] = str(venta_id)
+        ctx.user_data["gv_motivo"] = "Corrección de datos"
+        ctx.user_data["gv_accion"] = "editar_cliente"
+        ctx.user_data["gv_campo"] = "telefono"
+        ctx.user_data["gv_nuevo_valor"] = "3009998877"
+        ctx.user_data["gv_valor_anterior"] = "3001112233"
+
+        with patch(
+            "garay.infraestructura.telegram.handlers_gestion_ventas.obtener_settings",
+            return_value=MagicMock(propietario_telegram_ids=""),
+        ):
+            await handle_gv_confirmar(update, ctx)
+
+        group_calls = [
+            c
+            for c in ctx.bot.send_message.call_args_list
+            if c.kwargs.get("chat_id") == "-1001234567"
+        ]
+        assert group_calls, "send_message was not called for the sales group"
+        text = group_calls[0].kwargs.get("text", "")
+        assert "$" in text, (
+            "Full sale summary (with prices) was not sent to the group — "
+            f"got: {text!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
