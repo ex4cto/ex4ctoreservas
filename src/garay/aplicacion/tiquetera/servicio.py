@@ -154,7 +154,8 @@ def _construir_mensaje_privado(
     lineas.append("")
     for s in socios:
         cantidad = split.get(s.nombre, Dinero(0))
-        lineas.append(f"   📊 {_esc(s.nombre)} ({s.porcentaje}%): {fmt_cop(cantidad)}")
+        pct = int(s.porcentaje) if s.porcentaje == int(s.porcentaje) else s.porcentaje
+        lineas.append(f"   📊 {_esc(s.nombre)} ({pct}%): {fmt_cop(cantidad)}")
 
     lineas.append("")
     lineas.append(f"✅ Tu parte: {fmt_cop(monto)}")

@@ -2875,8 +2875,10 @@ async def _construir_textos_edicion_financiera(
         parte = desglose.agencia.aplicar_porcentaje(socio.porcentaje) if desglose else None
         if parte is not None:
             nombre_socio = escape(socio.nombre, quote=False)
+            _p = socio.porcentaje
+            pct_s = int(_p) if _p == int(_p) else _p
             split_lines += (
-                f"   📊 {nombre_socio} ({socio.porcentaje}%): {fmt_cop(parte)}\n"
+                f"   📊 {nombre_socio} ({pct_s}%): {fmt_cop(parte)}\n"
             )
     # mi_parte is the total agencia net (shown to every socio equally)
     mi_parte = fmt_cop(desglose.agencia) if desglose else "—"
