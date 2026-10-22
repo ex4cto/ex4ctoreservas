@@ -91,7 +91,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "⏰ ¿A qué hora sale el tour <b>{tour}</b>?"
     },
     "pregunta_adultos": {Idioma.ES: "¿Cuántos adultos? (mínimo 1)"},
-    "pregunta_ninos": {Idioma.ES: "¿Cuántos niños? (puede ser 0)"},
+    "pregunta_ninos": {Idioma.ES: "¿Cuántos niños <b>menores de 4 años</b>? (puede ser 0)\n<i>Los mayores de 4 años cuentan como adultos.</i>"},
     "pregunta_numero_ticket": {Idioma.ES: "¿Cuál es el número de ticket?"},
     "pregunta_valor": {Idioma.ES: "¿Cuál es el valor total de la venta?"},
     "pregunta_abono": {Idioma.ES: "¿Cuánto abonó el cliente? (0 si no hubo abono)"},
