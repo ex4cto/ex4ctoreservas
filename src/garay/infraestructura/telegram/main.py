@@ -49,6 +49,7 @@ from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaService
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
+from garay.aplicacion.ventas.editar_referido import EditarReferidoVentaService
 from garay.aplicacion.ventas.editar_servicio import EditarServicioVentaService
 from garay.aplicacion.ventas.editar_valor_venta import EditarValorVentaService
 from garay.config.settings import obtener_settings
@@ -209,6 +210,14 @@ def main() -> None:
     editar_abono_venta_service = EditarAbonoVentaService(
         ventas=ventas_repo,
         auditoria=auditoria_venta_repo,
+    )
+    editar_referido_venta_service = EditarReferidoVentaService(
+        ventas=ventas_repo,
+        auditoria=auditoria_venta_repo,
+        reglas_repo=reglas_repo,
+        puntos_repo=pdv_repo,
+        comisiones_repo=comisiones_repo,
+        motor=MotorComisiones(),
     )
 
     hotel_service = ServicioHoteles(
@@ -550,6 +559,7 @@ def main() -> None:
             "editar_servicio_svc": editar_servicio_venta_service,
             "editar_metodo_pago_venta_service": editar_metodo_pago_venta_service,
             "editar_abono_venta_service": editar_abono_venta_service,
+            "editar_referido_venta_service": editar_referido_venta_service,
             "regenerar_factura_service": regenerar_factura_service,
             "cotizacion_service": generar_cotizacion_service,
             "notificador_email": notificador_email,

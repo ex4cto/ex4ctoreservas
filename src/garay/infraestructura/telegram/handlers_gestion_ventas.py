@@ -33,6 +33,7 @@ from garay.aplicacion.ventas.comandos import (
     EditarNetoVentaComando,
     EditarParticipantesVentaComando,
     EditarPaxVentaComando,
+    EditarReferidoVentaComando,
     EditarServicioVentaComando,
     EditarValorVentaComando,
 )
@@ -44,6 +45,7 @@ from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaServ
 from garay.aplicacion.ventas.editar_neto import EditarNetoVentaService
 from garay.aplicacion.ventas.editar_participantes import EditarParticipantesVentaService
 from garay.aplicacion.ventas.editar_pax_venta import EditarPaxVentaService
+from garay.aplicacion.ventas.editar_referido import EditarReferidoVentaService
 from garay.aplicacion.ventas.editar_servicio import (
     EditarServicioVentaService,
     calcular_neto_tour,
@@ -73,11 +75,13 @@ from garay.dominio.ventas.errores import (
     MismoCanal,
     MismoMetodoPago,
     MismoNeto,
+    MismoReferido,
     MismoServicio,
     MismosParticipantes,
     MismoValorVenta,
     MotivoRequerido,
     NetoIgualOSuperaValorVenta,
+    PermisoDenegado,
     PuntoDeVentaRequerido,
     ValorVentaMenorQueAbono,
     VentaNoEncontrada,
@@ -130,6 +134,8 @@ def _limpiar(context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data.pop("gv_ninos_anterior", None)
         context.user_data.pop("gv_neto_nuevo_pax", None)
         context.user_data.pop("gv_canal_anterior", None)
+        context.user_data.pop("gv_nuevo_referido", None)
+        context.user_data.pop("gv_referido_anterior", None)
 
 
 async def _notificar_grupo(context: ContextTypes.DEFAULT_TYPE, mensaje: str) -> None:
@@ -268,6 +274,7 @@ GV_EDIT_METODO_PAGO: int = 237    # user is picking new payment method
 GV_EDIT_ABONO: int = 238          # user is entering new abono amount
 GV_EDIT_ADULTOS: int = 239        # user is entering new adultos count
 GV_EDIT_NINOS: int = 240          # user is entering new ninos count
+GV_EDIT_REFERIDO: int = 241       # user is entering new referido alias
 
 GV_EDIT_METODO_PAGO_PATTERN = "^(gv_metodo_pago:.+|gv_volver_detalle)$"
 
@@ -411,6 +418,8 @@ def _construir_teclado_campos(
         rows.append(_btn("gestion_ventas.campo_vendedor", "gv_campo:vendedor"))
     if venta is not None and venta.participantes.cerrador_nombre is not None:
         rows.append(_btn("gestion_ventas.campo_cerrador", "gv_campo:cerrador"))
+    if es_admin:
+        rows.append(_btn("gestion_ventas.campo_referido", "gv_campo:referido"))
     rows += [
         _btn("gestion_ventas.campo_hotel", "gv_campo:hotel"),
         _btn("gestion_ventas.campo_habitacion", "gv_campo:numero_habitacion"),
@@ -1144,6 +1153,41 @@ async def handle_gv_edit_campo(update: Update, context: ContextTypes.DEFAULT_TYP
             parse_mode="HTML",
         )
         return GV_EDIT_ADULTOS
+
+    if campo_str == "referido":
+        # Admin-only field.
+        _user_ref = query.from_user
+        _uid_ref = _user_ref.id if _user_ref else 0
+        if not await es_admin_o_propietario(_uid_ref, context):
+            _limpiar(context)
+            return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+        if context.user_data is not None:
+            context.user_data["gv_accion"] = "editar_referido"
+        alias_actual = venta.participantes.referido_alias
+        if alias_actual:
+            if context.user_data is not None:
+                context.user_data["gv_referido_anterior"] = alias_actual
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    obtener_mensaje("gestion_ventas.sin_referido"),
+                    callback_data="gv_referido_sin",
+                )
+            ]])
+            await query.edit_message_text(
+                obtener_mensaje("gestion_ventas.prompt_referido_con_actual").format(
+                    alias=escape(alias_actual, quote=False)
+                ),
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+        else:
+            if context.user_data is not None:
+                context.user_data["gv_referido_anterior"] = ""
+            await query.edit_message_text(
+                obtener_mensaje("gestion_ventas.prompt_referido_sin_actual"),
+                parse_mode="HTML",
+            )
+        return GV_EDIT_REFERIDO
 
     try:
         campo = CampoCliente(campo_str)
@@ -2001,6 +2045,16 @@ async def handle_gv_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             neto_nuevo=_neto_nuevo_str,
             motivo=escape(motivo, quote=False),
         )
+    elif gv_accion == "editar_referido":
+        _nuevo_ref = user_data.get("gv_nuevo_referido")
+        _anterior_ref = user_data.get("gv_referido_anterior") or "—"
+        _sin_ref = obtener_mensaje("gestion_ventas.sin_referido")
+        _nuevo_ref_display = _nuevo_ref if _nuevo_ref else _sin_ref
+        confirm_text = obtener_mensaje("gestion_ventas.confirmar_editar_referido").format(
+            anterior=escape(_anterior_ref, quote=False),
+            nuevo=escape(_nuevo_ref_display, quote=False),
+            motivo=escape(motivo, quote=False),
+        )
     elif gv_accion == "editar_tour":
         # Build confirmation text for tour edit.
         _tour_nuevo_nombre: str = user_data.get("gv_nuevo_servicio_nombre") or "—"
@@ -2127,6 +2181,9 @@ async def handle_gv_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if gv_accion == "editar_pax":
         return await _handle_confirmar_editar_pax(update, context, user_data, user)
+
+    if gv_accion == "editar_referido":
+        return await _handle_confirmar_editar_referido(update, context, user_data, user)
 
     # Default: anular path.
     return await _handle_confirmar_anular(update, context, user_data, user)
@@ -3800,6 +3857,184 @@ async def _handle_confirmar_editar_pax(
     if update.effective_message and mensaje_key_pax:
         await update.effective_message.reply_text(
             obtener_mensaje(mensaje_key_pax),
+            parse_mode="HTML",
+        )
+    _limpiar(context)
+    return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+
+# ---------------------------------------------------------------------------
+# GV_EDIT_REFERIDO state — text capture + "Sin referido" callback
+# ---------------------------------------------------------------------------
+
+
+async def handle_gv_capturar_referido(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Capture the new referido alias text.  Empty text re-prompts; valid text asks for motivo."""
+    if update.effective_message is None:
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    text = (update.message.text if update.message else "") or ""
+    alias = text.strip()
+
+    if not alias:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.referido_vacio"),
+            parse_mode="HTML",
+        )
+        return GV_EDIT_REFERIDO
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_referido"] = alias
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+        parse_mode="HTML",
+    )
+    return GV_MOTIVO
+
+
+async def handle_gv_referido_sin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle the 'Sin referido' callback button — sets nuevo_referido to None and asks motivo."""
+    query = update.callback_query
+    if query is None:
+        return ConversationHandler.END
+    await query.answer()
+
+    if context.user_data is not None:
+        context.user_data["gv_nuevo_referido"] = None
+
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            obtener_mensaje("gestion_ventas.pedir_motivo_editar"),
+            parse_mode="HTML",
+        )
+    return GV_MOTIVO
+
+
+async def _handle_confirmar_editar_referido(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_data: dict,  # type: ignore[type-arg]
+    user: object,
+) -> int:
+    """Handle confirmation for the editar-referido action."""
+
+    venta_id_str: str | None = user_data.get("gv_venta_id")
+    motivo: str | None = user_data.get("gv_motivo")
+    # gv_nuevo_referido is str | None (None = clear referido)
+    nuevo_referido: str | None = user_data.get("gv_nuevo_referido")
+    # Key distinguishes "not set" from "set to None" — check via direct get
+    if "gv_nuevo_referido" not in user_data:
+        logger.error("editar_referido confirm: gv_nuevo_referido key missing")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if not venta_id_str or not motivo:
+        logger.error("editar_referido confirm: incomplete state — venta_id or motivo missing")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    user_id: int = getattr(user, "id", 0)
+    freelancer_repo: FreelancerRepository | None = context.bot_data.get("freelancer_repo")
+    nombre: str | None = None
+    if freelancer_repo is not None:
+        fl = await asyncio.to_thread(freelancer_repo.buscar_por_telegram_id, user_id)
+        if fl is not None:
+            nombre = fl.nombre
+
+    cmd = EditarReferidoVentaComando(
+        venta_id=uuid.UUID(venta_id_str),
+        nuevo_referido_alias=nuevo_referido,
+        motivo=motivo,
+        realizada_por_telegram_id=user_id,
+        realizada_por_nombre=nombre,
+    )
+
+    service: EditarReferidoVentaService | None = context.bot_data.get(
+        "editar_referido_venta_service"
+    )
+    if service is None:
+        logger.error("editar_referido_venta_service not found in bot_data — wiring error")
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.error_generico"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    referido_anterior_str = user_data.get("gv_referido_anterior") or "—"
+    nuevo_referido_display = nuevo_referido or obtener_mensaje("gestion_ventas.sin_referido")
+    mensaje_key_ref: str | None = None
+    try:
+        await asyncio.to_thread(service.ejecutar, cmd)
+    except MismoReferido:
+        mensaje_key_ref = "gestion_ventas.referido_igual"
+    except PermisoDenegado:
+        mensaje_key_ref = "gestion_ventas.error_generico"
+    except VentaYaAnulada:
+        mensaje_key_ref = "gestion_ventas.ya_anulada"
+    except LimiteEdicionesAlcanzado:
+        mensaje_key_ref = "gestion_ventas.limite_ediciones"
+    except VentaNoEncontrada:
+        mensaje_key_ref = "gestion_ventas.no_encontrada"
+    except MotivoRequerido:
+        mensaje_key_ref = "gestion_ventas.motivo_vacio"
+    except Exception:
+        logger.exception("Unexpected error in _handle_confirmar_editar_referido")
+        mensaje_key_ref = "gestion_ventas.error_generico"
+    else:
+        venta_repo_ref: VentaRepository | None = context.bot_data.get("venta_repo")
+        venta_actualizada_ref: Venta | None = None
+        if venta_repo_ref is not None:
+            venta_actualizada_ref = await asyncio.to_thread(
+                venta_repo_ref.buscar_por_id, uuid.UUID(venta_id_str)
+            )
+        _venta_ref = venta_actualizada_ref
+
+        dm_admins_text = obtener_mensaje("gestion_ventas.dm_admin_edicion").format(
+            cliente=escape(user_data.get("gv_cliente_nombre") or "—", quote=False),
+            tours=escape(user_data.get("gv_tours") or "—", quote=False),
+            campo_label=escape(obtener_mensaje("gestion_ventas.campo_referido"), quote=False),
+            anterior=escape(referido_anterior_str, quote=False),
+            nuevo=escape(nuevo_referido_display, quote=False),
+            actor=escape(nombre or "—", quote=False),
+        )
+
+        if _venta_ref is not None:
+            await _notificar_edicion(
+                context,
+                _venta_ref,
+                dm_admins_text,
+                campo_label=obtener_mensaje("gestion_ventas.campo_referido"),
+                es_financiero=False,
+                dm_admins_text=dm_admins_text,
+            )
+        else:
+            await _notificar_grupo(context, dm_admins_text)
+
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                obtener_mensaje("gestion_ventas.referido_editado"),
+                parse_mode="HTML",
+            )
+        _limpiar(context)
+        return await cerrar_flujo(update, context, GrupoComando.VENTAS)
+
+    if update.effective_message and mensaje_key_ref:
+        await update.effective_message.reply_text(
+            obtener_mensaje(mensaje_key_ref),
             parse_mode="HTML",
         )
     _limpiar(context)
