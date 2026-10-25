@@ -114,3 +114,12 @@ class EditarPaxVentaComando:
     motivo: str
     realizada_por_telegram_id: int
     realizada_por_nombre: str | None
+
+
+@dataclass(frozen=True)
+class EditarReferidoVentaComando:
+    venta_id: uuid.UUID
+    nuevo_referido_alias: str | None
+    motivo: str
+    realizada_por_telegram_id: int
+    realizada_por_nombre: str | None
