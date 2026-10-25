@@ -122,7 +122,7 @@ class ReglasComisionModel(Base):
     tipo_cliente: Mapped[str] = mapped_column(String, nullable=False)
     porcentaje_vendedor: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     porcentaje_cerrador: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
-    porcentaje_referido_maximo: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    porcentaje_referido_maximo: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     punto_de_venta_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
     numero_personas: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
@@ -149,7 +149,7 @@ class VentaModel(Base):
     punto_de_venta_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("puntos_de_venta.id"), nullable=True
     )
-    referido_nombre: Mapped[str | None] = mapped_column(String, nullable=True)
+    referido_alias: Mapped[str | None] = mapped_column(String, nullable=True)
     canal_origen: Mapped[str | None] = mapped_column(String(20), nullable=True)
     fechas_por_servicio: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     horarios_por_servicio: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
@@ -202,6 +202,9 @@ class ComisionRegistradaModel(Base):
     punto_de_venta: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
     referido: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
     agencia: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
+    # neto fields: NULL for records created before PR2 migration; repo falls back to bruto.
+    neto_vendedor: Mapped[Dinero | None] = mapped_column(TipoDinero(), nullable=True)
+    neto_cerrador: Mapped[Dinero | None] = mapped_column(TipoDinero(), nullable=True)
     # Serialized SnapshotReglas; immutable historical record. Repo handles conversion.
     snapshot_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     fecha: Mapped[datetime.date] = mapped_column(Date, nullable=False)
@@ -457,6 +460,22 @@ class PagoFreelancerModel(Base):
     monto: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
     desde: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     hasta: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    fecha_pago: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    registrado_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    registrado_por_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+
+class PagoReferidoModel(Base):
+    """ORM model for referido payment records."""
+
+    __tablename__ = "pagos_referidos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    venta_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("ventas.id"), nullable=False
+    )
+    referido_alias: Mapped[str] = mapped_column(String(200), nullable=False)
+    monto: Mapped[Dinero] = mapped_column(TipoDinero(), nullable=False)
     fecha_pago: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registrado_por_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     registrado_por_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)

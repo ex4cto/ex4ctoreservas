@@ -152,14 +152,16 @@ def test_seed_crespo_rows_exist() -> None:
     assert row_1p.tipo_cliente == TipoCliente.EXTERNO.value  # sentinel
     assert Decimal(str(row_1p.porcentaje_vendedor)) == Decimal("50")
     assert Decimal(str(row_1p.porcentaje_cerrador)) == Decimal("0")
-    assert Decimal(str(row_1p.porcentaje_referido_maximo)) == Decimal("10")
+    # porcentaje_referido_maximo is no longer written by seed (domain dropped the field)
+    assert row_1p.porcentaje_referido_maximo is None
 
     row_2p = by_personas[2]
     assert row_2p.id == seed_id("regla:crespo:2p")
     assert row_2p.tipo_cliente == TipoCliente.EXTERNO.value  # sentinel
     assert Decimal(str(row_2p.porcentaje_vendedor)) == Decimal("30")
     assert Decimal(str(row_2p.porcentaje_cerrador)) == Decimal("30")
-    assert Decimal(str(row_2p.porcentaje_referido_maximo)) == Decimal("10")
+    # porcentaje_referido_maximo is no longer written by seed (domain dropped the field)
+    assert row_2p.porcentaje_referido_maximo is None
 
 def test_seed_freelancers_activos() -> None:
     """All seeded freelancers start active with no telegram_user_id."""

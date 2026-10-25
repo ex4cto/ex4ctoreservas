@@ -761,3 +761,31 @@ def test_listar_por_freelancer_y_periodo_still_filters_on_scalar_fecha(
     ids = {r.id for r in results}
     assert v_in.id in ids
     assert v_out.id not in ids
+
+
+def test_referido_alias_roundtrip(sf: sessionmaker[Session]) -> None:
+    """Task 3.3: referido_alias must persist and load correctly after column rename."""
+    from garay.dominio.ventas.valor_objetos import Participantes as _P
+    repo = SQLAVentaRepository(sf)
+    cliente_id = uuid.uuid4()
+    with sf.begin() as s:
+        from garay.infraestructura.persistencia.modelos import ClienteModel
+        s.add(ClienteModel(id=cliente_id, nombre="Test", tipo="EXTERNO"))
+    from garay.dominio.comun.dinero import Dinero
+    from garay.dominio.comun.tipos import TipoCliente
+    import datetime
+
+    venta = Venta(
+        id=uuid.uuid4(),
+        valor_venta=Dinero(500_000),
+        neto=Dinero(400_000),
+        servicio_ids=[],
+        cliente_id=cliente_id,
+        tipo_cliente=TipoCliente.EXTERNO,
+        fecha=datetime.date(2026, 10, 1),
+        participantes=_P(vendedor_nombre="Ana", referido_alias="taxi"),
+    )
+    repo.guardar(venta)
+    loaded = repo.buscar_por_id(venta.id)
+    assert loaded is not None
+    assert loaded.participantes.referido_alias == "taxi"

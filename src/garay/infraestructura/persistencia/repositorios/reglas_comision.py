@@ -11,11 +11,6 @@ from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import ReglasComisionRepository
 from garay.infraestructura.persistencia.modelos import ReglasComisionModel
 
-# PR3 migration will drop the porcentaje_referido_maximo column from the DB.
-# Until then, write a sentinel 0 so the NOT NULL constraint is satisfied.
-_REFERIDO_MAXIMO_LEGACY_DEFAULT = Decimal("0")
-
-
 def to_orm(r: ReglasComision) -> ReglasComisionModel:
     return ReglasComisionModel(
         id=r.id,
@@ -24,7 +19,7 @@ def to_orm(r: ReglasComision) -> ReglasComisionModel:
         porcentaje_cerrador=r.porcentaje_cerrador,
         punto_de_venta_nombre=r.punto_de_venta_nombre,
         numero_personas=r.numero_personas,
-        porcentaje_referido_maximo=_REFERIDO_MAXIMO_LEGACY_DEFAULT,
+        # porcentaje_referido_maximo is nullable post-PR2; not written (PR3 migration will drop it).
     )
 
 

@@ -233,14 +233,12 @@ def seed_reglas_comision(session: Session) -> None:
         assert isinstance(tipo, TipoCliente)
         vendedor = Decimal(str(regla["vendedor"]))
         cerrador = Decimal(str(regla["cerrador"]))
-        referido_max = Decimal(str(regla["referido_max"]))
         session.merge(
             ReglasComisionModel(
                 id=seed_id(f"regla:{tipo.value}"),
                 tipo_cliente=tipo.value,
                 porcentaje_vendedor=vendedor,
                 porcentaje_cerrador=cerrador,
-                porcentaje_referido_maximo=referido_max,
                 punto_de_venta_nombre=None,
                 numero_personas=None,
             )
@@ -256,7 +254,6 @@ def seed_reglas_comision(session: Session) -> None:
                 tipo_cliente=tipo.value,
                 porcentaje_vendedor=Decimal(str(regla["vendedor"])),
                 porcentaje_cerrador=Decimal(str(regla["cerrador"])),
-                porcentaje_referido_maximo=Decimal(str(regla["referido_max"])),
                 punto_de_venta_nombre=str(regla["punto_de_venta_nombre"]),
                 numero_personas=int(str(regla["numero_personas"])),
             )
