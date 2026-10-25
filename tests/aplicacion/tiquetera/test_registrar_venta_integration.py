@@ -54,7 +54,6 @@ from garay.infraestructura.persistencia.repositorios.ventas import (
 _SERVICIO_ID = uuid.uuid4()
 _FECHA = datetime.date(2026, 8, 1)
 
-
 def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
     """Seed the in-memory DB with the minimum rows needed for all integration tests."""
     cliente_id = uuid.uuid4()
@@ -94,7 +93,7 @@ def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
                 tipo_cliente="EXTERNO",
                 porcentaje_vendedor=Decimal("20"),
                 porcentaje_cerrador=Decimal("10"),
-                porcentaje_referido_maximo=Decimal("10"),
+                porcentaje_referido_maximo=Decimal("0"),
                 punto_de_venta_nombre=None,
                 numero_personas=None,
             )
@@ -105,7 +104,7 @@ def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
                 tipo_cliente="INTERNO",
                 porcentaje_vendedor=Decimal("15"),
                 porcentaje_cerrador=Decimal("15"),
-                porcentaje_referido_maximo=Decimal("10"),
+                porcentaje_referido_maximo=Decimal("0"),
                 punto_de_venta_nombre=None,
                 numero_personas=None,
             )
@@ -118,7 +117,7 @@ def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
                 tipo_cliente="EXTERNO",  # sentinel — ignored in point-specific match
                 porcentaje_vendedor=Decimal("50"),
                 porcentaje_cerrador=Decimal("0"),
-                porcentaje_referido_maximo=Decimal("10"),
+                porcentaje_referido_maximo=Decimal("0"),
                 punto_de_venta_nombre="Crespo",
                 numero_personas=1,
             )
@@ -129,7 +128,7 @@ def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
                 tipo_cliente="EXTERNO",  # sentinel
                 porcentaje_vendedor=Decimal("30"),
                 porcentaje_cerrador=Decimal("30"),
-                porcentaje_referido_maximo=Decimal("10"),
+                porcentaje_referido_maximo=Decimal("0"),
                 punto_de_venta_nombre="Crespo",
                 numero_personas=2,
             )
@@ -142,7 +141,6 @@ def _seed_db(sf: sessionmaker[Session]) -> dict[str, uuid.UUID]:
         "vendedor_a_id": vendedor_a_id,
         "vendedor_b_id": vendedor_b_id,
     }
-
 
 def _build_real_service(sf: sessionmaker[Session]) -> RegistrarVentaService:
     return RegistrarVentaService(
@@ -158,7 +156,6 @@ def _build_real_service(sf: sessionmaker[Session]) -> RegistrarVentaService:
         freelancers=MagicMock(),
         servicios=MagicMock(),
     )
-
 
 def _cmd(
     *,
@@ -193,7 +190,6 @@ def _cmd(
         porcentaje_referido=Decimal("0"),
         servicio_nombres=["Test Destino"],
     )
-
 
 # ---------------------------------------------------------------------------
 # Integration tests

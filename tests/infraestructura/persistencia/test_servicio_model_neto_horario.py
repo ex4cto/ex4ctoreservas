@@ -25,7 +25,6 @@ def sf() -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 class TestNetosHorarioRoundTrip:
     """ServicioModel.netos_por_horario persists and reloads without float coercion."""
 

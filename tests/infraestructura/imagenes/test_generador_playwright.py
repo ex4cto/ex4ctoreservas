@@ -27,10 +27,8 @@ def _servicio(numero: int = 1, categoria: str = "TEST") -> Servicio:
         permite_ninos=True,
     )
 
-
 # Skip this whole module if playwright is not installed
 playwright = pytest.importorskip("playwright", reason="playwright not installed")
-
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -44,7 +42,6 @@ async def test_genera_imagen_interna_devuelve_png() -> None:
 
     assert isinstance(result, bytes)
     assert result[:4] == b"\x89PNG", f"Expected PNG magic bytes, got: {result[:8]!r}"
-
 
 @pytest.mark.integration
 @pytest.mark.asyncio

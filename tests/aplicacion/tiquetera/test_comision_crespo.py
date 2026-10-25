@@ -31,14 +31,12 @@ _FECHA = datetime.date(2026, 8, 1)
 _VENDEDOR_A = uuid.uuid4()
 _VENDEDOR_B = uuid.uuid4()
 
-
 def _crespo_punto() -> PuntoDeVenta:
     return PuntoDeVenta(
         id=uuid.uuid4(),
         nombre="Crespo",
         porcentaje_capa=Decimal("20"),
     )
-
 
 def _crespo_regla_1p() -> ReglasComision:
     """Crespo 1-person rule: 50% vendedor, 0% cerrador, capa 20% from punto."""
@@ -47,11 +45,9 @@ def _crespo_regla_1p() -> ReglasComision:
         tipo_cliente=TipoCliente.EXTERNO,  # sentinel — ignored in selection
         porcentaje_vendedor=Decimal("50"),
         porcentaje_cerrador=Decimal("0"),
-        porcentaje_referido_maximo=Decimal("10"),
         punto_de_venta_nombre="Crespo",
         numero_personas=1,
     )
-
 
 def _crespo_regla_2p() -> ReglasComision:
     """Crespo 2-person rule: 30% vendedor, 30% cerrador, capa 20% from punto."""
@@ -60,11 +56,9 @@ def _crespo_regla_2p() -> ReglasComision:
         tipo_cliente=TipoCliente.EXTERNO,  # sentinel
         porcentaje_vendedor=Decimal("30"),
         porcentaje_cerrador=Decimal("30"),
-        porcentaje_referido_maximo=Decimal("10"),
         punto_de_venta_nombre="Crespo",
         numero_personas=2,
     )
-
 
 def _regla_digital() -> ReglasComision:
     """Standard digital rule: 15% vendedor, 15% cerrador, no capa."""
@@ -73,11 +67,9 @@ def _regla_digital() -> ReglasComision:
         tipo_cliente=TipoCliente.DIGITAL,
         porcentaje_vendedor=Decimal("15"),
         porcentaje_cerrador=Decimal("15"),
-        porcentaje_referido_maximo=Decimal("10"),
         punto_de_venta_nombre=None,
         numero_personas=None,
     )
-
 
 def _regla_externo() -> ReglasComision:
     """Standard global EXTERNO rule (non-Crespo)."""
@@ -86,11 +78,9 @@ def _regla_externo() -> ReglasComision:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20"),
         porcentaje_cerrador=Decimal("10"),
-        porcentaje_referido_maximo=Decimal("10"),
         punto_de_venta_nombre=None,
         numero_personas=None,
     )
-
 
 def _venta(
     *,
@@ -122,9 +112,7 @@ def _venta(
         ),
     )
 
-
 _MOTOR = MotorComisiones()
-
 
 # ---------------------------------------------------------------------------
 # T1 — Crespo 1 persona: montos correctos (REQ-01)
@@ -138,7 +126,7 @@ class TestT1CrespoPrimeraPersona:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         # vendedor gets 50 000 (50%), cerrador gets 0 (0%)
         assert desglose.vendedor == Dinero("50000.00")
@@ -149,7 +137,7 @@ class TestT1CrespoPrimeraPersona:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.punto_de_venta == Dinero("20000.00")
 
@@ -158,7 +146,7 @@ class TestT1CrespoPrimeraPersona:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.agencia == Dinero("30000.00")
 
@@ -168,7 +156,7 @@ class TestT1CrespoPrimeraPersona:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         total = (
             desglose.vendedor
@@ -177,7 +165,6 @@ class TestT1CrespoPrimeraPersona:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T2 — Crespo 2 personas: montos correctos (REQ-02)
@@ -197,7 +184,7 @@ class TestT2Crespo2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.vendedor == Dinero("30000.00")
 
@@ -212,7 +199,7 @@ class TestT2Crespo2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.cerrador == Dinero("30000.00")
 
@@ -227,7 +214,7 @@ class TestT2Crespo2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.punto_de_venta == Dinero("20000.00")
 
@@ -242,7 +229,7 @@ class TestT2Crespo2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         assert desglose.agencia == Dinero("20000.00")
 
@@ -257,7 +244,7 @@ class TestT2Crespo2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         total = (
             desglose.vendedor
@@ -266,7 +253,6 @@ class TestT2Crespo2Personas:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T3 — Invariante de suma exacta 1 persona (con decimales) (REQ-03)
@@ -279,7 +265,7 @@ class TestT3InvarianteSuma1Persona:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         total = (
             desglose.vendedor
@@ -288,7 +274,6 @@ class TestT3InvarianteSuma1Persona:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T4 — Invariante de suma exacta 2 personas (con decimales) (REQ-03)
@@ -306,7 +291,7 @@ class TestT4InvarianteSuma2Personas:
         reglas = _crespo_regla_2p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         total = (
             desglose.vendedor
@@ -315,7 +300,6 @@ class TestT4InvarianteSuma2Personas:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T5 — Canal DIGITAL + punto Crespo: no aplica capa, aplica 15/15 (REQ-04)
@@ -339,7 +323,7 @@ class TestT5DigitalConPuntoCrespo:
         reglas = _regla_digital()
 
         # No punto passed — digital has no capa
-        desglose = _MOTOR.calcular(venta, reglas, None, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, None)
 
         assert desglose.vendedor == Dinero("15000.00")
         assert desglose.cerrador == Dinero("15000.00")
@@ -357,10 +341,9 @@ class TestT5DigitalConPuntoCrespo:
         )
         reglas = _regla_digital()
 
-        desglose = _MOTOR.calcular(venta, reglas, None, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, None)
 
         assert desglose.agencia == Dinero("70000.00")
-
 
 # ---------------------------------------------------------------------------
 # T6 — Canal DIGITAL + punto != Crespo: comportamiento idéntico al previo (REQ-08a)
@@ -381,12 +364,11 @@ class TestT6DigitalPuntoNoCrespo:
         )
         reglas = _regla_digital()
 
-        desglose = _MOTOR.calcular(venta, reglas, None, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, None)
 
         assert desglose.vendedor == Dinero("15000.00")
         assert desglose.cerrador == Dinero("15000.00")
         assert desglose.punto_de_venta == Dinero("0.00")
-
 
 # ---------------------------------------------------------------------------
 # T9 — Cambio de porcentajes en DB refleja nuevo cálculo (REQ-06)
@@ -402,7 +384,6 @@ class TestT9PorcentajesDesdeDB:
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("25"),
             porcentaje_cerrador=Decimal("35"),
-            porcentaje_referido_maximo=Decimal("10"),
             punto_de_venta_nombre="Crespo",
             numero_personas=2,
         )
@@ -415,7 +396,7 @@ class TestT9PorcentajesDesdeDB:
             cerrador_nombre="Luis",
         )
 
-        desglose = _MOTOR.calcular(venta, regla_custom, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, regla_custom, punto)
 
         assert desglose.vendedor == Dinero("25000.00")
         assert desglose.cerrador == Dinero("35000.00")
@@ -430,7 +411,6 @@ class TestT9PorcentajesDesdeDB:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T12 — Misma persona como vendedor Y cerrador con rol_registrante="ambos" (REQ-01)
@@ -451,7 +431,7 @@ class TestT12MismaPersonaAmbosRoles:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         # vendedor = 50%, cerrador = 0% — combined = 50000
         assert desglose.vendedor + desglose.cerrador == Dinero("50000.00")
@@ -470,7 +450,7 @@ class TestT12MismaPersonaAmbosRoles:
         reglas = _crespo_regla_1p()
         punto = _crespo_punto()
 
-        desglose = _MOTOR.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, punto)
 
         total = (
             desglose.vendedor
@@ -479,7 +459,6 @@ class TestT12MismaPersonaAmbosRoles:
             + desglose.agencia
         )
         assert total == venta.ganancia
-
 
 # ---------------------------------------------------------------------------
 # T13 — Non-Crespo sale: unchanged behavior (REQ-08b)
@@ -499,7 +478,7 @@ class TestT13NoCrespoUnchanged:
         )
         reglas = _regla_externo()  # 20% vendedor, 10% cerrador, no punto
 
-        desglose = _MOTOR.calcular(venta, reglas, None, Decimal("0"))
+        desglose = _MOTOR.calcular(venta, reglas, None)
 
         assert desglose.vendedor == Dinero("20000.00")
         assert desglose.cerrador == Dinero("10000.00")

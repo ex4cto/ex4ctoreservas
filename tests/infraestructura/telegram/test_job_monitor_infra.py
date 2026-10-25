@@ -33,7 +33,6 @@ _SERVICIO = ServicioInfraestructura(
 
 _HOY_BAND_30 = datetime.date(2027, 2, 13)  # 30 days before 2027-03-15
 
-
 class _FakeNotificador:
     """Captures (mensaje, grupo_id) calls; can be configured to raise on demand."""
 
@@ -45,7 +44,6 @@ class _FakeNotificador:
         self.calls.append((mensaje, grupo_id))
         if grupo_id in self._raise_for:
             raise RuntimeError(f"Fake notifier failure for {grupo_id}")
-
 
 def _make_context(
     *,
@@ -78,11 +76,9 @@ def _make_context(
 
     return ctx, fake_notificador
 
-
 # ---------------------------------------------------------------------------
 # AC-10: callback delivers to each owner id
 # ---------------------------------------------------------------------------
-
 
 async def test_callback_entrega_a_cada_propietario(monkeypatch: Any) -> None:
     """AC-10: callback calls notificador once per dev id with the alert message."""
@@ -106,11 +102,9 @@ async def test_callback_entrega_a_cada_propietario(monkeypatch: Any) -> None:
         assert "30" in mensaje
         assert "2027-03-15" in mensaje
 
-
 # ---------------------------------------------------------------------------
 # AC-11: empty recipient list — no send, no crash
 # ---------------------------------------------------------------------------
-
 
 async def test_callback_sin_destinatarios_no_envia_ni_crashea(monkeypatch: Any) -> None:
     """AC-11: empty monitor_infra_telegram_ids means nothing is sent."""
@@ -124,11 +118,9 @@ async def test_callback_sin_destinatarios_no_envia_ni_crashea(monkeypatch: Any) 
 
     assert fake_notif.calls == []
 
-
 # ---------------------------------------------------------------------------
 # AC-12: per-recipient exception is caught; others still notified
 # ---------------------------------------------------------------------------
-
 
 async def test_callback_excepcion_por_destinatario_continua(
     monkeypatch: Any, caplog: Any
@@ -156,11 +148,9 @@ async def test_callback_excepcion_por_destinatario_continua(
         for r in caplog.records
     )
 
-
 # ---------------------------------------------------------------------------
 # AC-13: missing bot_data keys — log error and return
 # ---------------------------------------------------------------------------
-
 
 async def test_callback_bot_data_incompleto_log_y_retorna(
     monkeypatch: Any, caplog: Any
@@ -177,11 +167,9 @@ async def test_callback_bot_data_incompleto_log_y_retorna(
 
     assert any("monitor" in r.getMessage().lower() for r in caplog.records)
 
-
 # ---------------------------------------------------------------------------
 # AC-15: _post_init wiring guard — job registration
 # ---------------------------------------------------------------------------
-
 
 def _make_app_with_job_queue(propietario_ids: str = "111") -> tuple[MagicMock, MagicMock]:
     """Build a fake PTB Application with a spy job_queue."""
@@ -200,7 +188,6 @@ def _make_app_with_job_queue(propietario_ids: str = "111") -> tuple[MagicMock, M
     app.job_queue = job_queue
 
     return app, job_queue
-
 
 async def test_post_init_registra_job_cuando_hay_servicios(monkeypatch: Any) -> None:
     """AC-15a: job 'monitor_servicios_infra' is registered when services list is non-empty."""
@@ -224,7 +211,6 @@ async def test_post_init_registra_job_cuando_hay_servicios(monkeypatch: Any) -> 
     job_queue.run_daily.assert_called_once()
     call_kwargs = job_queue.run_daily.call_args
     assert call_kwargs.kwargs.get("name") == "monitor_servicios_infra"
-
 
 async def test_post_init_no_registra_job_cuando_servicios_vacio(monkeypatch: Any) -> None:
     """AC-15b: job is NOT registered when monitor service has empty services list."""

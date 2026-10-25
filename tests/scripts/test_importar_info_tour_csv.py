@@ -19,7 +19,6 @@ from scripts.importar_info_tour_csv import _blank_to_none, _normalize, run
 # Helpers — in-memory SQLite DB mirroring migration 0034 schema
 # ---------------------------------------------------------------------------
 
-
 def _make_db() -> sa.engine.Engine:
     """Create an in-memory SQLite DB with the servicios table (post-0034 schema)."""
     engine = sa.create_engine("sqlite:///:memory:")
@@ -47,7 +46,6 @@ def _make_db() -> sa.engine.Engine:
         )
     return engine
 
-
 def _seed_servicio(
     engine: sa.engine.Engine,
     nombre: str,
@@ -73,7 +71,6 @@ def _seed_servicio(
             )
     return sid
 
-
 def _read_row(engine: sa.engine.Engine, sid: str) -> dict[str, object]:
     with engine.connect() as conn:
         row = conn.execute(
@@ -82,7 +79,6 @@ def _read_row(engine: sa.engine.Engine, sid: str) -> dict[str, object]:
         ).fetchone()
     assert row is not None
     return {"info_tour": row[0], "observaciones": row[1]}
-
 
 def _make_csv(rows: list[dict[str, str]], path: Path) -> None:
     """Write a CSV file with headers matching the real CSV: TOUR, INFORMACION DEL TOUR, OBSERVACIONES."""
@@ -93,32 +89,25 @@ def _make_csv(rows: list[dict[str, str]], path: Path) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-
 # ---------------------------------------------------------------------------
 # Unit tests for helpers
 # ---------------------------------------------------------------------------
 
-
 def test_blank_to_none_empty_string() -> None:
     assert _blank_to_none("") is None
-
 
 def test_blank_to_none_whitespace() -> None:
     assert _blank_to_none("   ") is None
 
-
 def test_blank_to_none_real_content() -> None:
     assert _blank_to_none("Salida 8am") == "Salida 8am"
-
 
 def test_normalize_uppercases_and_collapses_spaces() -> None:
     assert _normalize("tour  islas") == "TOUR ISLAS"
 
-
 # ---------------------------------------------------------------------------
 # Integration tests using in-memory SQLite
 # ---------------------------------------------------------------------------
-
 
 def test_matched_tour_fields_updated(tmp_path: Path) -> None:
     """Matched tour name -> info_tour and observaciones updated in DB."""
@@ -140,7 +129,6 @@ def test_matched_tour_fields_updated(tmp_path: Path) -> None:
     assert row["info_tour"] == "Salida 8am"
     assert row["observaciones"] == "No apto para embarazadas"
 
-
 def test_blank_cell_writes_null(tmp_path: Path) -> None:
     """Blank info_tour cell -> NULL in DB."""
     engine = _make_db()
@@ -160,7 +148,6 @@ def test_blank_cell_writes_null(tmp_path: Path) -> None:
     row = _read_row(engine, sid)
     assert row["info_tour"] is None
     assert row["observaciones"] == "Some obs"
-
 
 def test_idempotent_rerun(tmp_path: Path) -> None:
     """Running script twice with same CSV produces same state."""
@@ -183,7 +170,6 @@ def test_idempotent_rerun(tmp_path: Path) -> None:
     row_second = _read_row(engine, sid)
     assert row_first == row_second
 
-
 def test_unmatched_tour_logs_warning_no_crash(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -204,7 +190,6 @@ def test_unmatched_tour_logs_warning_no_crash(
         run(engine, csv_file)
 
     assert any("TOUR INEXISTENTE XYZ" in r.message for r in caplog.records)
-
 
 def test_normalization_case_insensitive_match(tmp_path: Path) -> None:
     """CSV nombre with different casing/spaces matches DB after normalization."""

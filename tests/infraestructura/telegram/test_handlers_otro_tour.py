@@ -25,10 +25,8 @@ _PUNTOS: list[str] = ["Marie Real"]
 _SRV_UUID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
 _FL_UUID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
-
 def _make_fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=_SERVICIOS, puntos_venta=_PUNTOS)
-
 
 def _make_ctx_listo() -> ContextoVenta:
     """Context that passes all guards in _contexto_a_comando."""
@@ -52,7 +50,6 @@ def _make_ctx_listo() -> ContextoVenta:
         rol_registrante="ambos",
     )
 
-
 def _make_update_cb(data: str) -> MagicMock:
     """Update with callback_query."""
     update = MagicMock()
@@ -69,7 +66,6 @@ def _make_update_cb(data: str) -> MagicMock:
     update.callback_query = cq
     return update
 
-
 def _make_update_text(text: str) -> MagicMock:
     """Update with text message."""
     update = MagicMock()
@@ -84,7 +80,6 @@ def _make_update_text(text: str) -> MagicMock:
     msg.reply_text = AsyncMock()
     update.message = msg
     return update
-
 
 def _make_context(
     *,
@@ -132,13 +127,11 @@ def _make_context(
 
     return context
 
-
 def _make_freelancer() -> MagicMock:
     fl = MagicMock()
     fl.id = _FL_UUID
     fl.nombre = "Maria Lopez"
     return fl
-
 
 def _make_registro_service() -> MagicMock:
     """A registrar_venta_service that succeeds."""
@@ -154,11 +147,9 @@ def _make_registro_service() -> MagicMock:
     svc.ejecutar.return_value = resultado
     return svc
 
-
 # ---------------------------------------------------------------------------
 # Task 6a: CONFIRMACION handler → returns OTRO_TOUR on success
 # ---------------------------------------------------------------------------
-
 
 class TestConfirmacionOtroTourHook:
     """After successful registration, handler must return ESTADO_PTB[OTRO_TOUR]."""
@@ -330,11 +321,9 @@ class TestConfirmacionOtroTourHook:
             f"pregunta_otro_tour was incorrectly sent via edit_message_text: {edit_calls}"
         )
 
-
 # ---------------------------------------------------------------------------
 # Task 6b: handle_otro_tour
 # ---------------------------------------------------------------------------
-
 
 class TestHandleOtroTour:
     """handle_otro_tour routes based on callback data."""
@@ -440,11 +429,9 @@ class TestHandleOtroTour:
 
         assert result == ESTADO_PTB[EstadoFSM.OTRO_TOUR]
 
-
 # ---------------------------------------------------------------------------
 # Fix 1: handle_iniciar_venta resets reservas_registradas counter
 # ---------------------------------------------------------------------------
-
 
 class TestIniciarVentaResetsCounter:
     """handle_iniciar_venta must reset reservas_registradas to 0 on every new sale."""

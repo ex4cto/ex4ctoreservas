@@ -38,7 +38,6 @@ _TOUR_KEYS = [
     "tour_sugerido_invalido",
 ]
 
-
 class TestClavesTours:
     """All tour management message keys must exist in the catalog."""
 
@@ -47,7 +46,6 @@ class TestClavesTours:
         msg = obtener_mensaje(clave)
         assert isinstance(msg, str)
         assert len(msg) > 0
-
 
 class TestClavesNuevoTourFormato:
     """Keys for /nuevo_tour must accept their documented format arguments."""

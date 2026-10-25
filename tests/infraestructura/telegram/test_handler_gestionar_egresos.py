@@ -49,7 +49,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _egreso() -> Egreso:
     return Egreso(
         id=uuid.uuid4(),
@@ -60,7 +59,6 @@ def _egreso() -> Egreso:
         tipo=TipoEgreso.MANUAL,
         destinatario="Proveedor A",
     )
-
 
 def _make_context(
     egresos: list[Egreso] | None = None,
@@ -87,7 +85,6 @@ def _make_context(
         "freelancer_repo": freelancer_repo,
     }
     return ctx
-
 
 class TestCmd:
     @pytest.mark.asyncio
@@ -116,7 +113,6 @@ class TestCmd:
         result = await cmd_gestionar_egresos(update, ctx)
         assert result == ConversationHandler.END
 
-
 class TestSeleccionar:
     @pytest.mark.asyncio
     async def test_seleccionar_abre_detalle(self) -> None:
@@ -134,7 +130,6 @@ class TestSeleccionar:
         update = _make_update(callback_data=CB_GE_CERRAR)
         result = await handle_ge_seleccionar(update, ctx)
         assert result == ConversationHandler.END
-
 
 class TestDetalle:
     @pytest.mark.asyncio
@@ -165,7 +160,6 @@ class TestDetalle:
         update = _make_update(callback_data=CB_GE_CERRAR)
         result = await handle_ge_detalle(update, ctx)
         assert result == ConversationHandler.END
-
 
 class TestEditValor:
     @pytest.mark.asyncio

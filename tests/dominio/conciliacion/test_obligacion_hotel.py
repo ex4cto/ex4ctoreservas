@@ -5,15 +5,11 @@ from __future__ import annotations
 import datetime
 import uuid
 
-import pytest
-
 from garay.dominio.comun.dinero import Dinero
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _obligacion(**kwargs: object) -> object:
     from garay.dominio.conciliacion.entidades import ObligacionHotel
@@ -33,11 +29,9 @@ def _obligacion(**kwargs: object) -> object:
     defaults.update(kwargs)
     return ObligacionHotel(**defaults)  # type: ignore[arg-type]
 
-
 # ---------------------------------------------------------------------------
 # Tests — entity fields
 # ---------------------------------------------------------------------------
-
 
 class TestObligacionHotelCampos:
     def test_creacion_valida(self) -> None:
@@ -103,11 +97,9 @@ class TestObligacionHotelCampos:
         b = _obligacion()
         assert a != b
 
-
 # ---------------------------------------------------------------------------
 # Tests — Egreso.obligacion_hotel_id field
 # ---------------------------------------------------------------------------
-
 
 class TestEgresoObligacionHotelId:
     def test_egreso_tiene_obligacion_hotel_id_none_por_defecto(self) -> None:

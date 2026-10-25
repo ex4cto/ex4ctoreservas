@@ -35,7 +35,6 @@ from garay.dominio.conciliacion.reenvio import detectar_reenvio
 def test_detectar_reenvio(asunto: str, cuerpo: str, esperado: bool) -> None:
     assert detectar_reenvio(asunto, cuerpo) == esperado
 
-
 def test_detectar_reenvio_caso_limpio_sin_argumentos() -> None:
     """Empty subject and body are not a forward."""
     assert detectar_reenvio("", "") is False

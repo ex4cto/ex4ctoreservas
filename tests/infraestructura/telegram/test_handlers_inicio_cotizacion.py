@@ -59,7 +59,6 @@ class TestTecladoInicioConCotizacion:
         ]
         assert "inicio_cotizacion" not in flat_data
 
-
 class TestHandleInicioCotizacionAuthGate:
     """SC-F03: handle_inicio_cotizacion rejects non-admin silently."""
 

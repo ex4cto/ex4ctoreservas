@@ -42,7 +42,6 @@ def _make_venta_mock(
     v.participantes = participantes
     return v
 
-
 def _make_servicio_mock(
     neto_adulto: Decimal = Decimal("80000"),
     neto_nino: Decimal | None = Decimal("40000"),
@@ -51,7 +50,6 @@ def _make_servicio_mock(
     s.neto_para_horario.return_value = neto_adulto
     s.precio_neto_nino = neto_nino
     return s
-
 
 def _make_repos(
     venta: MagicMock | None = None,
@@ -78,12 +76,10 @@ def _make_repos(
 
     return ventas_repo, servicio_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     motivo: str = "error al registrar",
@@ -100,7 +96,6 @@ def _make_cmd(
         realizada_por_telegram_id=123,
         realizada_por_nombre="Admin",
     )
-
 
 def _make_service(
     ventas: MagicMock,
@@ -122,7 +117,6 @@ def _make_service(
         comisiones_repo=comisiones,
         motor=motor,
     )
-
 
 class TestEditarPaxVentaService:
     def test_importable(self) -> None:
@@ -262,4 +256,4 @@ class TestEditarPaxVentaService:
         cmd = _make_cmd()
         service.ejecutar(cmd)  # type: ignore[union-attr]
         args = motor.calcular.call_args[0]
-        assert args[3] == Decimal("0")
+        assert len(args) == 3  # (venta, reglas, punto) — no porcentaje_referido

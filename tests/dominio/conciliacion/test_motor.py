@@ -21,7 +21,6 @@ from garay.dominio.ventas.valor_objetos import Participantes
 _HOY = datetime.date(2026, 7, 1)
 _MONTO_BASE = 100_000
 
-
 def _motor(
     *,
     tolerancia_pct: Decimal = Decimal("0.05"),
@@ -38,7 +37,6 @@ def _motor(
         peso_fecha=peso_fecha,
     )
 
-
 def _ingreso(monto: int = _MONTO_BASE, fecha: datetime.date = _HOY) -> Ingreso:
     return Ingreso(
         id=uuid.uuid4(),
@@ -47,7 +45,6 @@ def _ingreso(monto: int = _MONTO_BASE, fecha: datetime.date = _HOY) -> Ingreso:
         fecha=fecha,
         referencia="REF-001",
     )
-
 
 def _venta(
     valor: int = _MONTO_BASE,
@@ -64,11 +61,9 @@ def _venta(
         participantes=Participantes(),
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestMotorConciliacion:
     def test_match_exacto_estado_matcheado(self) -> None:

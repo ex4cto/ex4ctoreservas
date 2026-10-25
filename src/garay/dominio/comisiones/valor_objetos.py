@@ -14,3 +14,5 @@ class DesgloseComision:
     referido: Dinero
     agencia: Dinero
     snapshot: SnapshotReglas
+    neto_vendedor: Dinero
+    neto_cerrador: Dinero

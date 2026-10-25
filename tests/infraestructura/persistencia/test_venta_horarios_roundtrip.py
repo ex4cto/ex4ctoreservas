@@ -31,11 +31,10 @@ def _participantes() -> Participantes:
         vendedor_nombre="Vendedor",
         cerrador_nombre=None,
         punto_de_venta_id=None,
-        referido_nombre=None,
+        referido_alias=None,
         vendedor_id=None,
         cerrador_id=None,
     )
-
 
 def _venta(horarios: dict[uuid.UUID, str] | None = None) -> Venta:
     return Venta(
@@ -52,13 +51,11 @@ def _venta(horarios: dict[uuid.UUID, str] | None = None) -> Venta:
         horarios_por_servicio=horarios,
     )
 
-
 @pytest.fixture()
 def sf():  # type: ignore[no-untyped-def]
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
-
 
 class TestVentaEntidad:
     """Venta dataclass carries horarios_por_servicio."""
@@ -74,7 +71,6 @@ class TestVentaEntidad:
         venta = _venta(horarios={uid: "07:00"})
         assert venta.horarios_por_servicio == {uid: "07:00"}
 
-
 class TestVentaModelColumn:
     """VentaModel has horarios_por_servicio JSON column."""
 
@@ -84,7 +80,6 @@ class TestVentaModelColumn:
         inspector = sa.inspect(engine)
         cols = {c["name"] for c in inspector.get_columns("ventas")}
         assert "horarios_por_servicio" in cols
-
 
 class TestVentaHorariosRoundtrip:
     """to_orm / to_domain preserves horarios_por_servicio across serialization."""
@@ -135,7 +130,6 @@ class TestVentaHorariosRoundtrip:
             resultado = to_domain(modelo_leido)
 
         assert resultado.horarios_por_servicio == {uid1: "07:00", uid2: "14:00"}
-
 
 class TestVentaRepositorioHorarios:
     """SQLAVentaRepository.guardar + buscar_por_id preserves horarios_por_servicio."""

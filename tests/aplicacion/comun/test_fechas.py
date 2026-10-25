@@ -40,7 +40,6 @@ class TestFormatearFechasCompactas:
         """No pairs → empty string."""
         assert formatear_fechas_compactas([]) == ""
 
-
 class TestParsearFecha:
     def test_dd_mm_yyyy_hh_mm(self) -> None:
         """DD/MM/YYYY HH:MM parses correctly."""

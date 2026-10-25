@@ -6,12 +6,10 @@ bot.py ConversationHandler has GV_EDIT_NETO and GV_EDIT_VALOR_VENTA states.
 
 from __future__ import annotations
 
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from telegram.ext import ConversationHandler, MessageHandler
 
-from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.infraestructura.telegram.bot import crear_aplicacion
 
 
@@ -34,7 +32,6 @@ def _build_gv_handler() -> ConversationHandler:  # type: ignore[type-arg]
                 if GV_EDIT_NETO in handler.states:
                     return handler
     raise AssertionError("gestionar_ventas ConversationHandler not found")
-
 
 class TestGestionVentasWiring:
     def test_gv_edit_neto_state_registered(self) -> None:

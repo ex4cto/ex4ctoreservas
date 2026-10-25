@@ -18,10 +18,8 @@ _SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]
 ]
 _PUNTOS: list[str] = ["Marie Real"]
 
-
 def _make_fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=_SERVICIOS, puntos_venta=_PUNTOS)
-
 
 def _make_update_command() -> MagicMock:
     """Update from /nueva_venta command (no callback_query)."""
@@ -35,7 +33,6 @@ def _make_update_command() -> MagicMock:
     msg.reply_text = AsyncMock()
     update.message = msg
     return update
-
 
 def _make_update_cb(data: str) -> MagicMock:
     """Update with a callback_query."""
@@ -51,7 +48,6 @@ def _make_update_cb(data: str) -> MagicMock:
     update.callback_query = cq
     return update
 
-
 def _make_update_text(text: str) -> MagicMock:
     """Update with a plain text message."""
     update = MagicMock()
@@ -64,7 +60,6 @@ def _make_update_text(text: str) -> MagicMock:
     msg.reply_text = AsyncMock()
     update.message = msg
     return update
-
 
 def _make_context(
     *,
@@ -94,11 +89,9 @@ def _make_context(
 
     return context
 
-
 # ---------------------------------------------------------------------------
 # A. handle_iniciar_venta shows date selector
 # ---------------------------------------------------------------------------
-
 
 class TestIniciarVentaMuestraBotonesDeInicio:
     @pytest.mark.asyncio
@@ -132,13 +125,11 @@ class TestIniciarVentaMuestraBotonesDeInicio:
         assert "inicio_hoy" in flat_data
         assert "inicio_otra_fecha" in flat_data
 
-
 # ---------------------------------------------------------------------------
 # SC-01..SC-04, SC-07..SC-09: tier-aware keyboard in _mostrar_selector_inicio
 # ---------------------------------------------------------------------------
 
 _PATCH_ES_ADMIN = "garay.infraestructura.telegram.auth.es_admin_o_propietario"
-
 
 class TestMostrarSelectorInicio:
     """Tests for tier-aware keyboard shape via handle_iniciar_venta and handle_inicio_volver."""
@@ -281,11 +272,9 @@ class TestMostrarSelectorInicio:
         assert "inicio_hoy" in flat
         assert "inicio_otra_fecha" in flat
 
-
 # ---------------------------------------------------------------------------
 # B. handle_inicio_hoy proceeds to METODO_INPUT
 # ---------------------------------------------------------------------------
-
 
 class TestIniciohoyProcedeAMetodoInput:
     @pytest.mark.asyncio
@@ -299,11 +288,9 @@ class TestIniciohoyProcedeAMetodoInput:
 
         assert result == ESTADO_PTB[EstadoFSM.METODO_INPUT]
 
-
 # ---------------------------------------------------------------------------
 # B2. handle_inicio_hoy sets registrante_privilegiado based on tier
 # ---------------------------------------------------------------------------
-
 
 class TestIniciohoySetRegistrantePrivilegiado:
     @pytest.mark.asyncio
@@ -344,11 +331,9 @@ class TestIniciohoySetRegistrantePrivilegiado:
 
         update.callback_query.edit_message_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # D2. handle_fecha_ayer sets registrante_privilegiado
 # ---------------------------------------------------------------------------
-
 
 class TestFechaAyerSetRegistrantePrivilegiado:
     @pytest.mark.asyncio
@@ -376,11 +361,9 @@ class TestFechaAyerSetRegistrantePrivilegiado:
 
         assert context.user_data.get("fecha_venta_override") is not None
 
-
 # ---------------------------------------------------------------------------
 # E2. handle_fecha_antes_ayer sets registrante_privilegiado
 # ---------------------------------------------------------------------------
-
 
 class TestFechaAntesAyerSetRegistrantePrivilegiado:
     @pytest.mark.asyncio
@@ -397,11 +380,9 @@ class TestFechaAntesAyerSetRegistrantePrivilegiado:
         assert isinstance(ctx, ContextoVenta)
         assert ctx.registrante_privilegiado is True
 
-
 # ---------------------------------------------------------------------------
 # C. handle_inicio_otra_fecha shows date sub-picker
 # ---------------------------------------------------------------------------
-
 
 class TestIniciOtraFechaMuestraSubPicker:
     @pytest.mark.asyncio
@@ -436,11 +417,9 @@ class TestIniciOtraFechaMuestraSubPicker:
         assert "fecha_otra" in flat_data
         assert "inicio_volver" in flat_data
 
-
 # ---------------------------------------------------------------------------
 # D. handle_fecha_ayer saves override and proceeds
 # ---------------------------------------------------------------------------
-
 
 class TestFechaAyerGuardaOverride:
     @pytest.mark.asyncio
@@ -459,11 +438,9 @@ class TestFechaAyerGuardaOverride:
         assert isinstance(override, datetime.datetime)
         assert override.date() == ayer
 
-
 # ---------------------------------------------------------------------------
 # E. handle_fecha_antes_ayer saves override and proceeds
 # ---------------------------------------------------------------------------
-
 
 class TestFechaAntesAyerGuardaOverride:
     @pytest.mark.asyncio
@@ -482,11 +459,9 @@ class TestFechaAntesAyerGuardaOverride:
         assert isinstance(override, datetime.datetime)
         assert override.date() == antes_ayer
 
-
 # ---------------------------------------------------------------------------
 # F. handle_fecha_retroactiva_texto valid
 # ---------------------------------------------------------------------------
-
 
 class TestFechaRetroactivaTextoValido:
     @pytest.mark.asyncio
@@ -507,11 +482,9 @@ class TestFechaRetroactivaTextoValido:
         assert override.month == 9
         assert override.year == 2026
 
-
 # ---------------------------------------------------------------------------
 # F2. handle_fecha_retroactiva_texto sets registrante_privilegiado
 # ---------------------------------------------------------------------------
-
 
 class TestFechaRetroactivaTextoSetRegistrantePrivilegiado:
     @pytest.mark.asyncio
@@ -530,11 +503,9 @@ class TestFechaRetroactivaTextoSetRegistrantePrivilegiado:
         assert isinstance(ctx, ContextoVenta)
         assert ctx.registrante_privilegiado is True
 
-
 # ---------------------------------------------------------------------------
 # G. handle_fecha_retroactiva_texto invalid
 # ---------------------------------------------------------------------------
-
 
 class TestFechaRetroactivaTextoInvalido:
     @pytest.mark.asyncio
@@ -552,11 +523,9 @@ class TestFechaRetroactivaTextoInvalido:
         assert result == FECHA_RETROACTIVA_TEXTO
         assert context.user_data.get("fecha_venta_override") is None
 
-
 # ---------------------------------------------------------------------------
 # H. handle_inicio_volver cleans override and goes back
 # ---------------------------------------------------------------------------
-
 
 class TestIniciVolverLimpiaOverride:
     @pytest.mark.asyncio
@@ -578,11 +547,9 @@ class TestIniciVolverLimpiaOverride:
         assert result == INICIO_VENTA
         assert "fecha_venta_override" not in context.user_data
 
-
 # ---------------------------------------------------------------------------
 # I. handle_fecha_salida auto-fills when override is present
 # ---------------------------------------------------------------------------
-
 
 class TestFechaSalidaAutoFillCuandoHayOverride:
     @pytest.mark.asyncio
@@ -610,11 +577,9 @@ class TestFechaSalidaAutoFillCuandoHayOverride:
         # Override must be consumed
         assert "fecha_venta_override" not in context.user_data
 
-
 # ---------------------------------------------------------------------------
 # SC-05 / SC-06. Stale-callback guard in handle_inicio_otra_fecha
 # ---------------------------------------------------------------------------
-
 
 class TestHandleInicioOtraFecha:
     @pytest.mark.asyncio
@@ -657,16 +622,13 @@ class TestHandleInicioOtraFecha:
         assert result == FECHA_RETROACTIVA
         update.callback_query.edit_message_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # SC-13. venta.retroactiva_sin_acceso message key exists in catalog
 # ---------------------------------------------------------------------------
 
-
 # ---------------------------------------------------------------------------
 # SC-11 / SC-12. _teclado_inicio unit tests
 # ---------------------------------------------------------------------------
-
 
 class TestTecladoInicio:
     def test_sin_otra_fecha_una_sola_fila(self) -> None:
@@ -683,7 +645,6 @@ class TestTecladoInicio:
         flat = [b.callback_data for row in markup.inline_keyboard for b in row]
         assert "inicio_hoy" in flat
         assert "inicio_otra_fecha" in flat
-
 
 class TestMensajeRetroactivaSinAcceso:
     def test_clave_retroactiva_sin_acceso_existe(self) -> None:

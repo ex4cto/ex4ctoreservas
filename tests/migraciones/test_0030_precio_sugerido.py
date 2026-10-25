@@ -22,7 +22,6 @@ _MIGRATION_FILE = (
     / "0030_add_precio_sugerido_to_servicios.py"
 )
 
-
 def _load_migration() -> ModuleType:
     if not _MIGRATION_FILE.exists():
         pytest.fail(f"Migration file not found: {_MIGRATION_FILE}.")
@@ -35,7 +34,6 @@ def _load_migration() -> ModuleType:
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
-
 
 def build_servicios_at_0029(engine: Engine) -> None:
     """Create servicios table as it exists at revision 0029 (no sugerido columns).
@@ -63,7 +61,6 @@ def build_servicios_at_0029(engine: Engine) -> None:
             )
             """)
         )
-
 
 class TestMigration0030Upgrade:
     def test_upgrade_agrega_precio_sugerido_adulto(self, sqlite_engine: Engine) -> None:
@@ -145,7 +142,6 @@ class TestMigration0030Upgrade:
         assert row[1] == 100000
         assert row[2] is None  # new column defaults to NULL
 
-
 class TestMigration0030Downgrade:
     def test_downgrade_elimina_precio_sugerido_adulto(self, sqlite_engine: Engine) -> None:
         """downgrade() removes precio_sugerido_adulto from servicios."""
@@ -164,7 +160,6 @@ class TestMigration0030Downgrade:
         assert "precio_sugerido_nino" in table_columns(sqlite_engine, "servicios")
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert "precio_sugerido_nino" not in table_columns(sqlite_engine, "servicios")
-
 
 class TestMigration0030Chain:
     def test_revision(self) -> None:

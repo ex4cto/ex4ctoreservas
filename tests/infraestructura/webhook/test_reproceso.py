@@ -31,7 +31,6 @@ from garay.infraestructura.webhook.schemas import EgresoExtraido, PagoExtraido
 
 _NOW = datetime(2026, 8, 1, 12, 0, 0, tzinfo=UTC)
 
-
 def _make_correo(
     *,
     id: uuid.UUID | None = None,
@@ -60,7 +59,6 @@ def _make_correo(
         error_ultimo="",
     )
 
-
 def _pago_extraido() -> PagoExtraido:
     return PagoExtraido(
         monto=Decimal("500000"),
@@ -68,7 +66,6 @@ def _pago_extraido() -> PagoExtraido:
         banco_origen="Bancolombia",
         fecha_pago=datetime(2026, 7, 15, 10, 30, tzinfo=UTC),
     )
-
 
 def _egreso_extraido() -> EgresoExtraido:
     return EgresoExtraido(
@@ -78,11 +75,9 @@ def _egreso_extraido() -> EgresoExtraido:
         fecha_egreso=datetime(2026, 7, 27, 18, 25, tzinfo=UTC),
     )
 
-
 # ---------------------------------------------------------------------------
 # Fake in-memory correo repo
 # ---------------------------------------------------------------------------
-
 
 class FakeCorreoRepo(CorreoNoParseadoRepository):
     """Minimal in-memory implementation of CorreoNoParseadoRepository."""
@@ -114,11 +109,9 @@ class FakeCorreoRepo(CorreoNoParseadoRepository):
                 c.intentos += 1
                 c.error_ultimo = error
 
-
 # ---------------------------------------------------------------------------
 # Fake ingreso / egreso repos
 # ---------------------------------------------------------------------------
-
 
 class FakeIngresoRepo(IngresoRepository):
     def __init__(self, *, referencia_exists: bool = False) -> None:
@@ -142,7 +135,6 @@ class FakeIngresoRepo(IngresoRepository):
 
     def listar_por_periodo(self, desde: date, hasta: date) -> list[Ingreso]:
         return []
-
 
 class FakeEgresoRepo(EgresoRepository):
     def __init__(self, *, referencia_exists: bool = False) -> None:
@@ -189,7 +181,6 @@ class FakeEgresoRepo(EgresoRepository):
     def sumar_por_obligacion(self, obligacion_id: uuid.UUID) -> Dinero:
         return Dinero(0)
 
-
 # ---------------------------------------------------------------------------
 # Import target (will fail until reproceso.py exists — RED)
 # ---------------------------------------------------------------------------
@@ -199,7 +190,6 @@ from garay.infraestructura.webhook.reproceso import reprocesar_pendientes  # noq
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 def test_reproceso_exito_marca_procesado_y_guarda() -> None:
     """A pending ingreso that now parses successfully must be persisted via
@@ -231,7 +221,6 @@ def test_reproceso_exito_marca_procesado_y_guarda() -> None:
     assert correo.id in correo_repo.marcados_procesados
     assert len(ingreso_repo.guardados) == 1
 
-
 def test_reproceso_no_guarda_si_referencia_duplicada() -> None:
     """If ingreso_repo.existe_referencia returns True (bank re-sent and live
     route already saved it), guardar is NOT called but marcar_procesado IS,
@@ -261,7 +250,6 @@ def test_reproceso_no_guarda_si_referencia_duplicada() -> None:
     assert resultado.fallidos == 0
     assert correo.id in correo_repo.marcados_procesados
     assert len(ingreso_repo.guardados) == 0
-
 
 def test_reproceso_usa_direccion_guardada() -> None:
     """A row with direccion=egreso must route to the egreso parser and egreso repo,
@@ -301,7 +289,6 @@ def test_reproceso_usa_direccion_guardada() -> None:
     assert len(egreso_repo.guardados) == 1
     assert len(ingreso_repo.guardados) == 0
 
-
 def test_reproceso_reconstruye_reenviado_desde_asunto() -> None:
     """detectar_reenvio must receive correo.asunto so the saved ingreso carries
     the correct reenviado flag when the subject starts with 'Fwd:'."""
@@ -334,7 +321,6 @@ def test_reproceso_reconstruye_reenviado_desde_asunto() -> None:
     # detectar_reenvio("Fwd: Transferencia recibida", ...) must return True
     assert ingreso.reenviado is True
 
-
 def test_reproceso_falla_incrementa_intentos_no_marca_procesado() -> None:
     """When the parser still raises ErrorParseoBanco, registrar_intento_fallido
     is called, marcar_procesado is NOT called, and the row is counted as fallido."""
@@ -361,7 +347,6 @@ def test_reproceso_falla_incrementa_intentos_no_marca_procesado() -> None:
     assert len(correo_repo.intentos_fallidos) == 1
     assert correo_repo.intentos_fallidos[0][0] == correo.id
     assert "still broken" in correo_repo.intentos_fallidos[0][1]
-
 
 def test_reproceso_una_fila_mala_no_aborta_el_lote() -> None:
     """An unexpected exception on one row must not abort processing of subsequent rows."""

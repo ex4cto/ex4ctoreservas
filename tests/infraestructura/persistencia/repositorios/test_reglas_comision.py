@@ -22,7 +22,6 @@ def test_guardar_y_buscar_por_tipo_cliente(sf: sessionmaker[Session]) -> None:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20.00"),
         porcentaje_cerrador=Decimal("10.00"),
-        porcentaje_referido_maximo=Decimal("5.00"),
     )
     repo.guardar(r)
     resultado = repo.buscar_por_tipo_cliente(TipoCliente.EXTERNO)
@@ -30,11 +29,9 @@ def test_guardar_y_buscar_por_tipo_cliente(sf: sessionmaker[Session]) -> None:
     assert resultado.tipo_cliente == TipoCliente.EXTERNO
     assert resultado.porcentaje_vendedor == Decimal("20.00")
 
-
 def test_buscar_tipo_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAReglasComisionRepository(sf)
     assert repo.buscar_por_tipo_cliente(TipoCliente.DIGITAL) is None
-
 
 class TestReglasComisionModelSchema:
     """WU-4: ReglasComisionModel schema — new columns + composite unique (JD-7)."""
@@ -64,7 +61,7 @@ class TestReglasComisionModelSchema:
                     tipo_cliente="EXTERNO",
                     porcentaje_vendedor=Decimal("30"),
                     porcentaje_cerrador=Decimal("30"),
-                    porcentaje_referido_maximo=Decimal("10"),
+                    porcentaje_referido_maximo=Decimal("0"),
                     punto_de_venta_nombre=None,
                     numero_personas=None,
                 )
@@ -75,7 +72,7 @@ class TestReglasComisionModelSchema:
                     tipo_cliente="EXTERNO",
                     porcentaje_vendedor=Decimal("50"),
                     porcentaje_cerrador=Decimal("0"),
-                    porcentaje_referido_maximo=Decimal("10"),
+                    porcentaje_referido_maximo=Decimal("0"),
                     punto_de_venta_nombre="Crespo",
                     numero_personas=1,
                 )
@@ -95,7 +92,6 @@ class TestReglasComisionModelSchema:
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("50"),
             porcentaje_cerrador=Decimal("0"),
-            porcentaje_referido_maximo=Decimal("10"),
             punto_de_venta_nombre="Crespo",
             numero_personas=1,
         )
@@ -110,7 +106,6 @@ class TestReglasComisionModelSchema:
         assert row.punto_de_venta_nombre == "Crespo"
         assert row.numero_personas == 1
 
-
 class TestBuscarRegla:
     """WU-8: buscar_regla — two-step point-specific + global fallback selector."""
 
@@ -120,7 +115,6 @@ class TestBuscarRegla:
             tipo_cliente=tipo,
             porcentaje_vendedor=Decimal(pct_v),
             porcentaje_cerrador=Decimal(pct_c),
-            porcentaje_referido_maximo=Decimal("10"),
             punto_de_venta_nombre=None,
             numero_personas=None,
         )
@@ -131,7 +125,6 @@ class TestBuscarRegla:
             tipo_cliente=TipoCliente.EXTERNO,  # sentinel
             porcentaje_vendedor=Decimal(pct_v),
             porcentaje_cerrador=Decimal(pct_c),
-            porcentaje_referido_maximo=Decimal("10"),
             punto_de_venta_nombre="Crespo",
             numero_personas=numero_personas,
         )
@@ -206,7 +199,6 @@ class TestBuscarRegla:
         with pytest.raises((ValueError, AssertionError)):
             repo.buscar_regla(TipoCliente.EXTERNO, None, 1)
 
-
 class TestBuscarPorTipoClienteCoexistencia:
     """B1 co-existence: buscar_por_tipo_cliente must return only the global row
     even when Crespo-specific rows with the same tipo_cliente are present.
@@ -229,7 +221,6 @@ class TestBuscarPorTipoClienteCoexistencia:
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("20.00"),
             porcentaje_cerrador=Decimal("10.00"),
-            porcentaje_referido_maximo=Decimal("5.00"),
             punto_de_venta_nombre=None,
             numero_personas=None,
         )
@@ -238,7 +229,6 @@ class TestBuscarPorTipoClienteCoexistencia:
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("50.00"),
             porcentaje_cerrador=Decimal("0.00"),
-            porcentaje_referido_maximo=Decimal("10.00"),
             punto_de_venta_nombre="Crespo",
             numero_personas=1,
         )
@@ -247,7 +237,6 @@ class TestBuscarPorTipoClienteCoexistencia:
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("30.00"),
             porcentaje_cerrador=Decimal("30.00"),
-            porcentaje_referido_maximo=Decimal("10.00"),
             punto_de_venta_nombre="Crespo",
             numero_personas=2,
         )

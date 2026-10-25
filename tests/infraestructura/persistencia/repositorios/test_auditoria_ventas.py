@@ -21,7 +21,6 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
         s.add(ClienteModel(id=cliente_id, nombre="Test Cliente", tipo="EXTERNO"))
     return cliente_id
 
-
 def _make_venta(sf: sessionmaker[Session], cliente_id: uuid.UUID) -> uuid.UUID:
     venta_id = uuid.uuid4()
     with sf.begin() as s:
@@ -41,7 +40,6 @@ def _make_venta(sf: sessionmaker[Session], cliente_id: uuid.UUID) -> uuid.UUID:
             )
         )
     return venta_id
-
 
 def test_guardar_y_listar_por_venta_id(sf: sessionmaker[Session]) -> None:
     """guardar then listar_por_venta_id returns the record with all fields intact."""
@@ -77,13 +75,11 @@ def test_guardar_y_listar_por_venta_id(sf: sessionmaker[Session]) -> None:
     assert r.realizada_at == at
     assert r.datos_previos == datos
 
-
 def test_listar_por_venta_id_sin_registros(sf: sessionmaker[Session]) -> None:
     """listar_por_venta_id returns [] for a venta with no audit records."""
     repo = SQLAAuditoriaVentaRepository(sf)
     results = repo.listar_por_venta_id(uuid.uuid4())
     assert results == []
-
 
 def test_listar_por_venta_id_datos_previos_none(sf: sessionmaker[Session]) -> None:
     """datos_previos=None round-trips correctly."""
@@ -107,7 +103,6 @@ def test_listar_por_venta_id_datos_previos_none(sf: sessionmaker[Session]) -> No
     assert len(results) == 1
     assert results[0].datos_previos is None
     assert results[0].realizada_por_nombre is None
-
 
 def test_realizada_at_timezone_aware_round_trip(sf: sessionmaker[Session]) -> None:
     """realizada_at with tzinfo=UTC survives guardar → listar_por_venta_id.
@@ -146,7 +141,6 @@ def test_realizada_at_timezone_aware_round_trip(sf: sessionmaker[Session]) -> No
     else:
         stored_naive = stored
     assert stored_naive == tz_at.replace(tzinfo=None)
-
 
 def test_listar_por_venta_id_ordered_by_realizada_at(sf: sessionmaker[Session]) -> None:
     """Multiple audit records are returned ordered by realizada_at ascending."""

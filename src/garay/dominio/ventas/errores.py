@@ -80,3 +80,11 @@ class MismoMetodoPago(ErrorDeDominio):
 
 class MismoAbono(ErrorDeDominio):
     """Idempotency guard: el nuevo abono es idéntico al abono actual."""
+
+
+class MismoReferido(ErrorDeDominio):
+    """Idempotency guard: el nuevo referido_alias es idéntico al alias actual."""
+
+
+class PermisoDenegado(ErrorDeDominio):
+    """La operacion fue rechazada porque el actor no tiene los permisos necesarios."""

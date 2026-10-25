@@ -25,10 +25,8 @@ from garay.dominio.ventas.errores import MismoServicio, MotivoRequerido, VentaNo
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 _DEFAULT_NETO = Dinero(100)
 _DEFAULT_VALOR_VENTA = Dinero(300)
-
 
 def _make_venta_mock(
     servicio_ids: list[uuid.UUID] | None = None,
@@ -57,7 +55,6 @@ def _make_venta_mock(
     v.participantes = participantes
     return v
 
-
 def _make_servicio_mock(
     precio_adulto: Decimal | None = Decimal("50"),
     activo: bool = True,
@@ -72,7 +69,6 @@ def _make_servicio_mock(
     # Make neto_para_horario return precio_adulto (no horario-specific override)
     s.neto_para_horario.return_value = precio_adulto
     return s
-
 
 def _make_repos(
     venta: MagicMock | None = None,
@@ -99,12 +95,10 @@ def _make_repos(
 
     return ventas_repo, auditoria_repo, servicios_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -120,7 +114,6 @@ def _make_cmd(
         realizada_por_telegram_id=42,
         realizada_por_nombre="Admin",
     )
-
 
 def _make_service(
     ventas: MagicMock,
@@ -141,11 +134,9 @@ def _make_service(
         motor=motor or _make_motor(),
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestEditarServicioVentaService:
     def test_editar_servicio_motivo_vacio_lanza_error(self) -> None:

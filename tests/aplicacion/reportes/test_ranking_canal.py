@@ -25,12 +25,10 @@ def _venta(valor: int, neto: int, canal: str) -> Venta:
         canal_origen=canal,
     )
 
-
 def _svc(ventas: list[Venta]) -> RankingCanalService:
     vr = MagicMock()
     vr.listar_por_periodo.return_value = ventas
     return RankingCanalService(vr)
-
 
 def test_agrupa_por_canal() -> None:
     svc = _svc([
@@ -46,7 +44,6 @@ def test_agrupa_por_canal() -> None:
     assert filas["Hotel"].margen == Dinero(270000)
     assert filas["Externas"].cantidad == 1
     assert filas["Externas"].margen == Dinero(100000)
-
 
 def test_canal_none_se_agrupa_como_sin_canal() -> None:
     svc = _svc([_venta(100000, 60000, None)])  # type: ignore[arg-type]

@@ -48,7 +48,6 @@ from garay.infraestructura.telegram.handlers_freelancers import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _freelancer(nombre: str = "Ana", activo: bool = True, es_admin: bool = True) -> Freelancer:
     return Freelancer(
         id=uuid.uuid4(),
@@ -57,7 +56,6 @@ def _freelancer(nombre: str = "Ana", activo: bool = True, es_admin: bool = True)
         telegram_user_id=None,
         es_admin=es_admin,
     )
-
 
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
@@ -74,7 +72,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _make_context(
     freelancers: list[Freelancer] | None = None,
     user_data: dict[str, object] | None = None,
@@ -88,11 +85,9 @@ def _make_context(
     ctx.bot_data = {"freelancer_repo": repo}
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # /listar_freelancers
 # ---------------------------------------------------------------------------
-
 
 class TestCmdListarFreelancers:
     @pytest.mark.asyncio
@@ -121,11 +116,9 @@ class TestCmdListarFreelancers:
         msg = update.effective_message.reply_text.call_args[0][0]
         assert "No hay freelancers" in msg
 
-
 # ---------------------------------------------------------------------------
 # /nuevo_freelancer — new A1 flow
 # ---------------------------------------------------------------------------
-
 
 class TestCmdNuevoFreelancer:
     @pytest.mark.asyncio
@@ -139,7 +132,6 @@ class TestCmdNuevoFreelancer:
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
         assert "nombre" in msg.lower()
-
 
 class TestHandleFlNombreCompleto:
     @pytest.mark.asyncio
@@ -173,7 +165,6 @@ class TestHandleFlNombreCompleto:
         assert result == FL_CEDULA
         assert ctx.user_data["fl_nombre"] == "Madonna"
 
-
 class TestHandleFlCedula:
     @pytest.mark.asyncio
     async def test_cedula_invalida_permanece_en_estado(self) -> None:
@@ -204,7 +195,6 @@ class TestHandleFlCedula:
 
         assert result == FL_NOMBRE_CORTO
         assert ctx.user_data["fl_cedula"] == "12345678"
-
 
 class TestHandleFlNombreCorto:
     @pytest.mark.asyncio
@@ -258,7 +248,6 @@ class TestHandleFlNombreCorto:
         assert ctx.user_data["fl_display"] == ctx.user_data["fl_nombre_completo"]
         assert ctx.user_data["fl_display"] == "Bryan Castro Gomez"
 
-
 class TestHandleFlTelegramId:
     @pytest.mark.asyncio
     async def test_invalido_permanece_en_estado(self) -> None:
@@ -311,7 +300,6 @@ class TestHandleFlTelegramId:
         assert result == FL_EMAIL
         assert ctx.user_data["fl_telegram_id"] == 12345678
 
-
 class TestHandleFlSkipTg:
     @pytest.mark.asyncio
     async def test_skip_establece_telegram_none_y_avanza(self) -> None:
@@ -329,7 +317,6 @@ class TestHandleFlSkipTg:
 
         assert result == FL_EMAIL
         assert ctx.user_data["fl_telegram_id"] is None
-
 
 class TestHandleFlConfirmacion:
     @pytest.mark.asyncio
@@ -395,11 +382,9 @@ class TestHandleFlConfirmacion:
         assert result == ConversationHandler.END
         ctx.bot_data["freelancer_repo"].guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # /eliminar_freelancer
 # ---------------------------------------------------------------------------
-
 
 class TestCmdEliminarFreelancer:
     @pytest.mark.asyncio
@@ -482,11 +467,9 @@ class TestCmdEliminarFreelancer:
         update.effective_message.edit_message_text = AsyncMock()
         update.effective_message.reply_text.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # A2 state constants
 # ---------------------------------------------------------------------------
-
 
 class TestEditorFreelancerStateConstants:
     def test_editar_seleccionar_valor(self) -> None:
@@ -507,11 +490,9 @@ class TestEditorFreelancerStateConstants:
         a2 = {EDITAR_SELECCIONAR, EDITAR_CAMPO, EDITAR_VALOR, EDITAR_CONFIRMAR}
         assert a1.isdisjoint(a2), f"Collision: {a1 & a2}"
 
-
 # ---------------------------------------------------------------------------
 # A2 helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_freelancer(
     nombre: str = "Ana",
@@ -531,7 +512,6 @@ def _make_freelancer(
         display=None,
     )
 
-
 def _make_context_edf(
     freelancers: list[Freelancer] | None = None,
     user_data: Mapping[str, object] | None = None,
@@ -550,11 +530,9 @@ def _make_context_edf(
     ctx.bot_data = {"freelancer_repo": repo}
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # cmd_editar_freelancer
 # ---------------------------------------------------------------------------
-
 
 class TestCmdEditarFreelancer:
     @pytest.mark.asyncio
@@ -594,11 +572,9 @@ class TestCmdEditarFreelancer:
         )
         assert "[inactivo]" in buttons_text.lower()
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_seleccionar
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfSeleccionar:
     @pytest.mark.asyncio
@@ -641,11 +617,9 @@ class TestHandleEdfSeleccionar:
         ]
         assert "edf_listo" in buttons_cb
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_campo
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfCampo:
     @pytest.mark.asyncio
@@ -739,7 +713,6 @@ class TestHandleEdfCampo:
 
         assert ctx.user_data.get("edf_anterior") == obtener_mensaje("freelancer.sin_dato")
 
-
 class TestMostrarConfirmacionEditar:
     @pytest.mark.asyncio
     async def test_confirmacion_muestra_anterior_real_no_placeholder(self) -> None:
@@ -777,11 +750,9 @@ class TestMostrarConfirmacionEditar:
         # keys cleared
         assert "edf_target_id" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_valor — cedula path
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfValorCedula:
     @pytest.mark.asyncio
@@ -834,11 +805,9 @@ class TestHandleEdfValorCedula:
 
         assert result == EDITAR_CONFIRMAR
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_valor — telegram_id path
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfValorTelegramId:
     @pytest.mark.asyncio
@@ -902,11 +871,9 @@ class TestHandleEdfValorTelegramId:
 
         assert result == EDITAR_CONFIRMAR
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_valor — nombre_completo + nombre paths
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfValorNombre:
     @pytest.mark.asyncio
@@ -950,11 +917,9 @@ class TestHandleEdfValorNombre:
 
         assert result == EDITAR_CONFIRMAR
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_activo_toggle
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfActivoToggle:
     @pytest.mark.asyncio
@@ -979,11 +944,9 @@ class TestHandleEdfActivoToggle:
         assert result == EDITAR_CONFIRMAR
         assert ctx.user_data["edf_activo"] is False
 
-
 # ---------------------------------------------------------------------------
 # handle_edf_confirmar
 # ---------------------------------------------------------------------------
-
 
 class TestHandleEdfConfirmar:
     @pytest.mark.asyncio
@@ -1147,11 +1110,9 @@ class TestHandleEdfConfirmar:
 
         assert ctx.user_data.get("edf_target_id") == target_id
 
-
 # ---------------------------------------------------------------------------
 # _render_ficha + freelancer detail card on select / after edit
 # ---------------------------------------------------------------------------
-
 
 def _reply_texts(update: MagicMock) -> list[str]:
     """Collect the first positional arg of every reply_text call."""
@@ -1160,7 +1121,6 @@ def _reply_texts(update: MagicMock) -> list[str]:
         for call in update.effective_message.reply_text.call_args_list
         if call.args
     ]
-
 
 class TestRenderFicha:
     def test_incluye_todos_los_campos(self) -> None:
@@ -1186,7 +1146,6 @@ class TestRenderFicha:
         assert "—" in ficha
         assert "Inactivo" in ficha
 
-
 class TestFichaEnSeleccionar:
     @pytest.mark.asyncio
     async def test_muestra_ficha_al_seleccionar(self) -> None:
@@ -1199,7 +1158,6 @@ class TestFichaEnSeleccionar:
         assert result == EDITAR_CAMPO
         textos = _reply_texts(update)
         assert any("Ana Maria Garcia" in t for t in textos)
-
 
 class TestFichaEnConfirmar:
     @pytest.mark.asyncio
@@ -1220,11 +1178,9 @@ class TestFichaEnConfirmar:
         textos = _reply_texts(update)
         assert any("Ana Maria Garcia Lopez" in t for t in textos)
 
-
 # ---------------------------------------------------------------------------
 # Roster refresh: mutating a freelancer must refresh the sale-flow FSM roster
 # ---------------------------------------------------------------------------
-
 
 class TestFreelancerRefrescaFSM:
     @pytest.mark.asyncio
@@ -1282,7 +1238,6 @@ class TestFreelancerRefrescaFSM:
         await handle_edf_confirmar(update, ctx)
 
         fsm.refrescar_freelancers.assert_called_once()
-
 
 class TestEmailFreelancer:
     """E2: email en crear (/nuevo_freelancer) y editar (/editar_freelancer)."""
@@ -1345,11 +1300,9 @@ class TestEmailFreelancer:
         await handle_edf_confirmar(update, ctx)
         assert f.email == "cerr@garay.com"
 
-
 # ---------------------------------------------------------------------------
 # Botones no colgados: cada handler de avance por botón limpia el teclado
 # ---------------------------------------------------------------------------
-
 
 class TestFreelancersLimpiaBotones:
     @pytest.mark.asyncio

@@ -17,10 +17,8 @@ SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]]
 ]
 PUNTOS: list[str] = ["Marie Real"]
 
-
 def _fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS, puntos_venta=PUNTOS)
-
 
 def _ctx_with_schedule(horarios: dict[int, str]) -> ContextoVenta:
     return ContextoVenta(
@@ -31,7 +29,6 @@ def _ctx_with_schedule(horarios: dict[int, str]) -> ContextoVenta:
         horarios_por_servicio=horarios,
     )
 
-
 def _ctx_without_schedule() -> ContextoVenta:
     return ContextoVenta(
         destinos_numeros=[3],
@@ -40,7 +37,6 @@ def _ctx_without_schedule() -> ContextoVenta:
         fechas_por_servicio={3: datetime.datetime(2026, 9, 20, 8, 0)},
         horarios_por_servicio={},
     )
-
 
 class TestResumenHorarioLine:
     def test_with_schedule_contains_am_pm_display(self) -> None:
@@ -114,7 +110,6 @@ class TestResumenHorarioLine:
         result = fsm._construir_resumen(ctx)
 
         assert "19:00" not in result
-
 
 class TestResumenEscapaHtml:
     """Slice 1 (Markdown→HTML): user data in the resumen must be HTML-escaped."""

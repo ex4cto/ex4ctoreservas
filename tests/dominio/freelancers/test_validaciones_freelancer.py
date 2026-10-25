@@ -35,7 +35,6 @@ class TestValidarEmail:
         with pytest.raises(EmailInvalido):
             validar_email("")
 
-
 class TestValidarCedula:
     # --- valid inputs ---
 
@@ -72,7 +71,6 @@ class TestValidarCedula:
     def test_cedula_solo_espacios_rechazada(self) -> None:
         with pytest.raises(CedulaInvalida):
             validar_cedula("   ")
-
 
 class TestDerivarDisplay:
     def test_nombre_multipalabra_tres_tokens(self) -> None:

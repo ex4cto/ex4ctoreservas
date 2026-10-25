@@ -23,7 +23,6 @@ def _gasto(nombre: str = "Arriendo", activo: bool = True) -> GastoRecurrente:
         activo=activo,
     )
 
-
 def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)
     gasto = _gasto()
@@ -38,11 +37,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.dia_mes == 1
     assert resultado.activo is True
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def test_listar_activos(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)
@@ -56,7 +53,6 @@ def test_listar_activos(sf: sessionmaker[Session]) -> None:
     assert "Nomina" in nombres
     assert "Inactivo" not in nombres
 
-
 def test_listar_activos_ordenado_por_nombre(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)
     repo.guardar(_gasto("Zorro"))
@@ -66,7 +62,6 @@ def test_listar_activos_ordenado_por_nombre(sf: sessionmaker[Session]) -> None:
     activos = repo.listar_activos()
     nombres = [g.nombre for g in activos]
     assert nombres == sorted(nombres)
-
 
 def test_desactivar(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)
@@ -78,7 +73,6 @@ def test_desactivar(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(gasto.id)
     assert resultado is not None
     assert resultado.activo is False
-
 
 def test_listar_activos_vacio(sf: sessionmaker[Session]) -> None:
     repo = SQLAGastoRecurrenteRepository(sf)

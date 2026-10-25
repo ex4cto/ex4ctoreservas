@@ -59,13 +59,11 @@ _EXPECTED_TABLES = {
     "cambios_imagen_pendiente",
 }
 
-
 def test_schema_creates_all_tables_in_sqlite() -> None:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     tables = set(sa.inspect(engine).get_table_names())
     assert tables == _EXPECTED_TABLES
-
 
 def test_venta_columns_present() -> None:
     engine = sa.create_engine("sqlite:///:memory:")
@@ -91,7 +89,6 @@ def test_venta_columns_present() -> None:
         "anulada",
     }.issubset(cols)
 
-
 def test_tiquetera_has_both_ticket_fields() -> None:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -99,7 +96,6 @@ def test_tiquetera_has_both_ticket_fields() -> None:
     cols = {c["name"] for c in inspector.get_columns("tiqueteras")}
     assert "numero_fisico" in cols
     assert "numero_ticket" in cols
-
 
 def test_comision_registrada_has_snapshot_json() -> None:
     engine = sa.create_engine("sqlite:///:memory:")
@@ -109,7 +105,6 @@ def test_comision_registrada_has_snapshot_json() -> None:
     assert "snapshot_json" in cols
     assert {"vendedor", "cerrador", "punto_de_venta", "referido", "agencia"}.issubset(cols)
 
-
 def test_freelancer_tiene_columnas_identidad() -> None:
     """FreelancerModel must expose nombre_completo, cedula, and display columns."""
     engine = sa.create_engine("sqlite:///:memory:")
@@ -117,7 +112,6 @@ def test_freelancer_tiene_columnas_identidad() -> None:
     inspector = sa.inspect(engine)
     cols = {c["name"] for c in inspector.get_columns("freelancers")}
     assert {"nombre_completo", "cedula", "display"}.issubset(cols)
-
 
 def test_freelancer_cedula_unique_constraint_rechaza_duplicados() -> None:
     """Inserting two rows with the same non-NULL cedula raises IntegrityError."""
@@ -164,7 +158,6 @@ def test_freelancer_cedula_unique_constraint_rechaza_duplicados() -> None:
             )
             conn.commit()
 
-
 def test_freelancer_cedula_null_permitido_en_multiples_filas() -> None:
     """Multiple rows with cedula=NULL must coexist (NULL is not a conflict)."""
     import uuid as _uuid
@@ -204,7 +197,6 @@ def test_freelancer_cedula_null_permitido_en_multiples_filas() -> None:
         result = conn.execute(FreelancerModel.__table__.select()).fetchall()
         assert len(result) == 2
 
-
 def test_venta_tiene_vendedor_id_y_cerrador_id_nullable() -> None:
     """Slice B: ventas table must have nullable vendedor_id and cerrador_id FK columns."""
     engine = sa.create_engine("sqlite:///:memory:")
@@ -216,7 +208,6 @@ def test_venta_tiene_vendedor_id_y_cerrador_id_nullable() -> None:
     assert "cerrador_id" in cols_by_name, "cerrador_id column missing from ventas"
     assert cols_by_name["vendedor_id"]["nullable"] is True, "vendedor_id must be nullable"
     assert cols_by_name["cerrador_id"]["nullable"] is True, "cerrador_id must be nullable"
-
 
 def test_venta_vendedor_cerrador_ids_son_fk_a_freelancers() -> None:
     """Slice B: vendedor_id and cerrador_id are FK-constrained to freelancers.id."""
@@ -234,7 +225,6 @@ def test_venta_vendedor_cerrador_ids_son_fk_a_freelancers() -> None:
     assert (("cerrador_id",), "freelancers") in fk_targets, (
         "cerrador_id FK to freelancers.id missing"
     )
-
 
 def test_correos_no_parseados_table_has_expected_columns() -> None:
     engine = sa.create_engine("sqlite:///:memory:")

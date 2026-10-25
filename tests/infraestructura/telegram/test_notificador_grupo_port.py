@@ -20,7 +20,6 @@ class FakeNotificadorGrupo(NotificadorGrupo):
         self.calls.append((mensaje, grupo_id))
         return self._return_value
 
-
 class TestNotificadorGrupoPortReturnType:
     def test_notificar_devuelve_int_cuando_hay_message_id(self) -> None:
         """notificar() should return the message_id integer when available."""

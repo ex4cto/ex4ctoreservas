@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -41,7 +41,6 @@ def _make_venta_mock(
     v.participantes = participantes
     return v
 
-
 def _make_repos(
     venta: MagicMock | None = None,
     auditoria_records: list[object] | None = None,
@@ -63,12 +62,10 @@ def _make_repos(
 
     return ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     motivo: str = "reduccion de costo",
@@ -83,7 +80,6 @@ def _make_cmd(
         realizada_por_telegram_id=123,
         realizada_por_nombre="Admin",
     )
-
 
 def _make_service(
     ventas: MagicMock,
@@ -103,7 +99,6 @@ def _make_service(
         comisiones_repo=comisiones,
         motor=motor,
     )
-
 
 class TestEditarNetoVentaService:
     def test_importable(self) -> None:
@@ -196,7 +191,6 @@ class TestEditarNetoVentaService:
         auditoria.guardar.assert_not_called()
 
     def test_motor_calcular_called(self) -> None:
-        from decimal import Decimal
 
         venta = _make_venta_mock()
         ventas, auditoria, reglas, puntos, comisiones = _make_repos(venta=venta)
@@ -205,10 +199,8 @@ class TestEditarNetoVentaService:
         cmd = _make_cmd()
         service.ejecutar(cmd)  # type: ignore[union-attr]
         motor.calcular.assert_called_once()
-        _, kwargs = motor.calcular.call_args
-        # porcentaje_referido must be Decimal("0")
         args = motor.calcular.call_args[0]
-        assert args[3] == Decimal("0")
+        assert len(args) == 3  # (venta, reglas, punto) — no porcentaje_referido
 
     def test_mismo_neto_propagated(self) -> None:
         venta = _make_venta_mock()

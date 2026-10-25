@@ -8,15 +8,38 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.liquidaciones.entidades import PagoFreelancer
+from garay.dominio.liquidaciones.entidades import PagoFreelancer, PagoReferido
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
     PagoFreelancerRepository,
+    PagoReferidoRepository,
     ServicioRepository,
     VentaRepository,
 )
 
+# ---------------------------------------------------------------------------
+# DTOs for referido liquidation
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReferidoVentaDetalle:
+    """Detail line for a single sale contributing to a referido's amount."""
+
+    fecha: datetime.date
+    referido: Dinero
+
+
+@dataclass(frozen=True)
+class ResultadoLiquidacionReferido:
+    """Result of calculating what a referido alias is owed for a period."""
+
+    referido_alias: str
+    desde: datetime.date
+    hasta: datetime.date
+    total: Dinero
+    desglose: list[ReferidoVentaDetalle]
 
 # ---------------------------------------------------------------------------
 # DTOs
@@ -200,9 +223,121 @@ class LiquidarFreelancerService:
             monto=cmd.monto,
             desde=cmd.desde,
             hasta=cmd.hasta,
-            fecha_pago=datetime.datetime.now(tz=datetime.timezone.utc),
+            fecha_pago=datetime.datetime.now(tz=datetime.UTC),
             registrado_por_telegram_id=cmd.registrado_por_telegram_id,
             registrado_por_nombre=cmd.registrado_por_nombre,
         )
         self._pago_repo.guardar(pago)
+        return pago
+
+
+@dataclass(frozen=True)
+class RegistrarPagoReferidoComando:
+    """Command to register a payment to a referido alias for a given venta."""
+
+    referido_alias: str
+    venta_id: uuid.UUID
+    monto: Dinero
+    desde: date
+    hasta: date
+    registrado_por_telegram_id: int
+    registrado_por_nombre: str | None
+
+
+# ---------------------------------------------------------------------------
+# Referido liquidation service
+# ---------------------------------------------------------------------------
+
+
+class LiquidarReferidoService:
+    """Calculates the referido amount owed for a given alias over a period."""
+
+    def __init__(
+        self,
+        ventas_repo: VentaRepository,
+        comisiones_repo: ComisionRegistradaRepository,
+        pago_referido_repo: PagoReferidoRepository | None = None,
+    ) -> None:
+        self._ventas_repo = ventas_repo
+        self._comisiones_repo = comisiones_repo
+        self._pago_referido_repo = pago_referido_repo
+
+    def calcular(
+        self,
+        referido_alias: str,
+        desde: date,
+        hasta: date,
+    ) -> ResultadoLiquidacionReferido:
+        """Calculate total referido amount for alias over [desde, hasta].
+
+        Steps:
+        1. Load all non-anulada ventas in period.
+        2. Load registered commissions for those ventas.
+        3. For each venta where referido_alias matches, accumulate desglose.referido.
+        """
+        ventas = self._ventas_repo.listar_por_periodo(desde, hasta)
+        venta_ids = [v.id for v in ventas]
+
+        comisiones_list = (
+            self._comisiones_repo.listar_por_venta_ids(venta_ids) if venta_ids else []
+        )
+        comisiones_by_venta = {c.venta_id: c for c in comisiones_list}
+
+        desglose: list[ReferidoVentaDetalle] = []
+        total = Dinero(0)
+
+        for venta in ventas:
+            if venta.anulada:
+                continue
+            if venta.participantes.referido_alias != referido_alias:
+                continue
+
+            comision = comisiones_by_venta.get(venta.id)
+            if comision is None:
+                continue
+
+            monto_referido = comision.desglose.referido
+            desglose.append(
+                ReferidoVentaDetalle(
+                    fecha=venta.fecha,
+                    referido=monto_referido,
+                )
+            )
+            total = total + monto_referido
+
+        return ResultadoLiquidacionReferido(
+            referido_alias=referido_alias,
+            desde=desde,
+            hasta=hasta,
+            total=total,
+            desglose=desglose,
+        )
+
+    def registrar_pago(self, cmd: RegistrarPagoReferidoComando) -> PagoReferido:
+        """Register a payment to a referido alias and persist it.
+
+        Raises ValueError if a pago for the same alias already exists in the period.
+        """
+        if self._pago_referido_repo is None:
+            raise RuntimeError("pago_referido_repo is required for registrar_pago")
+
+        solapados = self._pago_referido_repo.buscar_solapados(
+            cmd.referido_alias, cmd.desde, cmd.hasta
+        )
+        if solapados:
+            raise ValueError(
+                f"Pago solapado: ya existe un pago para '{cmd.referido_alias}' "
+                f"en el período {cmd.desde} - {cmd.hasta}"
+            )
+
+        pago = PagoReferido(
+            id=uuid.uuid4(),
+            venta_id=cmd.venta_id,
+            referido_alias=cmd.referido_alias,
+            monto=cmd.monto,
+            fecha_pago=datetime.datetime.now(tz=datetime.UTC),
+            registrado_por_telegram_id=cmd.registrado_por_telegram_id,
+            registrado_por_nombre=cmd.registrado_por_nombre,
+        )
+        self._pago_referido_repo.guardar(pago)
         return pago

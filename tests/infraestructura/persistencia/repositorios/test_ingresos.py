@@ -23,7 +23,6 @@ def _make_ingreso(*, referencia: str = "MSG-001", clasificado: bool = False) -> 
         clasificado=clasificado,
     )
 
-
 def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso()
@@ -39,11 +38,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.remitente == "Juan Perez"
     assert resultado.clasificado is False
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def test_listar_sin_clasificar(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
@@ -62,7 +59,6 @@ def test_listar_sin_clasificar(sf: sessionmaker[Session]) -> None:
     assert i3.id in ids
     assert i2.id not in ids
 
-
 def test_existe_referencia_verdadero(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso(referencia="MSG-UNICO")
@@ -70,12 +66,10 @@ def test_existe_referencia_verdadero(sf: sessionmaker[Session]) -> None:
 
     assert repo.existe_referencia("MSG-UNICO") is True
 
-
 def test_existe_referencia_falso(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
 
     assert repo.existe_referencia("MSG-INEXISTENTE") is False
-
 
 def test_listar_por_periodo_devuelve_ingresos_en_rango(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
@@ -103,7 +97,6 @@ def test_listar_por_periodo_devuelve_ingresos_en_rango(sf: sessionmaker[Session]
     ids = {r.id for r in resultado}
     assert dentro.id in ids
     assert fuera.id not in ids
-
 
 def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
     sf: sessionmaker[Session],

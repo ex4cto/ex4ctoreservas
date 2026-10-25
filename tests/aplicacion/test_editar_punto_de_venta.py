@@ -22,7 +22,6 @@ def _punto(**kwargs: object) -> PuntoDeVenta:
     defaults.update(kwargs)
     return PuntoDeVenta(**defaults)  # type: ignore[arg-type]
 
-
 def _make_service(
     punto: PuntoDeVenta,
 ) -> tuple[EditarPuntoDeVentaService, MagicMock, MagicMock]:
@@ -34,7 +33,6 @@ def _make_service(
         repo,
         auditoria,
     )
-
 
 class TestCambiarPorcentajeCapa:
     def test_cambiar_porcentaje_capa_emite_un_registro(self) -> None:
@@ -62,7 +60,6 @@ class TestCambiarPorcentajeCapa:
         service.editar(p.id, porcentaje_capa=Decimal("15"), por_telegram_id=1, por_nombre="A")
         repo.guardar.assert_called_once()
 
-
 class TestSinCambios:
     def test_mismo_porcentaje_no_emite_registros(self) -> None:
         p = _punto()
@@ -74,7 +71,6 @@ class TestSinCambios:
             por_nombre="A",
         )
         auditoria.guardar.assert_not_called()
-
 
 class TestMissingActor:
     def test_actor_none_lanza_antes_de_guardar(self) -> None:
@@ -89,7 +85,6 @@ class TestMissingActor:
             )
         repo.guardar.assert_not_called()
         auditoria.guardar.assert_not_called()
-
 
 class TestEntidadNoEncontrada:
     def test_punto_inexistente_lanza_value_error(self) -> None:

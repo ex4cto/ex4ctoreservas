@@ -23,12 +23,10 @@ def _audit_record(accion: AccionAuditoria) -> AuditoriaVenta:
         realizada_at=datetime.datetime.now(datetime.UTC),
     )
 
-
 def _mock_auditoria(acciones: list[AccionAuditoria]) -> MagicMock:
     mock = MagicMock()
     mock.listar_por_venta_id.return_value = [_audit_record(a) for a in acciones]
     return mock
-
 
 class TestVerificarLimiteEdicionesFinanciero:
     """Financial verifier enforces MAX=3 counting EDITAR_CANAL + EDITAR_NETO + EDITAR_VALOR_VENTA."""
@@ -105,7 +103,6 @@ class TestVerificarLimiteEdicionesFinanciero:
         # 4 informational edits — should NOT trigger financial limit
         verificar_limite_ediciones_financiero(mock_auditoria, uuid.uuid4())
 
-
 class TestVerificarLimiteEdicionesInformativo:
     """Informational verifier is a no-op; no limit applies."""
 
@@ -126,7 +123,6 @@ class TestVerificarLimiteEdicionesInformativo:
             [AccionAuditoria.EDITAR_CANAL] * 100
         )
         verificar_limite_ediciones_informativo(mock_auditoria, uuid.uuid4())
-
 
 class TestBackwardCompatAlias:
     """verificar_limite_ediciones must still exist and delegate to financial verifier."""

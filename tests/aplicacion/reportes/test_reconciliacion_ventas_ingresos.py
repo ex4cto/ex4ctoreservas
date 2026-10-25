@@ -21,7 +21,6 @@ _SNAP = SnapshotReglas(
     TipoCliente.INTERNO, Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0")
 )
 
-
 def _venta(vid: uuid.UUID) -> Venta:
     return Venta(
         id=vid, valor_venta=Dinero(100000), neto=Dinero(60000), servicio_ids=[],
@@ -30,24 +29,23 @@ def _venta(vid: uuid.UUID) -> Venta:
         estado=EstadoVenta.PROCESADA, canal_origen="Hotel",
     )
 
-
 def _com(vid: uuid.UUID, agencia: int) -> ComisionRegistrada:
     return ComisionRegistrada(
         venta_id=vid,
         desglose=DesgloseComision(
             vendedor=Dinero(0), cerrador=Dinero(0), punto_de_venta=Dinero(0),
             referido=Dinero(0), agencia=Dinero(agencia), snapshot=_SNAP,
-        ),
+            neto_vendedor=Dinero(0),
+            neto_cerrador=Dinero(0),
+),
         fecha=datetime.date(2026, 7, 5),
     )
-
 
 def _ingreso(monto: int, ref: str) -> Ingreso:
     return Ingreso(
         id=uuid.uuid4(), banco="Nequi", monto=Dinero(monto),
         fecha=datetime.date(2026, 7, 5), referencia=ref,
     )
-
 
 def _svc(
     ventas: list[Venta], comisiones: list[ComisionRegistrada], ingresos: list[Ingreso]
@@ -59,7 +57,6 @@ def _svc(
     ir = MagicMock()
     ir.listar_por_periodo.return_value = ingresos
     return ReconciliacionVentasIngresosService(vr, cr, ir)
-
 
 def test_reconciliacion() -> None:
     v1 = uuid.uuid4()
@@ -74,7 +71,6 @@ def test_reconciliacion() -> None:
     assert r.diferencia == Dinero(-50000)  # banco - agencia
     # desviacion = -50000 / 6800000 * 100 ~ -0.74%
     assert round(r.porcentaje_desviacion, 2) == Decimal("-0.74")
-
 
 def test_sin_agencia_desviacion_cero() -> None:
     svc = _svc([], [], [_ingreso(100000, "R1")])

@@ -28,7 +28,6 @@ def _sf() -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 def _servicio(**kw: object) -> ServicioModel:
     base: dict[str, object] = dict(
         id=uuid.uuid4(),
@@ -45,11 +44,9 @@ def _servicio(**kw: object) -> ServicioModel:
     base.update(kw)
     return ServicioModel(**base)
 
-
 # ---------------------------------------------------------------------------
 # Test 1: insert a brand-new service
 # ---------------------------------------------------------------------------
-
 
 def test_inserta_servicio_nuevo() -> None:
     sf = _sf()
@@ -74,11 +71,9 @@ def test_inserta_servicio_nuevo() -> None:
         # horarios must not be None — model has NOT NULL default
         assert row.horarios is not None
 
-
 # ---------------------------------------------------------------------------
 # Test 2: update nombre/activo/categoria for an existing service
 # ---------------------------------------------------------------------------
-
 
 def test_actualiza_nombre_activo_categoria() -> None:
     sf = _sf()
@@ -108,11 +103,9 @@ def test_actualiza_nombre_activo_categoria() -> None:
         assert row.permite_ninos is True
         assert row.horarios == ["08:00", "14:00"]
 
-
 # ---------------------------------------------------------------------------
 # Test 3: sin_cambios when entry matches DB exactly
 # ---------------------------------------------------------------------------
-
 
 def test_sin_cambios_cuando_igual() -> None:
     sf = _sf()
@@ -128,11 +121,9 @@ def test_sin_cambios_cuando_igual() -> None:
     assert resumen.actualizados == []
     assert resumen.insertados == []
 
-
 # ---------------------------------------------------------------------------
 # Test 4: horarios and precio are never touched on update
 # ---------------------------------------------------------------------------
-
 
 def test_no_toca_horarios_ni_precio() -> None:
     sf = _sf()
@@ -176,11 +167,9 @@ def test_no_toca_horarios_ni_precio() -> None:
         assert row.precio_neto_nino == Decimal("100000")
         assert row.permite_ninos is False
 
-
 # ---------------------------------------------------------------------------
 # Test 5: dry_run does not persist changes
 # ---------------------------------------------------------------------------
-
 
 def test_dry_run_no_persiste() -> None:
     sf = _sf()

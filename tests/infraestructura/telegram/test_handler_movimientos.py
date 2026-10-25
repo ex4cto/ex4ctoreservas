@@ -14,7 +14,6 @@ from garay.dominio.conciliacion.tipos import TipoEgreso
 
 _UTC = datetime.UTC
 
-
 def _make_update(user_id: int = 999) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -23,12 +22,10 @@ def _make_update(user_id: int = 999) -> MagicMock:
     update.callback_query = None
     return update
 
-
 def _make_settings(*, propietario_ids: str = "999") -> MagicMock:
     s = MagicMock()
     s.propietario_telegram_ids = propietario_ids
     return s
-
 
 def _make_movimientos_service(
     ingresos: list[Ingreso] | None = None,
@@ -49,12 +46,10 @@ def _make_movimientos_service(
     svc.ejecutar.return_value = resultado
     return svc
 
-
 def _make_context(**bot_data: object) -> MagicMock:
     ctx = MagicMock()
     ctx.bot_data = dict(bot_data)
     return ctx
-
 
 def _ingreso(monto: str = "100000", reenviado: bool = False) -> Ingreso:
     return Ingreso(
@@ -66,7 +61,6 @@ def _ingreso(monto: str = "100000", reenviado: bool = False) -> Ingreso:
         fecha_recibido=datetime.datetime.now(_UTC),
         reenviado=reenviado,
     )
-
 
 def _egreso(monto: str = "50000", reenviado: bool = False) -> Egreso:
     return Egreso(
@@ -80,7 +74,6 @@ def _egreso(monto: str = "50000", reenviado: bool = False) -> Egreso:
         reenviado=reenviado,
     )
 
-
 # ---------------------------------------------------------------------------
 # Import sanity — the module must be importable
 # ---------------------------------------------------------------------------
@@ -88,11 +81,9 @@ def _egreso(monto: str = "50000", reenviado: bool = False) -> Egreso:
 def test_handlers_reportes_imports_cmd_movimientos() -> None:
     from garay.infraestructura.telegram.handlers_reportes import cmd_movimientos  # noqa: F401
 
-
 # ---------------------------------------------------------------------------
 # Functional tests
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_cmd_movimientos_sin_movimientos_muestra_sin_datos() -> None:
@@ -110,7 +101,6 @@ async def test_cmd_movimientos_sin_movimientos_muestra_sin_datos() -> None:
         await cmd_movimientos.__wrapped__(update, context)  # type: ignore[attr-defined]
 
     update.effective_message.reply_text.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_cmd_movimientos_muestra_ingresos_y_egresos() -> None:
@@ -133,7 +123,6 @@ async def test_cmd_movimientos_muestra_ingresos_y_egresos() -> None:
     # Should mention amounts somewhere
     assert "150" in call_args or "75" in call_args
 
-
 @pytest.mark.asyncio
 async def test_cmd_movimientos_incluye_tag_reenvio_cuando_reenviado() -> None:
     """An ingreso with reenviado=True must show the reenvio tag."""
@@ -153,7 +142,6 @@ async def test_cmd_movimientos_incluye_tag_reenvio_cuando_reenviado() -> None:
     call_args = update.effective_message.reply_text.call_args[0][0]
     assert "fwd" in call_args.lower()
 
-
 @pytest.mark.asyncio
 async def test_cmd_movimientos_bloqueado_para_non_propietario() -> None:
     """User not in propietario list → handler replies denial, service NOT called."""
@@ -171,11 +159,9 @@ async def test_cmd_movimientos_bloqueado_para_non_propietario() -> None:
 
     svc.ejecutar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # FIX 1: _fmt_cop format — amounts must use Colombian dot-separator, no cents
 # ---------------------------------------------------------------------------
-
 
 def test_formatear_movimientos_ingreso_monto_grande_formato_cop() -> None:
     """Dinero(208929.30) must appear as '$208.929' — not '208,929.3' (FIX 1)."""
@@ -192,11 +178,9 @@ def test_formatear_movimientos_ingreso_monto_grande_formato_cop() -> None:
     texto = _formatear_movimientos(resultado, horas=24)
     assert "$208.929" in texto, f"Expected '$208.929' in output, got: {texto!r}"
 
-
 # ---------------------------------------------------------------------------
 # FIX 2: Markdown special chars in egreso.descripcion must appear verbatim
 # ---------------------------------------------------------------------------
-
 
 def test_formatear_movimientos_egreso_descripcion_markdown_verbatim() -> None:
     """An egreso description with Markdown chars must appear verbatim (FIX 2)."""
@@ -225,11 +209,9 @@ def test_formatear_movimientos_egreso_descripcion_markdown_verbatim() -> None:
         f"Expected description {desc_markdown!r} verbatim in output, got: {texto!r}"
     )
 
-
 # ---------------------------------------------------------------------------
 # FIX 2: cmd_movimientos must NOT pass parse_mode="Markdown"
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_cmd_movimientos_no_usa_parse_mode_markdown() -> None:
@@ -255,11 +237,9 @@ async def test_cmd_movimientos_no_usa_parse_mode_markdown() -> None:
         f"reply_text was called with parse_mode='Markdown': kwargs={kwargs}, args={args}"
     )
 
-
 # ---------------------------------------------------------------------------
 # Hora shown in Bogotá time (UTC-5), not UTC
 # ---------------------------------------------------------------------------
-
 
 def test_formatear_movimientos_hora_en_bogota() -> None:
     """fecha_recibido 18:46 UTC must render as 13:46 (America/Bogota, UTC-5)."""

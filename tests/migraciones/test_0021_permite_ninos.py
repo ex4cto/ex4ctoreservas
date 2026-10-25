@@ -23,7 +23,6 @@ _MIGRATION_FILE = (
     / "0021_add_permite_ninos_to_servicios.py"
 )
 
-
 def _load_migration() -> ModuleType:
     if not _MIGRATION_FILE.exists():
         pytest.fail(f"Migration file not found: {_MIGRATION_FILE}.")
@@ -36,7 +35,6 @@ def _load_migration() -> ModuleType:
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
-
 
 class TestMigration0021Upgrade:
     def test_upgrade_agrega_columna(self, sqlite_engine: Engine) -> None:
@@ -60,7 +58,6 @@ class TestMigration0021Upgrade:
             ).scalar_one()
         assert bool(valor) is True
 
-
 class TestMigration0021Downgrade:
     def test_downgrade_elimina_columna(self, sqlite_engine: Engine) -> None:
         build_servicios_at_0020(sqlite_engine)
@@ -68,7 +65,6 @@ class TestMigration0021Downgrade:
         run_migration_fn(sqlite_engine, migration.upgrade)
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert "permite_ninos" not in table_columns(sqlite_engine, "servicios")
-
 
 class TestMigration0021Chain:
     def test_revision(self) -> None:

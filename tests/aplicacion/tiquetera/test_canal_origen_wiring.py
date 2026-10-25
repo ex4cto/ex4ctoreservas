@@ -19,7 +19,6 @@ _SERVICIO_ID = uuid.uuid4()
 _CLIENTE_ID = uuid.uuid4()
 _FECHA = datetime.date(2026, 7, 1)
 
-
 def _build_service(**kwargs: object) -> RegistrarVentaService:
     defaults: dict[str, Any] = dict(
         ventas=MagicMock(),
@@ -37,7 +36,6 @@ def _build_service(**kwargs: object) -> RegistrarVentaService:
     defaults.update(kwargs)
     return RegistrarVentaService(**defaults)
 
-
 def _cmd(**kwargs: object) -> RegistrarVentaComando:
     defaults: dict[str, Any] = dict(
         valor_venta=_VALOR,
@@ -53,7 +51,6 @@ def _cmd(**kwargs: object) -> RegistrarVentaComando:
     defaults.update(kwargs)
     return RegistrarVentaComando(**defaults)
 
-
 class TestRegistrarVentaComandoCanalOrigen:
     def test_comando_acepta_canal_origen(self) -> None:
         cmd = _cmd(canal_origen="WhatsApp")
@@ -62,7 +59,6 @@ class TestRegistrarVentaComandoCanalOrigen:
     def test_comando_canal_default_none(self) -> None:
         cmd = _cmd()
         assert cmd.canal_origen is None
-
 
 class TestRegistrarVentaServiceCanalOrigen:
     def test_servicio_pasa_canal_a_venta(self) -> None:

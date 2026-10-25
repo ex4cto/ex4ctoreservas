@@ -14,7 +14,6 @@ from garay.dominio.clientes.errores import ClienteNoEncontrado
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.auditoria import AccionAuditoria
 from garay.dominio.ventas.errores import (
-    LimiteEdicionesAlcanzado,
     MotivoRequerido,
     VentaNoEncontrada,
 )
@@ -22,7 +21,6 @@ from garay.dominio.ventas.errores import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_cliente(telefono: str | None = "300000") -> Cliente:
     return Cliente(
@@ -32,13 +30,11 @@ def _make_cliente(telefono: str | None = "300000") -> Cliente:
         telefono=telefono,
     )
 
-
 def _make_venta(cliente_id: uuid.UUID) -> MagicMock:
     venta = MagicMock()
     venta.id = uuid.uuid4()
     venta.cliente_id = cliente_id
     return venta
-
 
 def _make_repos(
     venta: MagicMock | None = None,
@@ -52,12 +48,10 @@ def _make_repos(
     auditoria_repo.listar_por_venta_id.return_value = []
     return ventas_repo, clientes_repo, auditoria_repo
 
-
 def _rec(accion: AccionAuditoria) -> MagicMock:
     r = MagicMock()
     r.accion = accion
     return r
-
 
 def _make_cmd(
     venta_id: uuid.UUID,
@@ -74,11 +68,9 @@ def _make_cmd(
         realizada_por_nombre="Admin",
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestEditarClienteVentaService:
     def test_success_muta_cliente_y_persiste(self) -> None:

@@ -9,7 +9,6 @@ from __future__ import annotations
 import datetime
 import uuid
 
-import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.auditoria.entidades import RegistroAuditoria
@@ -28,7 +27,6 @@ _ACTOR_NOMBRE = "Ryan"
 _T0 = datetime.datetime(2026, 10, 15, 10, 0, 0)
 _T1 = datetime.datetime(2026, 10, 16, 10, 0, 0)
 _T2 = datetime.datetime(2026, 10, 17, 10, 0, 0)
-
 
 def _registro(
     entidad_tipo: str = "servicio",
@@ -53,7 +51,6 @@ def _registro(
         realizada_por_nombre=actor_nombre,
         realizada_at=realizada_at,
     )
-
 
 class TestGuardarYListar:
     def test_guardar_persiste_fila_recuperable_por_listar(
@@ -87,7 +84,6 @@ class TestGuardarYListar:
         rows = repo.listar()
         assert rows[0].valor_anterior is None
         assert rows[0].valor_nuevo is None
-
 
 class TestListarFiltros:
     def test_filtro_por_entidad_tipo(self, sf: sessionmaker[Session]) -> None:

@@ -26,11 +26,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.nombre == c.nombre
     assert resultado.tipo == TipoCliente.EXTERNO
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)
@@ -48,11 +46,9 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     assert resultado.id == c.id
     assert resultado.nombre == "Maria Lopez"
 
-
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)
     assert repo.buscar_por_nombre("No Existe") is None
-
 
 def test_listar_devuelve_todos(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)
@@ -66,7 +62,6 @@ def test_listar_devuelve_todos(sf: sessionmaker[Session]) -> None:
     ids = {c.id for c in resultado}
     assert a.id in ids
     assert b.id in ids
-
 
 def test_listar_sin_datos_devuelve_lista_vacia(sf: sessionmaker[Session]) -> None:
     repo = SQLAClienteRepository(sf)

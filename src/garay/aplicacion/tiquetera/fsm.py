@@ -346,7 +346,7 @@ class FSMTiquetera:
         ctx.vendedor_id = None
         ctx.cerrador_nombre = None
         ctx.cerrador_id = None
-        ctx.referido_nombre = None
+        ctx.referido_alias = None
         ctx.rol_registrante = None
         # Set discriminator and navigation flags
         ctx.tour_adicional = True

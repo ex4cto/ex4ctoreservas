@@ -27,7 +27,6 @@ def _make_pago(
         fecha_pago=datetime.datetime(year, month, day, 10, 30, tzinfo=datetime.UTC),
     )
 
-
 def test_guardar_ingreso_devuelve_ingreso_con_campos_correctos() -> None:
     repo = MagicMock()
     pago = _make_pago()
@@ -42,7 +41,6 @@ def test_guardar_ingreso_devuelve_ingreso_con_campos_correctos() -> None:
     assert resultado.fecha == datetime.date(2026, 7, 15)
     assert resultado.correo_origen is None
     assert resultado.reenviado is False
-
 
 def test_guardar_ingreso_pasa_correo_origen_y_reenviado() -> None:
     repo = MagicMock()
@@ -60,7 +58,6 @@ def test_guardar_ingreso_pasa_correo_origen_y_reenviado() -> None:
     assert resultado.correo_origen == "alertas@bancolombia.com"
     assert resultado.reenviado is True
 
-
 def test_guardar_ingreso_llama_repo_guardar() -> None:
     repo = MagicMock()
     pago = _make_pago()
@@ -68,7 +65,6 @@ def test_guardar_ingreso_llama_repo_guardar() -> None:
     resultado = guardar_ingreso(pago, "MSG-002", repo, moneda="COP")
 
     repo.guardar.assert_called_once_with(resultado)
-
 
 def test_guardar_ingreso_genera_uuid_unico() -> None:
     repo = MagicMock()
@@ -78,7 +74,6 @@ def test_guardar_ingreso_genera_uuid_unico() -> None:
     r2 = guardar_ingreso(pago, "MSG-B", repo, moneda="COP")
 
     assert r1.id != r2.id
-
 
 def test_guardar_ingreso_nequi() -> None:
     repo = MagicMock()

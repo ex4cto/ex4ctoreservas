@@ -33,7 +33,6 @@ def _make_app(propietario_ids: str) -> MagicMock:
     app.bot_data = {"freelancer_repo": repo}
     return app
 
-
 def test_post_init_chat_not_found_no_crashea(monkeypatch: Any) -> None:
     """A per-chat 'Chat not found' must never abort startup."""
     settings = MagicMock()
@@ -45,7 +44,6 @@ def test_post_init_chat_not_found_no_crashea(monkeypatch: Any) -> None:
 
     # Must not raise.
     asyncio.run(_post_init(_make_app("111")))
-
 
 def test_post_init_chat_not_found_warning_sin_traceback(
     monkeypatch: Any, caplog: Any
@@ -70,7 +68,6 @@ def test_post_init_chat_not_found_warning_sin_traceback(
     # The noise fix: no full traceback attached to an expected condition.
     assert menu_warnings[0].exc_info is None
 
-
 def test_parsear_grupo_id_casos() -> None:
     from garay.infraestructura.telegram.bot import _parsear_grupo_id
 
@@ -79,7 +76,6 @@ def test_parsear_grupo_id_casos() -> None:
     assert _parsear_grupo_id("") is None
     assert _parsear_grupo_id(None) is None
     assert _parsear_grupo_id("no-es-numero") is None
-
 
 def test_ignorar_grupo_detiene_updates_del_grupo(monkeypatch: Any) -> None:
     import pytest
@@ -100,7 +96,6 @@ def test_ignorar_grupo_detiene_updates_del_grupo(monkeypatch: Any) -> None:
     with pytest.raises(ApplicationHandlerStop):
         asyncio.run(_ignorar_grupo_notificaciones(update, MagicMock()))
 
-
 def test_ignorar_grupo_no_afecta_otros_chats(monkeypatch: Any) -> None:
     from telegram import Update
 
@@ -117,7 +112,6 @@ def test_ignorar_grupo_no_afecta_otros_chats(monkeypatch: Any) -> None:
 
     # Must NOT raise (returns None) so normal chats keep working.
     asyncio.run(_ignorar_grupo_notificaciones(update, MagicMock()))
-
 
 def test_post_init_oculta_menu_en_grupo_notificaciones(monkeypatch: Any) -> None:
     """_post_init debe fijar comandos vacíos ([]) para el scope del grupo de notificaciones."""

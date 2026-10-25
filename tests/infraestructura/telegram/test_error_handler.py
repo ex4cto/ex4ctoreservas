@@ -17,14 +17,12 @@ def _settings(dev_ids: str) -> MagicMock:
     s.dev_telegram_ids = dev_ids
     return s
 
-
 def _context() -> MagicMock:
     ctx = MagicMock()
     ctx.error = RuntimeError("boom")
     ctx.bot = MagicMock()
     ctx.bot.send_message = AsyncMock()
     return ctx
-
 
 class TestManejarError:
     @pytest.mark.asyncio
@@ -109,14 +107,12 @@ class TestManejarError:
 
         ctx.bot.send_message.assert_called_once()
 
-
 def test_crear_aplicacion_registra_error_handler() -> None:
     from garay.infraestructura.telegram.bot import crear_aplicacion
 
     app = crear_aplicacion("123456:FAKETOKEN")
 
     assert _manejar_error in app.error_handlers
-
 
 class TestManejarErrorRed:
     @pytest.mark.asyncio

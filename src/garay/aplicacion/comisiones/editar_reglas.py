@@ -34,7 +34,6 @@ class EditarReglasComisionService:
         *,
         porcentaje_vendedor: Decimal = _SENTINEL,  # type: ignore[assignment]
         porcentaje_cerrador: Decimal = _SENTINEL,  # type: ignore[assignment]
-        porcentaje_referido_maximo: Decimal = _SENTINEL,  # type: ignore[assignment]
         punto_de_venta_nombre: str | None = _SENTINEL,  # type: ignore[assignment]
         numero_personas: int | None = _SENTINEL,  # type: ignore[assignment]
         por_telegram_id: int,
@@ -53,8 +52,6 @@ class EditarReglasComisionService:
             kwargs_nuevos["porcentaje_vendedor"] = porcentaje_vendedor
         if porcentaje_cerrador is not _SENTINEL:
             kwargs_nuevos["porcentaje_cerrador"] = porcentaje_cerrador
-        if porcentaje_referido_maximo is not _SENTINEL:
-            kwargs_nuevos["porcentaje_referido_maximo"] = porcentaje_referido_maximo
         if punto_de_venta_nombre is not _SENTINEL:
             kwargs_nuevos["punto_de_venta_nombre"] = punto_de_venta_nombre
         if numero_personas is not _SENTINEL:

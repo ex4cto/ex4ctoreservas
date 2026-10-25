@@ -26,7 +26,6 @@ def _make_ingreso(referencia: str = "REF-001") -> Ingreso:
         referencia=referencia,
     )
 
-
 def _make_conciliacion(
     ingreso_id: uuid.UUID,
     *,
@@ -44,7 +43,6 @@ def _make_conciliacion(
         confianza=confianza,
     )
 
-
 def test_guardar_y_buscar_por_ingreso_id(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso()
@@ -58,7 +56,6 @@ def test_guardar_y_buscar_por_ingreso_id(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.ingreso_id == ingreso.id
 
-
 def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso("REF-002")
@@ -71,7 +68,6 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(conc.id)
     assert resultado is not None
     assert resultado.id == conc.id
-
 
 def test_guardar_preserva_score_y_confianza(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
@@ -90,7 +86,6 @@ def test_guardar_preserva_score_y_confianza(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.score == Decimal("0.9500")
     assert resultado.confianza == Decimal("0.9500")
-
 
 def test_listar_pendientes_filtra_estados(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
@@ -111,7 +106,6 @@ def test_listar_pendientes_filtra_estados(sf: sessionmaker[Session]) -> None:
     assert EstadoConciliacion.MATCHEADO not in ids_estado
     assert len(pendientes) == 2  # PENDIENTE + SIN_MATCH
 
-
 def test_listar_ingreso_ids_procesados(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
     i1 = _make_ingreso("REF-IP1")
@@ -127,16 +121,13 @@ def test_listar_ingreso_ids_procesados(sf: sessionmaker[Session]) -> None:
     assert i1.id in ids_procesados
     assert i2.id in ids_procesados
 
-
 def test_buscar_por_id_no_existe_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAConciliacionRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
 
-
 def test_buscar_por_ingreso_id_no_existe_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAConciliacionRepository(sf)
     assert repo.buscar_por_ingreso_id(uuid.uuid4()) is None
-
 
 def test_listar_por_periodo_filtra_por_fecha_del_ingreso(sf: sessionmaker[Session]) -> None:
     ingreso_repo = SQLAIngresoRepository(sf)
@@ -176,7 +167,6 @@ def test_listar_por_periodo_filtra_por_fecha_del_ingreso(sf: sessionmaker[Sessio
     ids = {c.id for c in resultado}
     assert conc_dentro.id in ids
     assert conc_fuera.id not in ids
-
 
 def test_listar_por_periodo_sin_conciliaciones_devuelve_vacio(
     sf: sessionmaker[Session],

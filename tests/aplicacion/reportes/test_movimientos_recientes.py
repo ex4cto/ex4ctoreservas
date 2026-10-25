@@ -16,7 +16,6 @@ from garay.dominio.conciliacion.tipos import TipoEgreso
 
 _UTC = datetime.UTC
 
-
 def _ingreso(monto: str = "100000", reenviado: bool = False) -> Ingreso:
     return Ingreso(
         id=uuid.uuid4(),
@@ -26,7 +25,6 @@ def _ingreso(monto: str = "100000", reenviado: bool = False) -> Ingreso:
         referencia=f"MSG-{uuid.uuid4().hex[:8]}",
         reenviado=reenviado,
     )
-
 
 def _egreso(monto: str = "50000", reenviado: bool = False) -> Egreso:
     return Egreso(
@@ -38,7 +36,6 @@ def _egreso(monto: str = "50000", reenviado: bool = False) -> Egreso:
         tipo=TipoEgreso.AUTOMATICO,
         reenviado=reenviado,
     )
-
 
 def _make_service(
     ingresos: list[Ingreso] | None = None,
@@ -52,7 +49,6 @@ def _make_service(
         ingresos_repo=ingreso_repo,
         egresos_repo=egreso_repo,
     )
-
 
 class TestMovimientosRecientes:
     def test_ventana_horas_se_convierte_a_minutos(self) -> None:

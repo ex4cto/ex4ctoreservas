@@ -22,10 +22,8 @@ _SNAPSHOT = SnapshotReglas(
     tipo_cliente=TipoCliente.EXTERNO,
     porcentaje_vendedor=Decimal("0"),
     porcentaje_cerrador=Decimal("0"),
-    porcentaje_referido_maximo=Decimal("0"),
     porcentaje_capa_punto=Decimal("0"),
 )
-
 
 def _resultado(venta_id: uuid.UUID | None = None) -> ResultadoRegistrarVenta:
     return ResultadoRegistrarVenta(
@@ -37,9 +35,10 @@ def _resultado(venta_id: uuid.UUID | None = None) -> ResultadoRegistrarVenta:
             referido=_CERO,
             agencia=_CERO,
             snapshot=_SNAPSHOT,
+            neto_vendedor=_CERO,
+            neto_cerrador=_CERO,
         ),
     )
-
 
 def _ctx(
     *,
@@ -53,12 +52,10 @@ def _ctx(
     ctx.abono = Decimal("100000")
     return ctx
 
-
 def _generador_mock(html: str = "<html>factura</html>") -> MagicMock:
     gen = MagicMock()
     gen.generar.return_value = html
     return gen
-
 
 def test_happy_envia_y_persiste_enviado() -> None:
     facturas = MagicMock()
@@ -81,7 +78,6 @@ def test_happy_envia_y_persiste_enviado() -> None:
     assert final.monto_total == Dinero("500000")
     assert final.abono == Dinero("100000")
 
-
 def test_notificador_lanza_persiste_error() -> None:
     facturas = MagicMock()
     facturas.buscar_por_venta_id.return_value = None
@@ -99,7 +95,6 @@ def test_notificador_lanza_persiste_error() -> None:
     final = facturas.guardar.call_args_list[-1].args[0]
     assert final.estado_envio is EstadoEnvioFactura.ERROR
 
-
 def test_notificador_none_persiste_sin_email() -> None:
     facturas = MagicMock()
     facturas.buscar_por_venta_id.return_value = None
@@ -113,7 +108,6 @@ def test_notificador_none_persiste_sin_email() -> None:
 
     final = facturas.guardar.call_args_list[-1].args[0]
     assert final.estado_envio is EstadoEnvioFactura.SIN_EMAIL
-
 
 def test_idempotente_enviado_no_regenera_ni_reenvia() -> None:
     venta_id = uuid.uuid4()
@@ -142,7 +136,6 @@ def test_idempotente_enviado_no_regenera_ni_reenvia() -> None:
     generador.generar.assert_not_called()
     notificador.enviar.assert_not_called()
     facturas.guardar.assert_not_called()
-
 
 def test_reintento_error_reusa_documento_original_y_reenvia() -> None:
     venta_id = uuid.uuid4()
@@ -181,7 +174,6 @@ def test_reintento_error_reusa_documento_original_y_reenvia() -> None:
     assert final.html_contenido == "<html>original</html>"
     assert final.estado_envio is EstadoEnvioFactura.ENVIADO
 
-
 def test_sin_email_es_no_op() -> None:
     facturas = MagicMock()
     servicio = GenerarYGuardarFacturaService(
@@ -194,7 +186,6 @@ def test_sin_email_es_no_op() -> None:
 
     facturas.buscar_por_venta_id.assert_not_called()
     facturas.guardar.assert_not_called()
-
 
 def test_valor_none_es_no_op() -> None:
     facturas = MagicMock()
@@ -209,21 +200,17 @@ def test_valor_none_es_no_op() -> None:
     facturas.buscar_por_venta_id.assert_not_called()
     facturas.guardar.assert_not_called()
 
-
 # --- copia oculta (BCC) al cerrador -----------------------------------------
-
 
 def _ctx_con_cerrador(cerrador_id: uuid.UUID, email: str = "juan@example.com") -> ContextoVenta:
     ctx = _ctx(email=email)
     ctx.cerrador_id = cerrador_id
     return ctx
 
-
 def _freelancer(cid: uuid.UUID, email: str | None) -> object:
     from garay.dominio.freelancers.entidades import Freelancer
 
     return Freelancer(id=cid, nombre="Cerrador", email=email)
-
 
 def test_bcc_al_cerrador_cuando_tiene_email() -> None:
     cid = uuid.uuid4()
@@ -244,7 +231,6 @@ def test_bcc_al_cerrador_cuando_tiene_email() -> None:
     freelancers.buscar_por_id.assert_called_once_with(cid)
     assert notificador.enviar.call_args.kwargs["bcc"] == "cerrador@garay.com"
 
-
 def test_sin_repo_freelancers_no_bcc() -> None:
     facturas = MagicMock()
     facturas.buscar_por_venta_id.return_value = None
@@ -258,7 +244,6 @@ def test_sin_repo_freelancers_no_bcc() -> None:
     servicio.ejecutar(_ctx_con_cerrador(uuid.uuid4()), _resultado())
 
     assert notificador.enviar.call_args.kwargs["bcc"] is None
-
 
 def test_cerrador_sin_email_no_bcc() -> None:
     cid = uuid.uuid4()
@@ -277,7 +262,6 @@ def test_cerrador_sin_email_no_bcc() -> None:
     servicio.ejecutar(_ctx_con_cerrador(cid), _resultado())
 
     assert notificador.enviar.call_args.kwargs["bcc"] is None
-
 
 def test_cerrador_email_igual_cliente_no_bcc() -> None:
     cid = uuid.uuid4()

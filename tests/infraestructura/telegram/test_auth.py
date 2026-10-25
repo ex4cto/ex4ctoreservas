@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from telegram import Update
 from telegram.ext import ConversationHandler
 
@@ -21,7 +20,6 @@ from garay.infraestructura.telegram.auth import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_update(user_id: int | None = 123) -> MagicMock:
     update = MagicMock(spec=Update)
     if user_id is None:
@@ -32,7 +30,6 @@ def _make_update(user_id: int | None = 123) -> MagicMock:
     update.effective_message = AsyncMock()
     return update
 
-
 def _make_context(repo: object | None = None) -> MagicMock:
     ctx = MagicMock()
     ctx.bot_data = {}
@@ -40,26 +37,21 @@ def _make_context(repo: object | None = None) -> MagicMock:
         ctx.bot_data["freelancer_repo"] = repo
     return ctx
 
-
 def _make_repo(found: bool = True) -> MagicMock:
     repo = MagicMock()
     repo.buscar_por_telegram_id.return_value = MagicMock() if found else None
     return repo
 
-
 # ---------------------------------------------------------------------------
 # A trivial async handler to wrap
 # ---------------------------------------------------------------------------
 
-
 async def _dummy_handler(update: object, context: object) -> int:
     return 42
-
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 async def test_usuario_registrado_permite_acceso() -> None:
     """Registered user: inner handler is called and its return value propagates."""
@@ -72,7 +64,6 @@ async def test_usuario_registrado_permite_acceso() -> None:
 
     repo.buscar_por_telegram_id.assert_called_once_with(123)
     assert result == 42
-
 
 async def test_usuario_no_registrado_deniega_acceso() -> None:
     """Unregistered user: reply_text called with denial message, returns END."""
@@ -88,7 +79,6 @@ async def test_usuario_no_registrado_deniega_acceso() -> None:
     )
     assert result == ConversationHandler.END
 
-
 async def test_effective_user_none_devuelve_end() -> None:
     """Channel post with no user: returns END without touching repo."""
     repo = _make_repo(found=True)
@@ -101,7 +91,6 @@ async def test_effective_user_none_devuelve_end() -> None:
     repo.buscar_por_telegram_id.assert_not_called()
     assert result == ConversationHandler.END
 
-
 async def test_repo_ausente_en_bot_data_devuelve_end() -> None:
     """Missing freelancer_repo in bot_data: returns END (wiring error)."""
     update = _make_update(user_id=123)
@@ -112,17 +101,14 @@ async def test_repo_ausente_en_bot_data_devuelve_end() -> None:
 
     assert result == ConversationHandler.END
 
-
 def test_functools_wraps_preserva_nombre() -> None:
     """@functools.wraps: decorated handler keeps __name__ of the original."""
     wrapped = requiere_rol(_dummy_handler)
     assert wrapped.__name__ == _dummy_handler.__name__
 
-
 # ---------------------------------------------------------------------------
 # Tests for requiere_admin
 # ---------------------------------------------------------------------------
-
 
 def _make_repo_admin(found: bool = True, es_admin: bool = False) -> MagicMock:
     repo = MagicMock()
@@ -133,7 +119,6 @@ def _make_repo_admin(found: bool = True, es_admin: bool = False) -> MagicMock:
     else:
         repo.buscar_por_telegram_id.return_value = None
     return repo
-
 
 async def test_requiere_admin_no_freelancer() -> None:
     """buscar_por_telegram_id returns None → reply + return None."""
@@ -149,7 +134,6 @@ async def test_requiere_admin_no_freelancer() -> None:
     )
     assert result is None
 
-
 async def test_requiere_admin_no_es_admin() -> None:
     """Freelancer found but es_admin=False → reply + return None."""
     repo = _make_repo_admin(found=True, es_admin=False)
@@ -164,7 +148,6 @@ async def test_requiere_admin_no_es_admin() -> None:
     )
     assert result is None
 
-
 async def test_requiere_admin_ok() -> None:
     """Freelancer found and es_admin=True → handler called and return value propagates."""
     repo = _make_repo_admin(found=True, es_admin=True)
@@ -177,11 +160,9 @@ async def test_requiere_admin_ok() -> None:
     repo.buscar_por_telegram_id.assert_called_once_with(123)
     assert result == 42
 
-
 # ---------------------------------------------------------------------------
 # Tests for requiere_admin_conv
 # ---------------------------------------------------------------------------
-
 
 class TestRequiereAdminConv:
     """requiere_admin_conv must return ConversationHandler.END (not None) on deny."""
@@ -255,16 +236,13 @@ class TestRequiereAdminConv:
             result = await handler(update, context)
         assert result == 42
 
-
 # ---------------------------------------------------------------------------
 # Tests for dev_telegram_ids() helper
 # ---------------------------------------------------------------------------
 
-
 # ---------------------------------------------------------------------------
 # Tests for es_admin_o_propietario
 # ---------------------------------------------------------------------------
-
 
 class TestEsAdminOPropietario:
     """SC-10: es_admin_o_propietario fails closed when freelancer_repo is absent."""
@@ -291,9 +269,7 @@ class TestEsAdminOPropietario:
             result = await es_admin_o_propietario(999, ctx)
         assert result is False
 
-
 _PATCH_SETTINGS = "garay.infraestructura.telegram.auth.obtener_settings"
-
 
 class TestDevTelegramIds:
     def test_parses_multiple_ids(self) -> None:

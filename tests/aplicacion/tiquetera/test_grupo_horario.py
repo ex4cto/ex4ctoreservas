@@ -21,7 +21,6 @@ _GRUPO_ID = "grupo-test-horario"
 _FECHA = datetime.date(2026, 9, 20)
 _UUID_A = uuid.uuid4()
 
-
 def _build_service(notificador: MagicMock) -> RegistrarVentaService:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock(
@@ -44,7 +43,6 @@ def _build_service(notificador: MagicMock) -> RegistrarVentaService:
         freelancers=MagicMock(),
         servicios=MagicMock(),
     )
-
 
 def _cmd(
     *,
@@ -71,12 +69,10 @@ def _cmd(
         horarios_por_servicio=horarios_por_servicio,
     )
 
-
 def _capture_message(svc: RegistrarVentaService, cmd: RegistrarVentaComando) -> str:
     notificador = cast(MagicMock, svc._notificador)
     svc.ejecutar(cmd)
     return str(notificador.notificar.call_args.args[0])
-
 
 class TestGrupoHorarioLine:
     def test_single_tour_with_schedule_contains_horario_line(self) -> None:

@@ -22,16 +22,13 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.nombre == s.nombre
     assert resultado.activo is True
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
 
-
 def test_listar_vacio(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     assert repo.listar() == []
-
 
 def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
@@ -41,7 +38,6 @@ def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo.guardar(s2)
     lista = repo.listar()
     assert len(lista) == 2
-
 
 def test_listar_incluye_neto(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
@@ -58,7 +54,6 @@ def test_listar_incluye_neto(sf: sessionmaker[Session]) -> None:
     assert lista[0].precio_neto_adulto == Decimal("100000")
     assert lista[0].precio_neto_nino == Decimal("50000")
 
-
 def test_listar_neto_null(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Sin Neto")
@@ -67,7 +62,6 @@ def test_listar_neto_null(sf: sessionmaker[Session]) -> None:
     assert len(lista) == 1
     assert lista[0].precio_neto_adulto is None
     assert lista[0].precio_neto_nino is None
-
 
 def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
@@ -78,11 +72,9 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     assert resultado.id == s.id
     assert resultado.nombre == "CITY TOUR"
 
-
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     assert repo.buscar_por_nombre("No Existe") is None
-
 
 def test_categoria_persiste(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
@@ -97,7 +89,6 @@ def test_categoria_persiste(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.categoria == "TOURS BAHIA"
 
-
 def test_permite_ninos_por_defecto_persiste(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     s = Servicio(id=uuid.uuid4(), numero=1, nombre="Tour Con Ninos")
@@ -105,7 +96,6 @@ def test_permite_ninos_por_defecto_persiste(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(s.id)
     assert resultado is not None
     assert resultado.permite_ninos is True
-
 
 def test_permite_ninos_false_persiste(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
@@ -115,7 +105,6 @@ def test_permite_ninos_false_persiste(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.permite_ninos is False
 
-
 def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
     repo = SQLAServicioRepository(sf)
     s = Servicio(id=uuid.uuid4(), numero=2, nombre="Sin Categoria")
@@ -124,15 +113,12 @@ def test_categoria_default_vacia(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.categoria == ""
 
-
 # ── siguiente_numero ──────────────────────────────────────────────────────────
-
 
 def test_siguiente_numero_tabla_vacia(sf: sessionmaker[Session]) -> None:
     """siguiente_numero() returns 1 when no tours exist (satisfies numero >= 1)."""
     repo = SQLAServicioRepository(sf)
     assert repo.siguiente_numero() == 1
-
 
 def test_siguiente_numero_con_tours_existentes(sf: sessionmaker[Session]) -> None:
     """siguiente_numero() returns max(numero) + 1 when tours exist."""
@@ -140,7 +126,6 @@ def test_siguiente_numero_con_tours_existentes(sf: sessionmaker[Session]) -> Non
     for num, nombre in [(1, "TOUR A"), (3, "TOUR B"), (5, "TOUR C")]:
         repo.guardar(Servicio(id=uuid.uuid4(), numero=num, nombre=nombre))
     assert repo.siguiente_numero() == 6
-
 
 def test_siguiente_numero_incluye_inactivos(sf: sessionmaker[Session]) -> None:
     """siguiente_numero() uses MAX over ALL rows, including inactive tours."""
@@ -150,9 +135,7 @@ def test_siguiente_numero_incluye_inactivos(sf: sessionmaker[Session]) -> None:
     # MAX is 10 (inactive), so next is 11 — inactive tours are not excluded
     assert repo.siguiente_numero() == 11
 
-
 # ── listar_activos ────────────────────────────────────────────────────────────
-
 
 def test_listar_activos_solo_activos(sf: sessionmaker[Session]) -> None:
     """listar_activos() returns only tours where activo=True."""
@@ -166,14 +149,12 @@ def test_listar_activos_solo_activos(sf: sessionmaker[Session]) -> None:
     assert activo.id in ids
     assert inactivo.id not in ids
 
-
 def test_listar_activos_vacio(sf: sessionmaker[Session]) -> None:
     """listar_activos() returns empty list when no active tours exist."""
     repo = SQLAServicioRepository(sf)
     inactivo = Servicio(id=uuid.uuid4(), numero=20, nombre="Solo Inactivo", activo=False)
     repo.guardar(inactivo)
     assert repo.listar_activos() == []
-
 
 def test_listar_sigue_devolviendo_todos(sf: sessionmaker[Session]) -> None:
     """Regression: listar() still returns ALL tours regardless of activo state."""
@@ -185,9 +166,7 @@ def test_listar_sigue_devolviendo_todos(sf: sessionmaker[Session]) -> None:
     todos = repo.listar()
     assert len(todos) == 2
 
-
 # ── horarios round-trip (task 2.1) ────────────────────────────────────────────
-
 
 def test_horarios_persiste_y_mantiene_orden(sf: sessionmaker[Session]) -> None:
     """Saving a Servicio with horarios and reloading returns the same list in order."""
@@ -203,7 +182,6 @@ def test_horarios_persiste_y_mantiene_orden(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.horarios == ["07:00", "19:00"]
 
-
 def test_horarios_vacio_persiste_como_lista_vacia(sf: sessionmaker[Session]) -> None:
     """Saving a Servicio without horarios returns an empty list on reload."""
     repo = SQLAServicioRepository(sf)
@@ -212,7 +190,6 @@ def test_horarios_vacio_persiste_como_lista_vacia(sf: sessionmaker[Session]) -> 
     resultado = repo.buscar_por_id(s.id)
     assert resultado is not None
     assert resultado.horarios == []
-
 
 def test_horarios_listar_preserva_datos(sf: sessionmaker[Session]) -> None:
     """listar() also returns correct horarios for each entity."""

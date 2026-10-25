@@ -16,18 +16,33 @@ def _reglas(**kwargs: object) -> ReglasComision:
         "tipo_cliente": TipoCliente.EXTERNO,
         "porcentaje_vendedor": Decimal("20"),
         "porcentaje_cerrador": Decimal("20"),
-        "porcentaje_referido_maximo": Decimal("10"),
     }
     defaults.update(kwargs)
     return ReglasComision(**defaults)  # type: ignore[arg-type]
-
 
 class TestReglasComision:
     def test_creacion_valida(self) -> None:
         r = _reglas()
         assert r.porcentaje_vendedor == Decimal("20")
         assert r.porcentaje_cerrador == Decimal("20")
-        assert r.porcentaje_referido_maximo == Decimal("10")
+
+    def test_sin_campo_porcentaje_referido_maximo(self) -> None:
+        """Task 1.2: porcentaje_referido_maximo must NOT exist on ReglasComision."""
+        r = _reglas()
+        assert not hasattr(r, "porcentaje_referido_maximo"), (
+            "porcentaje_referido_maximo debe haber sido eliminado de ReglasComision"
+        )
+
+    def test_construccion_sin_porcentaje_referido_maximo(self) -> None:
+        """Task 1.2: constructing without porcentaje_referido_maximo works fine."""
+        r = ReglasComision(
+            id=uuid.uuid4(),
+            tipo_cliente=TipoCliente.EXTERNO,
+            porcentaje_vendedor=Decimal("15"),
+            porcentaje_cerrador=Decimal("15"),
+        )
+        assert r.porcentaje_vendedor == Decimal("15")
+        assert r.porcentaje_cerrador == Decimal("15")
 
     def test_porcentajes_negativos_invalidos(self) -> None:
         with pytest.raises(PorcentajeInvalidoRegla):
@@ -40,17 +55,8 @@ class TestReglasComision:
         with pytest.raises(PorcentajeInvalidoRegla):
             _reglas(porcentaje_vendedor=Decimal("60"), porcentaje_cerrador=Decimal("60"))
 
-    def test_referido_mayor_10_invalido(self) -> None:
-        with pytest.raises(PorcentajeInvalidoRegla):
-            _reglas(porcentaje_referido_maximo=Decimal("11"))
-
-    def test_referido_exactamente_10_valido(self) -> None:
-        r = _reglas(porcentaje_referido_maximo=Decimal("10"))
-        assert r.porcentaje_referido_maximo == Decimal("10")
-
     def test_agencia_recibe_residual(self) -> None:
         # vendedor=20 + cerrador=20 + punto=0 → agencia absorbs 60%
-        # This is verified at motor level; here we confirm valid config is accepted.
         r = _reglas(porcentaje_vendedor=Decimal("20"), porcentaje_cerrador=Decimal("20"))
         residual = Decimal("100") - r.porcentaje_vendedor - r.porcentaje_cerrador
         assert residual == Decimal("60")
@@ -65,7 +71,6 @@ class TestReglasComision:
         assert a != c
         assert hash(a) == hash(b)
         assert hash(a) != hash(c)
-
 
 class TestReglasComisionCamposNuevos:
     """WU-1: punto_de_venta_nombre and numero_personas fields (REQ-06 / JD-6)."""
@@ -103,14 +108,11 @@ class TestReglasComisionCamposNuevos:
             _reglas(numero_personas=-1)
 
     def test_campos_nuevos_son_ultimos_no_rompe_posicionales(self) -> None:
-        # Non-defaulted fields must all come before defaulted fields.
-        # This constructs with keyword args matching all non-defaulted fields positionally.
         r = ReglasComision(
             id=uuid.uuid4(),
             tipo_cliente=TipoCliente.EXTERNO,
             porcentaje_vendedor=Decimal("30"),
             porcentaje_cerrador=Decimal("30"),
-            porcentaje_referido_maximo=Decimal("10"),
             punto_de_venta_nombre="Crespo",
             numero_personas=1,
         )

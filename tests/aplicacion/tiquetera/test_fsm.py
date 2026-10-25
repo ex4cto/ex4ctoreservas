@@ -8,8 +8,8 @@ from decimal import Decimal
 
 import pytest
 
-from garay.aplicacion.comun.montos import parsear_monto as _parsear_monto
 from garay.aplicacion.comun.formato import fmt_cop as _formatear_monto
+from garay.aplicacion.comun.montos import parsear_monto as _parsear_monto
 from garay.aplicacion.tiquetera.fsm import (
     EstadoFSM,
     FSMTiquetera,
@@ -36,11 +36,9 @@ FREELANCERS_TEST: list[tuple[uuid.UUID, str, bool]] = [
     (F3_ID, "Carlos", False),  # inactive
 ]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 @pytest.fixture()
 def fsm_multi() -> FSMTiquetera:
@@ -51,7 +49,6 @@ def fsm_multi() -> FSMTiquetera:
         multi_tour_habilitado=True,
     )
 
-
 @pytest.fixture()
 def fsm_con_roster() -> FSMTiquetera:
     return FSMTiquetera(
@@ -60,11 +57,9 @@ def fsm_con_roster() -> FSMTiquetera:
         freelancers=FREELANCERS_TEST,
     )
 
-
 @pytest.fixture()
 def ctx() -> ContextoVenta:
     return ContextoVenta()
-
 
 class TestIniciar:
     def test_iniciar_devuelve_estado_metodo_input(self, fsm: FSMTiquetera) -> None:
@@ -72,7 +67,6 @@ class TestIniciar:
         assert salida.nuevo_estado == EstadoFSM.METODO_INPUT
         assert "Manual" in salida.opciones
         assert "Foto" in salida.opciones
-
 
 class TestTipoReserva:
     def test_tipo_reserva_interno_avanza_a_familia(
@@ -88,7 +82,6 @@ class TestTipoReserva:
         # After reorder: TIPO_RESERVA comes after PUNTO_DE_VENTA, so it goes to FAMILIA
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
-
 
 class TestPickerFamilia:
     """Two-level button picker: pick familia, then tour in that familia."""
@@ -144,7 +137,6 @@ class TestPickerFamilia:
         salida = fsm.procesar(EstadoFSM.FAMILIA, "no-es-fam", ctx)
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-
 class TestPickerServicioEnFamilia:
     def _familia_ctx(self, fsm: FSMTiquetera, indice_familia: int) -> ContextoVenta:
         salida = fsm.procesar(EstadoFSM.FAMILIA, f"fam:{indice_familia}", ContextoVenta())
@@ -189,7 +181,6 @@ class TestPickerServicioEnFamilia:
         salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:9999", ctx)
         assert salida.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
 
-
 class TestAcumuladorDestino:
     """DESTINO repurposed as accumulator: add another tour or confirm."""
 
@@ -227,7 +218,6 @@ class TestAcumuladorDestino:
         assert any("Otro tour" in lbl for lbl in labels)
         assert any("Confirmar" in lbl for lbl in labels)
 
-
 class TestAcumuladorGuardVacio:
     """FIX 1: confirming with an empty selection must never advance the sale."""
 
@@ -248,7 +238,6 @@ class TestAcumuladorGuardVacio:
         salida = fsm.procesar(EstadoFSM.DESTINO, "✅ Confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
 
-
 class TestServicioEnFamiliaFallback:
     """FIX 2: stale state (familia_seleccionada=None) routes back to FAMILIA."""
 
@@ -258,7 +247,6 @@ class TestServicioEnFamiliaFallback:
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
         assert salida.opciones_estructuradas is not None
         assert all(d.startswith("fam:") for _, d in salida.opciones_estructuradas)
-
 
 class TestAcumuladorDeseleccion:
     """FIX 3: each selected tour renders a removable 'del:{numero}' button."""
@@ -297,7 +285,6 @@ class TestAcumuladorDeseleccion:
         for _, data in salida.opciones_estructuradas:
             assert len(data.encode("utf-8")) <= 64
 
-
 def _indice_de(fsm: FSMTiquetera, categoria: str) -> int:
     # After Slice 3: reach FAMILIA via TIPO_RESERVA (punto set before, TIPO_RESERVA → FAMILIA)
     salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ContextoVenta())
@@ -307,7 +294,6 @@ def _indice_de(fsm: FSMTiquetera, categoria: str) -> int:
             return indice
     raise AssertionError(f"categoria {categoria!r} not found")
 
-
 def _labels(salida: object) -> list[str]:
     from garay.aplicacion.tiquetera.fsm import SalidaFSM
 
@@ -315,7 +301,6 @@ def _labels(salida: object) -> list[str]:
     if salida.opciones_estructuradas is not None:
         return [label for label, _ in salida.opciones_estructuradas]
     return list(salida.opciones)
-
 
 class TestFechaSalida:
     def test_fecha_invalida_devuelve_error_mismo_estado(
@@ -328,7 +313,6 @@ class TestFechaSalida:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12", ctx)
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-
 class TestPax:
     def test_adultos_invalido_devuelve_error(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.PAX_ADULTOS, "0", ctx)
@@ -338,7 +322,6 @@ class TestPax:
         """After WU-3: PAX_NINOS transitions directly to MONTO_VALOR (no NUMERO_TICKET)."""
         salida = fsm.procesar(EstadoFSM.PAX_NINOS, "0", ctx)
         assert salida.nuevo_estado == EstadoFSM.MONTO_VALOR
-
 
 class TestMonto:
     def test_monto_neto_estado_acepta_valor_valido(
@@ -355,7 +338,6 @@ class TestMonto:
         ctx_con_valor = ContextoVenta(valor=Decimal("100000"))
         salida = fsm.procesar(EstadoFSM.MONTO_NETO, "200000", ctx_con_valor)
         assert salida.nuevo_estado == EstadoFSM.MONTO_NETO
-
 
 class TestHotelSkip:
     """WU-5: hotel skip — 'no'/'sin hotel'/etc. jumps to FECHA_SALIDA."""
@@ -381,7 +363,6 @@ class TestHotelSkip:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HABITACION, "301", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-
 class TestFechaFormatos:
     """WU-5: two-digit year format support."""
 
@@ -401,7 +382,6 @@ class TestFechaFormatos:
         assert salida.contexto.fecha_salida is not None
         assert salida.contexto.fecha_salida.year == 2026
 
-
 class TestOpcionesAcumulador:
     """The DESTINO accumulator always offers 'Otro tour' and 'Confirmar' (multi-tour mode)."""
 
@@ -411,7 +391,6 @@ class TestOpcionesAcumulador:
         labels = _labels(salida)
         assert any("Confirmar" in lbl for lbl in labels)
         assert any("Otro tour" in lbl for lbl in labels)
-
 
 class TestNetoAutoCalculo:
     """WU-5: automatic neto calculation from service catalog."""
@@ -461,7 +440,6 @@ class TestNetoAutoCalculo:
         assert salida.nuevo_estado == EstadoFSM.MONTO_VALOR
         assert "$50.000" in salida.mensaje or "$100.000" in salida.mensaje
 
-
 class TestResumen:
     """WU-5: summary shows tour names, not numbers; no Ticket N°; sin hotel sentinel."""
 
@@ -478,7 +456,6 @@ class TestResumen:
         ctx = ContextoVenta(rol_registrante="ambos")
         salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
         assert "Ticket N°" not in salida.mensaje
-
 
 class TestConfirmacionEditar:
     """Fix 3: Editar from CONFIRMACION now goes to EDITAR_SELECTOR, not TIPO_RESERVA."""
@@ -500,7 +477,6 @@ class TestConfirmacionEditar:
     def test_confirmacion_cancelar_cancela(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "❌ Cancelar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CANCELADO
-
 
 class TestMetodoInput:
     """WU-6: METODO_INPUT is the first state returned by iniciar()."""
@@ -529,7 +505,6 @@ class TestMetodoInput:
         salida = fsm.iniciar()
         assert "Manual" in salida.opciones
         assert "Foto" in salida.opciones
-
 
 class TestParticipante:
     def test_rol_ambos_salta_a_confirmacion(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
@@ -571,7 +546,6 @@ class TestParticipante:
         assert s.contexto.vendedor_nombre == "Luis"
         assert s.contexto.vendedor_id == F2_ID
 
-
 class TestConfirmacion:
     def test_confirmacion_confirmar_con_ctx_vacio_bloquea(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -580,12 +554,10 @@ class TestConfirmacion:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-
 class TestCancelar:
     def test_cancelar_desde_cualquier_estado(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:
         salida = fsm.cancelar(ctx)
         assert salida.nuevo_estado == EstadoFSM.CANCELADO
-
 
 class TestDestinoDesdeIA:
     """Tests for IA-seeded destinos_nombres pre-population and UI hints."""
@@ -637,7 +609,6 @@ class TestDestinoDesdeIA:
         ctx = ContextoVenta(destinos_nombres=["Destino Inventado"])
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Marie Real", ctx)
         assert salida.contexto.destinos_numeros == []
-
 
 class TestFlujoCompleto:
     def test_flujo_completo_feliz(self, fsm: FSMTiquetera) -> None:
@@ -759,7 +730,6 @@ class TestFlujoCompleto:
         assert s.nuevo_estado == EstadoFSM.TERMINADO
         assert s.listo is True
 
-
 class TestProcesarFoto:
     """Tests for procesar_foto() — photo AI pre-filled auto-advance logic."""
 
@@ -817,9 +787,7 @@ class TestProcesarFoto:
         # →PAX_NINOS (ninos=None, stops)
         assert salida.nuevo_estado == EstadoFSM.PAX_NINOS
 
-
 # ─── Fix 1: destino mensaje sin instruccion cuando hay seleccion ─────────────
-
 
 class TestDestinoMensaje:
     """Accumulator message lists the selected tours by name (multi-tour mode)."""
@@ -829,9 +797,7 @@ class TestDestinoMensaje:
         salida = fsm_multi.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert "Tour Playa Blanca" in salida.mensaje
 
-
 # ─── Fix 2: hotel skip detection flexible ────────────────────────────────────
-
 
 class TestEsSinHotel:
     """Fix 2: _es_sin_hotel covers flexible natural-language inputs."""
@@ -870,7 +836,6 @@ class TestEsSinHotel:
         assert _es_sin_hotel("sol") is False
         assert _es_sin_hotel("ibis") is False
 
-
 class TestHotelSkipFlexible:
     """Fix 2: FSM accepts flexible no-hotel phrases."""
 
@@ -891,9 +856,7 @@ class TestHotelSkipFlexible:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "Hotel Novotel Centro", ctx)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
 
-
 # ─── Fix 3: EDITAR_SELECTOR ──────────────────────────────────────────────────
-
 
 class TestEditarSelector:
     """Fix 3: field-by-field edit mode from CONFIRMACION."""
@@ -979,9 +942,7 @@ class TestEditarSelector:
         salida = fsm.procesar(EstadoFSM.PARTICIPANTE_ROL, "Ambos", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-
 # ─── Fix 4: formateo de montos ───────────────────────────────────────────────
-
 
 class TestFormatearMonto:
     """Fix 4: _formatear_monto uses dot as thousands separator."""
@@ -998,7 +959,6 @@ class TestFormatearMonto:
     def test_formatear_monto_millon(self) -> None:
         assert _formatear_monto(Decimal("1000000")) == "$1.000.000"
 
-
 class TestResumenMontos:
     """Fix 4: summary uses _formatear_monto for valor/abono/neto."""
 
@@ -1014,7 +974,6 @@ class TestResumenMontos:
         assert "200.000" in salida.mensaje
         assert "50.000" in salida.mensaje
         assert "100.000" in salida.mensaje
-
 
 class TestParsearMonto:
     """_parsear_monto must scale plain numbers < 1000 by x1000 (Colombian miles notation)."""
@@ -1034,9 +993,7 @@ class TestParsearMonto:
     def test_dot_thousands_large_not_scaled(self) -> None:
         assert _parsear_monto("1.800.000") == Decimal("1800000")
 
-
 # ─── foto_modo: jump to CONFIRMACION after PUNTO_DE_VENTA ────────────────────
-
 
 class TestFotoModo:
     """foto_modo=True causes _handle_punto_de_venta to skip DESTINO and go to PARTICIPANTE_ROL."""
@@ -1115,9 +1072,7 @@ class TestFotoModo:
     def test_invalid_returns_none(self) -> None:
         assert _parsear_monto("abc") is None
 
-
 # ─── Change 1: procesar_foto respects modo_edicion ───────────────────────────
-
 
 class TestProcesarFotoModoEdicion:
     """Change 1: procesar_foto must NOT auto-advance when modo_edicion=True."""
@@ -1157,9 +1112,7 @@ class TestProcesarFotoModoEdicion:
         # CLIENTE_NOMBRE has value, so it auto-advances to CLIENTE_TELEFONO (no value → stops)
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_TELEFONO
 
-
 # ─── Change 2: Adultos/Niños edit covers both fields ─────────────────────────
-
 
 class TestEditarAdultosNinos:
     """Change 2: editing 'Adultos/Niños' must prompt for niños after adultos."""
@@ -1186,9 +1139,7 @@ class TestEditarAdultosNinos:
         assert salida2.contexto.ninos == 1
         assert salida2.contexto.modo_edicion is False
 
-
 # ─── Change 3: Habitación en _CAMPOS_EDITABLES ───────────────────────────────
-
 
 class TestHabitacionEditable:
     """Change 3: 'Habitación' must appear in _CAMPOS_EDITABLES."""
@@ -1213,9 +1164,7 @@ class TestHabitacionEditable:
         assert salida.nuevo_estado == EstadoFSM.CLIENTE_HABITACION
         assert salida.contexto.modo_edicion is True
 
-
 # ─── WU-2 Phase 4: FSM Picker Core ───────────────────────────────────────────
-
 
 class TestFSMFreelancerRoster:
     """Phase 4 — FSM accepts a freelancer roster and exposes picker helpers."""
@@ -1257,9 +1206,7 @@ class TestFSMFreelancerRoster:
         assert any("[inactivo]" in label for label in labels)
         assert f"fl:{F3_ID}" in datas
 
-
 # ─── WU-2 Phase 5: PARTICIPANTE_OTRO Picker ──────────────────────────────────
-
 
 class TestParticipanteOtroPicker:
     """Phase 5 — PARTICIPANTE_OTRO emits picker + parses fl:{uuid}."""
@@ -1324,9 +1271,7 @@ class TestParticipanteOtroPicker:
         assert s.nuevo_estado == EstadoFSM.PARTICIPANTE_OTRO
         assert s.opciones_estructuradas is not None
 
-
 # ─── WU-2 Phase 6: Edit Pickers ──────────────────────────────────────────────
-
 
 class TestEditarParticipantesPicker:
     """Phase 6 — EDITAR_VENDEDOR / EDITAR_CERRADOR become fl: pickers."""
@@ -1381,9 +1326,7 @@ class TestEditarParticipantesPicker:
         assert s.opciones_estructuradas is not None
         assert len(s.opciones_estructuradas) == 3
 
-
 # ─── Change 4: EDITAR_VENDEDOR / EDITAR_CERRADOR states ─────────────────────
-
 
 class TestEditarParticipantes:
     """Change 4: new FSM states for editing participant names directly."""
@@ -1462,9 +1405,7 @@ class TestEditarParticipantes:
     def test_negative_returns_none(self) -> None:
         assert _parsear_monto("-500") is None
 
-
 # ─── foto_modo: salta a PARTICIPANTE_ROL (no CONFIRMACION) ──────────────────
-
 
 class TestFotoModoSaltaParticipanteRol:
     """Cambio 3: foto_modo=True non-Crespo routes through TIPO_RESERVA then PARTICIPANTE_ROL.
@@ -1500,9 +1441,7 @@ class TestFotoModoSaltaParticipanteRol:
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s1.contexto)
         assert s2.contexto.foto_modo is False
 
-
 # ─── Validación en _handle_confirmacion ──────────────────────────────────────
-
 
 @pytest.fixture()
 def ctx_completo() -> ContextoVenta:
@@ -1526,7 +1465,6 @@ def ctx_completo() -> ContextoVenta:
         rol_registrante="ambos",
         neto=Decimal("180000"),
     )
-
 
 class TestValidarDatosConfirmacion:
     def test_ctx_completo_no_tiene_faltantes(
@@ -1602,7 +1540,6 @@ class TestValidarDatosConfirmacion:
         salida = fsm.procesar(EstadoFSM.CONFIRMACION, "✅ Confirmar", ctx_completo)
         assert salida.nuevo_estado == EstadoFSM.TERMINADO
 
-
 class TestEditarMensajesConValorActual:
     """_handle_editar_selector shows current ctx value in the prompt."""
 
@@ -1675,7 +1612,6 @@ class TestEditarMensajesConValorActual:
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Abono", ctx_completo)
         assert "$130.000" in salida.mensaje
 
-
 class TestNetoRecalculoEnEdicion:
     """Neto must recalculate from catalog whenever destino or pax changes in edit mode."""
 
@@ -1726,9 +1662,7 @@ class TestNetoRecalculoEnEdicion:
         # Service 1: 100000 x 2 adultos = 200000
         assert s2.contexto.neto == Decimal("200000")
 
-
 # ─── Destination picker: edit flow, photo mode, callback_data limits ─────────
-
 
 class TestEditarDestinosPicker:
     """Editing 'Destinos' routes to the family picker and resets the selection."""
@@ -1768,7 +1702,6 @@ class TestEditarDestinosPicker:
         s4 = fsm_multi.procesar(EstadoFSM.DESTINO, "✅ Confirmar", s3.contexto)
         assert s4.nuevo_estado == EstadoFSM.CONFIRMACION
 
-
 class TestPickerModoFotoRegresion:
     """Photo mode must never enter the family/service picker."""
 
@@ -1792,7 +1725,6 @@ class TestPickerModoFotoRegresion:
         ctx = ContextoVenta(foto_modo=True, destinos_numeros=[1], adultos=1, ninos=0)
         salida = fsm.procesar_foto(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
         assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
-
 
 class TestCallbackDataLimite:
     """Every generated tour callback_data must fit Telegram's 64-byte limit."""
@@ -1836,9 +1768,7 @@ class TestCallbackDataLimite:
                     f"overflow (solo_activos={solo_activos}): {data!r}"
                 )
 
-
 # ─── Fix 2: Empty-roster guard ───────────────────────────────────────────────
-
 
 class TestEmptyRosterGuard:
     """PARTICIPANTE_ROL must not enter a button-less dead-end when no active freelancers."""
@@ -1882,9 +1812,7 @@ class TestEmptyRosterGuard:
         assert s.opciones_estructuradas is not None
         assert len(s.opciones_estructuradas) > 0
 
-
 # ─── Fix 3: End-to-end flujo completo for solo vendedor / solo cerrador ───────
-
 
 def _indice_familia_de(fsm: FSMTiquetera, categoria: str) -> int:
     """Return the index of a family by category name (substring match)."""
@@ -1895,7 +1823,6 @@ def _indice_familia_de(fsm: FSMTiquetera, categoria: str) -> int:
         if categoria in label:
             return i
     raise ValueError(f"Category {categoria!r} not found in family picker")
-
 
 class TestFlujoCompletoSoloParticipante:
     """Fix 3 — full flow for 'Solo vendedor' and 'Solo cerrador' roles."""
@@ -2019,9 +1946,7 @@ class TestFlujoCompletoSoloParticipante:
         assert s.nuevo_estado == EstadoFSM.TERMINADO
         assert s.listo is True
 
-
 # ─── Fix 4: Edit guard symmetry in _handle_editar_vendedor ───────────────────
-
 
 class TestEditarVendedorGuard:
     """Fix 4 — _handle_editar_vendedor must guard against None/unknown rol_registrante."""

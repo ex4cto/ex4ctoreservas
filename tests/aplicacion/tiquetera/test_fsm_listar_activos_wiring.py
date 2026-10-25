@@ -13,7 +13,6 @@ _MAIN_PY = (
     / "src" / "garay" / "infraestructura" / "telegram" / "main.py"
 )
 
-
 def _catalog_build_calls_listar_activos() -> bool:
     """Parse main.py AST and verify it calls servicio_repo.listar_activos().
 
@@ -34,7 +33,6 @@ def _catalog_build_calls_listar_activos() -> bool:
         ):
             return True
     return False
-
 
 def test_fsm_built_with_listar_activos() -> None:
     """main.py must use servicio_repo.listar_activos() for the FSM catalog build,

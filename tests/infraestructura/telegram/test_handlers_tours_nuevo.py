@@ -19,7 +19,6 @@ from garay.dominio.servicios.entidades import Servicio
 # Shared test helpers
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     nombre: str = "City Tour",
     categoria: str = "PLAYERO",
@@ -38,7 +37,6 @@ def _servicio(
         precio_neto_nino=neto_nino,
     )
 
-
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=42)
@@ -55,7 +53,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
     else:
         update.callback_query = None
     return update
-
 
 def _make_context(
     servicios: list[Servicio] | None = None,
@@ -74,11 +71,9 @@ def _make_context(
     ctx.bot_data = {"servicio_repo": repo, "fsm": fsm}
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Task 2.1 RED — State constants + FSM range test (no PTB needed, pure constants)
 # ---------------------------------------------------------------------------
-
 
 class TestNvtStateConstants:
     """NVT_* constants must be unique, in range 230-236, and correctly valued."""
@@ -195,11 +190,9 @@ class TestNvtStateConstants:
         overlap = fase1_states & nvt_states
         assert not overlap, f"State collision with Fase 1: {overlap}"
 
-
 # ---------------------------------------------------------------------------
 # Task 2.3 RED — Pure helper functions (unit tests, no async/PTB)
 # ---------------------------------------------------------------------------
-
 
 class TestNormalizarFamilia:
     """_normalizar_familia: trim + UPPERCASE + collapse internal spaces."""
@@ -223,7 +216,6 @@ class TestNormalizarFamilia:
         from garay.infraestructura.telegram.handlers_tours import _normalizar_familia
 
         assert _normalizar_familia("CULTURAL") == "CULTURAL"
-
 
 class TestReusarFamilia:
     """_reusar_familia: return existing casing when match found, else normalized."""
@@ -255,7 +247,6 @@ class TestReusarFamilia:
         result = _reusar_familia("PLAYERO", servicios)
         assert result == "PLAYERO"  # first match
 
-
 class TestLimpiarNvt:
     """_limpiar_nvt: removes all nvt_* keys from user_data."""
 
@@ -284,7 +275,6 @@ class TestLimpiarNvt:
         ctx = MagicMock()
         ctx.user_data = None
         _limpiar_nvt(ctx)  # must not raise
-
 
 class TestRenderFichaNuevo:
     """_render_ficha_nuevo: renders family, name, and '—' for None netos."""
@@ -327,11 +317,9 @@ class TestRenderFichaNuevo:
         assert "120000" in result
         assert "80000" in result
 
-
 # ---------------------------------------------------------------------------
 # Task 2.5 RED — Entry + family selection via PTB router
 # ---------------------------------------------------------------------------
-
 
 class TestCmdNuevoTour:
     """cmd_nuevo_tour: entry point displays family buttons, loads servicios into user_data."""
@@ -385,7 +373,6 @@ class TestCmdNuevoTour:
 
         ctx.bot_data["servicio_repo"].listar_activos.assert_called_once()
         ctx.bot_data["servicio_repo"].listar.assert_not_called()
-
 
 class TestHandleNvtFamilia:
     """handle_nvt_familia: family button press stores familia and advances to NVT_NOMBRE."""
@@ -442,11 +429,9 @@ class TestHandleNvtFamilia:
         assert result == NVT_FAMILIA
         assert ctx.user_data.get("nvt_editando") is True
 
-
 # ---------------------------------------------------------------------------
 # Task 2.7 RED — Nueva familia text input
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtNuevaFamilia:
     """handle_nvt_nueva_familia: normalizes text, reuses existing family, advances to NVT_NOMBRE."""
@@ -499,11 +484,9 @@ class TestHandleNvtNuevaFamilia:
         assert result == NVT_NOMBRE
         assert ctx.user_data.get("nvt_familia") == "PLAYERO"
 
-
 # ---------------------------------------------------------------------------
 # Task 2.9 RED — Nombre capture (NVT_NOMBRE state)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtNombre:
     """handle_nvt_nombre: validates name, checks duplicates, advances state accordingly."""
@@ -580,11 +563,9 @@ class TestHandleNvtNombre:
         # Must clear nvt_editando flag
         assert not ctx.user_data.get("nvt_editando")
 
-
 # ---------------------------------------------------------------------------
 # Task 2.11 RED — Duplicate name confirmation (NVT_DUP_CONFIRMA state)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtDup:
     """handle_nvt_dup: usar → NVT_NETO_ADULTO; cambiar → NVT_NOMBRE."""
@@ -639,11 +620,9 @@ class TestHandleNvtDup:
 
         assert result == NVT_CONFIRMA
 
-
 # ---------------------------------------------------------------------------
 # Task 2.13 RED — Neto adulto capture (NVT_NETO_ADULTO state)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtNetoAdulto:
     """handle_nvt_neto_adulto: empty→None skip; valid>0→Decimal; invalid/<=0→error."""
@@ -760,11 +739,9 @@ class TestHandleNvtNetoAdulto:
         assert result == NVT_CONFIRMA
         assert not ctx.user_data.get("nvt_editando")
 
-
 # ---------------------------------------------------------------------------
 # Task 2.15 RED — Neto niño capture (NVT_NETO_NINO state)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtNetoNino:
     """handle_nvt_neto_nino: same logic as neto adulto but advances to NVT_CONFIRMA."""
@@ -859,11 +836,9 @@ class TestHandleNvtNetoNino:
         assert result == NVT_CONFIRMA
         assert not ctx.user_data.get("nvt_editando")
 
-
 # ---------------------------------------------------------------------------
 # Task 2.17 RED — Confirmation screen (NVT_CONFIRMA state)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtCancelar:
     """handle_nvt_cancelar: clears nvt_* keys and ends conversation."""
@@ -886,7 +861,6 @@ class TestHandleNvtCancelar:
         assert result == ConversationHandler.END
         for key in ("nvt_familia", "nvt_nombre", "nvt_neto_adulto", "nvt_neto_nino"):
             assert key not in ctx.user_data
-
 
 class TestHandleNvtEdit:
     """handle_nvt_edit: sets nvt_editando=True, returns the target field's state."""
@@ -961,11 +935,9 @@ class TestHandleNvtEdit:
         assert ctx.user_data.get("nvt_neto_adulto") == Decimal("100000")
         assert ctx.user_data.get("nvt_neto_nino") is None
 
-
 # ---------------------------------------------------------------------------
 # Task 2.19 RED — Creation (handle_nvt_crear)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtCrear:
     """handle_nvt_crear: builds Servicio, calls guardar, refreshes FSM, replies ok."""
@@ -1052,11 +1024,9 @@ class TestHandleNvtCrear:
         texts = [str(c[0][0]) for c in update.effective_message.reply_text.call_args_list]
         assert any("TOUR PLAYA" in t for t in texts)
 
-
 # ---------------------------------------------------------------------------
 # Fix W-1 RED — Case-insensitive duplicate name detection
 # ---------------------------------------------------------------------------
-
 
 class TestHandleNvtNombreCaseInsensitive:
     """handle_nvt_nombre must detect duplicates case-insensitively (owner decision)."""
@@ -1135,11 +1105,9 @@ class TestHandleNvtNombreCaseInsensitive:
         # nvt_editando must still be set so the dup handler can return to NVT_CONFIRMA
         assert ctx.user_data.get("nvt_editando") is True
 
-
 # ---------------------------------------------------------------------------
 # Fix W-2 RED — Dead handler registration in NVT_FAMILIA must be removed
 # ---------------------------------------------------------------------------
-
 
 class TestNvtFamiliaDeadHandlerRemoved:
     """NVT_FAMILIA must not contain handle_nvt_edit; [Editar familia] fires from NVT_CONFIRMA."""
@@ -1196,11 +1164,9 @@ class TestNvtFamiliaDeadHandlerRemoved:
             f"NVT_CONFIRMA must have exactly 1 handle_nvt_edit callback; found {len(edit_cbs)}"
         )
 
-
 # ---------------------------------------------------------------------------
 # Fix S-1 RED — Re-edit "Cambiar nombre" path with a second duplicate name
 # ---------------------------------------------------------------------------
-
 
 class TestReEditNombreSegundoDuplicado:
     """S-1: re-edit 'Cambiar nombre' with another dup → re-warn, nvt_editando preserved."""
@@ -1233,11 +1199,9 @@ class TestReEditNombreSegundoDuplicado:
         # pending name stored correctly
         assert ctx.user_data.get("nvt_nombre_pendiente") == "tour nocturno"
 
-
 # ---------------------------------------------------------------------------
 # Task 2.21 RED — Menu visibility tests
 # ---------------------------------------------------------------------------
-
 
 class TestMenuNuevoTour:
     """nuevo_tour must appear for ADMIN tier and NOT for FREELANCER tier."""
@@ -1263,11 +1227,9 @@ class TestMenuNuevoTour:
         assert nvt is not None, "nuevo_tour must be in CATALOGO_COMANDOS"
         assert nvt.grupo == GrupoComando.TOURS
 
-
 # ---------------------------------------------------------------------------
 # Task 2.22 RED — Routing correctness: unique handlers per state
 # ---------------------------------------------------------------------------
-
 
 class TestNvtStateRouting:
     """Assert structural correctness of the ConversationHandler routing table."""
@@ -1308,11 +1270,9 @@ class TestNvtStateRouting:
                 f"State {state_id} has {len(text_handlers)} MessageHandlers, expected exactly 1"
             )
 
-
 # ---------------------------------------------------------------------------
 # Task 7.1 RED -- NVT-HOR state constants + editor handlers
 # ---------------------------------------------------------------------------
-
 
 class TestNvtHorStateConstants:
     """NVT_HOR_* constants must be defined, unique, in range 240-241."""
@@ -1334,7 +1294,6 @@ class TestNvtHorStateConstants:
         )
 
         assert NVT_HOR_LISTA != NVT_HOR_AGREGAR
-
 
 class TestHandleNvtEditHorarios:
     """handle_nvt_edit with campo=horarios must open the NVT-HOR editor."""
@@ -1376,7 +1335,6 @@ class TestHandleNvtEditHorarios:
             for c in call_args
         ]
         assert any(isinstance(k, InlineKeyboardMarkup) for k in keyboards)
-
 
 class TestHandleNvtHorLista:
     """handle_nvt_hor_lista routes nvt_hor_agregar / nvt_hor_quitar / nvt_hor_listo."""
@@ -1449,7 +1407,6 @@ class TestHandleNvtHorLista:
 
         assert result == NVT_CONFIRMA
 
-
 class TestHandleNvtHorAgregarTexto:
     """handle_nvt_hor_agregar_texto validates and adds horario to user_data."""
 
@@ -1498,7 +1455,6 @@ class TestHandleNvtHorAgregarTexto:
         result = await handle_nvt_hor_agregar_texto(update, ctx)
 
         assert result == NVT_HOR_AGREGAR
-
 
 class TestNvtCrearIncludesHorarios:
     """handle_nvt_crear must pass nvt_horarios to Servicio constructor."""
@@ -1552,11 +1508,9 @@ class TestNvtCrearIncludesHorarios:
         saved = repo.guardar.call_args[0][0]
         assert saved.horarios == []
 
-
 # ---------------------------------------------------------------------------
 # Task 7.3 RED -- NVT-HOR states wired in bot.py
 # ---------------------------------------------------------------------------
-
 
 class TestNvtHorStatesBotWiring:
     """Structural: NVT_HOR_LISTA and NVT_HOR_AGREGAR must be in nuevo_tour_conv_handler."""
@@ -1618,11 +1572,9 @@ class TestNvtHorStatesBotWiring:
             f"NVT_HOR_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
         )
 
-
 # ---------------------------------------------------------------------------
 # Bug T — _render_ficha_nuevo: fmt_cop para montos, html.escape en strings
 # ---------------------------------------------------------------------------
-
 
 class TestRenderFichaNuevo:
     """_render_ficha_nuevo must use fmt_cop and escape user strings."""

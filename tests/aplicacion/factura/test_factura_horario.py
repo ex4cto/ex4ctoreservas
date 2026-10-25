@@ -25,10 +25,8 @@ def _ctx(
     ctx.valor = Decimal("500000")
     return ctx
 
-
 _VID = uuid.uuid4()
 _SVC = GenerarFacturaService()
-
 
 class TestFacturaHorarioRow:
     def test_single_tour_with_schedule_contains_horario_row(self) -> None:

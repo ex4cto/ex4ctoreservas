@@ -22,11 +22,9 @@ def _ctx_minimo() -> ContextoCotizacion:
         ninos=0,
     )
 
-
 @pytest.fixture
 def svc() -> GenerarCotizacionService:
     return GenerarCotizacionService()
-
 
 class TestReturnType:
     def test_returns_non_empty_string(self, svc: GenerarCotizacionService) -> None:
@@ -34,7 +32,6 @@ class TestReturnType:
         html = svc.generar(_ctx_minimo())
         assert isinstance(html, str)
         assert len(html) > 100
-
 
 class TestTitles:
     def test_es_title(self, svc: GenerarCotizacionService) -> None:
@@ -58,7 +55,6 @@ class TestTitles:
         assert "FACTURA DE SERVICIO" not in html
         assert "SERVICE INVOICE" not in html
 
-
 class TestNoPaymentBlock:
     def test_no_payment_methods_block(self, svc: GenerarCotizacionService) -> None:
         """SC-C05: Payment methods block is absent."""
@@ -66,7 +62,6 @@ class TestNoPaymentBlock:
         assert "BRE-B" not in html
         assert "@garay58804" not in html
         assert "085-043956-43" not in html
-
 
 class TestNoAbonoRows:
     def test_no_abono_saldo_rows(self, svc: GenerarCotizacionService) -> None:
@@ -82,14 +77,12 @@ class TestNoAbonoRows:
         assert "Saldo pendiente" not in html
         assert "Balance due" not in html
 
-
 class TestFinancialRow:
     def test_valor_total_formatted(self, svc: GenerarCotizacionService) -> None:
         """SC-C07: Single financial row shows valor_total in COP format."""
         ctx = _ctx_minimo()  # adultos=2 x 150000 = 300000
         html = svc.generar(ctx)
         assert "$300.000" in html
-
 
 class TestClientBox:
     def test_nombre_and_email_present(self, svc: GenerarCotizacionService) -> None:
@@ -110,7 +103,6 @@ class TestClientBox:
         assert "Pedro" in html
         assert "—" in html
 
-
 class TestFooterText:
     def test_es_footer(self, svc: GenerarCotizacionService) -> None:
         """SC-C10: ES footer mentions 'cotización de servicio'."""
@@ -125,7 +117,6 @@ class TestFooterText:
         ctx.factura_idioma = "en"
         html = svc.generar(ctx)
         assert "service quote" in html.lower()
-
 
 class TestCancellationPolicies:
     def test_es_has_fuerza_mayor(self, svc: GenerarCotizacionService) -> None:
@@ -142,7 +133,6 @@ class TestCancellationPolicies:
         html = svc.generar(ctx)
         assert "FORCE MAJEURE" in html or "force majeure" in html.lower()
 
-
 class TestLayout:
     def test_page_break_present(self, svc: GenerarCotizacionService) -> None:
         """SC-C13: Two-page layout has page-break."""
@@ -153,7 +143,6 @@ class TestLayout:
         """SC-C14: NIT appears in company bar."""
         html = svc.generar(_ctx_minimo())
         assert "1128049588-6" in html
-
 
 class TestLangAttribute:
     def test_lang_en(self, svc: GenerarCotizacionService) -> None:
@@ -178,7 +167,6 @@ class TestLangAttribute:
         assert 'lang="es"' in html
         assert "COTIZACIÓN DE SERVICIO" in html
 
-
 class TestEnglishPolicies:
     def test_en_has_spanish_prevails_notice(self, svc: GenerarCotizacionService) -> None:
         """SC-C17: EN HTML includes 'Spanish shall prevail' clause."""
@@ -187,7 +175,6 @@ class TestEnglishPolicies:
         html = svc.generar(ctx)
         assert "Spanish" in html
         assert "prevail" in html.lower()
-
 
 class TestServiceDetailBox:
     def test_tour_name_present(self, svc: GenerarCotizacionService) -> None:

@@ -34,7 +34,6 @@ def _make_session_factory() -> sessionmaker:  # type: ignore[type-arg]
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 def test_seed_completo_sqlite() -> None:
     """Seed populates all tables with the expected row counts (3 global + 2 Crespo = 5)."""
     sf = _make_session_factory()
@@ -59,7 +58,6 @@ def test_seed_completo_sqlite() -> None:
         assert (
             session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
         )
-
 
 def test_seed_idempotente_sqlite() -> None:
     """Running the seed twice does not duplicate any records."""
@@ -87,7 +85,6 @@ def test_seed_idempotente_sqlite() -> None:
             session.execute(sa.select(sa.func.count()).select_from(FreelancerModel)).scalar() == 8
         )
 
-
 def test_seed_servicios_numero_unico() -> None:
     """Each service has a unique numero — the unique constraint holds."""
     sf = _make_session_factory()
@@ -97,7 +94,6 @@ def test_seed_servicios_numero_unico() -> None:
     with sf.begin() as session:
         numeros = session.execute(sa.select(ServicioModel.numero)).scalars().all()
     assert len(numeros) == len(set(numeros)), "Duplicate service numbers found"
-
 
 def test_seed_puntos_porcentaje_capa() -> None:
     """Crespo has 20% cap, the rest have 0%."""
@@ -115,7 +111,6 @@ def test_seed_puntos_porcentaje_capa() -> None:
     for r in others:
         assert float(r.porcentaje_capa) == 0.0
 
-
 def test_seed_reglas_tipo_cliente_valores() -> None:
     """Commission rules store the correct string values for tipo_cliente (global rows)."""
     sf = _make_session_factory()
@@ -129,7 +124,6 @@ def test_seed_reglas_tipo_cliente_valores() -> None:
     tipos = {r.tipo_cliente for r in rows if r.punto_de_venta_nombre is None}
     expected = {TipoCliente.INTERNO.value, TipoCliente.EXTERNO.value, TipoCliente.DIGITAL.value}
     assert tipos == expected
-
 
 def test_seed_crespo_rows_exist() -> None:
     """Crespo commission rows are seeded with correct values (JD-4 / T-seed)."""
@@ -167,7 +161,6 @@ def test_seed_crespo_rows_exist() -> None:
     assert Decimal(str(row_2p.porcentaje_cerrador)) == Decimal("30")
     assert Decimal(str(row_2p.porcentaje_referido_maximo)) == Decimal("10")
 
-
 def test_seed_freelancers_activos() -> None:
     """All seeded freelancers start active with no telegram_user_id."""
     sf = _make_session_factory()
@@ -179,7 +172,6 @@ def test_seed_freelancers_activos() -> None:
 
     assert all(r.activo for r in rows)
     assert all(r.telegram_user_id is None for r in rows)
-
 
 class TestCategoriasEgresoSeed:
     """FIX 3: seed.py must use CATEGORIA_TRANSPORTE constant (not raw literal)
@@ -222,7 +214,6 @@ class TestCategoriasEgresoSeed:
         assert row is not None, f"No row with nombre='{CATEGORIA_TRANSPORTE}' found after seed"
         assert row.orden == 8
 
-
 def test_seed_playa_linda_tiene_precio_neto() -> None:
     """Service #124 (PLAYA LINDA) must have precio_neto_adulto == 55000 after bug-1B fix."""
     sf = _make_session_factory()
@@ -240,7 +231,6 @@ def test_seed_playa_linda_tiene_precio_neto() -> None:
     # neto_nino intentionally stays null (no children price in the catalog)
     assert row.precio_neto_nino is None
 
-
 def test_seed_permite_ninos_true_por_defecto() -> None:
     """A regular tour (#1) admits children (permite_ninos=True)."""
     sf = _make_session_factory()
@@ -251,7 +241,6 @@ def test_seed_permite_ninos_true_por_defecto() -> None:
             sa.select(ServicioModel).where(ServicioModel.numero == 1)
         ).scalar_one()
     assert row.permite_ninos is True
-
 
 def test_seed_permite_ninos_false_para_tours_sin_ninos() -> None:
     """Tours flagged 'NO INGRESAN NIÑOS'/'NO SE ACEPTAN' must seed permite_ninos=False."""
@@ -267,11 +256,9 @@ def test_seed_permite_ninos_false_para_tours_sin_ninos() -> None:
     assert filas, "no se encontraron los tours sin niños esperados"
     assert all(permite is False for _numero, permite in filas)
 
-
 # ---------------------------------------------------------------------------
 # Tests for precio_sugerido_adulto / precio_sugerido_nino seed (T1.13)
 # ---------------------------------------------------------------------------
-
 
 def test_seed_servicios_precio_sugerido_adulto_tour_1() -> None:
     """Service #1 (PLAYA BLANCA X TIERRA) must have precio_sugerido_adulto == 100000."""
@@ -285,7 +272,6 @@ def test_seed_servicios_precio_sugerido_adulto_tour_1() -> None:
     assert row.precio_sugerido_adulto == Decimal("100000"), (
         f"Expected 100000 for tour #1, got {row.precio_sugerido_adulto}"
     )
-
 
 def test_seed_servicios_precio_sugerido_nino_none_cuando_no_aplica() -> None:
     """Service #1 must have precio_sugerido_nino as None (not in seed JSON for tour 1)."""

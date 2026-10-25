@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-from garay.aplicacion.tiquetera.fsm import EstadoFSM, FSMTiquetera
+from garay.aplicacion.tiquetera.fsm import FSMTiquetera
 from garay.dominio.ventas.contexto import ContextoVenta
 from tests.aplicacion.tiquetera.conftest import catalogo_fsm
 
@@ -27,7 +27,6 @@ def _ctx_con_fecha_y_horario(numero: int, horario: str | None) -> ContextoVenta:
         ctx.horarios_por_servicio = {numero: horario}
     return ctx
 
-
 def _ctx_con_fecha_sin_horario(numero: int) -> ContextoVenta:
     """Return a ContextoVenta with one destino and date but NO horario selection."""
     ctx = ContextoVenta()
@@ -40,12 +39,10 @@ def _ctx_con_fecha_sin_horario(numero: int) -> ContextoVenta:
     # horarios_por_servicio intentionally left empty
     return ctx
 
-
 _NETOS_CITY_TOUR: dict[str, Decimal] = {
     "08:00": Decimal("60000"),
     "13:00": Decimal("55000"),
 }
-
 
 class TestCalcularNetoConHorario:
     """_calcular_neto uses per-horario neto when available."""
@@ -132,7 +129,6 @@ class TestCalcularNetoConHorario:
         ctx = _ctx_con_fecha_sin_horario(numero=1)
         neto = fsm._calcular_neto(ctx)
         assert neto == Decimal("50000")
-
 
 class TestRefrescarServiciosConNetos:
     """refrescar_servicios with netos_por_horario data updates internal catalog."""

@@ -24,7 +24,6 @@ from garay.infraestructura.telegram.handlers_tours import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     nombre: str = "CITY TOUR",
     categoria: str = "CARTAGENA",
@@ -40,7 +39,6 @@ def _servicio(
         precio_neto_nino=None,
     )
 
-
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=123)
@@ -55,7 +53,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
     else:
         update.callback_query = None
     return update
-
 
 def _make_context(
     servicios: list[Servicio] | None = None,
@@ -74,11 +71,9 @@ def _make_context(
     ctx.bot_data = {"servicio_repo": repo, "fsm": fsm}
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Phase 6.2 — /eliminar_tour tests
 # ---------------------------------------------------------------------------
-
 
 class TestCmdEliminarTour:
     @pytest.mark.asyncio
@@ -94,7 +89,6 @@ class TestCmdEliminarTour:
         assert result == ELT_FAMILIA
         # Must use listar() (ALL tours) for navigation
         ctx.bot_data["servicio_repo"].listar.assert_called_once()
-
 
 class TestHandleEltFamilia:
     @pytest.mark.asyncio
@@ -115,7 +109,6 @@ class TestHandleEltFamilia:
             reply_markup=None
         )
 
-
 class TestHandleEltTour:
     @pytest.mark.asyncio
     async def test_seleccionar_tour_muestra_confirmacion(self) -> None:
@@ -134,7 +127,6 @@ class TestHandleEltTour:
         update.effective_message.reply_text.assert_called_once()
         msg = update.effective_message.reply_text.call_args[0][0]
         assert "CITY TOUR" in msg
-
 
 class TestHandleEltConfirma:
     @pytest.mark.asyncio
@@ -181,7 +173,6 @@ class TestHandleEltConfirma:
         assert result == ConversationHandler.END
         ctx.bot_data["servicio_repo"].guardar.assert_not_called()
         ctx.bot_data["fsm"].refrescar_servicios.assert_not_called()
-
 
 class TestRefrescoConListarActivos:
     @pytest.mark.asyncio

@@ -30,7 +30,6 @@ def _fsm() -> FSMTiquetera:
     ]
     return FSMTiquetera(servicios=servicios, puntos_venta=["Marie Real"])
 
-
 def _build_handler() -> ConversationHandler:  # type: ignore[type-arg]
     """Build the ConversationHandler from crear_aplicacion without running the event loop."""
     token = "fake:token"
@@ -44,7 +43,6 @@ def _build_handler() -> ConversationHandler:  # type: ignore[type-arg]
     # The first handler added is the main ConversationHandler for tiquetera.
     return app.handlers[0][0]  # type: ignore[return-value]
 
-
 def _fl_states_with_callback(conv: ConversationHandler) -> dict[int, bool]:  # type: ignore[type-arg]
     """Return mapping of state_int → True if any CallbackQueryHandler matches '^fl:'."""
     result: dict[int, bool] = {}
@@ -57,7 +55,6 @@ def _fl_states_with_callback(conv: ConversationHandler) -> dict[int, bool]:  # t
         )
         result[state_int] = has_fl  # type: ignore[index]
     return result
-
 
 class TestBotWiringFlCallbacks:
     """Phase 8 — PARTICIPANTE_OTRO, EDITAR_VENDEDOR, EDITAR_CERRADOR have ^fl: callbacks."""
@@ -110,7 +107,6 @@ class TestBotWiringFlCallbacks:
             f" with 'fl:' pattern. Handlers found: {handlers}"
         )
 
-
 class TestBotWiringHorarioSalida:
     """Phase 10 — HORARIO_SALIDA state is registered in the ConversationHandler.
 
@@ -161,7 +157,6 @@ class TestBotWiringHorarioSalida:
             f" Handlers found: {handlers}"
         )
 
-
 class TestBotWiringFacturaIdioma:
     """Regression: FACTURA_IDIOMA renders inline buttons (Español/English), so the
     state MUST have a CallbackQueryHandler or the button tap hangs the bot.
@@ -206,7 +201,6 @@ class TestBotWiringFacturaIdioma:
             f"Handlers found: {handlers}"
         )
 
-
 def _build_app() -> Application:  # type: ignore[type-arg]
     """Build the full Application from crear_aplicacion with mocked settings."""
     with patch("garay.infraestructura.telegram.bot.obtener_settings") as mock_settings:
@@ -215,7 +209,6 @@ def _build_app() -> Application:  # type: ignore[type-arg]
         settings.dev_telegram_ids = ""
         mock_settings.return_value = settings
         return crear_aplicacion("fake:token")
-
 
 def _command_names(app: object) -> set[str]:
     """Collect every CommandHandler command registered across all handler groups."""
@@ -226,7 +219,6 @@ def _command_names(app: object) -> set[str]:
                 nombres |= set(h.commands)
     return nombres
 
-
 class TestBotWiringConciliacion:
     """Spec: /conciliar and /pendientes must NOT be registered (commands deleted)."""
 
@@ -235,7 +227,6 @@ class TestBotWiringConciliacion:
 
     def test_pendientes_command_not_registered(self) -> None:
         assert "pendientes" not in _command_names(_build_app())
-
 
 def _conv_entry_commands(app: object) -> set[str]:
     """Collect commands registered as ConversationHandler entry points."""
@@ -247,7 +238,6 @@ def _conv_entry_commands(app: object) -> set[str]:
                     if isinstance(ep, CommandHandler):
                         nombres |= set(ep.commands)
     return nombres
-
 
 class TestBotWiringPropuestas:
     """The dev-only /generar_documento command must be registered as a

@@ -99,26 +99,21 @@ _TEXTO_MES_DESCONOCIDO = (
     "Total  $12.800\n"
 )
 
-
 # ---------------------------------------------------------------------------
 # Amount parsing
 # ---------------------------------------------------------------------------
-
 
 def test_express_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
     assert resultado.monto == Decimal("12800")
 
-
 def test_pon_tu_precio_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PON_TU_PRECIO)
     assert resultado.monto == Decimal("9500")
 
-
 def test_moto_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_MOTO)
     assert resultado.monto == Decimal("9500")
-
 
 # FIX 1 — amount anchoring: footer Total must not override real Total
 def test_footer_total_no_sobreescribe_monto_real() -> None:
@@ -126,13 +121,11 @@ def test_footer_total_no_sobreescribe_monto_real() -> None:
     resultado = _PARSER.parsear("", _TEXTO_FOOTER_TOTAL)
     assert resultado.monto == Decimal("12800")
 
-
 # FIX 1 — negative sub-line must not be captured
 def test_descuento_negativo_no_capturado() -> None:
     """A negative adjustment line adjacent to Total must not become the parsed monto."""
     resultado = _PARSER.parsear("", _TEXTO_DESCUENTO_NEGATIVO)
     assert resultado.monto == Decimal("12800")
-
 
 # FIX 4 — 6-digit (million-range) amount
 def test_monto_seis_digitos() -> None:
@@ -140,11 +133,9 @@ def test_monto_seis_digitos() -> None:
     resultado = _PARSER.parsear("", _TEXTO_MILLON)
     assert resultado.monto == Decimal("1183000")
 
-
 # ---------------------------------------------------------------------------
 # Date parsing
 # ---------------------------------------------------------------------------
-
 
 def test_express_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
@@ -152,13 +143,11 @@ def test_express_fecha() -> None:
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.day == 31
 
-
 def test_pon_tu_precio_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PON_TU_PRECIO)
     assert resultado.fecha_egreso.year == 2026
     assert resultado.fecha_egreso.month == 8
     assert resultado.fecha_egreso.day == 10
-
 
 def test_moto_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_MOTO)
@@ -166,57 +155,47 @@ def test_moto_fecha() -> None:
     assert resultado.fecha_egreso.month == 5
     assert resultado.fecha_egreso.day == 5
 
-
 def test_fecha_es_utc() -> None:
     from datetime import UTC
 
     resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
     assert resultado.fecha_egreso.tzinfo is UTC
 
-
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------
 
-
 def test_banco_origen_es_didi() -> None:
     resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
     assert resultado.banco_origen == BANCO_DIDI
-
 
 # FIX 5 — exact description string
 def test_descripcion_exacta() -> None:
     resultado = _PARSER.parsear("", _TEXTO_EXPRESS)
     assert resultado.descripcion == "Viaje DiDi"
 
-
 # ---------------------------------------------------------------------------
 # HTML-only fallback
 # ---------------------------------------------------------------------------
-
 
 def test_html_only_parsea_correctamente() -> None:
     resultado = _PARSER.parsear(_HTML_EXPRESS, "")
     assert resultado.monto == Decimal("12800")
     assert resultado.banco_origen == BANCO_DIDI
 
-
 # ---------------------------------------------------------------------------
 # Error path — FIX 2: failure branches (ErrorParseoBanco)
 # ---------------------------------------------------------------------------
 
-
 def test_sin_total_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", _TEXTO_SIN_TOTAL)
-
 
 # FIX 2 — garbage/unknown month -> must raise ErrorParseoBanco
 def test_mes_desconocido_lanza_error() -> None:
     """A date with an unknown Spanish month abbreviation must raise ErrorParseoBanco."""
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", _TEXTO_MES_DESCONOCIDO)
-
 
 # --- destinatario confirmation (REQ-1, Phase 8.1) ---
 

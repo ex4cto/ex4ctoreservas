@@ -20,7 +20,6 @@ class TestDetectarBancoUber:
     def test_subdominio_uber(self) -> None:
         assert detectar_banco("soporte@payments.uber.com") == "Uber"
 
-
 class TestDetectarBancoDiDi:
     def test_dominio_didi_directo(self) -> None:
         assert detectar_banco("didi@co.didiglobal.com") == "DiDi"
@@ -31,7 +30,6 @@ class TestDetectarBancoDiDi:
 
     def test_dominio_didi_exacto_sigue_funcionando(self) -> None:
         assert detectar_banco("noreply@co.didiglobal.com") == "DiDi"
-
 
 class TestEsBancoTransporte:
     def test_uber_es_transporte(self) -> None:
@@ -52,7 +50,6 @@ class TestEsBancoTransporte:
     def test_none_no_es_transporte(self) -> None:
         """es_banco_transporte(None) must return False, not raise TypeError."""
         assert es_banco_transporte(None) is False
-
 
 class TestEsReciboTransporte:
     """es_recibo_transporte gates transport emails: only real receipts (with a
@@ -93,7 +90,6 @@ class TestEsReciboTransporte:
 
     def test_cuerpo_vacio_no_es_recibo(self) -> None:
         assert es_recibo_transporte("") is False
-
 
 class TestSenalesNoContaminadas:
     def test_senales_transaccion_sin_uber(self) -> None:

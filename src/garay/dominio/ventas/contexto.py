@@ -30,7 +30,7 @@ class ContextoVenta:
     neto: Decimal | None = None
     vendedor_nombre: str | None = None
     cerrador_nombre: str | None = None
-    referido_nombre: str | None = None
+    referido_alias: str | None = None
     vendedor_id: uuid.UUID | None = None
     cerrador_id: uuid.UUID | None = None
     numero_fisico: str | None = None

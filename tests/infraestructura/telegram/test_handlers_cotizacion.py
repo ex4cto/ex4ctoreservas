@@ -19,11 +19,9 @@ from telegram.ext import ConversationHandler
 
 from garay.aplicacion.cotizacion.contexto import ContextoCotizacion
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_update_cb(data: str) -> MagicMock:
     update = MagicMock()
@@ -41,7 +39,6 @@ def _make_update_cb(data: str) -> MagicMock:
     update.callback_query = cq
     return update
 
-
 def _make_update_text(text: str) -> MagicMock:
     update = MagicMock()
     update.callback_query = None
@@ -57,7 +54,6 @@ def _make_update_text(text: str) -> MagicMock:
     update.message = msg
     return update
 
-
 def _make_update_command(cmd: str) -> MagicMock:
     update = MagicMock()
     update.callback_query = None
@@ -72,7 +68,6 @@ def _make_update_command(cmd: str) -> MagicMock:
     msg.reply_text = AsyncMock()
     update.message = msg
     return update
-
 
 def _make_context(
     ctx: ContextoCotizacion | None = None,
@@ -99,7 +94,6 @@ def _make_context(
         context.user_data["cotizacion_ctx"] = ctx
     return context
 
-
 def _make_servicio(
     numero: int = 1,
     nombre: str = "Tour Test",
@@ -118,11 +112,9 @@ def _make_servicio(
     svc.categoria = categoria
     return svc
 
-
 # ---------------------------------------------------------------------------
 # TASK-5A: Date picker states (SC-G01 to SC-G07)
 # ---------------------------------------------------------------------------
-
 
 class TestDatePickerKeyboards:
     """SC-G01 / SC-G02: COT_FECHA has no back button; COT_FECHA_TEXTO has one."""
@@ -156,7 +148,6 @@ class TestDatePickerKeyboards:
             for btn in row
         ]
         assert "cot_fecha_volver" in flat_data
-
 
 class TestDateResolution:
     """SC-G03 / SC-G04: Ayer / Antes de ayer resolve correctly."""
@@ -209,7 +200,6 @@ class TestDateResolution:
         assert salida is not None
         assert salida.date() == datetime.date(2026, 9, 18)
 
-
 class TestOtraFechaState:
     """SC-G05: 'Otra fecha' button transitions to COT_FECHA_TEXTO."""
 
@@ -226,7 +216,6 @@ class TestOtraFechaState:
         context = _make_context(ctx=ctx)
         result = await handle_cot_otra(update, context)
         assert result == COT_FECHA_TEXTO
-
 
 class TestFechaTexto:
     """SC-G06 / SC-G07: Free-text date input."""
@@ -264,11 +253,9 @@ class TestFechaTexto:
         result = await handle_cot_fecha_texto(update, context)
         assert result == COT_FECHA_TEXTO
 
-
 # ---------------------------------------------------------------------------
 # TASK-5B: /cancelar mid-flow (SC-H01, SC-H02, SC-H03)
 # ---------------------------------------------------------------------------
-
 
 class TestCancelarMidFlow:
     """SC-H01 to SC-H03: /cancelar ends conversation and cleans user_data."""
@@ -318,11 +305,9 @@ class TestCancelarMidFlow:
         await cmd_cancelar_cotizacion(update, context)
         assert "cotizacion_ctx" not in context.user_data
 
-
 # ---------------------------------------------------------------------------
 # TASK-5C: Email delivery (SC-D01 to SC-D04)
 # ---------------------------------------------------------------------------
-
 
 class TestEmailDelivery:
     """SC-D01 to SC-D04: email sent only when cliente_email is present."""
@@ -445,11 +430,9 @@ class TestEmailDelivery:
         expected = obtener_mensaje("cotizacion.asunto_email.es", Idioma.ES)
         assert asunto_enviado == expected
 
-
 # ---------------------------------------------------------------------------
 # TASK-5D: Telegram notification (SC-E01 to SC-E06)
 # ---------------------------------------------------------------------------
-
 
 class TestTelegramNotification:
     """SC-E01 to SC-E06: Telegram notification content and parse mode."""
@@ -568,11 +551,9 @@ class TestTelegramNotification:
         call_kwargs = context.bot.send_message.call_args[1]
         assert call_kwargs.get("parse_mode") == "HTML"
 
-
 # ---------------------------------------------------------------------------
 # TASK-5F: Happy path integration (SC-I01 to SC-I05)
 # ---------------------------------------------------------------------------
-
 
 class TestHappyPathIntegration:
     """SC-I01 to SC-I05: Full flow scenarios (mocked bot_data)."""
@@ -697,10 +678,10 @@ class TestHappyPathIntegration:
     @pytest.mark.asyncio
     async def test_en_language_html_title(self) -> None:
         """SC-I05: EN idioma → generated HTML has 'SERVICE QUOTE'."""
+        from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
         from garay.infraestructura.telegram.handlers_cotizacion import (
             handle_cot_confirmar,
         )
-        from garay.aplicacion.cotizacion.servicio import GenerarCotizacionService
 
         captured_html: list[str] = []
         original_generar = GenerarCotizacionService.generar

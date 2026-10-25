@@ -19,7 +19,6 @@ def _snapshot_to_dict(s: SnapshotReglas) -> dict[str, object]:
         "tipo_cliente": str(s.tipo_cliente),
         "porcentaje_vendedor": str(s.porcentaje_vendedor),
         "porcentaje_cerrador": str(s.porcentaje_cerrador),
-        "porcentaje_referido_maximo": str(s.porcentaje_referido_maximo),
         "porcentaje_capa_punto": str(s.porcentaje_capa_punto),
         "numero_personas": str(s.numero_personas) if s.numero_personas is not None else None,
         "punto_de_venta_nombre": s.punto_de_venta_nombre,
@@ -27,7 +26,8 @@ def _snapshot_to_dict(s: SnapshotReglas) -> dict[str, object]:
 
 
 def _dict_to_snapshot(raw: dict[str, object]) -> SnapshotReglas:
-    # Use .get() with default None for backward compat: old snapshots lack these keys.
+    # Use .get() with defaults for backward compat: old snapshots may have
+    # porcentaje_referido_maximo (ignored) or lack numero_personas/punto_de_venta_nombre.
     np_raw = raw.get("numero_personas")
     numero_personas = int(str(np_raw)) if np_raw is not None else None
     pdvn_raw = raw.get("punto_de_venta_nombre")
@@ -36,7 +36,6 @@ def _dict_to_snapshot(raw: dict[str, object]) -> SnapshotReglas:
         tipo_cliente=TipoCliente(str(raw["tipo_cliente"])),
         porcentaje_vendedor=Decimal(str(raw["porcentaje_vendedor"])),
         porcentaje_cerrador=Decimal(str(raw["porcentaje_cerrador"])),
-        porcentaje_referido_maximo=Decimal(str(raw["porcentaje_referido_maximo"])),
         porcentaje_capa_punto=Decimal(str(raw["porcentaje_capa_punto"])),
         numero_personas=numero_personas,
         punto_de_venta_nombre=punto_de_venta_nombre,
@@ -57,6 +56,10 @@ def to_orm(c: ComisionRegistrada) -> ComisionRegistradaModel:
 
 
 def to_domain(m: ComisionRegistradaModel) -> ComisionRegistrada:
+    # neto_vendedor / neto_cerrador not yet in DB (PR2 migration pending).
+    # Fall back to bruto (referido=0) for existing records — correct when no referido.
+    neto_v = getattr(m, "neto_vendedor", None)
+    neto_c = getattr(m, "neto_cerrador", None)
     return ComisionRegistrada(
         venta_id=m.venta_id,
         desglose=DesgloseComision(
@@ -66,6 +69,8 @@ def to_domain(m: ComisionRegistradaModel) -> ComisionRegistrada:
             referido=m.referido,
             agencia=m.agencia,
             snapshot=_dict_to_snapshot(m.snapshot_json),
+            neto_vendedor=neto_v if neto_v is not None else m.vendedor,
+            neto_cerrador=neto_c if neto_c is not None else m.cerrador,
         ),
         fecha=m.fecha,
     )

@@ -21,12 +21,10 @@ def _update(telegram_id: int = 12345) -> MagicMock:
     u.effective_user.id = telegram_id
     return u
 
-
 def _context(bot_data: dict) -> MagicMock:  # type: ignore[type-arg]
     c = MagicMock()
     c.bot_data = bot_data
     return c
-
 
 def _freelancer(nombre: str = "Maria Lopez", fl_id: uuid.UUID | None = None) -> MagicMock:
     f = MagicMock()
@@ -34,13 +32,11 @@ def _freelancer(nombre: str = "Maria Lopez", fl_id: uuid.UUID | None = None) -> 
     f.id = fl_id or uuid.uuid4()
     return f
 
-
 def _servicio(numero: int, sid: uuid.UUID | None = None) -> MagicMock:
     s = MagicMock()
     s.numero = numero
     s.id = sid or uuid.uuid4()
     return s
-
 
 def _bot_data_two_tours(
     sid1: uuid.UUID,
@@ -52,7 +48,6 @@ def _bot_data_two_tours(
     s_repo.listar.return_value = [_servicio(1, sid1), _servicio(2, sid2)]
     c_repo = MagicMock()
     return {"freelancer_repo": fl_repo, "servicio_repo": s_repo, "cliente_repo": c_repo}
-
 
 def _full_ctx_two_tours(
     sid1: uuid.UUID,
@@ -76,7 +71,6 @@ def _full_ctx_two_tours(
     }
     defaults.update(overrides)
     return ContextoVenta(**defaults)  # type: ignore[arg-type]
-
 
 class TestContextoAComandoFechasPorServicio:
     def test_fechas_por_servicio_translated_to_ids(self) -> None:
@@ -171,7 +165,6 @@ class TestContextoAComandoFechasPorServicio:
         assert cmd is not None
         assert cmd.fechas_por_servicio is None
 
-
 class TestIncompleteDateGuard:
     """Tests for the multi-tour incomplete-date guard in _contexto_a_comando."""
 
@@ -221,7 +214,6 @@ class TestIncompleteDateGuard:
         cmd = _contexto_a_comando(_update(), _context(bot_data), ctx)
         assert cmd is None
 
-
 class TestNightTourTimePrecision:
     """Per-tour datetime with explicit HH:MM must be preserved through numero→id translation."""
 
@@ -241,7 +233,6 @@ class TestNightTourTimePrecision:
         assert translated.hour == 22
         assert translated.minute == 30
 
-
 def _venta(
     fecha: datetime.date,
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None,
@@ -254,7 +245,6 @@ def _venta(
     v.canal_origen = None
     v.fechas_por_servicio = fechas_por_servicio
     return v
-
 
 def _mis_ventas_context(ventas: list[MagicMock]) -> MagicMock:
     freelancer = MagicMock()
@@ -276,14 +266,12 @@ def _mis_ventas_context(ventas: list[MagicMock]) -> MagicMock:
     }
     return ctx
 
-
 def _mis_ventas_update(user_id: int = 123) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
     update.effective_user.id = user_id
     update.effective_message = AsyncMock()
     return update
-
 
 class TestMisVentasVariasFechasMarker:
     """/mis_ventas appends ' (varias fechas)' only when a sale spans >1 tour date."""

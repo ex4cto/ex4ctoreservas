@@ -32,7 +32,6 @@ _PAYLOAD_BANCO_DESCONOCIDO = {
     "cuerpo_texto": "Recibiste un pago de 100,000",
 }
 
-
 def test_payload_bancolombia_valido_retorna_ok(
     client: TestClient, mock_ingreso_repo: MagicMock
 ) -> None:
@@ -45,7 +44,6 @@ def test_payload_bancolombia_valido_retorna_ok(
     assert response.json() == {"estado": "ok"}
     mock_ingreso_repo.guardar.assert_called_once()
 
-
 def test_secret_invalido_retorna_403(
     client: TestClient, mock_ingreso_repo: MagicMock
 ) -> None:
@@ -56,7 +54,6 @@ def test_secret_invalido_retorna_403(
 
     assert response.status_code == 403
     mock_ingreso_repo.guardar.assert_not_called()
-
 
 def test_message_id_duplicado_no_guarda(
     client: TestClient, mock_ingreso_repo: MagicMock
@@ -71,7 +68,6 @@ def test_message_id_duplicado_no_guarda(
     assert response.status_code == 200
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 def test_banco_desconocido_retorna_ok_sin_guardar(
     client: TestClient, mock_ingreso_repo: MagicMock
 ) -> None:
@@ -84,7 +80,6 @@ def test_banco_desconocido_retorna_ok_sin_guardar(
     assert response.json() == {"estado": "ok"}
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 def test_message_id_vacio_retorna_ok_sin_guardar(
     client: TestClient, mock_ingreso_repo: MagicMock
 ) -> None:
@@ -96,7 +91,6 @@ def test_message_id_vacio_retorna_ok_sin_guardar(
 
     assert response.status_code == 200
     mock_ingreso_repo.guardar.assert_not_called()
-
 
 # ---------------------------------------------------------------------------
 # Non-transaction pre-filter gate
@@ -126,7 +120,6 @@ _PAYLOAD_NO_TRANSACCION_NEQUI = {
     ),
 }
 
-
 def test_email_no_transaccion_retorna_200_sin_cuarentena_ni_notificacion(
     client: TestClient,
     mock_ingreso_repo: MagicMock,
@@ -145,7 +138,6 @@ def test_email_no_transaccion_retorna_200_sin_cuarentena_ni_notificacion(
     mock_notificador.notificar.assert_not_called()
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 def test_email_no_transaccion_nequi_retorna_200_sin_cuarentena(
     client: TestClient,
     mock_ingreso_repo: MagicMock,
@@ -163,7 +155,6 @@ def test_email_no_transaccion_nequi_retorna_200_sin_cuarentena(
     mock_notificador.notificar.assert_not_called()
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 def test_email_transaccion_real_sigue_parseando(
     client: TestClient,
     mock_ingreso_repo: MagicMock,
@@ -178,7 +169,6 @@ def test_email_transaccion_real_sigue_parseando(
     assert response.status_code == 200
     mock_ingreso_repo.guardar.assert_called_once()
     mock_correo_repo.guardar.assert_not_called()
-
 
 # ---------------------------------------------------------------------------
 # PSE end-to-end route test
@@ -208,7 +198,6 @@ _PAYLOAD_PSE_EGRESO = {
     "cuerpo_html": "",
     "cuerpo_texto": _TEXTO_PSE_EGRESO,
 }
-
 
 def test_email_pse_egreso_persiste_y_no_cuarentena(
     client: TestClient,

@@ -14,7 +14,6 @@ def test_guarda_nombre_empresa() -> None:
     ctx = PropuestaContexto(empresa_nombre="Acme S.A.S.")
     assert ctx.empresa_nombre == "Acme S.A.S."
 
-
 def test_precios_por_defecto() -> None:
     ctx = PropuestaContexto(empresa_nombre="X")
     assert ctx.precios == PRECIOS_AUDIOVISUAL_DEFAULT
@@ -22,7 +21,6 @@ def test_precios_por_defecto() -> None:
     assert ctx.precios.medio == Dinero(1_800_000)
     assert ctx.precios.community == Dinero(500_000)
     assert ctx.precios.trafficker == Dinero(600_000)
-
 
 def test_defaults_software() -> None:
     from garay.dominio.propuestas.contexto import (
@@ -36,7 +34,6 @@ def test_defaults_software() -> None:
     assert ctx.precios_software.anual == Dinero(5_000_000)
     assert ctx.ejemplos_servicios == EJEMPLOS_SERVICIOS_DEFAULT
 
-
 def test_precios_personalizados() -> None:
     precios = PreciosAudiovisual(
         completo=Dinero(4_000_000),
@@ -47,10 +44,8 @@ def test_precios_personalizados() -> None:
     ctx = PropuestaContexto(empresa_nombre="X", precios=precios)
     assert ctx.precios.completo == Dinero(4_000_000)
 
-
 def test_igualdad_por_valor() -> None:
     assert PropuestaContexto(empresa_nombre="X") == PropuestaContexto(empresa_nombre="X")
-
 
 def test_es_inmutable() -> None:
     ctx = PropuestaContexto(empresa_nombre="X")

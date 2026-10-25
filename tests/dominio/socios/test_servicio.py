@@ -12,7 +12,6 @@ from garay.dominio.socios.servicio import calcular_split_venta
 def _config(nombre: str, porcentaje: str) -> SocioConfig:
     return SocioConfig(nombre=nombre, porcentaje=Decimal(porcentaje), telegram_id=None)
 
-
 class TestCalcularSplitVenta:
     def test_split_exactamente_divisible(self) -> None:
         """50/25/25 con monto que divide exacto."""

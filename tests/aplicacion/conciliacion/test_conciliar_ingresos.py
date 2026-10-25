@@ -24,9 +24,7 @@ if TYPE_CHECKING:
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 _HOY = datetime.date(2026, 7, 1)
-
 
 def _motor() -> MotorConciliacion:
     return MotorConciliacion(
@@ -37,7 +35,6 @@ def _motor() -> MotorConciliacion:
         peso_fecha=Decimal("0.4"),
     )
 
-
 def _make_ingreso(monto: int = 100_000, fecha: datetime.date = _HOY) -> Ingreso:
     return Ingreso(
         id=uuid.uuid4(),
@@ -46,7 +43,6 @@ def _make_ingreso(monto: int = 100_000, fecha: datetime.date = _HOY) -> Ingreso:
         fecha=fecha,
         referencia=f"REF-{uuid.uuid4().hex[:6]}",
     )
-
 
 def _make_venta(valor: int = 100_000, fecha: datetime.date = _HOY) -> Venta:
     return Venta(
@@ -60,25 +56,21 @@ def _make_venta(valor: int = 100_000, fecha: datetime.date = _HOY) -> Venta:
         participantes=Participantes(),
     )
 
-
 def _make_ingresos_repo(ingresos: list[Ingreso]) -> MagicMock:
     repo = MagicMock()
     repo.listar_sin_clasificar.return_value = ingresos
     return repo
-
 
 def _make_ventas_repo(ventas: list[Venta]) -> MagicMock:
     repo = MagicMock()
     repo.listar_por_periodo.return_value = ventas
     return repo
 
-
 def _make_conciliaciones_repo(procesados: list[uuid.UUID] | None = None) -> MagicMock:
     repo = MagicMock()
     repo.listar_ingreso_ids_procesados.return_value = procesados or []
     repo.guardar.return_value = None
     return repo
-
 
 def _make_service(
     ingresos_repo: MagicMock,
@@ -97,11 +89,9 @@ def _make_service(
         ventana_dias=ventana_dias,
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 def test_sin_ingresos_pendientes_devuelve_ceros() -> None:
     """No unclassified ingresos → ResultadoConciliacion(0, 0, 0)."""
@@ -113,7 +103,6 @@ def test_sin_ingresos_pendientes_devuelve_ceros() -> None:
     resultado = service.ejecutar()
     assert resultado == ResultadoConciliacion(matcheados=0, sin_match=0, pendientes=0)
 
-
 def test_todos_ya_procesados_devuelve_ceros() -> None:
     """All ingresos already have conciliaciones → no new processing."""
     ingreso = _make_ingreso()
@@ -124,7 +113,6 @@ def test_todos_ya_procesados_devuelve_ceros() -> None:
     )
     resultado = service.ejecutar()
     assert resultado == ResultadoConciliacion(matcheados=0, sin_match=0, pendientes=0)
-
 
 def test_happy_path_match_exacto() -> None:
     """1 ingreso, 1 venta con mismo monto y fecha → 1 matcheado."""
@@ -143,7 +131,6 @@ def test_happy_path_match_exacto() -> None:
     assert resultado.pendientes == 0
     conciliaciones_repo.guardar.assert_called_once()
 
-
 def test_ventas_cargadas_una_sola_vez_no_n_mas_1() -> None:
     """With N ingresos, ventas repo is called exactly ONCE (no N+1)."""
     ingresos = [_make_ingreso() for _ in range(5)]
@@ -155,7 +142,6 @@ def test_ventas_cargadas_una_sola_vez_no_n_mas_1() -> None:
     service.ejecutar()
 
     ventas_repo.listar_por_periodo.assert_called_once()
-
 
 def test_idempotencia_no_duplica_conciliaciones() -> None:
     """Calling ejecutar twice for already-processed ingreso → no duplicate guardar."""
@@ -175,7 +161,6 @@ def test_idempotencia_no_duplica_conciliaciones() -> None:
     service2 = _make_service(ingresos_repo2, ventas_repo, conciliaciones_repo2)
     service2.ejecutar()
     conciliaciones_repo2.guardar.assert_not_called()
-
 
 def test_ingreso_sin_match_contabilizado() -> None:
     """Ingreso with no matching venta → sin_match incremented."""

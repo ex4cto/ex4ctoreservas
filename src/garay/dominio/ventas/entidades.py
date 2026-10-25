@@ -18,6 +18,7 @@ from garay.dominio.ventas.errores import (
     MismoCanal,
     MismoMetodoPago,
     MismoNeto,
+    MismoReferido,
     MismoServicio,
     MismosParticipantes,
     MismoValorVenta,
@@ -197,6 +198,19 @@ class Venta:
             raise MismosParticipantes("Los participantes ya son los mismos.")
         self.participantes = nueva
 
+    def cambiar_referido(self, alias: str | None) -> None:
+        """Set or clear the referido_alias on participantes.
+
+        Raises MismoReferido if alias equals the current referido_alias (idempotency guard).
+        """
+        if alias == self.participantes.referido_alias:
+            raise MismoReferido(
+                "El referido ya tiene ese alias. No se realizó ningún cambio."
+            )
+        self.participantes = dataclasses.replace(
+            self.participantes, referido_alias=alias
+        )
+
     def cambiar_neto(self, nuevo_neto: Dinero) -> None:
         """Change neto at edit time with stricter rules than constructor.
 
@@ -274,7 +288,9 @@ class Venta:
             raise VentaYaAnulada("No se puede editar el servicio de una venta ya anulada.")
         if sorted(nuevos_ids) == sorted(self.servicio_ids):
             raise MismoServicio("Los servicios ya son los mismos. No se realizó ningún cambio.")
-        effective_valor_venta = nuevo_valor_venta if nuevo_valor_venta is not None else self.valor_venta
+        effective_valor_venta = (
+            nuevo_valor_venta if nuevo_valor_venta is not None else self.valor_venta
+        )
         if nuevo_neto.moneda != self.valor_venta.moneda:
             raise MonedaIncompatible(
                 f"nuevo_neto ({nuevo_neto.moneda}) y valor_venta ({self.valor_venta.moneda})"

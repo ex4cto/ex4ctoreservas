@@ -18,7 +18,6 @@ from garay.dominio.servicios.entidades import Servicio
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     numero: int = 1,
     nombre: str = "CITY TOUR",
@@ -41,7 +40,6 @@ def _servicio(
         precio_sugerido_adulto=precio_sugerido_adulto,
     )
 
-
 def _make_context(servicios: list[Servicio]) -> MagicMock:
     ctx = MagicMock()
     repo = MagicMock()
@@ -49,18 +47,15 @@ def _make_context(servicios: list[Servicio]) -> MagicMock:
     ctx.bot_data = {"servicio_repo": repo}
     return ctx
 
-
 def _make_update() -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=42)
     update.effective_message = AsyncMock()
     return update
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestCmdListaPrecios:
     """Inner-logic tests — use __wrapped__ to bypass @requiere_rol guard."""
@@ -216,11 +211,9 @@ class TestCmdListaPrecios:
         text = update.effective_message.reply_text.call_args[0][0]
         assert "niño = adulto" not in text
 
-
 # ---------------------------------------------------------------------------
 # Spec: lista-precios-runtime-guard
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_lista_precios_bloquea_usuario_no_registrado() -> None:
@@ -244,7 +237,6 @@ async def test_lista_precios_bloquea_usuario_no_registrado() -> None:
     update.effective_message.reply_text.assert_called_once()
     msg: str = update.effective_message.reply_text.call_args[0][0]
     assert "freelancer" in msg.lower()
-
 
 @pytest.mark.asyncio
 async def test_lista_precios_permite_usuario_registrado() -> None:

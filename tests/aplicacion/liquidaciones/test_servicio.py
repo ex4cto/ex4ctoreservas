@@ -7,25 +7,19 @@ import uuid
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-import pytest
-
-from garay.dominio.comun.dinero import Dinero
+from garay.aplicacion.liquidaciones.servicio import (
+    LiquidarFreelancerService,
+    _dias_solapados,
+)
 from garay.dominio.comisiones.entidades import ComisionRegistrada
-from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comisiones.snapshot import SnapshotReglas
+from garay.dominio.comisiones.valor_objetos import DesgloseComision
+from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.freelancers.entidades import Freelancer
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
-from garay.dominio.comun.tipos import TipoCliente
-from garay.dominio.servicios.entidades import Servicio
-from garay.aplicacion.liquidaciones.servicio import (
-    LiquidarFreelancerService,
-    RegistrarPagoFreelancerComando,
-    ResultadoCalculoLiquidacion,
-    _dias_solapados,
-)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -33,7 +27,6 @@ from garay.aplicacion.liquidaciones.servicio import (
 
 def _make_freelancer(nombre: str = "Ana", telegram_id: int | None = None) -> Freelancer:
     return Freelancer(id=uuid.uuid4(), nombre=nombre, telegram_user_id=telegram_id)
-
 
 def _make_venta(
     fecha: datetime.date,
@@ -64,7 +57,6 @@ def _make_venta(
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("0"),
         porcentaje_capa_punto=Decimal("0"),
         punto_de_venta_nombre=None,
         numero_personas=None,
@@ -78,11 +70,12 @@ def _make_venta(
             referido=Dinero(0),
             agencia=Dinero(0),
             snapshot=snapshot,
+            neto_vendedor=comision_vendedor or Dinero(0),
+            neto_cerrador=comision_cerrador or Dinero(0),
         ),
         fecha=fecha,
     )
     return venta, comision
-
 
 def _make_service(
     freelancer: Freelancer,
@@ -117,7 +110,6 @@ def _make_service(
         servicios_repo=servicio_repo,
         pago_repo=pago_repo,
     )
-
 
 # ---------------------------------------------------------------------------
 # Tests for calcular()
@@ -219,7 +211,7 @@ class TestCalcular:
             monto=Dinero(100_000),
             desde=datetime.date(2026, 9, 25),
             hasta=datetime.date(2026, 10, 5),
-            fecha_pago=datetime.datetime(2026, 10, 6, tzinfo=datetime.timezone.utc),
+            fecha_pago=datetime.datetime(2026, 10, 6, tzinfo=datetime.UTC),
             registrado_por_telegram_id=5870211102,
             registrado_por_nombre="Ryan",
         )
@@ -233,7 +225,6 @@ class TestCalcular:
 
         assert len(result.solapados) == 1
         assert result.solapados[0] == pago_anterior
-
 
 # ---------------------------------------------------------------------------
 # Tests for overlap helper

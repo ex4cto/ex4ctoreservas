@@ -26,7 +26,6 @@ def _make_update() -> MagicMock:
     update.callback_query.data = "confirmar"
     return update
 
-
 def _make_context() -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = {}
@@ -39,7 +38,6 @@ def _make_context() -> MagicMock:
     freelancer_repo.buscar_por_telegram_id.return_value = fl
     ctx.bot_data = {"egreso_service": egreso_service, "freelancer_repo": freelancer_repo}
     return ctx
-
 
 class TestAvisoDevEgresoManual:
     @pytest.mark.asyncio
@@ -75,7 +73,6 @@ class TestAvisoDevEgresoManual:
         )
         await handle_egreso_confirmacion(_make_update(), ctx)
         ctx.bot.send_message.assert_not_called()
-
 
 class TestAvisoDevGastoFijo:
     @pytest.mark.asyncio

@@ -13,12 +13,10 @@ import pytest
 
 from garay.dominio.auditoria.entidades import RegistroAuditoria
 
-
 _NOW = datetime.datetime(2026, 10, 17, 12, 0, 0, tzinfo=datetime.UTC)
 _ACTOR_ID = 5870211102
 _ACTOR_NOMBRE = "Ryan"
 _ENTIDAD_ID = uuid.uuid4()
-
 
 def _registro_valido(**kwargs: object) -> RegistroAuditoria:
     defaults: dict[str, object] = {
@@ -35,7 +33,6 @@ def _registro_valido(**kwargs: object) -> RegistroAuditoria:
     }
     defaults.update(kwargs)
     return RegistroAuditoria(**defaults)  # type: ignore[arg-type]
-
 
 class TestRegistroAuditoriaConstruction:
     def test_construye_con_campos_completos(self) -> None:
@@ -65,7 +62,6 @@ class TestRegistroAuditoriaConstruction:
         r = _registro_valido(valor_nuevo=None)
         assert r.valor_nuevo is None
 
-
 class TestRegistroAuditoriaImmutability:
     def test_instancia_es_frozen(self) -> None:
         r = _registro_valido()
@@ -78,7 +74,6 @@ class TestRegistroAuditoriaImmutability:
         r = _registro_valido()
         with pytest.raises(FrozenInstanceError):
             r.id = uuid.uuid4()  # type: ignore[misc]
-
 
 class TestRegistroAuditoriaValidation:
     def test_rechaza_realizada_por_telegram_id_none(self) -> None:

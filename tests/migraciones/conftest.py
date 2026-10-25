@@ -31,7 +31,6 @@ def sqlite_engine() -> Generator[Engine, None, None]:
     yield engine
     engine.dispose()
 
-
 def run_migration_fn(engine: Engine, fn: Callable[[], None]) -> None:
     """Execute a migration function (upgrade/downgrade) in an Alembic op context.
 
@@ -44,13 +43,11 @@ def run_migration_fn(engine: Engine, fn: Callable[[], None]) -> None:
         with Operations.context(ctx):
             fn()
 
-
 def table_columns(engine: Engine, table_name: str) -> set[str]:
     """Return the set of column names present in table_name."""
     with engine.connect() as conn:
         inspector = sa.inspect(conn)
         return {col["name"] for col in inspector.get_columns(table_name)}
-
 
 def build_servicios_at_0010(engine: Engine) -> None:
     """Create the servicios table as it exists at revision 0010 (no horarios column).
@@ -74,7 +71,6 @@ def build_servicios_at_0010(engine: Engine) -> None:
             """)
         )
 
-
 def build_servicios_at_0020(engine: Engine) -> None:
     """Create the servicios table as it exists at revision 0020 (no permite_ninos column).
 
@@ -97,7 +93,6 @@ def build_servicios_at_0020(engine: Engine) -> None:
             )
             """)
         )
-
 
 def build_ventas_at_0011(engine: Engine) -> None:
     """Create the ventas table as it exists at revision 0011 (no horarios_por_servicio column).

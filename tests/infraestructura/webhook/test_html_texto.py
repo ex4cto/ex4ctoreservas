@@ -38,23 +38,18 @@ _NEQUI_HTML = (
     "<script>track()</script></body></html>"
 )
 
-
 def test_saca_etiquetas_y_conserva_texto() -> None:
     assert html_a_texto("<p>Hola <b>mundo</b></p>") == "Hola mundo"
 
-
 def test_decodifica_entidades() -> None:
     assert html_a_texto("Garc&iacute;a &amp; Co") == "García & Co"
-
 
 def test_ignora_style_y_script() -> None:
     html = "<style>.x{color:red}</style><div>Recibiste 1 de BRYAN</div><script>x()</script>"
     assert html_a_texto(html) == "Recibiste 1 de BRYAN"
 
-
 def test_colapsa_espacios_saltos_y_nbsp() -> None:
     assert html_a_texto("a\n\nb\t c\xa0d") == "a b c d"
-
 
 def test_nequi_html_produce_texto_con_frase_parseable() -> None:
     texto = html_a_texto(_NEQUI_HTML)
@@ -62,7 +57,6 @@ def test_nequi_html_produce_texto_con_frase_parseable() -> None:
         "Recibiste 1.183.000 de Carlos Alberto Ferro Urango "
         "el 31 de julio de 2026 a las 6:24 p.m" in texto
     )
-
 
 def test_schema_rellena_cuerpo_texto_desde_html_cuando_falta() -> None:
     payload = PayloadEmail.model_validate(
@@ -77,7 +71,6 @@ def test_schema_rellena_cuerpo_texto_desde_html_cuando_falta() -> None:
     )
     assert payload.cuerpo_texto  # antes quedaba vacío y el parser fallaba
     assert "Recibiste 1.183.000 de Carlos Alberto Ferro Urango" in payload.cuerpo_texto
-
 
 def test_nequi_ingreso_html_only_extremo_a_extremo() -> None:
     """The exact production failure: Nequi HTML-only auto-forward must now parse."""
@@ -99,7 +92,6 @@ def test_nequi_ingreso_html_only_extremo_a_extremo() -> None:
     assert pago.fecha_pago.hour == 18
     assert pago.fecha_pago.minute == 24
 
-
 def test_bancolombia_egreso_html_only_extremo_a_extremo() -> None:
     """The original 2:29pm problem shape: a Bancolombia egreso arriving HTML-only."""
     payload = PayloadEmail.model_validate(
@@ -120,7 +112,6 @@ def test_bancolombia_egreso_html_only_extremo_a_extremo() -> None:
     assert egreso.monto == Decimal("69328.00")
     assert egreso.descripcion == "Compra en MOVISTAR PAGOSEPAYCO"
     assert egreso.banco_origen == "Bancolombia"
-
 
 def test_nequi_egreso_html_only_extremo_a_extremo() -> None:
     payload = PayloadEmail.model_validate(

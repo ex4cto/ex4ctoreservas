@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from decimal import Decimal
 
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
@@ -16,5 +15,4 @@ class MotorComisionesBase(ABC):
         venta: Venta,
         reglas: ReglasComision,
         punto: PuntoDeVenta | None,
-        porcentaje_referido: Decimal = Decimal("0"),
     ) -> DesgloseComision: ...

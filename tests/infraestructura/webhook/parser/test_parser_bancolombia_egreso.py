@@ -33,36 +33,28 @@ _TEXTO_TRANSFERENCIA_BREB = (
     "a NEIDA GARCIA el 25/07/26 a las 16:26."
 )
 
-
 # --- monto bilingue ---
 
 def test_monto_colombiano_punto_miles_coma_decimal() -> None:
     assert _parsear_monto_bilingue("$69.328,00") == Decimal("69328.00")
 
-
 def test_monto_us_coma_miles_punto_decimal_grande() -> None:
     assert _parsear_monto_bilingue("$50,000.00") == Decimal("50000.00")
-
 
 def test_monto_us_coma_miles_punto_decimal_pequeno() -> None:
     assert _parsear_monto_bilingue("$6,000.00") == Decimal("6000.00")
 
-
 def test_monto_nequi_solo_puntos_miles() -> None:
     assert _parsear_monto_bilingue("5.000") == Decimal("5000")
-
 
 def test_monto_numero_plano() -> None:
     assert _parsear_monto_bilingue("100") == Decimal("100")
 
-
 def test_monto_colombiano_con_signo_sin_centavos() -> None:
     assert _parsear_monto_bilingue("$3.000") == Decimal("3000")
 
-
 def test_monto_colombiano_punto_miles_sin_centavos_10k() -> None:
     assert _parsear_monto_bilingue("$10.000,00") == Decimal("10000.00")
-
 
 # --- tipo 1: compra tarjeta debito ---
 
@@ -70,16 +62,13 @@ def test_parsea_compra_tarjeta_debito_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_COMPRA)
     assert resultado.monto == Decimal("69328.00")
 
-
 def test_parsea_compra_tarjeta_debito_descripcion() -> None:
     resultado = _PARSER.parsear("", _TEXTO_COMPRA)
     assert resultado.descripcion == "Compra en MOVISTAR PAGOSEPAYCO"
 
-
 def test_parsea_compra_tarjeta_debito_banco_origen() -> None:
     resultado = _PARSER.parsear("", _TEXTO_COMPRA)
     assert resultado.banco_origen == "Bancolombia"
-
 
 def test_parsea_compra_tarjeta_debito_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_COMPRA)
@@ -89,12 +78,10 @@ def test_parsea_compra_tarjeta_debito_fecha() -> None:
     assert resultado.fecha_egreso.hour == 18
     assert resultado.fecha_egreso.minute == 25
 
-
 def test_parsea_segunda_compra_tarjeta() -> None:
     resultado = _PARSER.parsear("", _TEXTO_COMPRA_2)
     assert resultado.monto == Decimal("10000.00")
     assert resultado.descripcion == "Compra en GAZEL EL TIGRE"
-
 
 # --- tipo 2: transferencia a cuenta ---
 
@@ -102,11 +89,9 @@ def test_parsea_transferencia_cuenta_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
     assert resultado.monto == Decimal("50000.00")
 
-
 def test_parsea_transferencia_cuenta_descripcion() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
     assert resultado.descripcion == "Transferencia a cuenta *3207904880"
-
 
 def test_parsea_transferencia_cuenta_origen_con_asterisco() -> None:
     """Source account may carry a '*' prefix: 'desde tu cuenta *5643'."""
@@ -118,13 +103,11 @@ def test_parsea_transferencia_cuenta_origen_con_asterisco() -> None:
     assert resultado.monto == Decimal("560000")
     assert resultado.descripcion == "Transferencia a cuenta *08600002475"
 
-
 def test_parsea_transferencia_cuenta_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_CUENTA)
     assert resultado.fecha_egreso.year == 2026
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.day == 26
-
 
 # --- tipo 3: transferencia Bre-B / llave ---
 
@@ -132,11 +115,9 @@ def test_parsea_transferencia_breb_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
     assert resultado.monto == Decimal("6000.00")
 
-
 def test_parsea_transferencia_breb_descripcion() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
     assert resultado.descripcion == "Transferencia a NEIDA GARCIA"
-
 
 def test_parsea_transferencia_breb_llave_con_arroba() -> None:
     """Bre-B keys can be @user (not only digits) — must still parse."""
@@ -148,7 +129,6 @@ def test_parsea_transferencia_breb_llave_con_arroba() -> None:
     assert resultado.monto == Decimal("6000.00")
     assert resultado.descripcion == "Transferencia a NEIDA GARCIA"
 
-
 def test_parsea_transferencia_breb_fecha_2_digitos() -> None:
     resultado = _PARSER.parsear("", _TEXTO_TRANSFERENCIA_BREB)
     assert resultado.fecha_egreso.year == 2026
@@ -157,13 +137,11 @@ def test_parsea_transferencia_breb_fecha_2_digitos() -> None:
     assert resultado.fecha_egreso.hour == 16
     assert resultado.fecha_egreso.minute == 26
 
-
 # --- errores ---
 
 def test_texto_sin_patron_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("", "Notificacion irrelevante sin datos de egreso")
-
 
 # --- single-digit hour / day ---
 
@@ -176,7 +154,6 @@ def test_compra_hora_un_digito() -> None:
     assert resultado.fecha_egreso.hour == 9
     assert resultado.fecha_egreso.minute == 43
 
-
 def test_transferencia_breb_dia_un_digito() -> None:
     texto = (
         "Bancolombia: BRYAN, transferiste $6,000.00 a la llave 3015879983 desde tu cuenta *7488 "
@@ -185,7 +162,6 @@ def test_transferencia_breb_dia_un_digito() -> None:
     resultado = _PARSER.parsear("", texto)
     assert resultado.fecha_egreso.day == 5
     assert resultado.monto == Decimal("6000.00")
-
 
 # --- spaced-account destination (prod bug regression) ---
 
@@ -202,7 +178,6 @@ def test_transferencia_cuenta_destino_con_espacio_tras_asterisco() -> None:
     assert resultado.monto == Decimal("580000")
     assert resultado.fecha_egreso.date().isoformat() == "2026-08-10"
     assert "08600002475" in resultado.descripcion
-
 
 # --- destinatario wiring (REQ-1, REQ-5) ---
 
@@ -239,7 +214,6 @@ class TestBancolombiaDestinatario:
             fecha_egreso=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
         )
         assert eo.destinatario is None
-
 
 # --- parser-layer empty-recipient guard (REQ-1, REQ-5) ---
 #

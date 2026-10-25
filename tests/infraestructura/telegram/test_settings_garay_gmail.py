@@ -18,7 +18,6 @@ def test_garay_gmail_sharimel_default_value(monkeypatch: pytest.MonkeyPatch) -> 
     settings = Settings()
     assert settings.gmail_sharimel == "sharimelh@gmail.com"
 
-
 def test_garay_gmail_sharimel_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """When GARAY_GMAIL_SHARIMEL is set in env, Settings reflects it."""
     monkeypatch.setenv("GARAY_GMAIL_SHARIMEL", "custom@example.com")

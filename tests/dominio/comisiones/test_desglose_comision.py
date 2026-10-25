@@ -18,10 +18,8 @@ def _snapshot() -> SnapshotReglas:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20"),
         porcentaje_cerrador=Decimal("20"),
-        porcentaje_referido_maximo=Decimal("10"),
     )
     return SnapshotReglas.desde_reglas(reglas, None)
-
 
 def _desglose(**kwargs: object) -> DesgloseComision:
     defaults: dict[str, object] = {
@@ -31,10 +29,11 @@ def _desglose(**kwargs: object) -> DesgloseComision:
         "referido": Dinero(2_000),
         "agencia": Dinero(1_000),
         "snapshot": _snapshot(),
+        "neto_vendedor": Dinero(9_000),
+        "neto_cerrador": Dinero(4_500),
     }
     defaults.update(kwargs)
     return DesgloseComision(**defaults)  # type: ignore[arg-type]
-
 
 class TestDesgloseComision:
     def test_creacion_valida(self) -> None:
@@ -44,6 +43,44 @@ class TestDesgloseComision:
         assert d.punto_de_venta == Dinero(3_000)
         assert d.referido == Dinero(2_000)
         assert d.agencia == Dinero(1_000)
+
+    def test_neto_vendedor_presente(self) -> None:
+        """Task 1.4: neto_vendedor must be a required field on DesgloseComision."""
+        d = _desglose(neto_vendedor=Dinero(9_000))
+        assert d.neto_vendedor == Dinero(9_000)
+
+    def test_neto_cerrador_presente(self) -> None:
+        """Task 1.4: neto_cerrador must be a required field on DesgloseComision."""
+        d = _desglose(neto_cerrador=Dinero(4_500))
+        assert d.neto_cerrador == Dinero(4_500)
+
+    def test_sin_neto_vendedor_falla(self) -> None:
+        """Task 1.4: constructing DesgloseComision without neto_vendedor must fail."""
+        with pytest.raises(TypeError):
+            DesgloseComision(  # type: ignore[call-arg]
+                vendedor=Dinero(10_000),
+                cerrador=Dinero(5_000),
+                punto_de_venta=Dinero(3_000),
+                referido=Dinero(2_000),
+                agencia=Dinero(1_000),
+                snapshot=_snapshot(),
+                # neto_vendedor intentionally missing
+                neto_cerrador=Dinero(4_500),
+            )
+
+    def test_sin_neto_cerrador_falla(self) -> None:
+        """Task 1.4: constructing DesgloseComision without neto_cerrador must fail."""
+        with pytest.raises(TypeError):
+            DesgloseComision(  # type: ignore[call-arg]
+                vendedor=Dinero(10_000),
+                cerrador=Dinero(5_000),
+                punto_de_venta=Dinero(3_000),
+                referido=Dinero(2_000),
+                agencia=Dinero(1_000),
+                snapshot=_snapshot(),
+                neto_vendedor=Dinero(9_000),
+                # neto_cerrador intentionally missing
+            )
 
     def test_es_frozen(self) -> None:
         from dataclasses import FrozenInstanceError

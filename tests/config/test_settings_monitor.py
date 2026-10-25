@@ -25,7 +25,6 @@ class TestDominioRenovacion:
         settings = Settings()
         assert settings.dominio_renovacion is None
 
-
 class TestDominioBandasAviso:
     def test_parsea_bandas_custom(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GARAY_DOMINIO_BANDAS_AVISO", "[90,45,14,3]")

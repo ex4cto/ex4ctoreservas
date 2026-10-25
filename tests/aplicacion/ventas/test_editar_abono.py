@@ -44,14 +44,12 @@ def _make_venta(
     venta.cambiar_abono.side_effect = _cambiar_abono
     return venta
 
-
 def _make_repos(venta: MagicMock | None = None) -> tuple[MagicMock, MagicMock]:
     ventas_repo = MagicMock()
     ventas_repo.buscar_por_id.return_value = venta
     auditoria_repo = MagicMock()
     auditoria_repo.listar_por_venta_id.return_value = []
     return ventas_repo, auditoria_repo
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -65,7 +63,6 @@ def _make_cmd(
         realizada_por_telegram_id=42,
         realizada_por_nombre="Admin",
     )
-
 
 class TestEditarAbonoVentaService:
     def test_motivo_vacio_raises_motivo_requerido(self) -> None:

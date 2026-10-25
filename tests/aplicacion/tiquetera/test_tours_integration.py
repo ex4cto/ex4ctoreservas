@@ -16,7 +16,6 @@ def _make_fsm(servicios: list[Servicio]) -> FSMTiquetera:
     ]
     return FSMTiquetera(servicios=tuples, puntos_venta=["Marie Real"])
 
-
 class TestEditSaveRefreshVisibleToNewSale:
     def test_edit_save_refresh_visible_to_new_sale(self) -> None:
         """Edit tour name, refresh FSM, new sale flow sees the updated name."""
@@ -47,7 +46,6 @@ class TestEditSaveRefreshVisibleToNewSale:
 
         # New sale starts → FSM returns updated name
         assert fsm._servicios[1][0] == "CITY TOUR ACTUALIZADO"
-
 
 class TestDesactivarTourOcultoEnVentas:
     def test_desactivar_tour_refresco_usa_listar_activos(self) -> None:

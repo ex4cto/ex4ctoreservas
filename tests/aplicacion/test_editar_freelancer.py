@@ -22,7 +22,6 @@ def _freelancer(**kwargs: object) -> Freelancer:
     defaults.update(kwargs)
     return Freelancer(**defaults)  # type: ignore[arg-type]
 
-
 def _make_service(
     freelancer: Freelancer,
 ) -> tuple[EditarFreelancerService, MagicMock, MagicMock]:
@@ -34,7 +33,6 @@ def _make_service(
         repo,
         auditoria,
     )
-
 
 class TestCampoUnico:
     def test_cambiar_nombre_emite_un_registro(self) -> None:
@@ -66,14 +64,12 @@ class TestCampoUnico:
         registro = auditoria.guardar.call_args[0][0]
         assert registro.campo == "es_admin"
 
-
 class TestSinCambios:
     def test_mismos_valores_no_emite_registros(self) -> None:
         f = _freelancer()
         service, _, auditoria = _make_service(f)
         service.editar(f.id, nombre=f.nombre, por_telegram_id=1, por_nombre="A")
         auditoria.guardar.assert_not_called()
-
 
 class TestMissingActor:
     def test_actor_none_lanza_antes_de_guardar(self) -> None:
@@ -83,7 +79,6 @@ class TestMissingActor:
             service.editar(f.id, nombre="X", por_telegram_id=None, por_nombre="A")  # type: ignore[arg-type]
         repo.guardar.assert_not_called()
         auditoria.guardar.assert_not_called()
-
 
 class TestEntidadNoEncontrada:
     def test_freelancer_inexistente_lanza_value_error(self) -> None:

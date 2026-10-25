@@ -38,12 +38,10 @@ _spec.loader.exec_module(_mod)
 
 extraer_destinatario: Callable[[str], str | None] = _mod.extraer_destinatario
 
-
 # ---------------------------------------------------------------------------
 # Pattern 1 — "Transferencia a cuenta *{digits}"
 # Must match BEFORE the generic "Transferencia a {nombre}" branch.
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionTransferenciaCuenta:
     def test_cuenta_digitos_cortos(self) -> None:
@@ -66,11 +64,9 @@ class TestExtraccionTransferenciaCuenta:
         result = extraer_destinatario("Transferencia a NEIDA GARCIA")
         assert result == "NEIDA GARCIA"
 
-
 # ---------------------------------------------------------------------------
 # Pattern 2 — "Transferencia a {nombre}"  (Bancolombia Bre-B)
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionTransferenciaNombre:
     def test_nombre_simple(self) -> None:
@@ -90,11 +86,9 @@ class TestExtraccionTransferenciaNombre:
         result = extraer_destinatario("Transferencia a cuenta *4321")
         assert result == "*4321"
 
-
 # ---------------------------------------------------------------------------
 # Pattern 3 — "Compra en {comercio}"  (Bancolombia debit-purchase)
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionCompra:
     def test_comercio_simple(self) -> None:
@@ -109,11 +103,9 @@ class TestExtraccionCompra:
     def test_comercio_una_palabra(self) -> None:
         assert extraer_destinatario("Compra en Rappi") == "Rappi"
 
-
 # ---------------------------------------------------------------------------
 # Pattern 4 — "Envio a {nombre}"  (Nequi Bre-B)
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionEnvio:
     def test_nombre_simple(self) -> None:
@@ -127,11 +119,9 @@ class TestExtraccionEnvio:
         # UTF-8 special characters must pass through without encoding loss
         assert extraer_destinatario("Envio a José María Ñoño") == "José María Ñoño"
 
-
 # ---------------------------------------------------------------------------
 # Pattern 5 — "Pago en {comercio}"  (Nequi commerce payment)
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionPagoEn:
     def test_comercio_simple(self) -> None:
@@ -142,11 +132,9 @@ class TestExtraccionPagoEn:
             extraer_destinatario("Pago en Kushki Colombia SA") == "Kushki Colombia SA"
         )
 
-
 # ---------------------------------------------------------------------------
 # Pattern 6 — "Pago PSE a {empresa}"
 # ---------------------------------------------------------------------------
-
 
 class TestExtraccionPagoPSE:
     def test_empresa_simple(self) -> None:
@@ -158,22 +146,18 @@ class TestExtraccionPagoPSE:
     def test_empresa_con_siglas(self) -> None:
         assert extraer_destinatario("Pago PSE a WOMPI S.A.S") == "WOMPI S.A.S"
 
-
 # ---------------------------------------------------------------------------
 # Skip-list — always None
 # ---------------------------------------------------------------------------
-
 
 class TestSkipList:
     def test_pago_factura_nequi_es_none(self) -> None:
         # "Pago factura Nequi" is a known skip — no recipient
         assert extraer_destinatario("Pago factura Nequi") is None
 
-
 # ---------------------------------------------------------------------------
 # Non-match / free-form — must return None, never fabricate
 # ---------------------------------------------------------------------------
-
 
 class TestNoMatch:
     def test_descripcion_libre_es_none(self) -> None:
@@ -197,11 +181,9 @@ class TestNoMatch:
         # DiDi trips have no recipient — reach None via non-match, not skip-list
         assert extraer_destinatario("Viaje DiDi") is None
 
-
 # ---------------------------------------------------------------------------
 # Empty-string guard — result MUST be str or None, never ""
 # ---------------------------------------------------------------------------
-
 
 class TestGuardaCadenaVacia:
     def test_resultado_nunca_es_cadena_vacia(self) -> None:
@@ -223,7 +205,6 @@ class TestGuardaCadenaVacia:
                 f"extraer_destinatario({desc!r}) must not return '' — got {result!r}"
             )
 
-
 # ---------------------------------------------------------------------------
 # Idempotency — backfill never overwrites a non-NULL destinatario
 # (this is enforced by the WHERE clause, but we verify the extraction
@@ -231,7 +212,6 @@ class TestGuardaCadenaVacia:
 # at the SQL level; here we verify the pure function produces the same
 # value consistently, so a re-run would produce the same output)
 # ---------------------------------------------------------------------------
-
 
 class TestIdempotencia:
     def test_misma_descripcion_produce_mismo_resultado(self) -> None:

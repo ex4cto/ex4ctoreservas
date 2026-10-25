@@ -25,7 +25,6 @@ def _make_ingreso(
         referencia=f"REF-{uuid.uuid4().hex[:8]}",
     )
 
-
 def _make_egreso(
     monto: int = 50_000,
     categoria: str = "transporte",
@@ -42,7 +41,6 @@ def _make_egreso(
         destinatario=destinatario,
     )
 
-
 def _make_conciliacion(
     ingreso_id: uuid.UUID,
     estado: EstadoConciliacion = EstadoConciliacion.PENDIENTE,
@@ -53,7 +51,6 @@ def _make_conciliacion(
         venta_id=None,
         estado=estado,
     )
-
 
 def _make_service(
     ingresos: list[Ingreso],
@@ -75,7 +72,6 @@ def _make_service(
         conciliaciones=conc_repo,
     )
 
-
 class TestFlujoCajaServiceSinDatos:
     def test_mes_sin_datos_devuelve_ceros(self) -> None:
         service = _make_service(ingresos=[], egresos=[], conciliaciones=[])
@@ -89,7 +85,6 @@ class TestFlujoCajaServiceSinDatos:
         assert flujo.egresos_por_categoria == ()
         assert flujo.mes == 7
         assert flujo.año == 2026
-
 
 class TestFlujoCajaServiceBalance:
     def test_balance_positivo(self) -> None:
@@ -112,7 +107,6 @@ class TestFlujoCajaServiceBalance:
 
         assert flujo.balance.monto < 0
 
-
 class TestFlujoCajaServiceCategorias:
     def test_egresos_agrupados_por_categoria(self) -> None:
         egr1 = _make_egreso(monto=50_000, categoria="transporte")
@@ -125,7 +119,6 @@ class TestFlujoCajaServiceCategorias:
         cat_dict = dict(flujo.egresos_por_categoria)
         assert cat_dict["transporte"] == Dinero(80_000)
         assert cat_dict["oficina"] == Dinero(20_000)
-
 
 class TestFlujoCajaServiceConciliados:
     def test_conteo_correcto_por_estado(self) -> None:
@@ -147,7 +140,6 @@ class TestFlujoCajaServiceConciliados:
 
         assert flujo.ingresos_conciliados == 1
         assert flujo.ingresos_pendientes == 2  # PENDIENTE + SIN_MATCH
-
 
 class TestFlujoCajaServiceIngresosPorBanco:
     def test_ingresos_por_banco_agrupa(self) -> None:
@@ -182,7 +174,6 @@ class TestFlujoCajaServiceIngresosPorBanco:
         flujo = service.ejecutar(mes=7, año=2026)
 
         assert flujo.ingresos_por_estado == ()
-
 
 class TestFlujoCajaEgresosPorDestinatario:
     """Phase 11 — MONEY-CRITICAL tests for egresos_por_destinatario grouping.

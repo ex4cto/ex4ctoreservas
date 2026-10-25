@@ -25,7 +25,6 @@ from garay.dominio.ventas.valor_objetos import Participantes
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
 
-
 def _venta(
     valor_venta: Dinero | None = None,
     neto: Dinero | None = None,
@@ -50,7 +49,6 @@ def _venta(
         horarios_por_servicio=horarios_por_servicio,
     )
 
-
 def _servicio(
     precio_adulto: Decimal | None = Decimal("50"),
     precio_nino: Decimal | None = None,
@@ -65,11 +63,9 @@ def _servicio(
         netos_por_horario=netos_por_horario or {},
     )
 
-
 # ---------------------------------------------------------------------------
 # Venta.cambiar_servicio — happy paths
 # ---------------------------------------------------------------------------
-
 
 class TestCambiarServicio:
     def test_cambiar_servicio_actualiza_servicio_neto_y_valor(self) -> None:
@@ -167,11 +163,9 @@ class TestCambiarServicio:
         assert nuevo_id not in venta.fechas_por_servicio  # type: ignore[operator]
         assert viejo_id in venta.fechas_por_servicio  # type: ignore[operator]
 
-
 # ---------------------------------------------------------------------------
 # calcular_neto_tour
 # ---------------------------------------------------------------------------
-
 
 class TestCalcularNetoTour:
     def test_calcular_neto_tour_sin_precio_retorna_none(self) -> None:

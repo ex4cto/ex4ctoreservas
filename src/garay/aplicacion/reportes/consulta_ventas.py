@@ -184,7 +184,7 @@ class ConsultaVentasService:
                         cliente.numero_habitacion if cliente is not None else None
                     ),
                     punto_de_venta=punto,
-                    referido=p.referido_nombre,
+                    referido=p.referido_alias,
                     fechas_horarios=_detalle_tours(v, nombre_por_servicio),
                     comision_vendedor=desglose.vendedor if desglose else None,
                     comision_cerrador=desglose.cerrador if desglose else None,

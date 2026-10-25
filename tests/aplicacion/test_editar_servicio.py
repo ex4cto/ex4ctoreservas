@@ -29,7 +29,6 @@ def _servicio(**kwargs: object) -> Servicio:
     defaults.update(kwargs)
     return Servicio(**defaults)  # type: ignore[arg-type]
 
-
 def _make_service(
     servicio: Servicio,
 ) -> tuple[EditarServicioService, MagicMock, MagicMock]:
@@ -37,7 +36,6 @@ def _make_service(
     repo.buscar_por_id.return_value = servicio
     auditoria = MagicMock()
     return EditarServicioService(servicios=repo, auditoria=auditoria), repo, auditoria
-
 
 class TestCampoUnico:
     def test_un_campo_emite_exactamente_un_registro(self) -> None:
@@ -66,7 +64,6 @@ class TestCampoUnico:
         service.editar(s.id, nombre="NUEVO TOUR", por_telegram_id=1, por_nombre="A")
         repo.guardar.assert_called_once()
 
-
 class TestMultiplesCampos:
     def test_dos_campos_cambiados_emiten_dos_registros(self) -> None:
         s = _servicio()
@@ -81,7 +78,6 @@ class TestMultiplesCampos:
         assert auditoria.guardar.call_count == 2
         campos = {auditoria.guardar.call_args_list[i][0][0].campo for i in range(2)}
         assert campos == {"precio_neto_adulto", "activo"}
-
 
 class TestSinCambios:
     def test_sin_cambios_no_emite_registros(self) -> None:
@@ -104,7 +100,6 @@ class TestSinCambios:
         service.editar(s.id, por_telegram_id=9, por_nombre="Ryan")
         auditoria.guardar.assert_not_called()
 
-
 class TestMissingActor:
     def test_actor_none_lanza_antes_de_guardar(self) -> None:
         s = _servicio()
@@ -113,7 +108,6 @@ class TestMissingActor:
             service.editar(s.id, nombre="NUEVO", por_telegram_id=None, por_nombre="A")  # type: ignore[arg-type]
         repo.guardar.assert_not_called()
         auditoria.guardar.assert_not_called()
-
 
 class TestCampoJson:
     def test_netos_por_horario_emite_json_canonico(self) -> None:
@@ -134,7 +128,6 @@ class TestCampoJson:
         assert registro.valor_nuevo == json.dumps(
             {"08:00": "40000", "10:00": "45000"}, sort_keys=True, ensure_ascii=False
         )
-
 
 class TestEntidadNoEncontrada:
     def test_servicio_inexistente_lanza_value_error(self) -> None:

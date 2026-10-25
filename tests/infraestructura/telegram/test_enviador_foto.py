@@ -9,17 +9,15 @@ import json
 import urllib.error
 import urllib.request
 from io import BytesIO
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from garay.infraestructura.telegram.enviador_foto import EnviadorFotoTelegram
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _ok_response(payload: dict[str, object] | None = None) -> MagicMock:
     """Build a mock urllib context-manager response for a 200 OK."""
@@ -33,7 +31,6 @@ def _ok_response(payload: dict[str, object] | None = None) -> MagicMock:
     resp.status = 200
     return resp
 
-
 def _http_error(status: int, payload: dict[str, object]) -> urllib.error.HTTPError:
     """Build a urllib.error.HTTPError with a JSON body."""
     body = json.dumps(payload).encode()
@@ -46,14 +43,11 @@ def _http_error(status: int, payload: dict[str, object]) -> urllib.error.HTTPErr
         fp=fp,
     )
 
-
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
-
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestEnviadorFotoTelegram:
     @pytest.mark.asyncio

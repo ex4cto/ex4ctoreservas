@@ -30,7 +30,6 @@ _SERVICIO_ID_2 = uuid.uuid4()
 _VENDEDOR_ID = uuid.uuid4()
 _CERRADOR_ID = uuid.uuid4()
 
-
 def _make_servicio(
     sid: uuid.UUID,
     nombre: str = "Tour Test",
@@ -46,13 +45,11 @@ def _make_servicio(
         observaciones=observaciones,
     )
 
-
 def _make_freelancer(
     fid: uuid.UUID,
     telegram_user_id: int | None = 12345,
 ) -> Freelancer:
     return Freelancer(id=fid, nombre="Vendedor Test", telegram_user_id=telegram_user_id)
-
 
 def _make_reglas() -> ReglasComision:
     return ReglasComision(
@@ -60,11 +57,9 @@ def _make_reglas() -> ReglasComision:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20"),
         porcentaje_cerrador=Decimal("10"),
-        porcentaje_referido_maximo=Decimal("10"),
         punto_de_venta_nombre=None,
         numero_personas=None,
     )
-
 
 def _make_service(
     servicio_map: dict[uuid.UUID, Servicio | None] | None = None,
@@ -129,7 +124,6 @@ def _make_service(
     )
     return service, notificador
 
-
 def _make_cmd(
     servicio_ids: list[uuid.UUID],
     servicio_nombres: list[str],
@@ -155,11 +149,9 @@ def _make_cmd(
         servicio_nombres=servicio_nombres,
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 def test_vendedor_equals_cerrador_single_dm_sent() -> None:
     """When vendedor_id == cerrador_id, only one DM is sent per tour."""
@@ -185,7 +177,6 @@ def test_vendedor_equals_cerrador_single_dm_sent() -> None:
     ]
     assert len(dm_calls) == 1
 
-
 def test_vendedor_id_none_no_crash() -> None:
     """vendedor_id=None should not crash and no DM attempted for null participant."""
     cerrador = _make_freelancer(_CERRADOR_ID)
@@ -202,7 +193,6 @@ def test_vendedor_id_none_no_crash() -> None:
     )
     result = service.ejecutar(cmd)
     assert result is not None  # no exception raised
-
 
 def test_telegram_notifier_raises_sale_result_unaffected() -> None:
     """Telegram DM failure does not affect the returned sale result."""
@@ -234,7 +224,6 @@ def test_telegram_notifier_raises_sale_result_unaffected() -> None:
     result = service.ejecutar(cmd)
     assert result.venta_id is not None
 
-
 def test_two_tours_one_with_content_one_dm_sent() -> None:
     """Two tours in the sale, only one with content -> exactly one freelancer DM."""
     fid = _VENDEDOR_ID
@@ -259,7 +248,6 @@ def test_two_tours_one_with_content_one_dm_sent() -> None:
     ]
     assert len(dm_calls) == 1
 
-
 def test_two_tours_both_with_content_two_dms_sent() -> None:
     """Two tours both with content -> two separate DMs sent to the freelancer."""
     fid = _VENDEDOR_ID
@@ -283,7 +271,6 @@ def test_two_tours_both_with_content_two_dms_sent() -> None:
         if c.args[1] == str(freelancer.telegram_user_id)
     ]
     assert len(dm_calls) == 2
-
 
 def test_freelancer_telegram_user_id_none_no_dm_attempted() -> None:
     """Freelancer with telegram_user_id=None -> no DM attempted."""

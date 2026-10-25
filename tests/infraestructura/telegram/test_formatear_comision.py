@@ -19,10 +19,8 @@ _SNAP = SnapshotReglas(
     tipo_cliente=TipoCliente.INTERNO,
     porcentaje_vendedor=Decimal("0"),
     porcentaje_cerrador=Decimal("0"),
-    porcentaje_referido_maximo=Decimal("0"),
     porcentaje_capa_punto=Decimal("0"),
 )
-
 
 def _desglose(vendedor: int, cerrador: int) -> DesgloseComision:
     return DesgloseComision(
@@ -32,8 +30,9 @@ def _desglose(vendedor: int, cerrador: int) -> DesgloseComision:
         referido=Dinero(0),
         agencia=Dinero(0),
         snapshot=_SNAP,
+        neto_vendedor=Dinero(vendedor),
+        neto_cerrador=Dinero(cerrador),
     )
-
 
 def test_ambos_roles_mismo_freelancer_muestra_split() -> None:
     """Same freelancer as vendedor and cerrador — must still show the split."""
@@ -41,21 +40,17 @@ def test_ambos_roles_mismo_freelancer_muestra_split() -> None:
         "Vendedor: $56.000 / Cerrador: $56.000"
     )
 
-
 def test_dos_personas_distintas_muestra_split() -> None:
     assert _formatear_comision(_desglose(56000, 40000)) == (
         "Vendedor: $56.000 / Cerrador: $40.000"
     )
 
-
 def test_solo_vendedor_muestra_total_unico() -> None:
     """Only the vendedor earned — single total, no 'Cerrador: $0'."""
     assert _formatear_comision(_desglose(56000, 0)) == "$56.000"
 
-
 def test_solo_cerrador_muestra_total_unico() -> None:
     assert _formatear_comision(_desglose(0, 56000)) == "$56.000"
-
 
 def test_ambos_cero_muestra_cero() -> None:
     assert _formatear_comision(_desglose(0, 0)) == "$0"

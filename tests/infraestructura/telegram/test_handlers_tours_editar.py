@@ -15,7 +15,6 @@ from garay.dominio.servicios.entidades import Servicio
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     nombre: str = "CITY TOUR",
     categoria: str = "CARTAGENA",
@@ -35,7 +34,6 @@ def _servicio(
         permite_ninos=permite_ninos,
     )
 
-
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=123)
@@ -50,7 +48,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
     else:
         update.callback_query = None
     return update
-
 
 def _make_context(
     servicios: list[Servicio] | None = None,
@@ -68,7 +65,6 @@ def _make_context(
     fsm = MagicMock()
     ctx.bot_data = {"servicio_repo": repo, "fsm": fsm}
     return ctx
-
 
 # ---------------------------------------------------------------------------
 # Import guard — these will fail RED until handlers_tours.py exists
@@ -95,7 +91,6 @@ from garay.infraestructura.telegram.handlers_tours import (  # noqa: E402
 # Phase 6.1 — /editar_tour tests
 # ---------------------------------------------------------------------------
 
-
 class TestCmdEditarTour:
     @pytest.mark.asyncio
     async def test_cmd_editar_tour_muestra_familias(self) -> None:
@@ -113,7 +108,6 @@ class TestCmdEditarTour:
         # Must have called listar() (ALL tours, including inactive)
         ctx.bot_data["servicio_repo"].listar.assert_called_once()
         ctx.bot_data["servicio_repo"].listar_activos.assert_not_called()
-
 
 class TestHandleEdtFamilia:
     @pytest.mark.asyncio
@@ -136,7 +130,6 @@ class TestHandleEdtFamilia:
             reply_markup=None
         )
 
-
 class TestHandleEdtTour:
     @pytest.mark.asyncio
     async def test_seleccionar_tour_muestra_ficha(self) -> None:
@@ -153,7 +146,6 @@ class TestHandleEdtTour:
         assert result == EDF_FICHA
         assert ctx.user_data.get("edt_target_id") == str(s1.id)
         update.effective_message.reply_text.assert_called()
-
 
 class TestHandleEdtCampoNombre:
     @pytest.mark.asyncio
@@ -237,7 +229,6 @@ class TestHandleEdtCampoNombre:
         assert result == EDF_FICHA
         repo.guardar.assert_called_once()
         ctx.bot_data["fsm"].refrescar_servicios.assert_called_once()
-
 
 class TestHandleEdtCampoNeto:
     @pytest.mark.asyncio
@@ -333,7 +324,6 @@ class TestHandleEdtCampoNeto:
 
         assert result == EDF_CONFIRMA
 
-
 class TestHandleEdtFamiliaReasign:
     @pytest.mark.asyncio
     async def test_editar_familia_existente(self) -> None:
@@ -372,7 +362,6 @@ class TestHandleEdtFamiliaReasign:
         assert result == EDF_NUEVA_FAMILIA
         update.effective_message.reply_text.assert_called_once()
 
-
 class TestHandleEdtNuevaFamiliaTexto:
     @pytest.mark.asyncio
     async def test_nueva_familia_libre_texto_muestra_confirmacion(self) -> None:
@@ -391,7 +380,6 @@ class TestHandleEdtNuevaFamiliaTexto:
         result = await handle_edt_nueva_familia_texto(update, ctx)
 
         assert result == EDF_CONFIRMA
-
 
 class TestHandleEdtToggleActivo:
     @pytest.mark.asyncio
@@ -441,7 +429,6 @@ class TestHandleEdtToggleActivo:
         repo.guardar.assert_called_once()
         saved = repo.guardar.call_args[0][0]
         assert saved.activo is True
-
 
 class TestHandleEdtTogglePermiteNinos:
     @pytest.mark.asyncio
@@ -510,7 +497,6 @@ class TestHandleEdtTogglePermiteNinos:
         assert "Permite niños: No" in _render_ficha(_servicio(permite_ninos=False))
         assert "Permite niños: Sí" in _render_ficha(_servicio(permite_ninos=True))
 
-
 class TestHandleEdtCancelar:
     @pytest.mark.asyncio
     async def test_cancelar_edicion_sale_limpio(self) -> None:
@@ -554,11 +540,9 @@ class TestHandleEdtCancelar:
         # User_data must be cleaned up
         assert "edt_activo_nuevo" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # Routing tests — verify PTB state dispatch, not just handler logic
 # ---------------------------------------------------------------------------
-
 
 class TestEdtCampoRoutingNuevaFamilia:
     """
@@ -686,7 +670,6 @@ class TestEdtCampoRoutingNuevaFamilia:
             "when the callback is 'edt_familia_nueva_libre'."
         )
 
-
 class TestEdtNuevaFamiliaEndToEnd:
     """
     Full flow: taps 'Nueva familia' → types name → confirms → saved in repo with
@@ -733,11 +716,9 @@ class TestEdtNuevaFamiliaEndToEnd:
         )
         ctx.bot_data["fsm"].refrescar_servicios.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Task 4.1 RED -- _teclado_horarios helper
 # ---------------------------------------------------------------------------
-
 
 class TestTecladoHorarios:
     """_teclado_horarios(horarios, prefix) must return a properly structured keyboard."""
@@ -805,11 +786,9 @@ class TestTecladoHorarios:
         assert rows[-2][0].callback_data == "nvt_hor_agregar"
         assert rows[-1][0].callback_data == "nvt_hor_listo"
 
-
 # ---------------------------------------------------------------------------
 # Task 5.1 RED -- EDH state constants + editor handlers
 # ---------------------------------------------------------------------------
-
 
 class TestEdhStateConstants:
     """EDH_* constants must be defined, unique, in range 237-239."""
@@ -828,7 +807,6 @@ class TestEdhStateConstants:
         from garay.infraestructura.telegram.handlers_tours import EDH_AGREGAR, EDH_LISTA
 
         assert EDH_LISTA != EDH_AGREGAR
-
 
 class TestHandleEdtFichaHorarios:
     """handle_edt_ficha with campo=horarios must open the EDH editor."""
@@ -876,7 +854,6 @@ class TestHandleEdtFichaHorarios:
             for c in call_args
         ]
         assert any(isinstance(k, InlineKeyboardMarkup) for k in keyboards)
-
 
 class TestHandleEdhLista:
     """handle_edh_lista routes edh_agregar / edh_quitar / edh_listo correctly."""
@@ -945,7 +922,6 @@ class TestHandleEdhLista:
         result = await handle_edh_lista(update, ctx)
 
         assert result == EDF_FICHA
-
 
 class TestHandleEdhAgregarTexto:
     """handle_edh_agregar_texto validates and persists new horario."""
@@ -1017,11 +993,9 @@ class TestHandleEdhAgregarTexto:
         assert result == EDH_AGREGAR
         ctx.bot_data["servicio_repo"].guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Task 6.1 RED -- EDH states wired in bot.py
 # ---------------------------------------------------------------------------
-
 
 class TestEdhStatesBotWiring:
     """Structural: EDH_LISTA and EDH_AGREGAR must be in editar_tour_conv_handler."""
@@ -1082,11 +1056,9 @@ class TestEdhStatesBotWiring:
             f"EDH_AGREGAR must have exactly 1 MessageHandler, got {len(text_handlers)}"
         )
 
-
 # ---------------------------------------------------------------------------
 # T1.16 RED — fmt_cop display + precio_sugerido_adulto editor (imagen-precios)
 # ---------------------------------------------------------------------------
-
 
 def _servicio_sugerido(
     neto_adulto: object = Decimal("390000"),
@@ -1107,7 +1079,6 @@ def _servicio_sugerido(
         precio_sugerido_adulto=sugerido_adulto,  # type: ignore[arg-type]
         precio_sugerido_nino=sugerido_nino,  # type: ignore[arg-type]
     )
-
 
 class TestRenderFichaFmtCop:
     """T1.16 RED — _render_ficha() must use fmt_cop() for monetary values."""
@@ -1155,7 +1126,6 @@ class TestRenderFichaFmtCop:
             f"Expected '$100.000' for sugerido_adulto in ficha but got: {ficha!r}"
         )
 
-
 class TestCamposEditablesSugeridoAdulto:
     """T1.16 RED — precio_sugerido_adulto must be in _CAMPOS_EDITABLES."""
 
@@ -1176,7 +1146,6 @@ class TestCamposEditablesSugeridoAdulto:
         assert "precio_sugerido_nino" not in campos, (
             "'precio_sugerido_nino' must NOT be in _CAMPOS_EDITABLES (not a bot-editable field)"
         )
-
 
 class TestHandleEdtValorSugeridoAdulto:
     """T1.16 RED — handle_edt_valor must handle campo='precio_sugerido_adulto'."""
@@ -1279,7 +1248,6 @@ class TestHandleEdtValorSugeridoAdulto:
         assert ctx.user_data["edt_valor"] == Decimal("150000"), (
             "Input '150' (miles de pesos) must store Decimal('150000') in edt_valor"
         )
-
 
 class TestHandleEdtConfirmaSugeridoAdulto:
     """T1.16 RED — handle_edt_confirma must persist precio_sugerido_adulto."""

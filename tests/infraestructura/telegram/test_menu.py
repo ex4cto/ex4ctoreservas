@@ -52,7 +52,6 @@ class TestCatalogo:
         comandos = [c.comando for c in CATALOGO_COMANDOS]
         assert "editar_freelancer" in comandos
 
-
 class TestComandosParaTier:
     """Verify tier filtering behavior."""
 
@@ -131,7 +130,6 @@ class TestComandosParaTier:
         cat_nombres = [c.comando for c in CATALOGO_COMANDOS]
         assert nombres == cat_nombres
 
-
 class TestComandosBot:
     """Verify BotCommand list output per tier."""
 
@@ -155,7 +153,6 @@ class TestComandosBot:
         for bc in result:
             assert bc.command
             assert bc.description
-
 
 class TestRenderMenu:
     """Verify render_menu text output."""
@@ -214,7 +211,6 @@ class TestRenderMenu:
         assert "nueva_venta" in text
         assert "editar_freelancer" in text
 
-
 class TestRenderSubmenu:
     """Verify render_submenu — the per-group menu shown after a flow ends."""
 
@@ -244,7 +240,6 @@ class TestRenderSubmenu:
     def test_submenu_respeta_tier(self) -> None:
         text = render_submenu(GrupoComando.VENTAS, TierComando.FREELANCER)
         assert "gestionar_ventas" not in text
-
 
 class TestTierDeUsuario:
     """Verify tier resolution from uid/flags/sets."""

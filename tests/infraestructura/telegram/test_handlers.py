@@ -24,18 +24,15 @@ from garay.infraestructura.telegram.handlers import (
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-
 def _update(telegram_id: int = 12345) -> MagicMock:
     u = MagicMock()
     u.effective_user.id = telegram_id
     return u
 
-
 def _context(bot_data: dict) -> MagicMock:  # type: ignore[type-arg]
     c = MagicMock()
     c.bot_data = bot_data
     return c
-
 
 def _freelancer(nombre: str = "Maria Lopez", fl_id: uuid.UUID | None = None) -> MagicMock:
     f = MagicMock()
@@ -43,20 +40,17 @@ def _freelancer(nombre: str = "Maria Lopez", fl_id: uuid.UUID | None = None) -> 
     f.id = fl_id or uuid.uuid4()
     return f
 
-
 def _servicio(numero: int, sid: uuid.UUID | None = None) -> MagicMock:
     s = MagicMock()
     s.numero = numero
     s.id = sid or uuid.uuid4()
     return s
 
-
 def _pdv(nombre: str, pid: uuid.UUID | None = None) -> MagicMock:
     p = MagicMock()
     p.nombre = nombre
     p.id = pid or uuid.uuid4()
     return p
-
 
 def _full_ctx(**overrides: object) -> ContextoVenta:
     defaults: dict[str, object] = {
@@ -73,7 +67,6 @@ def _full_ctx(**overrides: object) -> ContextoVenta:
     }
     defaults.update(overrides)
     return ContextoVenta(**defaults)  # type: ignore[arg-type]
-
 
 def _base_bot_data(
     *,
@@ -96,9 +89,7 @@ def _base_bot_data(
     }
     return bot_data, sid, fl_id
 
-
 # ── TestGetFsm ───────────────────────────────────────────────────────────────
-
 
 class TestGetFsm:
     def test_returns_fsm_when_present(self) -> None:
@@ -112,9 +103,7 @@ class TestGetFsm:
     def test_returns_none_when_wrong_type(self) -> None:
         assert _get_fsm(_context({"fsm": "not-a-fsm"})) is None
 
-
 # ── TestContextoAComando ─────────────────────────────────────────────────────
-
 
 class TestContextoAComando:
     def test_ambos_sets_both_names_to_freelancer(self) -> None:
@@ -276,9 +265,7 @@ class TestContextoAComando:
         assert cmd is not None
         assert cmd.abono is not None
 
-
 # ── TestCmdFoto ──────────────────────────────────────────────────────────────
-
 
 def _make_freelancer_repo(found: bool = True) -> MagicMock:
     repo = MagicMock()
@@ -289,7 +276,6 @@ def _make_freelancer_repo(found: bool = True) -> MagicMock:
     else:
         repo.buscar_por_telegram_id.return_value = None
     return repo
-
 
 class TestCmdFoto:
     def _make_update_with_photo(self) -> MagicMock:
@@ -396,7 +382,6 @@ class TestCmdFoto:
         assert result == ConversationHandler.END
         update.effective_message.reply_text.assert_called_once()
 
-
 class TestTourPickerColumns:
     """Tour picker must render 1 button per row; freelancer picker keeps 2 columns."""
 
@@ -467,7 +452,6 @@ class TestTourPickerColumns:
             contexto=ContextoVenta(),
         )
         assert _columnas_para_salida(salida_fl) == 2
-
 
 class TestEnviarSalidaFallback:
     """A BadRequest parse-entities error must degrade to plain text, never freeze."""
@@ -544,7 +528,6 @@ class TestEnviarSalidaFallback:
         with pytest.raises(BadRequest):
             await _enviar_salida(update, context, self._salida())
 
-
 class TestRecortarALimite:
     """A message over Telegram's 4096-char limit must be truncated, not sent whole."""
 
@@ -585,7 +568,6 @@ class TestRecortarALimite:
 
         enviado = update.callback_query.edit_message_text.call_args.args[0]
         assert len(enviado) <= 4096
-
 
 class TestCmdStart:
     """WU-6: /start shows menu and returns END (does not start FSM)."""

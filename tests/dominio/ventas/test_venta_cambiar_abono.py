@@ -35,7 +35,6 @@ def _venta(
         abono=abono,
     )
 
-
 class TestCambiarAbono:
     def test_happy_path_establece_abono(self) -> None:
         venta = _venta(valor_venta=Dinero(300_000))

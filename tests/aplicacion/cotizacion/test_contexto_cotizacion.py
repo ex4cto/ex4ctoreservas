@@ -32,7 +32,6 @@ class TestContextoCotizacionDefaults:
         ctx = ContextoCotizacion()
         assert ctx.precio_adulto is None
 
-
 class TestContextoCotizacionTypeGuard:
     """SC-A02: precio_adulto/precio_nino must be Decimal, not float."""
 

@@ -43,11 +43,9 @@ _RECURSOS_CAROS: dict[str, float] = {"NETWORK_TX_GB": 500.0}  # $25.0
 # A "cheap" measurement that stays below _UMBRAL
 _RECURSOS_BARATOS: dict[str, float] = {"NETWORK_TX_GB": 10.0}  # $0.50
 
-
 # ---------------------------------------------------------------------------
 # Fake in-memory proveedor
 # ---------------------------------------------------------------------------
-
 
 class FakeProveedorUsoRailway(ProveedorUsoRailway):
     """In-memory stub: caller configures per-date usage dicts."""
@@ -66,11 +64,9 @@ class FakeProveedorUsoRailway(ProveedorUsoRailway):
     def estimado_mes(self, hoy: datetime.date) -> dict[str, float]:
         return self._estimado
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_service(
     proveedor: ProveedorUsoRailway,
@@ -85,17 +81,14 @@ def _make_service(
         plan_fee=plan_fee,
     )
 
-
 # Reference dates for mid-month tests
 _HOY = datetime.date(2026, 8, 16)  # hoy
 _AYER = datetime.date(2026, 8, 15)  # hoy - 1
 _ANTEAYER = datetime.date(2026, 8, 14)  # hoy - 2
 
-
 # ---------------------------------------------------------------------------
 # Threshold crossing fires
 # ---------------------------------------------------------------------------
-
 
 class TestCruceDePrecio:
     def test_cruce_umbral_devuelve_aviso(self) -> None:
@@ -137,11 +130,9 @@ class TestCruceDePrecio:
 
         assert avisos[0].estimado_factura == pytest.approx(_PLAN_FEE)
 
-
 # ---------------------------------------------------------------------------
 # No crossing: empty result
 # ---------------------------------------------------------------------------
-
 
 class TestSinCruce:
     def test_ambos_por_debajo_no_devuelve_aviso(self) -> None:
@@ -169,11 +160,9 @@ class TestSinCruce:
         avisos = service.avisos_para(_HOY)
         assert avisos == []
 
-
 # ---------------------------------------------------------------------------
 # Month-boundary reset: previo forced to 0
 # ---------------------------------------------------------------------------
-
 
 class TestMesBoundaryReset:
     def test_primer_dia_mes_previo_cero_dispara(self) -> None:
@@ -223,11 +212,9 @@ class TestMesBoundaryReset:
         assert len(avisos) == 1
         assert avisos[0].costo_actual == pytest.approx(25.0)
 
-
 # ---------------------------------------------------------------------------
 # AvisoCostoRailway dataclass
 # ---------------------------------------------------------------------------
-
 
 class TestAvisoCostoRailwayDataclass:
     def test_es_frozen(self) -> None:

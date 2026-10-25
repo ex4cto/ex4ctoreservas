@@ -184,7 +184,7 @@ class ImportarVentasExcelService:
                     vendedor_nombre=f.vendedor_nombre,
                     cerrador_nombre=f.cerrador_nombre,
                     punto_de_venta_id=punto_id,
-                    referido_nombre=None,
+                    referido_alias=None,
                     vendedor_id=vendedor_id,
                     cerrador_id=cerrador_id,
                 ),
@@ -280,7 +280,7 @@ class ImportarVentasExcelService:
                     f"No se encontraron reglas de comision para Crespo, "
                     f"personas={numero_personas!r}"
                 )
-            return self._motor.calcular(venta, reglas, punto_crespo, Decimal("0"))
+            return self._motor.calcular(venta, reglas, punto_crespo)
 
         # Historical spreadsheet path for all non-Crespo rows (Hotel, Externas, etc.).
         punto_residual = f.margen - f.agencia - f.comision_vendedor - f.comision_cerrador
@@ -293,7 +293,6 @@ class ImportarVentasExcelService:
             tipo_cliente=_tipo_cliente(f.canal),
             porcentaje_vendedor=pct(f.comision_vendedor),
             porcentaje_cerrador=pct(f.comision_cerrador),
-            porcentaje_referido_maximo=Decimal("0"),
             porcentaje_capa_punto=pct(punto_residual),
         )
         return DesgloseComision(
@@ -303,4 +302,6 @@ class ImportarVentasExcelService:
             referido=_CERO,
             agencia=f.agencia,
             snapshot=snapshot,
+            neto_vendedor=f.comision_vendedor,
+            neto_cerrador=f.comision_cerrador,
         )

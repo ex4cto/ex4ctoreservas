@@ -25,7 +25,6 @@ def _make_update(uid: int = 12345) -> MagicMock:
     update.effective_user.id = uid
     return update
 
-
 def _make_context(
     *,
     fl_repo_result: MagicMock | None = None,
@@ -39,12 +38,10 @@ def _make_context(
     context.bot.set_my_commands = AsyncMock()
     return context
 
-
 def _freelancer(*, es_admin: bool = False) -> MagicMock:
     fl = MagicMock()
     fl.es_admin = es_admin
     return fl
-
 
 class TestCmdStartDinamico:
     """cmd_start must reply with the caller-specific menu and return END."""
@@ -266,7 +263,6 @@ class TestCmdStartDinamico:
         text = update.message.reply_text.call_args[0][0]
         assert "nueva_venta" in text
         assert "flujo_caja" not in text
-
 
 class TestCmdHelp:
     """cmd_help must behave identically to cmd_start (same render)."""

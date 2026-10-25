@@ -28,7 +28,6 @@ def _make_egreso(
         referencia=referencia,
     )
 
-
 def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     egreso = _make_egreso()
@@ -43,11 +42,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.categoria == "otro"
     assert resultado.tipo == TipoEgreso.AUTOMATICO
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def test_existe_referencia_verdadero(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
@@ -56,11 +53,9 @@ def test_existe_referencia_verdadero(sf: sessionmaker[Session]) -> None:
 
     assert repo.existe_referencia("MSG-EGRESO-001") is True
 
-
 def test_existe_referencia_falso(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     assert repo.existe_referencia("MSG-INEXISTENTE") is False
-
 
 def test_existe_referencia_con_referencia_none_no_falla(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
@@ -68,7 +63,6 @@ def test_existe_referencia_con_referencia_none_no_falla(sf: sessionmaker[Session
     repo.guardar(egreso)
 
     assert repo.existe_referencia("MSG-CUALQUIERA") is False
-
 
 def test_listar_por_periodo_devuelve_egresos_en_rango(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
@@ -99,7 +93,6 @@ def test_listar_por_periodo_devuelve_egresos_en_rango(sf: sessionmaker[Session])
     assert dentro.id in ids
     assert fuera.id not in ids
 
-
 def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
     sf: sessionmaker[Session],
 ) -> None:
@@ -110,7 +103,6 @@ def test_listar_por_periodo_sin_datos_devuelve_lista_vacia(
     )
 
     assert resultado == []
-
 
 # --- destinatario roundtrip (REQ-2, design §1 critical finding) ---
 
@@ -132,7 +124,6 @@ def test_destinatario_persiste_y_recarga(sf: sessionmaker[Session]) -> None:
 
     assert recargado is not None
     assert recargado.destinatario == "Rappi"
-
 
 def test_destinatario_none_persiste_como_null(sf: sessionmaker[Session]) -> None:
     """Egreso with destinatario=None must reload as None, not empty string."""
