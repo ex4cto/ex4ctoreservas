@@ -9,12 +9,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from garay.aplicacion.liquidaciones.servicio import LiquidarReferidoService
+from garay.aplicacion.liquidaciones.servicio import (
+    LiquidarReferidoService,
+    RegistrarPagoReferidoComando,
+)
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.snapshot import SnapshotReglas
 from garay.dominio.comisiones.valor_objetos import DesgloseComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
+from garay.dominio.liquidaciones.entidades import PagoReferido
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
 
@@ -73,14 +77,20 @@ def _make_comision(
 def _make_service(
     ventas: list[Venta],
     comisiones: list[ComisionRegistrada],
+    *,
+    pago_referido_repo: MagicMock | None = None,
 ) -> LiquidarReferidoService:
     ventas_repo = MagicMock()
     ventas_repo.listar_por_periodo.return_value = ventas
     comisiones_repo = MagicMock()
     comisiones_repo.listar_por_venta_ids.return_value = comisiones
+    if pago_referido_repo is None:
+        pago_referido_repo = MagicMock()
+        pago_referido_repo.buscar_solapados.return_value = []
     return LiquidarReferidoService(
         ventas_repo=ventas_repo,
         comisiones_repo=comisiones_repo,
+        pago_referido_repo=pago_referido_repo,
     )
 
 
@@ -155,3 +165,83 @@ class TestLiquidarReferidoService:
         assert len(resultado.desglose) == 1
         assert resultado.desglose[0].referido == Dinero(18_000)
         assert resultado.desglose[0].fecha == _FECHA
+
+    # ------------------------------------------------------------------
+    # registrar_pago tests (C1, C2, C3)
+    # ------------------------------------------------------------------
+
+    def test_registrar_pago_rechaza_periodo_solapado(self) -> None:
+        """C1: registrar_pago raises ValueError when alias already has a pago in the period."""
+        pago_referido_repo = MagicMock()
+        existing_pago = PagoReferido(
+            id=uuid.uuid4(),
+            venta_id=uuid.uuid4(),
+            referido_alias="taxi",
+            monto=Dinero(18_000),
+            fecha_pago=datetime.datetime(2026, 10, 3, tzinfo=datetime.UTC),
+            registrado_por_telegram_id=5870211102,
+            registrado_por_nombre="Ryan",
+        )
+        pago_referido_repo.buscar_solapados.return_value = [existing_pago]
+        service = _make_service([], [], pago_referido_repo=pago_referido_repo)
+
+        cmd = RegistrarPagoReferidoComando(
+            referido_alias="taxi",
+            venta_id=uuid.uuid4(),
+            monto=Dinero(18_000),
+            desde=datetime.date(2026, 10, 1),
+            hasta=datetime.date(2026, 10, 7),
+            registrado_por_telegram_id=5870211102,
+            registrado_por_nombre="Ryan",
+        )
+
+        with pytest.raises(ValueError, match="solapado"):
+            service.registrar_pago(cmd)
+
+    def test_registrar_pago_permite_diferente_alias_mismo_periodo(self) -> None:
+        """C2: registrar_pago succeeds when a different alias has a pago in the same period."""
+        pago_referido_repo = MagicMock()
+        # No solapados for "moto" alias in the given period
+        pago_referido_repo.buscar_solapados.return_value = []
+        service = _make_service([], [], pago_referido_repo=pago_referido_repo)
+
+        cmd = RegistrarPagoReferidoComando(
+            referido_alias="moto",
+            venta_id=uuid.uuid4(),
+            monto=Dinero(12_000),
+            desde=datetime.date(2026, 10, 1),
+            hasta=datetime.date(2026, 10, 7),
+            registrado_por_telegram_id=5870211102,
+            registrado_por_nombre="Ryan",
+        )
+
+        result = service.registrar_pago(cmd)
+
+        assert result.referido_alias == "moto"
+        assert result.monto == Dinero(12_000)
+
+    def test_registrar_pago_persiste_pago_referido(self) -> None:
+        """C3: registrar_pago calls pago_referido_repo.guardar with correct data."""
+        pago_referido_repo = MagicMock()
+        pago_referido_repo.buscar_solapados.return_value = []
+        service = _make_service([], [], pago_referido_repo=pago_referido_repo)
+
+        venta_id = uuid.uuid4()
+        cmd = RegistrarPagoReferidoComando(
+            referido_alias="taxi",
+            venta_id=venta_id,
+            monto=Dinero(18_000),
+            desde=datetime.date(2026, 10, 1),
+            hasta=datetime.date(2026, 10, 7),
+            registrado_por_telegram_id=5870211102,
+            registrado_por_nombre="Ryan",
+        )
+
+        service.registrar_pago(cmd)
+
+        pago_referido_repo.guardar.assert_called_once()
+        saved: PagoReferido = pago_referido_repo.guardar.call_args[0][0]
+        assert saved.referido_alias == "taxi"
+        assert saved.venta_id == venta_id
+        assert saved.monto == Dinero(18_000)
+        assert saved.registrado_por_telegram_id == 5870211102
