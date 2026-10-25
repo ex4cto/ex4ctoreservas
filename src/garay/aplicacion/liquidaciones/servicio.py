@@ -18,6 +18,29 @@ from garay.dominio.puertos.repositorios import (
 )
 
 # ---------------------------------------------------------------------------
+# DTOs for referido liquidation
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReferidoVentaDetalle:
+    """Detail line for a single sale contributing to a referido's amount."""
+
+    fecha: datetime.date
+    referido: Dinero
+
+
+@dataclass(frozen=True)
+class ResultadoLiquidacionReferido:
+    """Result of calculating what a referido alias is owed for a period."""
+
+    referido_alias: str
+    desde: datetime.date
+    hasta: datetime.date
+    total: Dinero
+    desglose: list[ReferidoVentaDetalle]
+
+# ---------------------------------------------------------------------------
 # DTOs
 # ---------------------------------------------------------------------------
 
@@ -205,3 +228,71 @@ class LiquidarFreelancerService:
         )
         self._pago_repo.guardar(pago)
         return pago
+
+
+# ---------------------------------------------------------------------------
+# Referido liquidation service
+# ---------------------------------------------------------------------------
+
+
+class LiquidarReferidoService:
+    """Calculates the referido amount owed for a given alias over a period."""
+
+    def __init__(
+        self,
+        ventas_repo: VentaRepository,
+        comisiones_repo: ComisionRegistradaRepository,
+    ) -> None:
+        self._ventas_repo = ventas_repo
+        self._comisiones_repo = comisiones_repo
+
+    def calcular(
+        self,
+        referido_alias: str,
+        desde: date,
+        hasta: date,
+    ) -> ResultadoLiquidacionReferido:
+        """Calculate total referido amount for alias over [desde, hasta].
+
+        Steps:
+        1. Load all non-anulada ventas in period.
+        2. Load registered commissions for those ventas.
+        3. For each venta where referido_alias matches, accumulate desglose.referido.
+        """
+        ventas = self._ventas_repo.listar_por_periodo(desde, hasta)
+        venta_ids = [v.id for v in ventas]
+
+        comisiones_list = (
+            self._comisiones_repo.listar_por_venta_ids(venta_ids) if venta_ids else []
+        )
+        comisiones_by_venta = {c.venta_id: c for c in comisiones_list}
+
+        desglose: list[ReferidoVentaDetalle] = []
+        total = Dinero(0)
+
+        for venta in ventas:
+            if venta.anulada:
+                continue
+            if venta.participantes.referido_alias != referido_alias:
+                continue
+
+            comision = comisiones_by_venta.get(venta.id)
+            if comision is None:
+                continue
+
+            monto_referido = comision.desglose.referido
+            desglose.append(
+                ReferidoVentaDetalle(
+                    fecha=venta.fecha,
+                    referido=monto_referido,
+                )
+            )
+            total = total + monto_referido
+
+        return ResultadoLiquidacionReferido(
+            referido_alias=referido_alias,
+            desde=desde,
+            hasta=hasta,
+            total=total,
+            desglose=desglose,
+        )
