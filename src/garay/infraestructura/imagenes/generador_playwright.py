@@ -86,7 +86,15 @@ class PlaywrightGeneradorImagen(GeneradorListaPreciosPort):
         )
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--no-zygote",
+                ],
+            )
             try:
                 page = await browser.new_page(
                     viewport={"width": 1140, "height": 3200},
