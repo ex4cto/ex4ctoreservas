@@ -21,6 +21,7 @@ class AccionAuditoria(StrEnum):
     EDITAR_METODO_PAGO = "EDITAR_METODO_PAGO"
     EDITAR_ABONO = "EDITAR_ABONO"
     EDITAR_PAX = "EDITAR_PAX"
+    EDITAR_REFERIDO = "EDITAR_REFERIDO"
 
 
 @dataclass(frozen=True)

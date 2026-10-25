@@ -4,13 +4,12 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import date
 
+from garay.dominio.auditoria.entidades import RegistroAuditoria
 from garay.dominio.clientes.entidades import Cliente
-from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.dominio.comisiones.entidades import ComisionRegistrada
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.comun.tipos import TipoCliente
-from garay.dominio.auditoria.entidades import RegistroAuditoria
 from garay.dominio.conciliacion.auditoria_egreso import AuditoriaEgreso
 from garay.dominio.conciliacion.entidades import (
     CategoriaEgreso,
@@ -23,6 +22,7 @@ from garay.dominio.conciliacion.entidades import (
 )
 from garay.dominio.facturas.entidades import Factura
 from garay.dominio.freelancers.entidades import Freelancer
+from garay.dominio.liquidaciones.entidades import PagoFreelancer, PagoReferido
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.socios.entidades import PagoSocio, SocioConfig
@@ -452,3 +452,19 @@ class AuditoriaEntidadesRepository(ABC):
         desde: date | None = None,
         hasta: date | None = None,
     ) -> list[RegistroAuditoria]: ...
+
+
+class PagoReferidoRepository(ABC):
+    """Port for recording and querying referido payments."""
+
+    @abstractmethod
+    def guardar(self, pago: PagoReferido) -> None:
+        """Persist a new referido payment record."""
+
+    @abstractmethod
+    def listar_por_venta(self, venta_id: uuid.UUID) -> list[PagoReferido]:
+        """Return all referido payments for a given venta."""
+
+    @abstractmethod
+    def listar_por_referido(self, referido_alias: str) -> list[PagoReferido]:
+        """Return all referido payments for a given alias."""
