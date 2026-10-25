@@ -8,11 +8,12 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.liquidaciones.entidades import PagoFreelancer
+from garay.dominio.liquidaciones.entidades import PagoFreelancer, PagoReferido
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
     PagoFreelancerRepository,
+    PagoReferidoRepository,
     ServicioRepository,
     VentaRepository,
 )
@@ -230,6 +231,19 @@ class LiquidarFreelancerService:
         return pago
 
 
+@dataclass(frozen=True)
+class RegistrarPagoReferidoComando:
+    """Command to register a payment to a referido alias for a given venta."""
+
+    referido_alias: str
+    venta_id: uuid.UUID
+    monto: Dinero
+    desde: date
+    hasta: date
+    registrado_por_telegram_id: int
+    registrado_por_nombre: str | None
+
+
 # ---------------------------------------------------------------------------
 # Referido liquidation service
 # ---------------------------------------------------------------------------
@@ -242,9 +256,11 @@ class LiquidarReferidoService:
         self,
         ventas_repo: VentaRepository,
         comisiones_repo: ComisionRegistradaRepository,
+        pago_referido_repo: PagoReferidoRepository | None = None,
     ) -> None:
         self._ventas_repo = ventas_repo
         self._comisiones_repo = comisiones_repo
+        self._pago_referido_repo = pago_referido_repo
 
     def calcular(
         self,
@@ -296,3 +312,32 @@ class LiquidarReferidoService:
             total=total,
             desglose=desglose,
         )
+
+    def registrar_pago(self, cmd: RegistrarPagoReferidoComando) -> PagoReferido:
+        """Register a payment to a referido alias and persist it.
+
+        Raises ValueError if a pago for the same alias already exists in the period.
+        """
+        if self._pago_referido_repo is None:
+            raise RuntimeError("pago_referido_repo is required for registrar_pago")
+
+        solapados = self._pago_referido_repo.buscar_solapados(
+            cmd.referido_alias, cmd.desde, cmd.hasta
+        )
+        if solapados:
+            raise ValueError(
+                f"Pago solapado: ya existe un pago para '{cmd.referido_alias}' "
+                f"en el período {cmd.desde} - {cmd.hasta}"
+            )
+
+        pago = PagoReferido(
+            id=uuid.uuid4(),
+            venta_id=cmd.venta_id,
+            referido_alias=cmd.referido_alias,
+            monto=cmd.monto,
+            fecha_pago=datetime.datetime.now(tz=datetime.UTC),
+            registrado_por_telegram_id=cmd.registrado_por_telegram_id,
+            registrado_por_nombre=cmd.registrado_por_nombre,
+        )
+        self._pago_referido_repo.guardar(pago)
+        return pago
