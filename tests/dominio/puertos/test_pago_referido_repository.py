@@ -31,3 +31,15 @@ class TestPagoReferidoRepository:
         from garay.dominio.puertos.repositorios import PagoReferidoRepository
 
         assert hasattr(PagoReferidoRepository, "listar_por_referido")
+
+    def test_pago_referido_repository_has_buscar_solapados(self) -> None:
+        """Task 1.10: buscar_solapados(alias, desde, hasta) must be declared."""
+        from garay.dominio.puertos.repositorios import PagoReferidoRepository
+
+        assert hasattr(PagoReferidoRepository, "buscar_solapados")
+
+    def test_pago_referido_repository_has_eliminar(self) -> None:
+        """Task 1.10: eliminar must be declared."""
+        from garay.dominio.puertos.repositorios import PagoReferidoRepository
+
+        assert hasattr(PagoReferidoRepository, "eliminar")
