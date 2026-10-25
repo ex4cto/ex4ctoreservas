@@ -52,6 +52,7 @@ def _make_desglose() -> MagicMock:
     d.vendedor.monto = Decimal("0")
     d.cerrador.monto = Decimal("0")
     d.punto_de_venta.monto = Decimal("0")
+    d.referido.monto = Decimal("0")
     d.agencia = Dinero(45_000)
     return d
 

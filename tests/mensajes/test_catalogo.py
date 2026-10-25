@@ -533,3 +533,29 @@ class TestClavesEgresosDestinatario:
         msg = obtener_mensaje("egresos_sin_destinatario")
         # Must convey "no destinatario" concept — e.g. "Sin destinatario"
         assert "destinatario" in msg.lower()
+
+
+class TestReferidoCatalogKeys:
+    """Task 4.1: all referido catalog keys must exist and be non-empty."""
+
+    def test_campo_referido_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+        assert obtener_mensaje("gestion_ventas.campo_referido") != ""
+
+    def test_referido_vacio_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+        assert obtener_mensaje("gestion_ventas.referido_vacio") != ""
+
+    def test_prompt_referido_sin_actual_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+        assert obtener_mensaje("gestion_ventas.prompt_referido_sin_actual") != ""
+
+    def test_prompt_referido_con_actual_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+        msg = obtener_mensaje("gestion_ventas.prompt_referido_con_actual")
+        assert msg != ""
+        assert "{alias}" in msg
+
+    def test_resumen_referido_existe(self) -> None:
+        from garay.mensajes.catalogo import obtener_mensaje
+        assert obtener_mensaje("liquidaciones.resumen_referido") != ""
