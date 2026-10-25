@@ -145,3 +145,48 @@ def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
     results = repo.listar_por_venta_ids([venta_id1])
     assert len(results) == 1
     assert results[0].venta_id == venta_id1
+
+
+def test_old_snapshot_sin_porcentaje_referido_maximo_deserializa(
+    sf: sessionmaker[Session],
+) -> None:
+    """Task 3.2: old snapshot JSON missing porcentaje_referido_maximo must load without error."""
+    from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
+        _dict_to_snapshot,
+    )
+    old_json: dict[str, object] = {
+        "tipo_cliente": "EXTERNO",
+        "porcentaje_vendedor": "20.00",
+        "porcentaje_cerrador": "10.00",
+        "porcentaje_capa_punto": "0.00",
+    }
+    # Should not raise
+    snapshot = _dict_to_snapshot(old_json)
+    assert snapshot.porcentaje_vendedor == Decimal("20.00")
+
+
+def test_neto_vendedor_neto_cerrador_roundtrip(sf: sessionmaker[Session]) -> None:
+    """Task 3.2: neto_vendedor and neto_cerrador must persist and load correctly."""
+    venta_id = _make_venta(sf)
+    repo = SQLAComisionRegistradaRepository(sf)
+    snapshot = SnapshotReglas(
+        tipo_cliente=TipoCliente.EXTERNO,
+        porcentaje_vendedor=Decimal("15.00"),
+        porcentaje_cerrador=Decimal("15.00"),
+        porcentaje_capa_punto=Decimal("0.00"),
+    )
+    desglose = DesgloseComision(
+        vendedor=Dinero("90000"),
+        cerrador=Dinero("90000"),
+        punto_de_venta=Dinero("0"),
+        referido=Dinero("18000"),
+        agencia=Dinero("402000"),
+        snapshot=snapshot,
+        neto_vendedor=Dinero("81000"),
+        neto_cerrador=Dinero("81000"),
+    )
+    repo.guardar(ComisionRegistrada(venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 10, 1)))
+    loaded = repo.buscar_por_venta_id(venta_id)
+    assert loaded is not None
+    assert loaded.desglose.neto_vendedor == Dinero("81000")
+    assert loaded.desglose.neto_cerrador == Dinero("81000")

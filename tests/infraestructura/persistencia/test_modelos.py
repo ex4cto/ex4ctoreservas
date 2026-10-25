@@ -57,6 +57,7 @@ _EXPECTED_TABLES = {
     "contadores_documento",
     "pagos_freelancers",
     "cambios_imagen_pendiente",
+    "pagos_referidos",
 }
 
 def test_schema_creates_all_tables_in_sqlite() -> None:
@@ -85,7 +86,7 @@ def test_venta_columns_present() -> None:
         "vendedor_nombre",
         "cerrador_nombre",
         "punto_de_venta_id",
-        "referido_nombre",
+        "referido_alias",
         "anulada",
     }.issubset(cols)
 
@@ -246,3 +247,35 @@ def test_correos_no_parseados_table_has_expected_columns() -> None:
         "intentos",
         "error_ultimo",
     }.issubset(cols)
+
+
+def test_ventas_table_has_referido_alias_column() -> None:
+    """Task 3.1: VentaModel should have referido_alias column (renamed from referido_nombre)."""
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    inspector = sa.inspect(engine)
+    cols = {c["name"] for c in inspector.get_columns("ventas")}
+    assert "referido_alias" in cols, "referido_alias column not found in ventas"
+    assert "referido_nombre" not in cols, "old referido_nombre column still present"
+
+
+def test_reglas_comision_table_has_nullable_porcentaje_referido_maximo() -> None:
+    """Task 3.1: porcentaje_referido_maximo must be nullable on ReglaComisionModel."""
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    inspector = sa.inspect(engine)
+    cols = {c["name"]: c for c in inspector.get_columns("reglas_comision")}
+    assert "porcentaje_referido_maximo" in cols
+    assert cols["porcentaje_referido_maximo"]["nullable"] is True
+
+
+def test_pago_referido_table_exists() -> None:
+    """Task 3.1: PagoReferidoModel table must exist with required columns."""
+    engine = sa.create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    inspector = sa.inspect(engine)
+    tables = inspector.get_table_names()
+    assert "pagos_referidos" in tables
+    cols = {c["name"] for c in inspector.get_columns("pagos_referidos")}
+    assert {"id", "venta_id", "referido_alias", "monto", "fecha_pago",
+            "registrado_por_telegram_id"}.issubset(cols)

@@ -50,16 +50,16 @@ def to_orm(c: ComisionRegistrada) -> ComisionRegistradaModel:
         punto_de_venta=c.desglose.punto_de_venta,
         referido=c.desglose.referido,
         agencia=c.desglose.agencia,
+        neto_vendedor=c.desglose.neto_vendedor,
+        neto_cerrador=c.desglose.neto_cerrador,
         snapshot_json=_snapshot_to_dict(c.desglose.snapshot),
         fecha=c.fecha,
     )
 
 
 def to_domain(m: ComisionRegistradaModel) -> ComisionRegistrada:
-    # neto_vendedor / neto_cerrador not yet in DB (PR2 migration pending).
-    # Fall back to bruto (referido=0) for existing records — correct when no referido.
-    neto_v = getattr(m, "neto_vendedor", None)
-    neto_c = getattr(m, "neto_cerrador", None)
+    # neto_vendedor / neto_cerrador: nullable for old records without referido.
+    # Fall back to bruto when NULL (valid for pre-referido records).
     return ComisionRegistrada(
         venta_id=m.venta_id,
         desglose=DesgloseComision(
@@ -69,8 +69,8 @@ def to_domain(m: ComisionRegistradaModel) -> ComisionRegistrada:
             referido=m.referido,
             agencia=m.agencia,
             snapshot=_dict_to_snapshot(m.snapshot_json),
-            neto_vendedor=neto_v if neto_v is not None else m.vendedor,
-            neto_cerrador=neto_c if neto_c is not None else m.cerrador,
+            neto_vendedor=m.neto_vendedor if m.neto_vendedor is not None else m.vendedor,
+            neto_cerrador=m.neto_cerrador if m.neto_cerrador is not None else m.cerrador,
         ),
         fecha=m.fecha,
     )
