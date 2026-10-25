@@ -230,6 +230,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_EDIT_NINOS,
     GV_EDIT_PARTICIPANTE,
     GV_EDIT_PARTICIPANTE_PATTERN,
+    GV_EDIT_REFERIDO,
     GV_EDIT_SERVICIO,
     GV_EDIT_TOUR_VALOR,
     GV_EDIT_VALOR,
@@ -240,6 +241,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     GV_SELECCIONAR,
     cmd_gestionar_ventas,
     handle_gv_capturar_neto,
+    handle_gv_capturar_referido,
     handle_gv_capturar_valor_venta,
     handle_gv_confirmar,
     handle_gv_detalle,
@@ -259,6 +261,7 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
     handle_gv_filtro,
     handle_gv_motivo,
     handle_gv_rango_input,
+    handle_gv_referido_sin,
     handle_gv_seleccionar,
     handle_gv_seleccionar_atras,
 )
@@ -1110,6 +1113,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             GV_EDIT_ABONO: [MessageHandler(_TEXT, handle_gv_edit_abono)],
             GV_EDIT_ADULTOS: [MessageHandler(_TEXT, handle_gv_edit_adultos)],
             GV_EDIT_NINOS: [MessageHandler(_TEXT, handle_gv_edit_ninos)],
+            GV_EDIT_REFERIDO: [
+                MessageHandler(_TEXT, handle_gv_capturar_referido),
+                _CB(handle_gv_referido_sin, pattern=r"^gv_referido_sin$"),
+            ],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),
