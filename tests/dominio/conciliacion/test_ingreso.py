@@ -21,7 +21,6 @@ def _ingreso(**kwargs: object) -> Ingreso:
     defaults.update(kwargs)
     return Ingreso(**defaults)  # type: ignore[arg-type]
 
-
 class TestIngreso:
     def test_creacion_valida(self) -> None:
         iid = uuid.uuid4()

@@ -12,7 +12,6 @@ from garay.aplicacion.ventas.comandos import EditarFechaVentaComando
 from garay.aplicacion.ventas.editar_fecha_venta import EditarFechaVentaService
 from garay.dominio.ventas.auditoria import AccionAuditoria
 from garay.dominio.ventas.errores import (
-    LimiteEdicionesAlcanzado,
     MotivoRequerido,
     VentaNoEncontrada,
     VentaYaAnulada,
@@ -23,7 +22,6 @@ from garay.dominio.ventas.errores import (
 # ---------------------------------------------------------------------------
 
 _NUEVA_FECHA = datetime.datetime(2026, 9, 20, 10, 30)
-
 
 def _make_venta(anulada: bool = False) -> MagicMock:
     venta = MagicMock()
@@ -39,7 +37,6 @@ def _make_venta(anulada: bool = False) -> MagicMock:
     venta.cambiar_fecha.side_effect = _cambiar_fecha
     return venta
 
-
 def _make_repos(venta: MagicMock | None = None) -> tuple[MagicMock, MagicMock]:
     ventas_repo = MagicMock()
     ventas_repo.buscar_por_id.return_value = venta
@@ -48,13 +45,11 @@ def _make_repos(venta: MagicMock | None = None) -> tuple[MagicMock, MagicMock]:
     auditoria_repo.listar_por_venta_id.return_value = []
     return ventas_repo, auditoria_repo
 
-
 def _rec(accion: AccionAuditoria) -> MagicMock:
     """Minimal audit-record stub carrying only the accion the limit check reads."""
     r = MagicMock()
     r.accion = accion
     return r
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -69,11 +64,9 @@ def _make_cmd(
         realizada_por_nombre="Admin",
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestEditarFechaVentaService:
     def test_success_cambia_fecha_y_persiste(self) -> None:

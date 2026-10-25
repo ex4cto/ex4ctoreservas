@@ -23,7 +23,6 @@ def _sf() -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 def _servicio(**kw: object) -> ServicioModel:
     base: dict[str, object] = dict(
         id=__import__("uuid").uuid4(),
@@ -39,7 +38,6 @@ def _servicio(**kw: object) -> ServicioModel:
     )
     base.update(kw)
     return ServicioModel(**base)
-
 
 def test_actualiza_solo_precios_y_permite_ninos() -> None:
     sf = _sf()
@@ -65,14 +63,12 @@ def test_actualiza_solo_precios_y_permite_ninos() -> None:
         assert row.descripcion == "desc prod"
         assert row.horarios == ["07:00"]
 
-
 def test_numero_inexistente_se_reporta() -> None:
     sf = _sf()
     with sf.begin() as s:
         resumen = actualizar_precios(s, [{"numero": 999, "neto_adulto": "50"}])
     assert resumen.no_encontrados == [999]
     assert resumen.actualizados == []
-
 
 def test_sin_cambios_no_cuenta_como_actualizado() -> None:
     sf = _sf()
@@ -91,11 +87,9 @@ def test_sin_cambios_no_cuenta_como_actualizado() -> None:
     assert resumen.sin_cambios == [1]
     assert resumen.actualizados == []
 
-
 # ---------------------------------------------------------------------------
 # Tests for precio_sugerido_adulto / precio_sugerido_nino sync (T1.11)
 # ---------------------------------------------------------------------------
-
 
 def test_actualiza_precio_sugerido_adulto_desde_null() -> None:
     """Script syncs precio_sugerido_adulto from JSON when DB value is NULL."""
@@ -116,7 +110,6 @@ def test_actualiza_precio_sugerido_adulto_desde_null() -> None:
         row2 = s.execute(sa.select(ServicioModel).where(ServicioModel.numero == 2)).scalar_one()
         assert row2.precio_sugerido_adulto == Decimal("150000")
 
-
 def test_actualiza_precio_sugerido_nino_desde_null() -> None:
     """Script syncs precio_sugerido_nino from JSON when DB value is NULL."""
     sf = _sf()
@@ -135,7 +128,6 @@ def test_actualiza_precio_sugerido_nino_desde_null() -> None:
     with sf.begin() as s:
         row3 = s.execute(sa.select(ServicioModel).where(ServicioModel.numero == 3)).scalar_one()
         assert row3.precio_sugerido_nino == Decimal("90000")
-
 
 def test_sin_cambio_sugerido_no_actualiza() -> None:
     """Script is a no-op when sugerido values already match."""

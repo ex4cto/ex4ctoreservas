@@ -20,7 +20,6 @@ _S2_ID = uuid.uuid4()
 _CLIENTE_ID = uuid.uuid4()
 _FECHA = datetime.date(2026, 12, 20)
 
-
 def _build_service(
     ventas: MagicMock | None = None,
     motor: MagicMock | None = None,
@@ -45,7 +44,6 @@ def _build_service(
         servicios=MagicMock(),
     )
 
-
 def _cmd_con_fechas(
     fechas_por_servicio: dict[uuid.UUID, datetime.datetime] | None,
 ) -> RegistrarVentaComando:
@@ -61,7 +59,6 @@ def _cmd_con_fechas(
         ninos=0,
         fechas_por_servicio=fechas_por_servicio,
     )
-
 
 class TestRegistrarVentaConFechasPorServicio:
     def test_fechas_por_servicio_persisted_on_venta(self) -> None:
@@ -125,7 +122,6 @@ class TestRegistrarVentaConFechasPorServicio:
         comisiones_repo.guardar.assert_called_once()
         comision = comisiones_repo.guardar.call_args[0][0]
         assert comision.fecha == _FECHA
-
 
 class TestNotificacionGrupoFechasPorServicio:
     """Group-notification date rendering (Slice 3 — display)."""

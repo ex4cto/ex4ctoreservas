@@ -21,7 +21,6 @@ def test_recordar_teclado_guarda_chat_y_mensaje() -> None:
     recordar_teclado(ctx, msg)
     assert ctx.user_data["_ultimo_teclado"] == (55, 77)
 
-
 @pytest.mark.asyncio
 async def test_limpiar_quita_botones_y_popea_la_ref() -> None:
     ctx = MagicMock()
@@ -34,7 +33,6 @@ async def test_limpiar_quita_botones_y_popea_la_ref() -> None:
     assert kwargs["message_id"] == 77
     assert kwargs["reply_markup"] is None
     assert "_ultimo_teclado" not in ctx.user_data
-
 
 @pytest.mark.asyncio
 async def test_limpiar_sin_ref_no_llama_al_bot() -> None:

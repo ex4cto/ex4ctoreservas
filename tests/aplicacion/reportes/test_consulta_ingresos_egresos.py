@@ -36,7 +36,6 @@ def test_consulta_ingresos_aplana() -> None:
         datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
 
-
 def test_consulta_egresos_aplana() -> None:
     egreso = Egreso(
         id=uuid.uuid4(),
@@ -57,7 +56,6 @@ def test_consulta_egresos_aplana() -> None:
     assert filas[0].monto == Dinero("80000")
     assert filas[0].categoria == "Alimentacion"
     assert filas[0].tipo == "manual"
-
 
 def test_consulta_ingresos_sin_datos() -> None:
     ingresos = MagicMock()

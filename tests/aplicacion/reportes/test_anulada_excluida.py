@@ -45,13 +45,11 @@ _MES = 8
 _AÑO = 2026
 _FECHA = datetime.date(_AÑO, _MES, 11)
 
-
 @pytest.fixture()
 def sf() -> sessionmaker[Session]:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
-
 
 def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
     cliente_id = uuid.uuid4()
@@ -59,16 +57,13 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
         s.add(ClienteModel(id=cliente_id, nombre="Test Cliente", tipo="EXTERNO"))
     return cliente_id
 
-
 def _make_snapshot() -> SnapshotReglas:
     return SnapshotReglas(
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("3"),
         porcentaje_capa_punto=Decimal("2"),
     )
-
 
 def _make_comision(
     venta_id: uuid.UUID,
@@ -85,10 +80,11 @@ def _make_comision(
             referido=Dinero(0),
             agencia=Dinero(agencia),
             snapshot=_make_snapshot(),
+            neto_vendedor=Dinero(vendedor),
+            neto_cerrador=Dinero(0),
         ),
         fecha=_FECHA,
     )
-
 
 def test_anulada_comision_excluida_del_resumen(sf: sessionmaker[Session]) -> None:
     """ResumenVentasService.ejecutar does not include the anulada venta's amounts.

@@ -21,16 +21,13 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.nombre == p.nombre
     assert resultado.porcentaje_capa == Decimal("10.00")
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAPuntoDeVentaRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
 
-
 def test_listar_vacio(sf: sessionmaker[Session]) -> None:
     repo = SQLAPuntoDeVentaRepository(sf)
     assert repo.listar() == []
-
 
 def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo = SQLAPuntoDeVentaRepository(sf)
@@ -40,7 +37,6 @@ def test_listar_con_elementos(sf: sessionmaker[Session]) -> None:
     repo.guardar(p2)
     assert len(repo.listar()) == 2
 
-
 def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     repo = SQLAPuntoDeVentaRepository(sf)
     p = PuntoDeVenta(id=uuid.uuid4(), nombre="Crespo", porcentaje_capa=Decimal("20.00"))
@@ -49,7 +45,6 @@ def test_buscar_por_nombre(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.id == p.id
     assert resultado.nombre == "Crespo"
-
 
 def test_buscar_por_nombre_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAPuntoDeVentaRepository(sf)

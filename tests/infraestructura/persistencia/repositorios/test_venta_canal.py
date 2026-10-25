@@ -22,7 +22,6 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
         s.add(ClienteModel(id=cliente_id, nombre="Test Cliente", tipo="EXTERNO"))
     return cliente_id
 
-
 def _venta(cliente_id: uuid.UUID, **kwargs: object) -> Venta:
     defaults: dict[str, Any] = dict(
         id=uuid.uuid4(),
@@ -37,7 +36,6 @@ def _venta(cliente_id: uuid.UUID, **kwargs: object) -> Venta:
     defaults.update(kwargs)
     return Venta(**defaults)
 
-
 def test_guardar_venta_digital_persiste_canal(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -47,7 +45,6 @@ def test_guardar_venta_digital_persiste_canal(sf: sessionmaker[Session]) -> None
     assert resultado is not None
     assert resultado.canal_origen == "TikTok"
 
-
 def test_guardar_venta_interno_persiste_canal_null(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -56,7 +53,6 @@ def test_guardar_venta_interno_persiste_canal_null(sf: sessionmaker[Session]) ->
     resultado = repo.buscar_por_id(v.id)
     assert resultado is not None
     assert resultado.canal_origen is None
-
 
 def test_reconstruir_venta_historica_sin_canal(sf: sessionmaker[Session]) -> None:
     """Rows with canal_origen=NULL reconstruct to Venta with canal_origen=None."""

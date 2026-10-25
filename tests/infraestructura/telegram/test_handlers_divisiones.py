@@ -18,7 +18,6 @@ from garay.dominio.comun.dinero import Dinero
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_update_command(user_id: int = 99999) -> MagicMock:
     update = MagicMock()
     update.callback_query = None
@@ -31,7 +30,6 @@ def _make_update_command(user_id: int = 99999) -> MagicMock:
     msg.reply_text = AsyncMock()
     update.message = msg
     return update
-
 
 def _make_update_cb(data: str, user_id: int = 99999) -> MagicMock:
     update = MagicMock()
@@ -50,7 +48,6 @@ def _make_update_cb(data: str, user_id: int = 99999) -> MagicMock:
     cq.message.reply_text = AsyncMock()
     update.callback_query = cq
     return update
-
 
 def _make_context(
     *,
@@ -71,13 +68,11 @@ def _make_context(
     }
     return context
 
-
 def _make_settings_patch(propietario_ids: str = "99999", dev_ids: str = "") -> MagicMock:
     settings = MagicMock()
     settings.propietario_telegram_ids = propietario_ids
     settings.dev_telegram_ids = dev_ids
     return settings
-
 
 def _empty_resultado() -> ResumenSplitPeriodo:
     return ResumenSplitPeriodo(
@@ -87,7 +82,6 @@ def _empty_resultado() -> ResumenSplitPeriodo:
         total_comisiones_freelancer=Dinero(0),
         ventas_count=0,
     )
-
 
 def _resultado_con_datos() -> ResumenSplitPeriodo:
     socios = (
@@ -103,11 +97,9 @@ def _resultado_con_datos() -> ResumenSplitPeriodo:
         ventas_count=3,
     )
 
-
 # ---------------------------------------------------------------------------
 # State constants (imported from implementation once it exists)
 # ---------------------------------------------------------------------------
-
 
 class TestStateConstants:
     """D4: verify state integers are 310-313."""
@@ -125,11 +117,9 @@ class TestStateConstants:
         assert DIV_CAL_HASTA == 312
         assert DIV_RESULT == 313
 
-
 # ---------------------------------------------------------------------------
 # Menu keyboard — toggle checkbox layout
 # ---------------------------------------------------------------------------
-
 
 class TestMenuKeyboard:
     """Menu shows Hoy, Ayer, Período, Cancelar in row 1 and Ver resumen in row 2."""
@@ -253,11 +243,9 @@ class TestMenuKeyboard:
         flat_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
         assert all(d.startswith("rep_s:") for d in flat_data)
 
-
 # ---------------------------------------------------------------------------
 # _teclado_menu helper
 # ---------------------------------------------------------------------------
-
 
 class TestTecladoMenu:
     """_teclado_menu builds the correct toggle keyboard."""
@@ -312,11 +300,9 @@ class TestTecladoMenu:
         assert row0[2].callback_data == "rep_s:menu:periodo"
         assert row0[3].callback_data == "rep_s:menu:cancel"
 
-
 # ---------------------------------------------------------------------------
 # Hoy / Ayer toggle behavior
 # ---------------------------------------------------------------------------
-
 
 class TestHoyAyerToggle:
     """Hoy and Ayer buttons toggle selection, do NOT immediately produce a result."""
@@ -402,11 +388,9 @@ class TestHoyAyerToggle:
         hoy_btn = markup.inline_keyboard[0][0]
         assert "✅" in hoy_btn.text
 
-
 # ---------------------------------------------------------------------------
 # Ver resumen — validation and computation
 # ---------------------------------------------------------------------------
-
 
 class TestVerResumen:
     """Ver resumen computes date range from selections or shows toast if none."""
@@ -538,11 +522,9 @@ class TestVerResumen:
         text = call.args[0] if call.args else call.kwargs.get("text", "")
         assert "No hay datos" in text
 
-
 # ---------------------------------------------------------------------------
 # Calendar — end-before-start rejection
 # ---------------------------------------------------------------------------
-
 
 class TestCalendarValidation:
     """End date before start date is rejected inline."""
@@ -567,11 +549,9 @@ class TestCalendarValidation:
         answer_text = last_call.args[0] if last_call.args else last_call.kwargs.get("text", "")
         assert "anterior" in answer_text.lower() or "fin" in answer_text.lower()
 
-
 # ---------------------------------------------------------------------------
 # Calendar — Atrás from DIV_CAL_HASTA returns to DIV_CAL_DESDE
 # ---------------------------------------------------------------------------
-
 
 class TestCalendarAtras:
     """Atrás from hasta step returns to desde step."""
@@ -592,11 +572,9 @@ class TestCalendarAtras:
 
         assert result == DIV_CAL_DESDE
 
-
 # ---------------------------------------------------------------------------
 # Calendar — month navigation
 # ---------------------------------------------------------------------------
-
 
 class TestCalendarMonthNav:
     """Month navigation re-renders the grid."""
@@ -615,11 +593,9 @@ class TestCalendarMonthNav:
         # Verify month state updated
         assert context.user_data.get("div_mes") == "2026-08"
 
-
 # ---------------------------------------------------------------------------
 # Cancel button
 # ---------------------------------------------------------------------------
-
 
 class TestCancelButton:
     """Cancel ends the conversation."""
@@ -639,11 +615,9 @@ class TestCancelButton:
         assert result == ConversationHandler.END
         update.callback_query.edit_message_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # _teclado_calendario helper
 # ---------------------------------------------------------------------------
-
 
 class TestTecladoCalendario:
     """_teclado_calendario returns a valid PTB InlineKeyboardMarkup."""
@@ -673,11 +647,9 @@ class TestTecladoCalendario:
         atras_buttons = [b for b in flat if b.callback_data.startswith("rep_s:atras:")]
         assert len(atras_buttons) == 1
 
-
 # ---------------------------------------------------------------------------
 # build_divisiones_conv_handler factory
 # ---------------------------------------------------------------------------
-
 
 class TestConvHandlerFactory:
     """build_divisiones_conv_handler returns a ConversationHandler."""
@@ -692,11 +664,9 @@ class TestConvHandlerFactory:
         handler = build_divisiones_conv_handler()
         assert isinstance(handler, ConversationHandler)
 
-
 # ---------------------------------------------------------------------------
 # ResumenVentaDetalle button label format
 # ---------------------------------------------------------------------------
-
 
 class TestButtonLabelFormat:
     """Button label format: {dd/mm}  {primer_nombre}  ${k_format}."""
@@ -720,7 +690,7 @@ class TestButtonLabelFormat:
         """Button label uses dd/mm, first name, k-format."""
         import uuid
 
-        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenVentaDetalle
+        from garay.aplicacion.socios.split import ResumenVentaDetalle
         from garay.infraestructura.telegram.handlers_divisiones import _venta_btn_label
 
         detalle = ResumenVentaDetalle(
@@ -759,13 +729,11 @@ class TestButtonLabelFormat:
         label = _venta_btn_label(detalle)
         assert label == "19/09  —  $1.200k"
 
-
 # ---------------------------------------------------------------------------
 # Result view with sale buttons — handle_div_resultado
 # ---------------------------------------------------------------------------
 
-
-def _resultado_con_detalle() -> "ResumenSplitPeriodo":
+def _resultado_con_detalle() -> ResumenSplitPeriodo:
     """ResumenSplitPeriodo with ventas_detalle populated."""
     import uuid
 
@@ -803,7 +771,6 @@ def _resultado_con_detalle() -> "ResumenSplitPeriodo":
         ventas_detalle=(venta1,),
         por_freelancer=freelancers,
     )
-
 
 class TestResultViewWithButtons:
     """When result has ventas_detalle, show inline keyboard with sale buttons."""
@@ -871,11 +838,9 @@ class TestResultViewWithButtons:
 
         assert result == DIV_RESULT
 
-
 # ---------------------------------------------------------------------------
 # Drill-down per-sale handler
 # ---------------------------------------------------------------------------
-
 
 class TestDrillDownVenta:
     """handle_div_venta renders per-sale detail and shows Atrás button."""
@@ -947,11 +912,9 @@ class TestDrillDownVenta:
         assert len(atras) == 1
         assert atras[0].callback_data == "rep_s:atras:resultado"
 
-
 # ---------------------------------------------------------------------------
 # Atrás from drill-down restores result view
 # ---------------------------------------------------------------------------
-
 
 class TestAtrasDesdeDrillDown:
     """Pressing Atrás in drill-down restores the result view with sale buttons."""
@@ -980,7 +943,6 @@ class TestAtrasDesdeDrillDown:
         )
 
         from garay.aplicacion.socios.split import (
-            ResumenFreelancerPeriodo,
             ResumenSplitPeriodo,
         )
 
@@ -1010,11 +972,9 @@ class TestAtrasDesdeDrillDown:
         markup = call.kwargs.get("reply_markup")
         assert markup is not None
 
-
 # ---------------------------------------------------------------------------
 # Bug Q — _venta_btn_label must show registrado_en date when available
 # ---------------------------------------------------------------------------
-
 
 class TestVentaBtnLabelRegistradoEn:
     def _make_detalle(
@@ -1050,7 +1010,7 @@ class TestVentaBtnLabelRegistradoEn:
         label = _venta_btn_label(detalle)  # type: ignore[arg-type]
 
         assert "01/09" in label, f"Expected registration date 01/09 in label, got: {label}"
-        assert "10/09" not in label, f"Tour date 10/09 must NOT appear when registrado_en is set"
+        assert "10/09" not in label, "Tour date 10/09 must NOT appear when registrado_en is set"
 
     def test_label_falls_back_to_fecha_when_registrado_en_is_none(self) -> None:
         """When registrado_en is None, the label must fall back to fecha."""
@@ -1063,11 +1023,9 @@ class TestVentaBtnLabelRegistradoEn:
 
         assert "10/09" in label, f"Expected tour date 10/09 as fallback, got: {label}"
 
-
 # ---------------------------------------------------------------------------
 # Liquidaciones — ✅ marker in freelancer list (Change 1)
 # ---------------------------------------------------------------------------
-
 
 def _make_liq_context(
     *,
@@ -1131,9 +1089,8 @@ def _make_liq_context(
     }
     return context, fl_id  # type: ignore[return-value]
 
-
 def _make_pago_freelancer(
-    fl_id: "uuid.UUID",
+    fl_id: uuid.UUID,
     monto: int = 100_000,
     fecha_pago: datetime.datetime | None = None,
     registrado_por_nombre: str | None = "Admin",
@@ -1153,7 +1110,6 @@ def _make_pago_freelancer(
         registrado_por_telegram_id=1,
         registrado_por_nombre=registrado_por_nombre,
     )
-
 
 class TestLiqFreelancerListMarker:
     """handle_div_liq_start adds ✅ prefix when freelancer already has a payment."""
@@ -1237,17 +1193,14 @@ class TestLiqFreelancerListMarker:
         assert len(fl_buttons) == 1
         assert not fl_buttons[0].text.startswith("✅ ")
 
-
 # ---------------------------------------------------------------------------
 # Liquidaciones — ya liquidado screen (Change 2)
 # ---------------------------------------------------------------------------
 
-
 def _make_liq_resultado(
-    fl_id: "uuid.UUID",
+    fl_id: uuid.UUID,
     solapados: list | None = None,
 ) -> object:
-    import uuid as _uuid
 
     from garay.aplicacion.liquidaciones.servicio import (
         ComisionVentaDetalle,
@@ -1272,7 +1225,6 @@ def _make_liq_resultado(
         desglose=[desglose_item],
         solapados=solapados if solapados is not None else [],
     )
-
 
 class TestLiqYaLiquidadoScreen:
     """handle_div_liq_freelancer shows read-only screen when solapados is non-empty."""
@@ -1449,11 +1401,9 @@ class TestLiqYaLiquidadoScreen:
         # Atrás is last
         assert all_buttons[-1].callback_data == "rep_s:liq:atras_confirmar"
 
-
 # ---------------------------------------------------------------------------
 # Liquidaciones — anular pago flow
 # ---------------------------------------------------------------------------
-
 
 class TestAnularPagoFlow:
     """handle_div_liq_confirmar handles anular callbacks correctly."""
@@ -1576,11 +1526,9 @@ class TestAnularPagoFlow:
 
         assert result == DIV_LIQ_CONFIRMAR
 
-
 # ---------------------------------------------------------------------------
 # Socio payment flow — handle_div_soc_start
 # ---------------------------------------------------------------------------
-
 
 def _make_soc_context(
     *,
@@ -1588,8 +1536,8 @@ def _make_soc_context(
     with_socios: bool = True,
 ) -> MagicMock:
     """Build a context with split_socios_service and pagos_socio_repo in bot_data."""
-    from decimal import Decimal
     import uuid
+    from decimal import Decimal
 
     from garay.aplicacion.socios.split import (
         ResumenSocio,
@@ -1668,7 +1616,6 @@ def _make_soc_context(
         "pagos_socio_repo": pagos_socio_repo,
     }
     return context
-
 
 class TestSocioPaymentFlow:
     """Tests for the socio payment flow within /resumen_divisiones."""
@@ -1802,8 +1749,8 @@ class TestSocioPaymentFlow:
         """rep_s:soc:confirmar with monto set registers a parcial payment."""
         from telegram.ext import ConversationHandler
 
-        from garay.infraestructura.telegram.handlers_divisiones import handle_div_soc_confirmar
         from garay.dominio.comun.dinero import Dinero
+        from garay.infraestructura.telegram.handlers_divisiones import handle_div_soc_confirmar
 
         context = _make_soc_context(user_data={
             "div_soc_nombre": "ryan",
@@ -1829,11 +1776,9 @@ class TestSocioPaymentFlow:
         assert DIV_SOC_SELECCION == 317
         assert DIV_SOC_CONFIRMAR == 318
 
-
 # ---------------------------------------------------------------------------
 # Fix 1: ✖ Cancelar button in calendar screens
 # ---------------------------------------------------------------------------
-
 
 class TestCalendarioCancelar:
     """Calendar screens must have a ✖ Cancelar button below ← Atrás."""
@@ -1864,11 +1809,9 @@ class TestCalendarioCancelar:
         assert result == ConversationHandler.END
         update.callback_query.edit_message_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Fix 2: ← Atrás in result screen — _render_resultado always returns markup
 # ---------------------------------------------------------------------------
-
 
 class TestResultadoAtrasMenu:
     """_render_resultado must always return a non-None InlineKeyboardMarkup."""
@@ -1936,13 +1879,11 @@ class TestResultadoAtrasMenu:
             f"Empty result must return DIV_RESULT={DIV_RESULT}, got {result}"
         )
 
-
 # ---------------------------------------------------------------------------
 # Fix 3: Toggle ⬜/✅ Solo pendientes (Feature E)
 # ---------------------------------------------------------------------------
 
-
-def _resultado_con_pendientes() -> "ResumenSplitPeriodo":
+def _resultado_con_pendientes() -> ResumenSplitPeriodo:
     """Two ventas: one paid (saldo_pendiente=0), one pending (saldo_pendiente=200_000)."""
     import uuid
 
@@ -1986,7 +1927,6 @@ def _resultado_con_pendientes() -> "ResumenSplitPeriodo":
         ventas_count=2,
         ventas_detalle=(venta_pagada, venta_pendiente),
     )
-
 
 class TestToggleSoloPendientes:
     """Feature E: toggle ⬜/✅ Solo pendientes in the result view."""

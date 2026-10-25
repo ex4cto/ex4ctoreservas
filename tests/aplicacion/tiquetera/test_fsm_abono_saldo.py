@@ -20,16 +20,13 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Bug 2a — Saldo pendiente shown in confirmation summary
 # ══════════════════════════════════════════════════════════════════════════════
-
 
 class TestSaldoPendienteEnResumen:
     """_construir_resumen must include a 'Saldo pendiente:' line = valor - abono."""
@@ -83,11 +80,9 @@ class TestSaldoPendienteEnResumen:
         # When valor is None, saldo_pendiente is None → _formatear_monto → "—"
         assert "Saldo pendiente: —" in salida.mensaje
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Bug 2b — Abono guard must compare against valor, not neto
 # ══════════════════════════════════════════════════════════════════════════════
-
 
 class TestAbonoGuardaContraValor:
     """_handle_monto_abono must reject abono > valor, regardless of neto."""

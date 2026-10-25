@@ -16,7 +16,6 @@ from garay.infraestructura.persistencia.repositorios.correos_no_parseados import
 
 _UTC = datetime.UTC
 
-
 def _make_correo(
     *,
     referencia: str = "MSG-001",
@@ -39,7 +38,6 @@ def _make_correo(
         intentos=intentos,
     )
 
-
 def test_guardar_y_existe_referencia(sf: sessionmaker[Session]) -> None:
     repo = SQLACorreoNoParseadoRepository(sf)
     correo = _make_correo(referencia="MSG-UNIQUE")
@@ -48,12 +46,10 @@ def test_guardar_y_existe_referencia(sf: sessionmaker[Session]) -> None:
 
     assert repo.existe_referencia("MSG-UNIQUE") is True
 
-
 def test_existe_referencia_false_si_no_esta(sf: sessionmaker[Session]) -> None:
     repo = SQLACorreoNoParseadoRepository(sf)
 
     assert repo.existe_referencia("MSG-INEXISTENTE") is False
-
 
 def test_listar_pendientes_excluye_procesados(sf: sessionmaker[Session]) -> None:
     repo = SQLACorreoNoParseadoRepository(sf)
@@ -67,7 +63,6 @@ def test_listar_pendientes_excluye_procesados(sf: sessionmaker[Session]) -> None
     ids = {c.id for c in resultado}
     assert pendiente.id in ids
     assert procesado.id not in ids
-
 
 def test_listar_pendientes_excluye_los_que_superan_max_intentos(
     sf: sessionmaker[Session],
@@ -84,7 +79,6 @@ def test_listar_pendientes_excluye_los_que_superan_max_intentos(
     assert bajo.id in ids
     assert alto.id not in ids
 
-
 def test_marcar_procesado(sf: sessionmaker[Session]) -> None:
     repo = SQLACorreoNoParseadoRepository(sf)
     correo = _make_correo(referencia="MSG-MARCAR", procesado=False)
@@ -95,7 +89,6 @@ def test_marcar_procesado(sf: sessionmaker[Session]) -> None:
     pendientes = repo.listar_pendientes(max_intentos=99)
     ids = {c.id for c in pendientes}
     assert correo.id not in ids
-
 
 def test_registrar_intento_fallido_incrementa_y_guarda_error(
     sf: sessionmaker[Session],
@@ -110,7 +103,6 @@ def test_registrar_intento_fallido_incrementa_y_guarda_error(
     actualizado = next(c for c in pendientes if c.id == correo.id)
     assert actualizado.intentos == 1
     assert actualizado.error_ultimo == "Timeout al parsear HTML"
-
 
 def test_unique_constraint_referencia_impide_duplicado(sf: sessionmaker[Session]) -> None:
     repo = SQLACorreoNoParseadoRepository(sf)

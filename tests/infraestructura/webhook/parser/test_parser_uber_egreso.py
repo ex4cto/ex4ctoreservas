@@ -98,27 +98,22 @@ _TEXTO_FECHA_PIE_PAGINA = (
     "Oferta valida hasta 01/01/2027\n"
 )
 
-
 # ---------------------------------------------------------------------------
 # Amount parsing
 # ---------------------------------------------------------------------------
-
 
 def test_priority_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
     assert resultado.monto == Decimal("10700")
 
-
 def test_economy_monto() -> None:
     resultado = _PARSER.parsear("", _TEXTO_ECONOMY)
     assert resultado.monto == Decimal("8500")
-
 
 def test_monto_con_peaje_usa_total_no_subtotal() -> None:
     """Toll/adjustment lines above Total must not affect the parsed amount."""
     resultado = _PARSER.parsear("", _TEXTO_CON_PEAJE)
     assert resultado.monto == Decimal("10700")
-
 
 # FIX 1 — amount anchoring: footer Total must not override real Total
 def test_footer_total_no_sobreescribe_monto_real() -> None:
@@ -126,13 +121,11 @@ def test_footer_total_no_sobreescribe_monto_real() -> None:
     resultado = _PARSER.parsear("", _TEXTO_FOOTER_TOTAL)
     assert resultado.monto == Decimal("12800")
 
-
 # FIX 1 — negative sub-line must not be captured
 def test_descuento_negativo_no_capturado() -> None:
     """A negative adjustment line adjacent to Total must not become the parsed monto."""
     resultado = _PARSER.parsear("", _TEXTO_DESCUENTO_NEGATIVO)
     assert resultado.monto == Decimal("10700")
-
 
 # FIX 4 — 6-digit (million-range) amount
 def test_monto_seis_digitos() -> None:
@@ -140,11 +133,9 @@ def test_monto_seis_digitos() -> None:
     resultado = _PARSER.parsear("", _TEXTO_MILLON)
     assert resultado.monto == Decimal("1183000")
 
-
 # ---------------------------------------------------------------------------
 # Date parsing
 # ---------------------------------------------------------------------------
-
 
 def test_priority_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
@@ -152,13 +143,11 @@ def test_priority_fecha() -> None:
     assert resultado.fecha_egreso.month == 8
     assert resultado.fecha_egreso.day == 7
 
-
 def test_economy_fecha() -> None:
     resultado = _PARSER.parsear("", _TEXTO_ECONOMY)
     assert resultado.fecha_egreso.year == 2026
     assert resultado.fecha_egreso.month == 8
     assert resultado.fecha_egreso.day == 10
-
 
 def test_fecha_es_utc() -> None:
     from datetime import UTC
@@ -166,14 +155,12 @@ def test_fecha_es_utc() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
     assert resultado.fecha_egreso.tzinfo is UTC
 
-
 # FIX 4 — self-documenting: day > 12 proves DD/MM order
 def test_fecha_dia_mayor_que_12() -> None:
     """Day=31 is unambiguous proof that the format is DD/MM/YYYY, not MM/DD/YYYY."""
     resultado = _PARSER.parsear("", _TEXTO_MILLON)
     assert resultado.fecha_egreso.day == 31
     assert resultado.fecha_egreso.month == 7
-
 
 # FIX 6 — footer date must not override trip date
 def test_fecha_pie_pagina_no_sobreescribe_fecha_real() -> None:
@@ -183,43 +170,35 @@ def test_fecha_pie_pagina_no_sobreescribe_fecha_real() -> None:
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.year == 2026
 
-
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------
 
-
 def test_banco_origen_es_uber() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
     assert resultado.banco_origen == BANCO_UBER
-
 
 # FIX 5 — exact description string
 def test_descripcion_exacta() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PRIORITY)
     assert resultado.descripcion == "Viaje Uber"
 
-
 # ---------------------------------------------------------------------------
 # HTML-only fallback
 # ---------------------------------------------------------------------------
-
 
 def test_html_only_parsea_correctamente() -> None:
     resultado = _PARSER.parsear(_HTML_PRIORITY, "")
     assert resultado.monto == Decimal("10700")
     assert resultado.banco_origen == BANCO_UBER
 
-
 # ---------------------------------------------------------------------------
 # Error path — FIX 2: failure branches (ErrorParseoBanco)
 # ---------------------------------------------------------------------------
 
-
 def test_sin_total_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", _TEXTO_SIN_TOTAL)
-
 
 # FIX 2 — valid Total line but NO date -> must raise ErrorParseoBanco
 def test_sin_fecha_lanza_error() -> None:
@@ -232,7 +211,6 @@ def test_sin_fecha_lanza_error() -> None:
     )
     with pytest.raises(ErrorParseoBanco):
         _PARSER.parsear("", texto_sin_fecha)
-
 
 # --- destinatario confirmation (REQ-1, Phase 8.1) ---
 

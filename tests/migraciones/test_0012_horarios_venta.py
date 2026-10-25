@@ -31,7 +31,6 @@ _MIGRATION_FILE = (
     / "0012_add_horarios_por_servicio_to_ventas.py"
 )
 
-
 def _load_migration() -> ModuleType:
     """Dynamically load the 0012 migration module."""
     if not _MIGRATION_FILE.exists():
@@ -48,7 +47,6 @@ def _load_migration() -> ModuleType:
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
-
 
 class TestMigration0012Upgrade:
     def test_upgrade_agrega_columna_horarios_por_servicio(self, sqlite_engine: Engine) -> None:
@@ -94,7 +92,6 @@ class TestMigration0012Upgrade:
         assert row is not None
         # Pre-existing row must be NULL — no backfill applied.
         assert row[0] is None, f"Expected NULL, got {row[0]!r}"
-
 
 class TestMigration0012Downgrade:
     def test_downgrade_elimina_columna_horarios_por_servicio(

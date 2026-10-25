@@ -20,7 +20,6 @@ from garay.dominio.servicios.entidades import Servicio, TipoImagen
 # Helpers / fakes
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     activo: bool = True,
     precio_neto_adulto: Decimal | None = Decimal("100000"),
@@ -39,7 +38,6 @@ def _servicio(
         precio_sugerido_adulto=precio_sugerido_adulto,
     )
 
-
 class FakeGenerador(GeneradorListaPreciosPort):
     def __init__(self, imagen: bytes = b"\x89PNG") -> None:
         self.calls: list[tuple[list[Servicio], TipoImagen]] = []
@@ -48,7 +46,6 @@ class FakeGenerador(GeneradorListaPreciosPort):
     async def generar_imagen_precios(self, servicios: list[Servicio], tipo: TipoImagen) -> bytes:
         self.calls.append((servicios, tipo))
         return self._imagen
-
 
 class FakeEnviador(EnviadorFotoPort):
     def __init__(self) -> None:
@@ -59,11 +56,9 @@ class FakeEnviador(EnviadorFotoPort):
     ) -> None:
         self.sent.append((imagen, grupo_id, filename))
 
-
 # ---------------------------------------------------------------------------
 # Tests for PublicarListaPreciosServicio.publicar()
 # ---------------------------------------------------------------------------
-
 
 class TestPublicarListaPreciosServicio:
     def _make_repo(self, servicios: list[Servicio]) -> MagicMock:
@@ -243,11 +238,9 @@ class TestPublicarListaPreciosServicio:
             "lista_precios_4.png",
         ]
 
-
 # ---------------------------------------------------------------------------
 # Tests for publicar_seguro()
 # ---------------------------------------------------------------------------
-
 
 class TestPublicarSeguro:
     @pytest.mark.asyncio
@@ -316,7 +309,6 @@ class TestPublicarSeguro:
         # (INTERNA + TURISTA per group, for t1 only, not t2; up to 4 calls if 2 groups)
         assert call_count <= 4
 
-
 class TestFiltroNeto:
     @pytest.mark.asyncio
     async def test_excluye_servicios_sin_neto_adulto(self) -> None:
@@ -334,5 +326,4 @@ class TestFiltroNeto:
 
         assert generador.calls == []
         assert enviador.sent == []
-
 

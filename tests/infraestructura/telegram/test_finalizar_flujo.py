@@ -33,7 +33,6 @@ def _make_update(*, con_callback: bool, uid: int = 888) -> MagicMock:
         update.callback_query = None
     return update
 
-
 def _make_context(*, es_admin: bool = True) -> MagicMock:
     context = MagicMock()
     repo = MagicMock()
@@ -43,7 +42,6 @@ def _make_context(*, es_admin: bool = True) -> MagicMock:
     context.bot_data = {"freelancer_repo": repo}
     context.user_data = {}
     return context
-
 
 @contextmanager
 def _tier_admin() -> Iterator[None]:
@@ -58,7 +56,6 @@ def _tier_admin() -> Iterator[None]:
         ),
     ):
         yield
-
 
 class TestFinalizarFlujo:
     @pytest.mark.asyncio
@@ -111,7 +108,6 @@ class TestFinalizarFlujo:
                 update, _make_context(), "Listo", GrupoComando.TOURS
             )
         assert result == ConversationHandler.END
-
 
 class TestCerrarFlujo:
     """cerrar_flujo clears buttons and shows the submenu without a final message."""

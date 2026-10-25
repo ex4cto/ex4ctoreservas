@@ -16,7 +16,6 @@ _TOKEN = "test-bot-token"
 _GRUPO = "-1001234567890"
 _MENSAJE = "Nueva venta registrada"
 
-
 def _make_response(status: int = 200) -> MagicMock:
     """Build a mock urllib context-manager response."""
     mock_resp = MagicMock()
@@ -26,7 +25,6 @@ def _make_response(status: int = 200) -> MagicMock:
     mock_resp.__exit__ = MagicMock(return_value=False)
     return mock_resp
 
-
 def _make_http_error(code: int) -> urllib.error.HTTPError:
     return urllib.error.HTTPError(
         url="https://api.telegram.org",
@@ -35,7 +33,6 @@ def _make_http_error(code: int) -> urllib.error.HTTPError:
         hdrs=None,  # type: ignore[arg-type]
         fp=None,
     )
-
 
 def _make_http_error_body(code: int, body: dict[str, object]) -> urllib.error.HTTPError:
     """HTTPError whose .read() returns the given JSON body (e.g. migrate_to_chat_id)."""
@@ -48,13 +45,11 @@ def _make_http_error_body(code: int, body: dict[str, object]) -> urllib.error.HT
         fp=io.BytesIO(raw),
     )
 
-
 def _chat_ids_enviados(mock_open: MagicMock) -> list[str]:
     ids: list[str] = []
     for call in mock_open.call_args_list:
         ids.append(json.loads(call[0][0].data.decode("utf-8"))["chat_id"])
     return ids
-
 
 class TestNotificadorGrupoTelegram:
     def test_notificar_llama_api_correctamente(self) -> None:

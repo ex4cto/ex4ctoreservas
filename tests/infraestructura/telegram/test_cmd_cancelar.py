@@ -20,13 +20,11 @@ def _make_update(*, message: bool = True) -> MagicMock:
     update.callback_query = None
     return update
 
-
 def _make_context(user_data: dict[str, object] | None = None) -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = user_data if user_data is not None else {}
     ctx.bot_data = {}
     return ctx
-
 
 class TestCmdCancelarSinConv:
     @pytest.mark.asyncio

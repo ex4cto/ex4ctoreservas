@@ -23,7 +23,6 @@ def _config(nombre: str, porcentaje: str = "50", telegram_id: int | None = None)
         telegram_id=telegram_id,
     )
 
-
 def _pago(nombre_socio: str = "garay", tipo: str = "total") -> PagoSocio:
     return PagoSocio(
         id=uuid.uuid4(),
@@ -34,7 +33,6 @@ def _pago(nombre_socio: str = "garay", tipo: str = "total") -> PagoSocio:
         nota=None,
         registrado_en=datetime.datetime(2026, 9, 15, 10, 0, 0),
     )
-
 
 class TestSocioConfigRepository:
     def test_guardar_y_listar(self, sf: sessionmaker[Session]) -> None:
@@ -88,7 +86,6 @@ class TestSocioConfigRepository:
         resultado = repo.buscar_por_nombre("empresa")
         assert resultado is not None
         assert resultado.telegram_id is None
-
 
 class TestPagoSocioRepository:
     def test_guardar_y_listar(self, sf: sessionmaker[Session]) -> None:

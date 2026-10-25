@@ -20,14 +20,12 @@ _BASE = [
     "Margen de Ganancia total",
 ]
 
-
 def _escribir(ws: Worksheet, titulo: str, headers: list[str], filas: list[list[object]]) -> None:
     ws.append([titulo])  # fila 1 (titulo)
     ws.append([])  # fila 2 (en blanco)
     ws.append(headers)  # fila 3 (encabezados)
     for f in filas:
         ws.append(f)
-
 
 def _crear_xlsx(ruta: Path) -> None:
     wb = openpyxl.Workbook()
@@ -70,7 +68,6 @@ def _crear_xlsx(ruta: Path) -> None:
     )
     wb.save(ruta)
 
-
 def test_lee_y_deduplica(tmp_path: Path) -> None:
     ruta = tmp_path / "conta.xlsx"
     _crear_xlsx(ruta)
@@ -79,7 +76,6 @@ def test_lee_y_deduplica(tmp_path: Path) -> None:
     # Hotel(1) + Externas(1) + Crespo exclusivo(1) = 3; el compartido se deduplica
     assert len(filas) == 3
     assert {f.canal for f in filas} == {"Hotel", "Externas", "Crespo"}
-
 
 def test_campos_y_agencia_por_hoja(tmp_path: Path) -> None:
     ruta = tmp_path / "conta.xlsx"
@@ -97,7 +93,6 @@ def test_campos_y_agencia_por_hoja(tmp_path: Path) -> None:
     crespo = filas["Crespo"]
     assert crespo.cliente_nombre == "Sandy Martinez"
     assert crespo.agencia == Dinero("54000")  # de PC50 (Agencia 30%), gana el primero
-
 
 def test_lee_montos_de_comision(tmp_path: Path) -> None:
     ruta = tmp_path / "conta.xlsx"
@@ -117,7 +112,6 @@ def test_lee_montos_de_comision(tmp_path: Path) -> None:
     # la columna de NOMBRE "Vendedor" no se confunde con el monto "Vendedor 20%"
     assert fila.vendedor_nombre == "Eduardo"
 
-
 def test_lee_fecha_guardada_como_texto(tmp_path: Path) -> None:
     # En la planilla real algunas fechas quedan como string; deben leerse igual.
     ruta = tmp_path / "conta.xlsx"
@@ -133,7 +127,6 @@ def test_lee_fecha_guardada_como_texto(tmp_path: Path) -> None:
     filas = LectorVentasExcelOpenpyxl().leer(str(ruta))
     assert len(filas) == 1
     assert filas[0].fecha == datetime.date(2026, 7, 9)
-
 
 def test_salta_filas_sin_valor(tmp_path: Path) -> None:
     ruta = tmp_path / "conta.xlsx"

@@ -30,7 +30,6 @@ from garay.infraestructura.telegram.bot import (
 
 _HOY = datetime.date(2026, 8, 16)
 
-
 class _FakeNotificador:
     """Captures (mensaje, grupo_id) calls; can be configured to raise on demand."""
 
@@ -43,7 +42,6 @@ class _FakeNotificador:
         if grupo_id in self._raise_for:
             raise RuntimeError(f"Fake notifier failure for {grupo_id}")
 
-
 class _FakeMonitorCuotaService:
     """Stub for MonitorCuotaResendService that returns predefined avisos."""
 
@@ -52,7 +50,6 @@ class _FakeMonitorCuotaService:
 
     def avisos_para(self, hoy: datetime.date) -> list[Any]:
         return list(self._avisos)
-
 
 def _make_ctx(
     *,
@@ -84,11 +81,9 @@ def _make_ctx(
     ctx.bot_data = bot_data
     return ctx, fake_notif
 
-
 # ---------------------------------------------------------------------------
 # Monthly alert delivered to each owner
 # ---------------------------------------------------------------------------
-
 
 async def test_cuota_mensual_entrega_a_cada_propietario(monkeypatch: Any) -> None:
     """Quota monthly aviso → notificador called once per owner with the count in the message."""
@@ -111,11 +106,9 @@ async def test_cuota_mensual_entrega_a_cada_propietario(monkeypatch: Any) -> Non
         f"Expected both owner ids to receive quota alert, got: {sent_ids}"
     )
 
-
 # ---------------------------------------------------------------------------
 # Daily alert delivered to each owner
 # ---------------------------------------------------------------------------
-
 
 async def test_cuota_diaria_entrega_a_cada_propietario(monkeypatch: Any) -> None:
     """Quota daily aviso → notificador called once per owner."""
@@ -138,11 +131,9 @@ async def test_cuota_diaria_entrega_a_cada_propietario(monkeypatch: Any) -> None
     sent_ids = {g for _, g in quota_calls}
     assert "333" in sent_ids
 
-
 # ---------------------------------------------------------------------------
 # No alerts → notificador not called for quota
 # ---------------------------------------------------------------------------
-
 
 async def test_sin_avisos_cuota_no_notifica(monkeypatch: Any) -> None:
     """No quota avisos → notificador is not called for quota."""
@@ -159,11 +150,9 @@ async def test_sin_avisos_cuota_no_notifica(monkeypatch: Any) -> None:
     # Since domain monitor returns no avisos too (servicios=[]), no calls at all
     assert fake_notif.calls == []
 
-
 # ---------------------------------------------------------------------------
 # Quota service key absent → no crash
 # ---------------------------------------------------------------------------
-
 
 async def test_quota_service_ausente_no_falla(monkeypatch: Any) -> None:
     """Missing monitor_cuota_resend_service key in bot_data → job runs without crashing."""
@@ -179,11 +168,9 @@ async def test_quota_service_ausente_no_falla(monkeypatch: Any) -> None:
     # No quota sends (domain monitor has no services either)
     assert fake_notif.calls == []
 
-
 # ---------------------------------------------------------------------------
 # Per-recipient failure for quota alert is isolated
 # ---------------------------------------------------------------------------
-
 
 async def test_cuota_excepcion_por_destinatario_continua(
     monkeypatch: Any, caplog: Any
@@ -205,11 +192,9 @@ async def test_cuota_excepcion_por_destinatario_continua(
     attempted_ids = {g for _, g in raising_notif.calls}
     assert "222" in attempted_ids
 
-
 # ---------------------------------------------------------------------------
 # Quota DB failure is caught: no crash, no quota send, logged (W-1)
 # ---------------------------------------------------------------------------
-
 
 async def test_cuota_error_de_db_no_rompe_ni_notifica(
     monkeypatch: Any, caplog: Any
@@ -232,11 +217,9 @@ async def test_cuota_error_de_db_no_rompe_ni_notifica(
     assert fake_notif.calls == []  # no quota sends when the DB call fails
     assert any("quota" in r.getMessage().lower() for r in caplog.records)
 
-
 # ---------------------------------------------------------------------------
 # _post_init: quota-only config → job IS registered
 # ---------------------------------------------------------------------------
-
 
 def _make_app_spy(propietario_ids: str = "111") -> tuple[MagicMock, MagicMock]:
     """Build a fake PTB Application with a spy job_queue."""
@@ -255,7 +238,6 @@ def _make_app_spy(propietario_ids: str = "111") -> tuple[MagicMock, MagicMock]:
     app.job_queue = job_queue
 
     return app, job_queue
-
 
 async def test_post_init_registra_job_con_solo_cuota(monkeypatch: Any) -> None:
     """AC: quota-only config (no domain renewal services) → daily job IS registered."""
@@ -298,7 +280,6 @@ async def test_post_init_registra_job_con_solo_cuota(monkeypatch: Any) -> None:
     job_queue.run_daily.assert_called_once()
     call_kwargs = job_queue.run_daily.call_args
     assert call_kwargs.kwargs.get("name") == "monitor_servicios_infra"
-
 
 async def test_post_init_no_registra_job_sin_nada_configurado(monkeypatch: Any) -> None:
     """AC: no domain monitor, no quota monitor → daily job NOT registered."""

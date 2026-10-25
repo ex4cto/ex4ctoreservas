@@ -38,7 +38,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _make_context(
     categorias: list[str] | None = None, egreso_repo: object | None = None
 ) -> MagicMock:
@@ -49,18 +48,15 @@ def _make_context(
     ctx.bot_data = {"egreso_service": service, "egreso_repo": egreso_repo}
     return ctx
 
-
 def _egreso_mock(monto: Decimal) -> MagicMock:
     e = MagicMock()
     e.monto.monto = monto
     return e
 
-
 def _texto_enviado(update: MagicMock) -> str:
     if update.callback_query is not None:
         return str(update.callback_query.edit_message_text.call_args[0][0])
     return str(update.effective_message.reply_text.call_args[0][0])
-
 
 class TestTransporteAviso:
     @pytest.mark.asyncio
@@ -79,7 +75,6 @@ class TestTransporteAviso:
         result = await handle_egreso_categoria(update, ctx)
         assert result == EGRESO_DESTINATARIO
         assert "inDriver" not in _texto_enviado(update)
-
 
 class TestGuardiaDuplicado:
     @pytest.mark.asyncio
@@ -138,7 +133,6 @@ class TestGuardiaDuplicado:
         update = _make_update(text="01/07/2026")
         result = await handle_egreso_fecha(update, ctx)
         assert result == EGRESO_CONFIRMACION
-
 
 class TestDupConfirm:
     @pytest.mark.asyncio

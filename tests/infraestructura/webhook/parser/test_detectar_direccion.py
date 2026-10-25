@@ -12,14 +12,12 @@ def test_compraste_detecta_egreso() -> None:
     )
     assert detectar_direccion(texto) == "egreso"
 
-
 def test_transferiste_detecta_egreso() -> None:
     texto = (
         "Bancolombia: Transferiste $50,000.00 desde tu cuenta 7488 a la cuenta"
         " *3207904880 el 26/07/2026 a las 14:05."
     )
     assert detectar_direccion(texto) == "egreso"
-
 
 def test_enviaste_detecta_egreso() -> None:
     texto = (
@@ -28,16 +26,13 @@ def test_enviaste_detecta_egreso() -> None:
     )
     assert detectar_direccion(texto) == "egreso"
 
-
 def test_pagaste_con_nequi_detecta_egreso() -> None:
     texto = "Pagaste con Nequi tu factura por $3.000"
     assert detectar_direccion(texto) == "egreso"
 
-
 def test_texto_ingreso_retorna_ingreso() -> None:
     texto = "recibiste una transferencia de Juan Perez por $500,000 el 15/07/26 a las 10:30"
     assert detectar_direccion(texto) == "ingreso"
-
 
 def test_texto_sin_keywords_retorna_ingreso() -> None:
     texto = "Notificacion bancaria sin keywords relevantes"

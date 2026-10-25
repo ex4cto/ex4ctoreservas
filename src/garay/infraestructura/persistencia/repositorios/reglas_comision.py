@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,6 +11,10 @@ from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import ReglasComisionRepository
 from garay.infraestructura.persistencia.modelos import ReglasComisionModel
 
+# PR3 migration will drop the porcentaje_referido_maximo column from the DB.
+# Until then, write a sentinel 0 so the NOT NULL constraint is satisfied.
+_REFERIDO_MAXIMO_LEGACY_DEFAULT = Decimal("0")
+
 
 def to_orm(r: ReglasComision) -> ReglasComisionModel:
     return ReglasComisionModel(
@@ -17,9 +22,9 @@ def to_orm(r: ReglasComision) -> ReglasComisionModel:
         tipo_cliente=str(r.tipo_cliente),
         porcentaje_vendedor=r.porcentaje_vendedor,
         porcentaje_cerrador=r.porcentaje_cerrador,
-        porcentaje_referido_maximo=r.porcentaje_referido_maximo,
         punto_de_venta_nombre=r.punto_de_venta_nombre,
         numero_personas=r.numero_personas,
+        porcentaje_referido_maximo=_REFERIDO_MAXIMO_LEGACY_DEFAULT,
     )
 
 
@@ -29,7 +34,6 @@ def to_domain(m: ReglasComisionModel) -> ReglasComision:
         tipo_cliente=TipoCliente(m.tipo_cliente),
         porcentaje_vendedor=m.porcentaje_vendedor,
         porcentaje_cerrador=m.porcentaje_cerrador,
-        porcentaje_referido_maximo=m.porcentaje_referido_maximo,
         punto_de_venta_nombre=m.punto_de_venta_nombre,
         numero_personas=m.numero_personas,
     )

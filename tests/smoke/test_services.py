@@ -26,7 +26,6 @@ _WEBHOOK_SECRET = os.environ.get("GARAY_FORWARD_EMAIL_SECRET", "")
 
 _TIMEOUT = 15
 
-
 class TestWebhookService:
     """ex4ctoreservas must serve FastAPI, not Streamlit."""
 
@@ -86,7 +85,6 @@ class TestWebhookService:
         result: object = r.json()
         assert isinstance(result, dict)
         assert result.get("estado") == "ok"
-
 
 class TestDashboardService:
     """dashboard service must serve Streamlit, not FastAPI."""

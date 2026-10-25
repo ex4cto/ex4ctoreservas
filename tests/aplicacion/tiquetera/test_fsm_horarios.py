@@ -18,7 +18,6 @@ from tests.aplicacion.tiquetera.conftest import catalogo_fsm
 # Phase 2.1 RED — _build_catalog must populate self._horarios (new dict)
 # ---------------------------------------------------------------------------
 
-
 class TestHorariosDict:
     """self._horarios is a dict[int, list[str]] populated from the 6th tuple element."""
 
@@ -55,7 +54,6 @@ class TestHorariosDict:
         assert neto_n == Decimal("25")
         assert netos_por_horario == {}
 
-
 class TestRefrescarServicios6Tuples:
     """refrescar_servicios must accept 6-tuples and update _horarios."""
 
@@ -83,11 +81,9 @@ class TestRefrescarServicios6Tuples:
         assert fsm._horarios[1] == ["08:00"]
         assert 2 not in fsm._horarios
 
-
 # ---------------------------------------------------------------------------
 # Phase 4.1 RED — HORARIO_SALIDA state: skip path + happy path + edge cases
 # ---------------------------------------------------------------------------
-
 
 def _ctx_con_destino(numero: int = 1) -> ContextoVenta:
     """Return a ContextoVenta with one destino and no date yet."""
@@ -96,14 +92,12 @@ def _ctx_con_destino(numero: int = 1) -> ContextoVenta:
     ctx.destinos_nombres = ["Tour"]
     return ctx
 
-
 def _ctx_con_fecha(numero: int = 1) -> ContextoVenta:
     """Return a ContextoVenta with one destino and its date already set."""
     ctx = _ctx_con_destino(numero)
     ctx.fechas_por_servicio = {numero: datetime.datetime(2026, 12, 25, 0, 0)}
     ctx.fecha_salida = datetime.datetime(2026, 12, 25, 0, 0)
     return ctx
-
 
 class TestHorarioSalidaSkipPath:
     """Tour SIN horarios → FECHA_SALIDA must advance directly to PAX_ADULTOS.
@@ -136,7 +130,6 @@ class TestHorarioSalidaSkipPath:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", ctx)
 
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
-
 
 class TestHorarioSalidaConHorarios:
     """Tour CON horarios → FECHA_SALIDA must transition to HORARIO_SALIDA with buttons.
@@ -184,7 +177,6 @@ class TestHorarioSalidaConHorarios:
         assert salida.opciones_estructuradas is not None
         callbacks = [cb for _, cb in salida.opciones_estructuradas]
         assert callbacks == ["hor:07:00", "hor:09:00"]
-
 
 class TestHandleHorarioSalida:
     """_handle_horario_salida: valid selection advances, invalid re-renders.
@@ -240,7 +232,6 @@ class TestHandleHorarioSalida:
 
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-
 class TestSiguienteTourSinHorarioHelper:
     """_siguiente_tour_sin_horario skips tours without configured horarios.
 
@@ -273,11 +264,9 @@ class TestSiguienteTourSinHorarioHelper:
         resultado = fsm._siguiente_tour_sin_horario(ctx)
         assert resultado is None
 
-
 # ---------------------------------------------------------------------------
 # WARNING-1 — Multi-tour horarios: drain loop with multi_tour_habilitado=True
 # ---------------------------------------------------------------------------
-
 
 def _ctx_dos_destinos() -> ContextoVenta:
     """Return a ContextoVenta with two destinos and no dates yet."""
@@ -285,7 +274,6 @@ def _ctx_dos_destinos() -> ContextoVenta:
     ctx.destinos_numeros = [1, 2]
     ctx.destinos_nombres = ["Tour A", "Tour B"]
     return ctx
-
 
 class TestMultiTourHorarios:
     """Multi-tour horario drain: both pending horarios collected in sequence.
@@ -371,11 +359,9 @@ class TestMultiTourHorarios:
         assert s3.contexto.horarios_por_servicio == {1: "07:00"}
         assert 2 not in s3.contexto.horarios_por_servicio
 
-
 # ---------------------------------------------------------------------------
 # WARNING-2 — iniciar_otro_tour clears horarios_por_servicio
 # ---------------------------------------------------------------------------
-
 
 class TestIniciarOtroTourLimpiaHorarios:
     """iniciar_otro_tour must clear horarios_por_servicio regardless of prior content.

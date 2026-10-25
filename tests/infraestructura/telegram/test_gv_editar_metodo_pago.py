@@ -23,7 +23,6 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
 # Helpers for confirmation-handler tests
 # ---------------------------------------------------------------------------
 
-
 def _make_venta_mp(mensaje_grupo_id: int | None = 42000) -> MagicMock:
     v = MagicMock()
     v.id = uuid.uuid4()
@@ -43,7 +42,6 @@ def _make_venta_mp(mensaje_grupo_id: int | None = 42000) -> MagicMock:
     v.servicio_ids = []
     return v
 
-
 def _make_update_mp(callback_data: str) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -55,7 +53,6 @@ def _make_update_mp(callback_data: str) -> MagicMock:
     update.callback_query.from_user.id = 123
     update.message = None
     return update
-
 
 def _make_context_mp(
     venta: MagicMock | None = None,
@@ -93,7 +90,6 @@ def _make_context_mp(
 
     return ctx
 
-
 class TestTecladoCamposContieneBotones:
     def test_campo_metodo_pago_button_presente(self) -> None:
         """campo_metodo_pago button must appear in the field picker keyboard."""
@@ -114,7 +110,6 @@ class TestTecladoCamposContieneBotones:
             for btn in row
         ]
         assert "gv_campo:metodo_pago" in callback_data_vals
-
 
 class TestPatterns:
     def test_gv_campo_metodo_pago_matches_edit_campo_pattern(self) -> None:
@@ -141,7 +136,6 @@ class TestPatterns:
         """Random string must NOT match GV_EDIT_METODO_PAGO_PATTERN."""
         assert not re.match(GV_EDIT_METODO_PAGO_PATTERN, "gv_campo:nombre")
 
-
 class TestStateUniqueness:
     def test_gv_edit_metodo_pago_state_is_237(self) -> None:
         """GV_EDIT_METODO_PAGO must equal 237."""
@@ -151,11 +145,9 @@ class TestStateUniqueness:
         """GV_EDIT_METODO_PAGO must not conflict with GV_EDIT_TOUR_VALOR (236)."""
         assert GV_EDIT_METODO_PAGO != GV_EDIT_TOUR_VALOR
 
-
 # ---------------------------------------------------------------------------
 # Confirmation-handler integration tests
 # ---------------------------------------------------------------------------
-
 
 class TestHandleConfirmarEditarMetodoPago:
     @pytest.mark.asyncio

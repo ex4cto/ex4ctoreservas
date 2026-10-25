@@ -15,7 +15,6 @@ _TEXTO_VALIDO = "Recibiste 50.000 de Andrés García el 29 de abril de 2026 a la
 
 _TEXTO_SIN_DECIMAL = "Recibiste 100.000 de Maria Torres el 10 de julio de 2026 a las 11:00 a.m."
 
-
 def test_parsea_texto_valido() -> None:
     resultado = _PARSER.parsear("", _TEXTO_VALIDO)
 
@@ -28,7 +27,6 @@ def test_parsea_texto_valido() -> None:
     assert resultado.fecha_pago.hour == 16
     assert resultado.fecha_pago.minute == 27
 
-
 def test_parsea_hora_am() -> None:
     resultado = _PARSER.parsear("", _TEXTO_SIN_DECIMAL)
 
@@ -36,18 +34,15 @@ def test_parsea_hora_am() -> None:
     assert resultado.fecha_pago.minute == 0
     assert resultado.monto == Decimal("100000.00")
 
-
 def test_12pm_es_mediodia() -> None:
     texto = "Recibiste 20.000 de Luis Paz el 1 de enero de 2026 a las 12:00 p.m."
     resultado = _PARSER.parsear("", texto)
     assert resultado.fecha_pago.hour == 12
 
-
 def test_12am_es_medianoche() -> None:
     texto = "Recibiste 20.000 de Luis Paz el 1 de enero de 2026 a las 12:00 a.m."
     resultado = _PARSER.parsear("", texto)
     assert resultado.fecha_pago.hour == 0
-
 
 def test_parsea_con_espacios_no_estandar_del_reenvio() -> None:
     """Real forwarded emails carry NBSP (\\xa0) and line breaks that must be normalized."""
@@ -64,7 +59,6 @@ def test_parsea_con_espacios_no_estandar_del_reenvio() -> None:
     assert resultado.fecha_pago.hour == 19
     assert resultado.fecha_pago.minute == 19
 
-
 def test_parsea_hora_singular_a_la_una() -> None:
     """Bre-B notifications for 1:xx times say 'a la 1:46' (singular), not 'a las'."""
     texto = (
@@ -80,7 +74,6 @@ def test_parsea_hora_singular_a_la_una() -> None:
     assert resultado.fecha_pago.year == 2026
     assert resultado.fecha_pago.hour == 13
     assert resultado.fecha_pago.minute == 46
-
 
 def test_texto_sin_patron_lanza_error_parseo() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):

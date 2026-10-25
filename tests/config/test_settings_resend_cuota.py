@@ -25,7 +25,6 @@ class TestResendCapMensual:
         settings = Settings()
         assert settings.resend_cap_mensual == 5000
 
-
 class TestResendCapDiario:
     def test_default_es_100(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("GARAY_RESEND_CAP_DIARIO", raising=False)
@@ -36,7 +35,6 @@ class TestResendCapDiario:
         monkeypatch.setenv("GARAY_RESEND_CAP_DIARIO", "200")
         settings = Settings()
         assert settings.resend_cap_diario == 200
-
 
 class TestResendBandasMensual:
     def test_default_es_fracciones_estandar(
@@ -50,7 +48,6 @@ class TestResendBandasMensual:
         monkeypatch.setenv("GARAY_RESEND_BANDAS_MENSUAL", "[0.5,0.75,1.0]")
         settings = Settings()
         assert settings.resend_bandas_mensual == (0.5, 0.75, 1.0)
-
 
 class TestResendUmbralDiario:
     def test_default_es_80(self, monkeypatch: pytest.MonkeyPatch) -> None:

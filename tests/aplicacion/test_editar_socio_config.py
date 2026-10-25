@@ -21,7 +21,6 @@ def _socio(**kwargs: object) -> SocioConfig:
     defaults.update(kwargs)
     return SocioConfig(**defaults)  # type: ignore[arg-type]
 
-
 def _make_service(
     socio: SocioConfig,
 ) -> tuple[EditarSocioConfigService, MagicMock, MagicMock]:
@@ -33,7 +32,6 @@ def _make_service(
         repo,
         auditoria,
     )
-
 
 class TestCambiarPorcentaje:
     def test_cambiar_porcentaje_emite_registro_con_clave(self) -> None:
@@ -62,14 +60,12 @@ class TestCambiarPorcentaje:
         service.editar(s.nombre, porcentaje=Decimal("60"), por_telegram_id=1, por_nombre="A")
         repo.guardar.assert_called_once()
 
-
 class TestSinCambios:
     def test_mismo_porcentaje_no_emite_registros(self) -> None:
         s = _socio()
         service, _, auditoria = _make_service(s)
         service.editar(s.nombre, porcentaje=s.porcentaje, por_telegram_id=1, por_nombre="A")
         auditoria.guardar.assert_not_called()
-
 
 class TestMissingActor:
     def test_actor_none_lanza_antes_de_guardar(self) -> None:
@@ -84,7 +80,6 @@ class TestMissingActor:
             )
         repo.guardar.assert_not_called()
         auditoria.guardar.assert_not_called()
-
 
 class TestEntidadNoEncontrada:
     def test_socio_inexistente_lanza_value_error(self) -> None:

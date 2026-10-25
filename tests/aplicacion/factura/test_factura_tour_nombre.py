@@ -29,10 +29,8 @@ _SNAPSHOT = SnapshotReglas(
     tipo_cliente=TipoCliente.EXTERNO,
     porcentaje_vendedor=Decimal("0"),
     porcentaje_cerrador=Decimal("0"),
-    porcentaje_referido_maximo=Decimal("0"),
     porcentaje_capa_punto=Decimal("0"),
 )
-
 
 def _resultado() -> ResultadoRegistrarVenta:
     return ResultadoRegistrarVenta(
@@ -44,9 +42,10 @@ def _resultado() -> ResultadoRegistrarVenta:
             referido=_CERO,
             agencia=_CERO,
             snapshot=_SNAPSHOT,
+            neto_vendedor=_CERO,
+            neto_cerrador=_CERO,
         ),
     )
-
 
 def _ctx_base() -> ContextoVenta:
     ctx = ContextoVenta()
@@ -60,7 +59,6 @@ def _ctx_base() -> ContextoVenta:
     ctx.abono = Decimal("100000")
     ctx.neto = Decimal("300000")
     return ctx
-
 
 class TestFacturaTourNombre:
     """The 'Detalle del servicio' table must include a Tour row."""

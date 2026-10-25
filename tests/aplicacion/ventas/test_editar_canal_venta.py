@@ -26,7 +26,6 @@ from garay.dominio.ventas.errores import (
 # Task-8 RED: EditarCanalVentaComando shape
 # ---------------------------------------------------------------------------
 
-
 class TestEditarCanalVentaComando:
     """EditarCanalVentaComando must be a frozen dataclass with the 6 required fields."""
 
@@ -96,11 +95,9 @@ class TestEditarCanalVentaComando:
         assert cmd.punto_id is None
         assert cmd.realizada_por_nombre is None
 
-
 # ---------------------------------------------------------------------------
 # Task-10: EDITAR_CANAL in ACCIONES_EDICION
 # ---------------------------------------------------------------------------
-
 
 class TestAccionesEdicionIncludeEditarCanal:
     def test_editar_canal_in_acciones_edicion(self) -> None:
@@ -109,13 +106,11 @@ class TestAccionesEdicionIncludeEditarCanal:
 
         assert AccionAuditoria.EDITAR_CANAL in ACCIONES_EDICION
 
-
 # ---------------------------------------------------------------------------
 # Task-11 RED: EditarCanalVentaService — all scenarios
 # ---------------------------------------------------------------------------
 
 # Helpers
-
 
 def _make_venta_mock(
     tipo_cliente: TipoCliente = TipoCliente.EXTERNO,
@@ -150,7 +145,6 @@ def _make_venta_mock(
     v.cambiar_tipo_cliente.side_effect = _cambiar_tipo_cliente
     return v
 
-
 def _make_repos(
     venta: MagicMock | None = None,
     auditoria_records: list[MagicMock] | None = None,
@@ -173,12 +167,10 @@ def _make_repos(
 
     return ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -194,7 +186,6 @@ def _make_cmd(
         realizada_por_telegram_id=42,
         realizada_por_nombre="Admin",
     )
-
 
 def _make_service(
     ventas_repo: MagicMock,
@@ -213,12 +204,10 @@ def _make_service(
         motor=motor or _make_motor(),
     )
 
-
 def _rec(accion: AccionAuditoria) -> MagicMock:
     r = MagicMock()
     r.accion = accion
     return r
-
 
 class TestEditarCanalVentaService:
     # --- motivo vacío → MotivoRequerido ---

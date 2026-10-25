@@ -23,10 +23,8 @@ def _make_snapshot() -> SnapshotReglas:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("3"),
         porcentaje_capa_punto=Decimal("2"),
     )
-
 
 def _make_venta(
     *,
@@ -56,7 +54,6 @@ def _make_venta(
         ),
     )
 
-
 def _make_comision(
     venta_id: uuid.UUID,
     *,
@@ -73,10 +70,11 @@ def _make_comision(
             referido=Dinero(0),
             agencia=Dinero(agencia),
             snapshot=_make_snapshot(),
-        ),
+            neto_vendedor=Dinero(vendedor),
+            neto_cerrador=Dinero(cerrador),
+),
         fecha=datetime.date(2026, 7, 10),
     )
-
 
 def _make_service(
     ventas: list[Venta],
@@ -98,7 +96,6 @@ def _make_service(
         freelancers=freelancer_repo,
     )
 
-
 class TestResumenVentasServiceSinVentas:
     def test_sin_ventas_devuelve_ceros(self) -> None:
         service = _make_service(ventas=[], comisiones=[])
@@ -110,7 +107,6 @@ class TestResumenVentasServiceSinVentas:
         assert resumen.por_vendedor == ()
         assert resumen.mes == 7
         assert resumen.año == 2026
-
 
 class TestResumenVentasServiceUnVendedor:
     def test_un_vendedor_una_venta(self) -> None:
@@ -138,7 +134,6 @@ class TestResumenVentasServiceUnVendedor:
         assert juan.nombre == "Juan"
         assert juan.comision == Dinero(75_000)  # 50000 + 25000
 
-
 class TestResumenVentasServiceVendedorNulo:
     def test_vendedor_none_queda_como_sin_asignar(self) -> None:
         venta = _make_venta(vendedor=None, cerrador="Maria")
@@ -150,7 +145,6 @@ class TestResumenVentasServiceVendedorNulo:
         nombres = {v.nombre for v in resumen.por_vendedor}
         assert "Sin asignar" in nombres
 
-
 # ─── Phase 1: ResumenVendedor.freelancer_id ──────────────────────────────────
 
 _UUID_A = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -158,7 +152,6 @@ _UUID_B = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 _UUID_INACTIVE = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
 _UUID_UNKNOWN = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
 _UUID_OTHER = uuid.UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
-
 
 def _make_freelancer(
     fid: uuid.UUID,
@@ -168,7 +161,6 @@ def _make_freelancer(
     activo: bool = True,
 ) -> Freelancer:
     return Freelancer(id=fid, nombre=nombre, display=display, activo=activo)
-
 
 class TestResumenVendedorFreelancerId:
     """Tasks 1.1 and 1.2 — ResumenVendedor gains freelancer_id field (additive)."""
@@ -195,9 +187,7 @@ class TestResumenVendedorFreelancerId:
         )
         assert rv.freelancer_id is None
 
-
 # ─── Phase 3: two-level grouping (SC-01..SC-09, SC-16) ───────────────────────
-
 
 class TestResumenVentasIdKeyedGrouping:
     """SC-01 — id-keyed venta uses display name from bulk dict."""
@@ -218,7 +208,6 @@ class TestResumenVentasIdKeyedGrouping:
         assert "Mairele" not in vendedores
         assert vendedores["Mairelis G."].freelancer_id == _UUID_A
 
-
 class TestResumenVentasNullIdGrouping:
     """SC-02 — NULL-id venta uses snapshot name as vendedor bucket key (not 'Sin asignar')."""
 
@@ -234,7 +223,6 @@ class TestResumenVentasNullIdGrouping:
         assert "Sin asignar" not in vendedores
         assert vendedores["Bryan C."].freelancer_id is None
 
-
 class TestResumenVentasTwoNullIdNotCollapsed:
     """SC-03 — two NULL-id ventas with different snapshots are NOT merged."""
 
@@ -249,7 +237,6 @@ class TestResumenVentasTwoNullIdNotCollapsed:
         vendedores = {rv.nombre for rv in resumen.por_vendedor}
         assert "Ana" in vendedores
         assert "Pedro" in vendedores
-
 
 class TestResumenVentasSameIdOneBucket:
     """SC-04 — two id-keyed ventas with same id → one bucket, ventas=2."""
@@ -267,7 +254,6 @@ class TestResumenVentasSameIdOneBucket:
         assert "Carlos P." in vendedores
         assert vendedores["Carlos P."].ventas == 2
         assert vendedores["Carlos P."].freelancer_id == _UUID_A
-
 
 class TestResumenVentasCerradorAndVendedorIndependent:
     """SC-05 — cerrador_id set + vendedor_id None → independent buckets."""
@@ -290,7 +276,6 @@ class TestResumenVentasCerradorAndVendedorIndependent:
         assert "Luisa M." in vendedores
         assert vendedores["Luisa M."].freelancer_id == _UUID_B
 
-
 class TestResumenVentasTransitionDoubleCount:
     """SC-06 — transition double-count is present and correct."""
 
@@ -309,7 +294,6 @@ class TestResumenVentasTransitionDoubleCount:
         assert "Mairele" in vendedores, "name-bucket should use snapshot"
         assert vendedores["Mairelis G."].ventas == 1
         assert vendedores["Mairele"].ventas == 1
-
 
 class TestResumenVentasBulkLoadOnce:
     """SC-07 — listar_todos called exactly once."""
@@ -336,7 +320,6 @@ class TestResumenVentasBulkLoadOnce:
 
         freelancer_repo.listar_todos.assert_called_once()
 
-
 class TestResumenVentasInactiveFreelancer:
     """SC-08 — inactive freelancer still resolves display."""
 
@@ -351,7 +334,6 @@ class TestResumenVentasInactiveFreelancer:
         assert "Ex V." in vendedores
         assert vendedores["Ex V."].freelancer_id == _UUID_INACTIVE
 
-
 class TestResumenVentasUnknownIdFallback:
     """SC-09 — id-keyed freelancer not in dict falls back to snapshot."""
 
@@ -364,7 +346,6 @@ class TestResumenVentasUnknownIdFallback:
         vendedores = {rv.nombre: rv for rv in resumen.por_vendedor}
         assert "Copia vieja" in vendedores
         assert vendedores["Copia vieja"].freelancer_id == _UUID_UNKNOWN
-
 
 class TestResumenVentasDisplayNoneFallback:
     """display=None → nombre fallback for label."""
@@ -380,7 +361,6 @@ class TestResumenVentasDisplayNoneFallback:
         assert "Carlos Perez" in vendedores
         assert vendedores["Carlos Perez"].freelancer_id == _UUID_A
 
-
 class TestResumenVentasRequiresFreelancers:
     """SC-16 — TypeError when no freelancers arg."""
 
@@ -391,7 +371,6 @@ class TestResumenVentasRequiresFreelancers:
         comisiones_repo = MagicMock()
         with pytest.raises(TypeError):
             ResumenVentasService(ventas=ventas_repo, comisiones=comisiones_repo)  # type: ignore[call-arg]
-
 
 def test_por_dia_agrupa_correctamente() -> None:
     v1 = _make_venta(valor=300_000, neto=200_000, fecha=datetime.date(2026, 7, 10))
@@ -407,16 +386,13 @@ def test_por_dia_agrupa_correctamente() -> None:
     assert resumen.por_dia[0] == (datetime.date(2026, 7, 10), 2, Dinero(500_000))
     assert resumen.por_dia[1] == (datetime.date(2026, 7, 15), 1, Dinero(400_000))
 
-
 def test_por_dia_vacio_si_sin_ventas() -> None:
     service = _make_service(ventas=[], comisiones=[])
     resumen = service.ejecutar(mes=7, año=2026)
 
     assert resumen.por_dia == ()
 
-
 # ─── MetodoPago grouping tests (TDD RED) ─────────────────────────────────────
-
 
 class TestResumenVentasPorMetodoPago:
     """Tests for the por_metodo_pago grouping on ResumenVentas."""

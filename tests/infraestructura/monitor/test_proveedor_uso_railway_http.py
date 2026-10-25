@@ -35,14 +35,12 @@ _MEASUREMENTS = ["MEMORY_USAGE_GB", "CPU_USAGE", "NETWORK_TX_GB", "DISK_USAGE_GB
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_adapter(**kwargs: Any) -> ProveedorUsoRailwayHTTP:
     return ProveedorUsoRailwayHTTP(
         api_token=_TOKEN,
         project_id=_PROJECT_ID,
         **kwargs,
     )
-
 
 def _make_usage_response(items: list[dict[str, Any]]) -> MagicMock:
     """Return a fake httpx.Response for the usage query."""
@@ -51,7 +49,6 @@ def _make_usage_response(items: list[dict[str, Any]]) -> MagicMock:
     resp.raise_for_status.return_value = None
     return resp
 
-
 def _make_estimated_response(items: list[dict[str, Any]]) -> MagicMock:
     """Return a fake httpx.Response for the estimatedUsage query."""
     resp = MagicMock()
@@ -59,12 +56,10 @@ def _make_estimated_response(items: list[dict[str, Any]]) -> MagicMock:
     resp.raise_for_status.return_value = None
     return resp
 
-
 def _make_http_error_response() -> MagicMock:
     resp = MagicMock()
     resp.raise_for_status.side_effect = Exception("HTTP 402 Client Error")
     return resp
-
 
 def _make_graphql_error_response(message: str = "Unauthorized") -> MagicMock:
     resp = MagicMock()
@@ -72,11 +67,9 @@ def _make_graphql_error_response(message: str = "Unauthorized") -> MagicMock:
     resp.json.return_value = {"errors": [{"message": message}]}
     return resp
 
-
 # ---------------------------------------------------------------------------
 # uso_mes_a_la_fecha: dict parsing
 # ---------------------------------------------------------------------------
-
 
 def test_uso_mes_a_la_fecha_parses_measurement_to_value() -> None:
     """uso_mes_a_la_fecha returns {measurement: value} from the usage response."""
@@ -101,7 +94,6 @@ def test_uso_mes_a_la_fecha_parses_measurement_to_value() -> None:
     }
     mock_post.assert_called_once()
 
-
 def test_uso_mes_a_la_fecha_empty_list_returns_empty_dict() -> None:
     """uso_mes_a_la_fecha with empty usage list returns empty dict."""
     adapter = _make_adapter()
@@ -112,11 +104,9 @@ def test_uso_mes_a_la_fecha_empty_list_returns_empty_dict() -> None:
 
     assert result == {}
 
-
 # ---------------------------------------------------------------------------
 # uso_mes_a_la_fecha: request shape (header, query, dates)
 # ---------------------------------------------------------------------------
-
 
 def test_uso_mes_a_la_fecha_sends_bearer_auth_header() -> None:
     """uso_mes_a_la_fecha sends Authorization: Bearer <token> header."""
@@ -129,7 +119,6 @@ def test_uso_mes_a_la_fecha_sends_bearer_auth_header() -> None:
     call_kwargs = mock_post.call_args.kwargs
     assert "Authorization" in call_kwargs.get("headers", {})
     assert call_kwargs["headers"]["Authorization"] == f"Bearer {_TOKEN}"
-
 
 def test_uso_mes_a_la_fecha_sends_correct_iso_dates() -> None:
     """uso_mes_a_la_fecha sends startDate = first day of month T00:00:00Z,
@@ -146,7 +135,6 @@ def test_uso_mes_a_la_fecha_sends_correct_iso_dates() -> None:
     assert variables.get("startDate") == "2026-08-01T00:00:00Z"
     assert variables.get("endDate") == "2026-08-17T00:00:00Z"  # hasta + 1 day
 
-
 def test_uso_mes_a_la_fecha_dates_at_month_start() -> None:
     """startDate stays correct when hasta is already the 1st of the month."""
     adapter = _make_adapter()
@@ -158,7 +146,6 @@ def test_uso_mes_a_la_fecha_dates_at_month_start() -> None:
     variables = mock_post.call_args.kwargs.get("json", {}).get("variables", {})
     assert variables.get("startDate") == "2026-08-01T00:00:00Z"
     assert variables.get("endDate") == "2026-08-02T00:00:00Z"
-
 
 def test_uso_mes_a_la_fecha_sends_project_id_and_measurements() -> None:
     """uso_mes_a_la_fecha sends projectId and measurements in variables."""
@@ -172,11 +159,9 @@ def test_uso_mes_a_la_fecha_sends_project_id_and_measurements() -> None:
     assert variables.get("projectId") == _PROJECT_ID
     assert set(variables.get("measurements", [])) == set(_MEASUREMENTS)
 
-
 # ---------------------------------------------------------------------------
 # estimado_mes: dict parsing (field is estimatedValue, not value)
 # ---------------------------------------------------------------------------
-
 
 def test_estimado_mes_parses_estimated_value_field() -> None:
     """estimado_mes uses 'estimatedValue' (not 'value') to build the dict."""
@@ -200,7 +185,6 @@ def test_estimado_mes_parses_estimated_value_field() -> None:
         "DISK_USAGE_GB": 200.0,
     }
 
-
 def test_estimado_mes_empty_list_returns_empty_dict() -> None:
     """estimado_mes with empty estimatedUsage list returns empty dict."""
     adapter = _make_adapter()
@@ -211,11 +195,9 @@ def test_estimado_mes_empty_list_returns_empty_dict() -> None:
 
     assert result == {}
 
-
 # ---------------------------------------------------------------------------
 # estimado_mes: request shape (no dates)
 # ---------------------------------------------------------------------------
-
 
 def test_estimado_mes_sends_bearer_auth_header() -> None:
     """estimado_mes sends Authorization: Bearer <token> header."""
@@ -227,7 +209,6 @@ def test_estimado_mes_sends_bearer_auth_header() -> None:
 
     call_kwargs = mock_post.call_args.kwargs
     assert call_kwargs.get("headers", {}).get("Authorization") == f"Bearer {_TOKEN}"
-
 
 def test_estimado_mes_sends_project_id_no_dates() -> None:
     """estimado_mes sends projectId but no startDate/endDate in variables."""
@@ -242,11 +223,9 @@ def test_estimado_mes_sends_project_id_no_dates() -> None:
     assert "startDate" not in variables
     assert "endDate" not in variables
 
-
 # ---------------------------------------------------------------------------
 # Error handling
 # ---------------------------------------------------------------------------
-
 
 def test_uso_mes_a_la_fecha_raises_on_http_error() -> None:
     """uso_mes_a_la_fecha propagates exceptions from raise_for_status."""
@@ -259,7 +238,6 @@ def test_uso_mes_a_la_fecha_raises_on_http_error() -> None:
     ):
         adapter.uso_mes_a_la_fecha(hoy)
 
-
 def test_estimado_mes_raises_on_http_error() -> None:
     """estimado_mes propagates exceptions from raise_for_status."""
     adapter = _make_adapter()
@@ -270,7 +248,6 @@ def test_estimado_mes_raises_on_http_error() -> None:
         pytest.raises(Exception, match="HTTP 402"),
     ):
         adapter.estimado_mes(hoy)
-
 
 def test_uso_mes_a_la_fecha_raises_on_graphql_errors() -> None:
     """uso_mes_a_la_fecha raises when GraphQL response contains 'errors' field."""
@@ -283,7 +260,6 @@ def test_uso_mes_a_la_fecha_raises_on_graphql_errors() -> None:
     ):
         adapter.uso_mes_a_la_fecha(hoy)
 
-
 def test_estimado_mes_raises_on_graphql_errors() -> None:
     """estimado_mes raises when GraphQL response contains 'errors' field."""
     adapter = _make_adapter()
@@ -295,11 +271,9 @@ def test_estimado_mes_raises_on_graphql_errors() -> None:
     ):
         adapter.estimado_mes(hoy)
 
-
 # ---------------------------------------------------------------------------
 # Custom timeout propagated
 # ---------------------------------------------------------------------------
-
 
 def test_uso_mes_a_la_fecha_sends_timeout() -> None:
     """uso_mes_a_la_fecha passes a timeout to httpx.post."""

@@ -13,13 +13,11 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso, ObligacionHotel
 from garay.dominio.conciliacion.tipos import TipoEgreso
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _HOTEL_ID = uuid.UUID("11111111-0001-0001-0001-111111111111")
-
 
 def _make_obligacion(
     hotel_id: uuid.UUID = _HOTEL_ID,
@@ -40,7 +38,6 @@ def _make_obligacion(
         activa=True,
     )
 
-
 def _make_egreso_registrado(
     hotel_id: uuid.UUID = _HOTEL_ID,
     monto: Decimal = Decimal("1000000"),
@@ -55,7 +52,6 @@ def _make_egreso_registrado(
         destinatario="Maria",
         obligacion_hotel_id=hotel_id,
     )
-
 
 def _make_update(
     callback_data: str | None = None,
@@ -80,14 +76,12 @@ def _make_update(
         update.callback_query = None
     return update
 
-
 def _make_admin_repo(es_admin: bool = True) -> MagicMock:
     repo = MagicMock()
     freelancer = MagicMock()
     freelancer.es_admin = es_admin
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
-
 
 def _make_context(
     hotel_service: MagicMock | None = None,
@@ -102,7 +96,6 @@ def _make_context(
     }
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Integration test: complete pago flow
 # ---------------------------------------------------------------------------
@@ -113,14 +106,12 @@ class TestPagoFlowCompleto:
     @pytest.mark.asyncio
     async def test_flujo_completo_pago_con_monto_texto(self) -> None:
         """Full flow: list → detail → monto → fecha → concepto → confirmar → pago registrado."""
-        from telegram.ext import ConversationHandler
 
         from garay.infraestructura.telegram.handlers_hoteles import (
-            CB_HUB_HOTELES,
-            CB_HOTEL_HISTORIAL,
             CB_HOTEL_OMITIR_CONCEPTO,
             CB_HOTEL_PAGAR,
             CB_HOTEL_PAGO_CONFIRMAR,
+            CB_HUB_HOTELES,
             HOTEL_DETALLE,
             HOTEL_LIST,
             HOTEL_PAGO_CONCEPTO,
@@ -201,9 +192,7 @@ class TestPagoFlowCompleto:
     async def test_pago_con_concepto_textual(self) -> None:
         """Flow includes a typed concepto and it is passed to registrar_pago."""
         from garay.infraestructura.telegram.handlers_hoteles import (
-            CB_HOTEL_OMITIR_CONCEPTO,
             CB_HOTEL_PAGO_CONFIRMAR,
-            HOTEL_DETALLE,
             HOTEL_PAGO_CONFIRMAR,
             handle_pago_concepto,
             handle_pago_confirmar,

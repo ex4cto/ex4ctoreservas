@@ -21,7 +21,6 @@ def test_llena_empresa_ejemplos_y_precios_con_derivados() -> None:
         "2.000.000|500.000|5.000.000|416.667|1.000.000"
     )
 
-
 def test_reemplaza_logo() -> None:
     svc = GenerarPropuestaSoftwareService(
         plantilla='<img src="{{LOGO}}">', logo_data_uri="data:image/png;base64,AAA"
@@ -29,7 +28,6 @@ def test_reemplaza_logo() -> None:
     assert svc.generar(PropuestaContexto(empresa_nombre="X")) == (
         '<img src="data:image/png;base64,AAA">'
     )
-
 
 def test_precios_software_personalizados() -> None:
     ctx = PropuestaContexto(
@@ -44,7 +42,6 @@ def test_precios_software_personalizados() -> None:
     svc = GenerarPropuestaSoftwareService(plantilla="{{PRECIO_ANUAL_MES}}|{{PRECIO_AHORRO}}")
     # 6.000.000/12 = 500.000 ; ahorro = 600.000*12 - 6.000.000 = 1.200.000
     assert svc.generar(ctx) == "500.000|1.200.000"
-
 
 def test_ejemplos_personalizados() -> None:
     ctx = PropuestaContexto(empresa_nombre="X", ejemplos_servicios="citas y consultas")

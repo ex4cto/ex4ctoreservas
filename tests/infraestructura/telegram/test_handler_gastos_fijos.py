@@ -57,7 +57,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _gasto_recurrente(nombre: str = "Arriendo", gasto_id: uuid.UUID | None = None) -> GastoRecurrente:
     return GastoRecurrente(
         id=gasto_id or uuid.uuid4(),
@@ -68,14 +67,12 @@ def _gasto_recurrente(nombre: str = "Arriendo", gasto_id: uuid.UUID | None = Non
         activo=True,
     )
 
-
 def _make_admin_repo() -> MagicMock:
     repo = MagicMock()
     freelancer = MagicMock()
     freelancer.es_admin = True
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
-
 
 def _make_context(
     gastos: list[GastoRecurrente] | None = None,
@@ -96,7 +93,6 @@ def _make_context(
         "freelancer_repo": _make_admin_repo(),
     }
     return ctx
-
 
 class TestCmdGastosFijos:
     @pytest.mark.asyncio
@@ -129,7 +125,6 @@ class TestCmdGastosFijos:
         result = await cmd_gastos_fijos(update, ctx)
         assert result == ConversationHandler.END
         ctx.bot_data["recurrente_service"].listar_activos.assert_not_called()
-
 
 class TestLista:
     @pytest.mark.asyncio
@@ -171,7 +166,6 @@ class TestLista:
         assert CB_GF_LIQUIDAR in datas
         assert CB_GF_ATRAS in datas
 
-
 class TestDetalle:
     def _ctx_with_gasto(self, g: GastoRecurrente) -> MagicMock:
         ctx = _make_context(gastos=[g])
@@ -206,7 +200,6 @@ class TestDetalle:
         call_kwargs = ctx.bot_data["egreso_service"].registrar.call_args
         assert call_kwargs.kwargs["gasto_recurrente_id"] == g.id
 
-
 class TestEditarMonto:
     @pytest.mark.asyncio
     async def test_monto_valido_actualiza_y_vuelve_detalle(self) -> None:
@@ -226,7 +219,6 @@ class TestEditarMonto:
         result = await handle_gf_editar_monto(update, ctx)
         assert result == GF_EDITAR_MONTO
         ctx.bot_data["recurrente_service"].guardar.assert_not_called()
-
 
 class TestCrearGastoFijo:
     @pytest.mark.asyncio

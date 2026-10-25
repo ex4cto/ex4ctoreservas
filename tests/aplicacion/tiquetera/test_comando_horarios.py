@@ -36,7 +36,7 @@ def _base_comando(**kwargs: object) -> RegistrarVentaComando:
             vendedor_nombre="Test",
             cerrador_nombre=None,
             punto_de_venta_id=None,
-            referido_nombre=None,
+            referido_alias=None,
             vendedor_id=None,
             cerrador_id=None,
         ),
@@ -44,7 +44,6 @@ def _base_comando(**kwargs: object) -> RegistrarVentaComando:
         ninos=0,
         **kwargs,  # type: ignore[arg-type]
     )
-
 
 class TestRegistrarVentaComandoHorarios:
     """RegistrarVentaComando.horarios_por_servicio field contract."""
@@ -64,7 +63,6 @@ class TestRegistrarVentaComandoHorarios:
         """horarios_por_servicio=None is accepted."""
         cmd = _base_comando(horarios_por_servicio=None)
         assert cmd.horarios_por_servicio is None
-
 
 class TestHorariosIdTranslation:
     """Unit tests for the horarios numero→uuid.UUID translation logic.

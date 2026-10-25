@@ -12,20 +12,17 @@ from garay.infraestructura.webhook.app import crear_app
 
 _SECRET = "test-secret-12345"
 
-
 @pytest.fixture()
 def mock_ingreso_repo() -> MagicMock:
     repo = MagicMock()
     repo.existe_referencia.return_value = False
     return repo
 
-
 @pytest.fixture()
 def mock_egreso_repo() -> MagicMock:
     repo = MagicMock()
     repo.existe_referencia.return_value = False
     return repo
-
 
 @pytest.fixture()
 def mock_correo_repo() -> MagicMock:
@@ -34,13 +31,11 @@ def mock_correo_repo() -> MagicMock:
     repo.existe_referencia.return_value = False
     return repo
 
-
 @pytest.fixture()
 def mock_notificador() -> MagicMock:
     notificador = MagicMock()
     notificador.notificar.return_value = None
     return notificador
-
 
 @pytest.fixture()
 def client(

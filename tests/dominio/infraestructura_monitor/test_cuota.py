@@ -51,7 +51,6 @@ class TestBandasAbsolutas:
         result = bandas_absolutas(3000, (1.0,))
         assert result == (3000,)
 
-
 class TestBandaMensualCruzada:
     # --- Exact crossing: previo < T <= actual ---
 
@@ -123,7 +122,6 @@ class TestBandaMensualCruzada:
         """If previo=0 and actual < 2400, no crossing."""
         result = banda_mensual_cruzada(100, 0, (2400, 2850, 3000))
         assert result is None
-
 
 class TestSuperaUmbralDiario:
     def test_igual_al_umbral_dispara(self) -> None:

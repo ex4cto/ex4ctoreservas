@@ -34,7 +34,6 @@ _MIGRATION_FILE = (
     / "0011_add_horarios_to_servicios.py"
 )
 
-
 def _load_migration() -> ModuleType:
     """Dynamically load the 0011 migration module."""
     if not _MIGRATION_FILE.exists():
@@ -51,7 +50,6 @@ def _load_migration() -> ModuleType:
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
-
 
 class TestMigration0011Upgrade:
     def test_upgrade_agrega_columna_horarios(self, sqlite_engine: Engine) -> None:
@@ -123,7 +121,6 @@ class TestMigration0011Upgrade:
         raw = row[0]
         value = json.loads(raw) if isinstance(raw, str) else raw
         assert value == []
-
 
 class TestMigration0011Downgrade:
     def test_downgrade_elimina_columna_horarios(self, sqlite_engine: Engine) -> None:

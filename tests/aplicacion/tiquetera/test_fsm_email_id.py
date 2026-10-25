@@ -14,16 +14,13 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
-
 @pytest.fixture()
 def ctx() -> ContextoVenta:
     return ContextoVenta()
-
 
 class TestClienteTelefonoTransicion:
     def test_cliente_telefono_transiciona_a_cliente_email(
@@ -37,7 +34,6 @@ class TestClienteTelefonoTransicion:
     ) -> None:
         salida = fsm.procesar(EstadoFSM.CLIENTE_TELEFONO, "+573001234567", ctx)
         assert salida.contexto.cliente_telefono == "+573001234567"
-
 
 class TestClienteEmail:
     def test_email_valido_almacenado_y_avanza_a_factura_idioma(
@@ -70,7 +66,6 @@ class TestClienteEmail:
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.cliente_email == "nuevo@email.com"
 
-
 class TestFacturaIdioma:
     def test_espanol_almacena_es_y_avanza_a_tipo_id(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -92,7 +87,6 @@ class TestFacturaIdioma:
         salida = fsm.procesar(EstadoFSM.FACTURA_IDIOMA, "Frances", ctx)
         assert salida.nuevo_estado == EstadoFSM.FACTURA_IDIOMA
         assert salida.opciones == ["Español", "English"]
-
 
 class TestClienteTipoId:
     def test_cc_aceptado_y_almacenado(
@@ -131,7 +125,6 @@ class TestClienteTipoId:
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
         assert salida.contexto.cliente_tipo_identificacion == "NIT"
 
-
 class TestClienteIdentificacion:
     def test_identificacion_valida_almacenada_y_avanza_a_hotel(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -161,7 +154,6 @@ class TestClienteIdentificacion:
         salida = fsm.procesar(EstadoFSM.CLIENTE_IDENTIFICACION, "  12345  ", ctx)
         assert salida.contexto.cliente_identificacion == "12345"
 
-
 class TestValidacionConfirmacion:
     def test_falta_email_listado_en_faltantes(
         self, fsm: FSMTiquetera, ctx: ContextoVenta
@@ -181,7 +173,6 @@ class TestValidacionConfirmacion:
         # identificacion is missing
         faltantes = fsm._validar_datos_confirmacion(ctx)
         assert any("identificaci" in f.lower() for f in faltantes)
-
 
 class TestConstruirResumen:
     def test_resumen_incluye_email(self, fsm: FSMTiquetera, ctx: ContextoVenta) -> None:

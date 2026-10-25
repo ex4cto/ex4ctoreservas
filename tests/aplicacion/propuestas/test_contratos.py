@@ -24,7 +24,6 @@ _DATOS = DatosCliente(
 )
 _FECHA = datetime.date(2026, 9, 4)
 
-
 def _ctx(
     plan_audiovisual: PlanAudiovisual = PlanAudiovisual.COMPLETO,
 ) -> PropuestaContexto:
@@ -33,7 +32,6 @@ def _ctx(
         datos_cliente=_DATOS,
         plan_audiovisual=plan_audiovisual,
     )
-
 
 def test_contrato_software_llena_legal_y_deriva_precios() -> None:
     plantilla = (
@@ -53,25 +51,21 @@ def test_contrato_software_llena_legal_y_deriva_precios() -> None:
         "doce (12) meses|la fecha de firma|según la propuesta comercial aceptada|LOGO|FIRMA"
     )
 
-
 def test_contrato_audiovisual_completo() -> None:
     svc = GenerarContratoAudiovisualService("{{PAQUETE}}|{{VALOR_MENSUAL}}|{{DIA_PAGO}}")
     out = svc.generar(_ctx(plan_audiovisual=PlanAudiovisual.COMPLETO), numero="X", fecha=_FECHA)
     assert out == "Máximo Alcance (28 videos)|$3.000.000|cinco (5)"
-
 
 def test_contrato_audiovisual_medio() -> None:
     svc = GenerarContratoAudiovisualService("{{PAQUETE}}|{{VALOR_MENSUAL}}")
     out = svc.generar(_ctx(plan_audiovisual=PlanAudiovisual.MEDIO), numero="X", fecha=_FECHA)
     assert out == "Alcance Esencial (14 videos)|$1.800.000"
 
-
 def test_numero_contrato_autogenerado() -> None:
     svc = GenerarContratoSoftwareService("{{NUMERO_CONTRATO}}")
     out = svc.generar(_ctx(), fecha=_FECHA)
     assert out.startswith("GT-C-20260904-")
     assert len(out) == len("GT-C-20260904-") + 6
-
 
 def test_sin_datos_cliente_no_crashea() -> None:
     svc = GenerarContratoSoftwareService("{{CONTRATANTE_NIT}}")

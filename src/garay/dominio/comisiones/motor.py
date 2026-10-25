@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from garay.dominio.comisiones.errores import PorcentajeReferidoSuperaTecho
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comisiones.servicio import MotorComisionesBase
 from garay.dominio.comisiones.snapshot import SnapshotReglas
@@ -11,7 +10,8 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.puntos_venta.entidades import PuntoDeVenta
 from garay.dominio.ventas.entidades import Venta
 
-_CERO = Decimal("0")
+_DIEZ = Decimal("10")
+_NOVENTA = Decimal("90")
 
 
 class MotorComisiones(MotorComisionesBase):
@@ -22,14 +22,7 @@ class MotorComisiones(MotorComisionesBase):
         venta: Venta,
         reglas: ReglasComision,
         punto: PuntoDeVenta | None,
-        porcentaje_referido: Decimal = _CERO,
     ) -> DesgloseComision:
-        if porcentaje_referido > reglas.porcentaje_referido_maximo:
-            raise PorcentajeReferidoSuperaTecho(
-                f"El porcentaje de referido ({porcentaje_referido}%) supera el maximo "
-                f"permitido ({reglas.porcentaje_referido_maximo}%)."
-            )
-
         snapshot = SnapshotReglas.desde_reglas(reglas, punto)
 
         # 1. Comision punto (se descuenta primero de ganancia)
@@ -39,14 +32,14 @@ class MotorComisiones(MotorComisionesBase):
             else Dinero(0, venta.ganancia.moneda)
         )
 
-        # 2. Comision vendedor (solo si hay vendedor)
+        # 2. Comision vendedor bruto (solo si hay vendedor)
         comision_vendedor = (
             venta.ganancia.aplicar_porcentaje(snapshot.porcentaje_vendedor)
             if venta.participantes.vendedor_nombre is not None
             else Dinero(0, venta.ganancia.moneda)
         )
 
-        # 3. Comision cerrador (solo si hay cerrador)
+        # 3. Comision cerrador bruto (solo si hay cerrador)
         comision_cerrador = (
             venta.ganancia.aplicar_porcentaje(snapshot.porcentaje_cerrador)
             if venta.participantes.cerrador_nombre is not None
@@ -56,12 +49,19 @@ class MotorComisiones(MotorComisionesBase):
         # 4. Comision agencia = residual (garantiza que el invariante se cumpla exactamente)
         comision_agencia = venta.ganancia - comision_punto - comision_vendedor - comision_cerrador
 
-        # 5. Comision referido: sobre valor_venta (bruto), independiente de ganancia
-        comision_referido = (
-            venta.valor_venta.aplicar_porcentaje(porcentaje_referido)
-            if venta.participantes.referido_nombre is not None
-            else Dinero(0, venta.valor_venta.moneda)
-        )
+        # 5. Referido math: 10% of each bruto; neto = bruto * 0.90
+        referido_alias = venta.participantes.referido_alias
+        if referido_alias is not None:
+            comision_referido = (
+                comision_vendedor.aplicar_porcentaje(_DIEZ)
+                + comision_cerrador.aplicar_porcentaje(_DIEZ)
+            )
+            neto_vendedor = comision_vendedor.aplicar_porcentaje(_NOVENTA)
+            neto_cerrador = comision_cerrador.aplicar_porcentaje(_NOVENTA)
+        else:
+            comision_referido = Dinero(0, venta.ganancia.moneda)
+            neto_vendedor = comision_vendedor
+            neto_cerrador = comision_cerrador
 
         # Invariante sagrado: punto + vendedor + cerrador + agencia == ganancia
         total_neto = comision_punto + comision_vendedor + comision_cerrador + comision_agencia
@@ -74,4 +74,6 @@ class MotorComisiones(MotorComisionesBase):
             referido=comision_referido,
             agencia=comision_agencia,
             snapshot=snapshot,
+            neto_vendedor=neto_vendedor,
+            neto_cerrador=neto_cerrador,
         )

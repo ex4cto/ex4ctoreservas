@@ -19,7 +19,6 @@ def _make_cliente(sf: sessionmaker[Session]) -> uuid.UUID:
         s.add(ClienteModel(id=cliente_id, nombre="Test Cliente", tipo="EXTERNO"))
     return cliente_id
 
-
 def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -35,7 +34,7 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
             vendedor_nombre="Maria",
             cerrador_nombre=None,
             punto_de_venta_id=None,
-            referido_nombre=None,
+            referido_alias=None,
         ),
     )
     repo.guardar(v)
@@ -48,11 +47,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.participantes.vendedor_nombre == "Maria"
     assert resultado.tipo_cliente == TipoCliente.EXTERNO
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def _venta_gestion(
     cliente_id: uuid.UUID,
@@ -73,7 +70,6 @@ def _venta_gestion(
         registrado_en=registrado_en,
     )
 
-
 def test_registrado_en_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -83,7 +79,6 @@ def test_registrado_en_round_trip(sf: sessionmaker[Session]) -> None:
     r = repo.buscar_por_id(v.id)
     assert r is not None
     assert r.registrado_en is not None
-
 
 def test_listar_para_gestion_incluye_tour_futuro_registrado_hoy(
     sf: sessionmaker[Session],
@@ -100,7 +95,6 @@ def test_listar_para_gestion_incluye_tour_futuro_registrado_hoy(
     res = repo.listar_para_gestion(hoy - datetime.timedelta(days=30))
     assert any(x.id == v.id for x in res)
 
-
 def test_listar_para_gestion_legacy_usa_fecha_del_tour(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -113,7 +107,6 @@ def test_listar_para_gestion_legacy_usa_fecha_del_tour(sf: sessionmaker[Session]
     assert reciente.id in ids
     assert vieja.id not in ids
 
-
 def test_listar_para_gestion_excluye_anuladas(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -124,7 +117,6 @@ def test_listar_para_gestion_excluye_anuladas(sf: sessionmaker[Session]) -> None
     repo.guardar(v)
     res = repo.listar_para_gestion(hoy - datetime.timedelta(days=30))
     assert all(x.id != v.id for x in res)
-
 
 def test_servicio_ids_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
@@ -144,7 +136,6 @@ def test_servicio_ids_round_trip(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(v.id)
     assert resultado is not None
     assert set(resultado.servicio_ids) == set(sids)
-
 
 def test_factura_idioma_round_trip(sf: sessionmaker[Session]) -> None:
     """factura_idioma="en" survives a save/read round trip (needed for reenvíos)."""
@@ -166,7 +157,6 @@ def test_factura_idioma_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.factura_idioma == "en"
 
-
 def test_factura_idioma_default_es_round_trip(sf: sessionmaker[Session]) -> None:
     """A sale saved without an explicit language reads back as Spanish ("es")."""
     repo = SQLAVentaRepository(sf)
@@ -186,7 +176,6 @@ def test_factura_idioma_default_es_round_trip(sf: sessionmaker[Session]) -> None
     assert resultado is not None
     assert resultado.factura_idioma == "es"
 
-
 def test_listar(sf: sessionmaker[Session]) -> None:
     repo = SQLAVentaRepository(sf)
     cliente_id = _make_cliente(sf)
@@ -204,11 +193,9 @@ def test_listar(sf: sessionmaker[Session]) -> None:
         repo.guardar(v)
     assert len(repo.listar()) == 2
 
-
 _UUID_F = uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
 _UUID_OTHER = uuid.UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
 _UUID_OTHER2 = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
-
 
 def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> None:
     """Freelancer as vendedor by name (NULL id) — should be returned."""
@@ -226,7 +213,7 @@ def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> 
             vendedor_nombre="Carlos",
             cerrador_nombre=None,
             punto_de_venta_id=None,
-            referido_nombre=None,
+            referido_alias=None,
         ),
     )
     repo.guardar(v)
@@ -238,7 +225,6 @@ def test_listar_por_freelancer_y_periodo_vendedor(sf: sessionmaker[Session]) -> 
     )
     assert len(results) == 1
     assert results[0].id == v.id
-
 
 def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> None:
     """Freelancer as cerrador by name (NULL id) — should also be returned."""
@@ -256,7 +242,7 @@ def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> 
             vendedor_nombre="OtroVendedor",
             cerrador_nombre="Carlos",
             punto_de_venta_id=None,
-            referido_nombre=None,
+            referido_alias=None,
         ),
     )
     repo.guardar(v)
@@ -267,7 +253,6 @@ def test_listar_por_freelancer_y_periodo_cerrador(sf: sessionmaker[Session]) -> 
         hasta=datetime.date(2026, 7, 31),
     )
     assert len(results) == 1
-
 
 def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) -> None:
     """Venta outside date range — should NOT be returned."""
@@ -285,7 +270,7 @@ def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) 
             vendedor_nombre="Carlos",
             cerrador_nombre=None,
             punto_de_venta_id=None,
-            referido_nombre=None,
+            referido_alias=None,
         ),
     )
     repo.guardar(v)
@@ -296,7 +281,6 @@ def test_listar_por_freelancer_y_periodo_fuera_rango(sf: sessionmaker[Session]) 
         hasta=datetime.date(2026, 7, 31),
     )
     assert len(results) == 0
-
 
 def test_listar_por_freelancer_y_periodo_id_linked(sf: sessionmaker[Session]) -> None:
     """SC-13 partial: venta with vendedor_id=UUID_F is returned when queried by id."""
@@ -326,7 +310,6 @@ def test_listar_por_freelancer_y_periodo_id_linked(sf: sessionmaker[Session]) ->
     assert len(results) == 1
     assert results[0].id == v.id
 
-
 def test_listar_por_freelancer_y_periodo_null_id_name_match(sf: sessionmaker[Session]) -> None:
     """Name match only when vendedor_id IS NULL."""
     repo = SQLAVentaRepository(sf)
@@ -353,7 +336,6 @@ def test_listar_por_freelancer_y_periodo_null_id_name_match(sf: sessionmaker[Ses
     )
     assert len(results) == 1
     assert results[0].id == v.id
-
 
 def test_listar_por_freelancer_y_periodo_excludes_different_id_name_collision(
     sf: sessionmaker[Session],
@@ -388,7 +370,6 @@ def test_listar_por_freelancer_y_periodo_excludes_different_id_name_collision(
     # NOT returned: vendedor_id is not NULL and doesn't match f_id; name match is skipped
     assert len(results) == 0
 
-
 def _make_freelancer(sf: sessionmaker[Session]) -> uuid.UUID:
     """Insert a FreelancerModel row so FK constraints are satisfied."""
     f_id = uuid.uuid4()
@@ -403,7 +384,6 @@ def _make_freelancer(sf: sessionmaker[Session]) -> uuid.UUID:
             )
         )
     return f_id
-
 
 def test_vendedor_id_cerrador_id_round_trip(sf: sessionmaker[Session]) -> None:
     """Slice B: guardar a Venta with vendedor_id/cerrador_id and load it back preserves both ids."""
@@ -435,7 +415,6 @@ def test_vendedor_id_cerrador_id_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado.participantes.cerrador_id == f2_id
     assert resultado.participantes.vendedor_nombre == "Ana"
     assert resultado.participantes.cerrador_nombre == "Luis"
-
 
 def test_historical_null_ids_load_as_none(sf: sessionmaker[Session]) -> None:
     """Slice B: a VentaModel row with null ids loads with vendedor_id=None, cerrador_id=None."""
@@ -471,7 +450,6 @@ def test_historical_null_ids_load_as_none(sf: sessionmaker[Session]) -> None:
     assert resultado.participantes.cerrador_id is None
     assert resultado.participantes.vendedor_nombre == "Kike"
 
-
 def test_listar_por_periodo(sf: sessionmaker[Session]) -> None:
     """listar_por_periodo returns all ventas within the date range."""
     repo = SQLAVentaRepository(sf)
@@ -503,11 +481,9 @@ def test_listar_por_periodo(sf: sessionmaker[Session]) -> None:
     results = repo.listar_por_periodo(datetime.date(2026, 7, 1), datetime.date(2026, 7, 31))
     assert len(results) == 2
 
-
 # ---------------------------------------------------------------------------
 # Slice 1 — fechas_por_servicio storage (RED → GREEN via domain+model changes)
 # ---------------------------------------------------------------------------
-
 
 def test_fechas_por_servicio_round_trip(sf: sessionmaker[Session]) -> None:
     """Venta with a 2-entry fechas_por_servicio map survives guardar/buscar_por_id."""
@@ -533,7 +509,6 @@ def test_fechas_por_servicio_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.fechas_por_servicio == {sid1: dt1, sid2: dt2}
 
-
 def test_fechas_por_servicio_none_round_trip(sf: sessionmaker[Session]) -> None:
     """Legacy Venta without fechas_por_servicio persists and reads back as None."""
     repo = SQLAVentaRepository(sf)
@@ -553,7 +528,6 @@ def test_fechas_por_servicio_none_round_trip(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(v.id)
     assert resultado is not None
     assert resultado.fechas_por_servicio is None
-
 
 def test_listar_por_periodo_still_filters_on_scalar_fecha(sf: sessionmaker[Session]) -> None:
     """Regression: listar_por_periodo filters on Venta.fecha, not fechas_por_servicio."""
@@ -592,11 +566,9 @@ def test_listar_por_periodo_still_filters_on_scalar_fecha(sf: sessionmaker[Sessi
     assert v_in.id in ids
     assert v_out.id not in ids
 
-
 # ---------------------------------------------------------------------------
 # Slice B1 — anulada soft-delete (RED → GREEN via domain+model+mapper+filter)
 # ---------------------------------------------------------------------------
-
 
 def test_anulada_round_trip(sf: sessionmaker[Session]) -> None:
     """guardar a Venta with anulada=True and load it back preserves anulada."""
@@ -618,7 +590,6 @@ def test_anulada_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.anulada is True
 
-
 def test_anulada_defaults_false(sf: sessionmaker[Session]) -> None:
     """A fresh Venta has anulada=False after round-trip."""
     repo = SQLAVentaRepository(sf)
@@ -637,7 +608,6 @@ def test_anulada_defaults_false(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(v.id)
     assert resultado is not None
     assert resultado.anulada is False
-
 
 def _make_ventas_normal_and_anulada(
     sf: sessionmaker[Session],
@@ -671,7 +641,6 @@ def _make_ventas_normal_and_anulada(
     repo.guardar(v_anulada)
     return v_normal.id, v_anulada.id
 
-
 def test_listar_excludes_anuladas(sf: sessionmaker[Session]) -> None:
     """listar() returns only non-anulada ventas."""
     normal_id, _anulada_id = _make_ventas_normal_and_anulada(sf)
@@ -681,7 +650,6 @@ def test_listar_excludes_anuladas(sf: sessionmaker[Session]) -> None:
     assert normal_id in ids
     assert _anulada_id not in ids
 
-
 def test_listar_por_periodo_excludes_anuladas(sf: sessionmaker[Session]) -> None:
     """listar_por_periodo() returns only non-anulada ventas."""
     normal_id, _anulada_id = _make_ventas_normal_and_anulada(sf)
@@ -690,7 +658,6 @@ def test_listar_por_periodo_excludes_anuladas(sf: sessionmaker[Session]) -> None
     ids = {v.id for v in results}
     assert normal_id in ids
     assert _anulada_id not in ids
-
 
 def test_listar_por_freelancer_y_periodo_excludes_anuladas(sf: sessionmaker[Session]) -> None:
     """listar_por_freelancer_y_periodo() returns only non-anulada ventas."""
@@ -706,7 +673,6 @@ def test_listar_por_freelancer_y_periodo_excludes_anuladas(sf: sessionmaker[Sess
     assert normal_id in ids
     assert _anulada_id not in ids
 
-
 def test_buscar_por_id_still_returns_anulada(sf: sessionmaker[Session]) -> None:
     """buscar_por_id() still returns an anulada venta (needed for future anular flow)."""
     _normal_id, anulada_id = _make_ventas_normal_and_anulada(sf)
@@ -715,11 +681,9 @@ def test_buscar_por_id_still_returns_anulada(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.anulada is True
 
-
 # ---------------------------------------------------------------------------
 # Fix 1 — actualizar_mensaje_grupo_id narrow update (RED → GREEN)
 # ---------------------------------------------------------------------------
-
 
 def test_actualizar_mensaje_grupo_id_only_updates_that_field(sf: sessionmaker[Session]) -> None:
     """actualizar_mensaje_grupo_id persists the new id WITHOUT touching any other field."""
@@ -748,13 +712,11 @@ def test_actualizar_mensaje_grupo_id_only_updates_that_field(sf: sessionmaker[Se
     assert resultado.participantes.cerrador_nombre == "Luis"
     assert resultado.valor_venta == Dinero("500000")
 
-
 def test_actualizar_mensaje_grupo_id_noop_on_missing_venta(sf: sessionmaker[Session]) -> None:
     """actualizar_mensaje_grupo_id on a non-existent id must not raise."""
     repo = SQLAVentaRepository(sf)
     # Should complete silently without raising an exception
     repo.actualizar_mensaje_grupo_id(uuid.uuid4(), 42)
-
 
 def test_listar_por_freelancer_y_periodo_still_filters_on_scalar_fecha(
     sf: sessionmaker[Session],

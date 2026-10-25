@@ -22,7 +22,6 @@ from garay.infraestructura.persistencia.modelos import FacturaModel
 
 _MONTO = Dinero("100000")
 
-
 def _insert_factura(
     sf: sessionmaker[Session],
     *,
@@ -46,11 +45,9 @@ def _insert_factura(
             )
         )
 
-
 # ---------------------------------------------------------------------------
 # contar_mes_a_la_fecha
 # ---------------------------------------------------------------------------
-
 
 def test_contar_mes_a_la_fecha_solo_enviados(sf: sessionmaker[Session]) -> None:
     """Only ENVIADO rows in the month of *hasta* are counted."""
@@ -61,14 +58,12 @@ def test_contar_mes_a_la_fecha_solo_enviados(sf: sessionmaker[Session]) -> None:
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 31)) == 1
 
-
 def test_contar_mes_a_la_fecha_limite_superior_inclusivo(sf: sessionmaker[Session]) -> None:
     """Row on *hasta* itself is included in the count."""
     _insert_factura(sf, fecha=datetime.date(2026, 7, 31), estado="ENVIADO")
 
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 31)) == 1
-
 
 def test_contar_mes_a_la_fecha_hasta_excluye_despues(sf: sessionmaker[Session]) -> None:
     """Rows after *hasta* but still in the same calendar month are NOT counted."""
@@ -78,14 +73,12 @@ def test_contar_mes_a_la_fecha_hasta_excluye_despues(sf: sessionmaker[Session]) 
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 10)) == 0
 
-
 def test_contar_mes_a_la_fecha_excluye_mes_anterior(sf: sessionmaker[Session]) -> None:
     """Rows in the previous calendar month are never counted."""
     _insert_factura(sf, fecha=datetime.date(2026, 6, 30), estado="ENVIADO")
 
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 31)) == 0
-
 
 def test_contar_mes_a_la_fecha_acumula_todo_el_mes(sf: sessionmaker[Session]) -> None:
     """Multiple ENVIADO rows in the same month all contribute to the count."""
@@ -95,12 +88,10 @@ def test_contar_mes_a_la_fecha_acumula_todo_el_mes(sf: sessionmaker[Session]) ->
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 31)) == 4
 
-
 def test_contar_mes_a_la_fecha_vacio_retorna_cero(sf: sessionmaker[Session]) -> None:
     """Empty table returns 0."""
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 7, 31)) == 0
-
 
 def test_contar_mes_a_la_fecha_primer_dia_del_mes(sf: sessionmaker[Session]) -> None:
     """Window [day1, day1] (hasta is the 1st) counts only that single day."""
@@ -110,11 +101,9 @@ def test_contar_mes_a_la_fecha_primer_dia_del_mes(sf: sessionmaker[Session]) -> 
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_mes_a_la_fecha(datetime.date(2026, 8, 1)) == 1
 
-
 # ---------------------------------------------------------------------------
 # contar_dia
 # ---------------------------------------------------------------------------
-
 
 def test_contar_dia_solo_dia_exacto(sf: sessionmaker[Session]) -> None:
     """Only rows with fecha_emision == *dia* are counted."""
@@ -124,7 +113,6 @@ def test_contar_dia_solo_dia_exacto(sf: sessionmaker[Session]) -> None:
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_dia(datetime.date(2026, 7, 10)) == 1
 
-
 def test_contar_dia_solo_enviados(sf: sessionmaker[Session]) -> None:
     """Non-ENVIADO rows on the exact date are ignored."""
     _insert_factura(sf, fecha=datetime.date(2026, 7, 10), estado="ENVIADO")
@@ -133,7 +121,6 @@ def test_contar_dia_solo_enviados(sf: sessionmaker[Session]) -> None:
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_dia(datetime.date(2026, 7, 10)) == 1
 
-
 def test_contar_dia_multiples_enviados(sf: sessionmaker[Session]) -> None:
     """Multiple ENVIADO rows on the same day are all counted."""
     for _ in range(3):
@@ -141,7 +128,6 @@ def test_contar_dia_multiples_enviados(sf: sessionmaker[Session]) -> None:
 
     contador = ContadorFacturasSQLAlchemy(sf)
     assert contador.contar_dia(datetime.date(2026, 7, 10)) == 3
-
 
 def test_contar_dia_sin_filas_retorna_cero(sf: sessionmaker[Session]) -> None:
     """Returns 0 when no rows match."""

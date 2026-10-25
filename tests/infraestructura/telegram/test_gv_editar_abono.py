@@ -42,7 +42,6 @@ def _make_venta_ab(
     v.servicio_ids = []
     return v
 
-
 def _make_update_text(text: str) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -52,7 +51,6 @@ def _make_update_text(text: str) -> MagicMock:
     update.message = MagicMock()
     update.message.text = text
     return update
-
 
 def _make_context_ab(
     venta: MagicMock | None = None,
@@ -85,11 +83,9 @@ def _make_context_ab(
     }
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Keyboard / pattern tests
 # ---------------------------------------------------------------------------
-
 
 class TestTecladoCamposBotonAbono:
     def test_abono_button_ausente_para_no_admin(self) -> None:
@@ -110,21 +106,17 @@ class TestTecladoCamposBotonAbono:
         ]
         assert "gv_campo:abono" in callback_data_vals
 
-
 class TestPatterns:
     def test_gv_campo_abono_matches_edit_campo_pattern(self) -> None:
         assert re.match(GV_EDIT_CAMPO_PATTERN, "gv_campo:abono")
-
 
 class TestStateUniqueness:
     def test_gv_edit_abono_state_is_238(self) -> None:
         assert GV_EDIT_ABONO == 238
 
-
 # ---------------------------------------------------------------------------
 # handle_gv_edit_abono: text input → GV_MOTIVO
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditAbono:
     @pytest.mark.asyncio
@@ -168,11 +160,9 @@ class TestHandleGvEditAbono:
 
         assert result == GV_EDIT_ABONO
 
-
 # ---------------------------------------------------------------------------
 # Confirmation handler
 # ---------------------------------------------------------------------------
-
 
 class TestHandleConfirmarEditarAbono:
     @pytest.mark.asyncio

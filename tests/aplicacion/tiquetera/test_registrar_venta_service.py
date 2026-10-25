@@ -27,7 +27,6 @@ _SERVICIO_ID = uuid.uuid4()
 _CLIENTE_ID = uuid.uuid4()
 _FECHA = datetime.date(2026, 7, 1)
 
-
 def _build_service(
     *,
     ventas: MagicMock | None = None,
@@ -60,7 +59,6 @@ def _build_service(
         servicios=servicios_mock,
         dm_venta_nueva_ids=dm_venta_nueva_ids or [],
     )
-
 
 def _cmd(
     *,
@@ -104,7 +102,6 @@ def _cmd(
         habitacion=habitacion,
     )
 
-
 class TestRegistrarVentaInternaSinPuntoSinReferido:
     def test_registrar_venta_interna_sin_punto_sin_referido(self) -> None:
         ventas = MagicMock()
@@ -137,7 +134,6 @@ class TestRegistrarVentaInternaSinPuntoSinReferido:
         assert resultado.desglose is fake_desglose
         assert isinstance(resultado.venta_id, uuid.UUID)
 
-
 class TestRegistrarVentaConPuntoDeVenta:
     def test_registrar_venta_con_punto_de_venta(self) -> None:
         punto_id = uuid.uuid4()
@@ -160,7 +156,6 @@ class TestRegistrarVentaConPuntoDeVenta:
         passed_punto = kwargs.get("punto") or call_args.args[2]
         assert passed_punto is fake_punto
 
-
 class TestRegistrarVentaCreaRequeteraConFoto:
     def test_registrar_venta_crea_tiquetera_si_hay_foto(self) -> None:
         tiqueteras = MagicMock()
@@ -178,7 +173,6 @@ class TestRegistrarVentaCreaRequeteraConFoto:
         assert saved_tiquetera.foto_referencia == "ruta/foto.jpg"
         assert saved_tiquetera.procesada is False
 
-
 class TestRegistrarVentaSinFotoNoCreaTiquetera:
     def test_registrar_venta_sin_foto_no_crea_tiquetera(self) -> None:
         tiqueteras = MagicMock()
@@ -192,7 +186,6 @@ class TestRegistrarVentaSinFotoNoCreaTiquetera:
 
         tiqueteras.guardar.assert_not_called()
 
-
 class TestRegistrarVentaRaisesSimReglas:
     def test_registrar_venta_raises_si_no_hay_reglas(self) -> None:
         reglas_repo = MagicMock()
@@ -203,7 +196,6 @@ class TestRegistrarVentaRaisesSimReglas:
 
         with pytest.raises(ReglasComisionNoEncontradas):
             service.ejecutar(cmd)
-
 
 class TestMensajeNotificacion:
     """WU-7: notification message format — no UUID, item-by-item."""
@@ -328,7 +320,6 @@ class TestMensajeNotificacion:
         mensaje = notificador.notificar.call_args.args[0]
         assert "Teléfono" not in mensaje
 
-
 def _servicio_con_contactos(contactos: list[ContactoReserva]) -> Servicio:
     return Servicio(
         id=_SERVICIO_ID,
@@ -336,7 +327,6 @@ def _servicio_con_contactos(contactos: list[ContactoReserva]) -> Servicio:
         nombre="TOUR TEST",
         contactos_reserva=contactos,
     )
-
 
 class TestDmNuevaReserva:
     """DM de contacto enviado a destinatarios configurados al registrar una venta."""
@@ -434,7 +424,6 @@ class TestDmNuevaReserva:
         resultado = service.ejecutar(_cmd(cliente_nombre="Ana"))
         assert isinstance(resultado, ResultadoRegistrarVenta)
 
-
 class TestRegistrarVentaPersistsComision:
     def test_comision_guardada_con_venta_id_correcto(self) -> None:
         comisiones_repo = MagicMock()
@@ -451,7 +440,6 @@ class TestRegistrarVentaPersistsComision:
         saved = comisiones_repo.guardar.call_args.args[0]
         assert isinstance(saved, ComisionRegistrada)
         assert saved.venta_id == resultado.venta_id
-
 
 # ---------------------------------------------------------------------------
 # WU-9: _derivar_numero_personas unit tests
@@ -488,7 +476,6 @@ class TestDerivarNumeroPersonas:
         """(A, None) → None: only vendedor present, returns None."""
         assert self._fn(uuid.uuid4(), None) is None
 
-
 # ---------------------------------------------------------------------------
 # WU-9: service reorder + buscar_regla integration tests
 # ---------------------------------------------------------------------------
@@ -519,7 +506,6 @@ def _cmd_with_participantes(
         porcentaje_referido=Decimal("0"),
         servicio_nombres=[],
     )
-
 
 class TestServiceUsasBuscarRegla:
     """WU-9: service must call buscar_regla (not buscar_por_tipo_cliente)."""
@@ -676,19 +662,16 @@ class TestServiceUsasBuscarRegla:
         assert call.args[1] is None  # no point-specific lookup for non-Crespo
         assert call.args[2] is None
 
-
 # ---------------------------------------------------------------------------
 # E3: private split DM to socios with telegram_id
 # ---------------------------------------------------------------------------
 
 _AGENCIA = Dinero(150_000)
 
-
 def _make_socio(nombre: str, porcentaje: Decimal, telegram_id: int | None) -> SocioConfig:
     return SocioConfig(nombre=nombre, porcentaje=porcentaje, telegram_id=telegram_id)
 
-
-def _make_fake_desglose(agencia: Dinero = _AGENCIA) -> "DesgloseComision":  # type: ignore[name-defined]
+def _make_fake_desglose(agencia: Dinero = _AGENCIA) -> DesgloseComision:  # type: ignore[name-defined]
     """Build a real DesgloseComision so the enriched DM builder can access typed fields."""
     from garay.dominio.comisiones.snapshot import SnapshotReglas
     from garay.dominio.comisiones.valor_objetos import DesgloseComision
@@ -698,7 +681,6 @@ def _make_fake_desglose(agencia: Dinero = _AGENCIA) -> "DesgloseComision":  # ty
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("0"),
         porcentaje_capa_punto=Decimal("0"),
     )
     return DesgloseComision(
@@ -708,8 +690,9 @@ def _make_fake_desglose(agencia: Dinero = _AGENCIA) -> "DesgloseComision":  # ty
         referido=Dinero("0"),
         agencia=agencia,
         snapshot=snap,
-    )
-
+        neto_vendedor=Dinero("15000"),
+        neto_cerrador=Dinero("7500"),
+)
 
 def _build_service_con_socios(
     socios: list[SocioConfig],
@@ -723,7 +706,6 @@ def _build_service_con_socios(
     socios_config.listar.return_value = socios
 
     return _build_service(motor=motor, notificador=notificador, socios_config=socios_config)
-
 
 class TestMensajePrivadoSocios:
     """E3: send private split DM to each socio that has telegram_id configured."""
@@ -837,18 +819,16 @@ class TestMensajePrivadoSocios:
         assert len(ryan_calls) == 1
         assert "25" in ryan_calls[0].args[0]
 
-
 # ---------------------------------------------------------------------------
 # Slice K: enriched waterfall DM
 # ---------------------------------------------------------------------------
-
 
 def _make_desglose(
     vendedor: int = 100_000,
     cerrador: int = 150_000,
     punto: int = 0,
     agencia: int = 550_000,
-) -> "DesgloseComision":
+) -> DesgloseComision:
     from garay.dominio.comisiones.entidades import ComisionRegistrada as _CR  # noqa: F401
     from garay.dominio.comisiones.snapshot import SnapshotReglas
     from garay.dominio.comisiones.valor_objetos import DesgloseComision
@@ -858,7 +838,6 @@ def _make_desglose(
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("15"),
-        porcentaje_referido_maximo=Decimal("0"),
         porcentaje_capa_punto=Decimal("0"),
     )
     return DesgloseComision(
@@ -868,8 +847,9 @@ def _make_desglose(
         referido=Dinero(0),
         agencia=Dinero(agencia),
         snapshot=snap,
-    )
-
+        neto_vendedor=Dinero(vendedor),
+        neto_cerrador=Dinero(cerrador),
+)
 
 class TestConstruirMensajePrivadoWaterfall:
     """Slice K: _construir_mensaje_privado must render the full money waterfall."""

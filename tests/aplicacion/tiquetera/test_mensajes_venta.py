@@ -27,7 +27,6 @@ _FECHA = datetime.date(2026, 9, 25)
 _VALOR = Dinero(200_000)
 _NETO = Dinero(110_000)
 
-
 def _make_cmd(
     *,
     numero_fisico: str | None = None,
@@ -48,7 +47,6 @@ def _make_cmd(
         abono=abono,
     )
 
-
 def _make_desglose() -> MagicMock:
     d = MagicMock()
     d.vendedor.monto = Decimal("0")
@@ -57,10 +55,8 @@ def _make_desglose() -> MagicMock:
     d.agencia = Dinero(45_000)
     return d
 
-
 def _make_socio() -> SocioConfig:
     return SocioConfig(nombre="garay", porcentaje=Decimal("25"), telegram_id=None)
-
 
 def _build_service() -> tuple[RegistrarVentaService, MagicMock]:
     notificador = MagicMock()
@@ -82,11 +78,9 @@ def _build_service() -> tuple[RegistrarVentaService, MagicMock]:
     )
     return svc, notificador
 
-
 # ---------------------------------------------------------------------------
 # M — Ticket number in private socio DM
 # ---------------------------------------------------------------------------
-
 
 class TestDmPrivadoTicket:
     def _call(self, numero_fisico: str | None) -> str:
@@ -108,11 +102,9 @@ class TestDmPrivadoTicket:
         result = self._call(None)
         assert "Ticket" not in result
 
-
 # ---------------------------------------------------------------------------
 # N — "(sin abono)" label in group message
 # ---------------------------------------------------------------------------
-
 
 class TestGrupoSinAbono:
     def _grupo_msg(self, abono: Dinero | None) -> str:

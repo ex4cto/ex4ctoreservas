@@ -25,16 +25,13 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Unit tests for _tours_sin_precio helper
 # ══════════════════════════════════════════════════════════════════════════════
-
 
 class TestToursSinPrecio:
     """_tours_sin_precio must return names of selected tours with neto_adulto=None."""
@@ -68,11 +65,9 @@ class TestToursSinPrecio:
         result = fsm._tours_sin_precio(ctx)
         assert result == []
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # FSM integration: message names the priceless tour(s)
 # ══════════════════════════════════════════════════════════════════════════════
-
 
 class TestMensajeSinPrecioNombraTour:
     """When _calcular_neto returns None, the MONTO_NETO message must name the tour(s)."""
@@ -102,11 +97,9 @@ class TestMensajeSinPrecioNombraTour:
         assert "COCOTERA (CLASSIC)" in salida.mensaje
         assert "CENA SIBARITA" in salida.mensaje
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # FSM integration: Playa Linda with new price auto-calculates
 # ══════════════════════════════════════════════════════════════════════════════
-
 
 class TestPlayaLindaConPrecioAutoCalcula:
     """Tour 40 (PLAYA LINDA) with neto_adulto=55000 must NOT fall to MONTO_NETO."""

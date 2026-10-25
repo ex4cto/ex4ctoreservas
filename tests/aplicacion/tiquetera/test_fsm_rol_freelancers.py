@@ -18,17 +18,14 @@ F1 = uuid.UUID("11111111-1111-1111-1111-111111111111")
 F2 = uuid.UUID("22222222-2222-2222-2222-222222222222")
 _FREELANCERS: list[tuple[uuid.UUID, str, bool]] = [(F1, "Ana", True), (F2, "Luis", True)]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=_SERVICIOS, puntos_venta=_PUNTOS, freelancers=_FREELANCERS)
-
 
 def _ctx(privilegiado: bool = True) -> ContextoVenta:
     ctx = ContextoVenta()
     ctx.registrante_privilegiado = privilegiado
     return ctx
-
 
 class TestOpcionesRol:
     def test_privilegiado_ve_la_opcion(self, fsm: FSMTiquetera) -> None:
@@ -36,7 +33,6 @@ class TestOpcionesRol:
 
     def test_no_privilegiado_no_ve_la_opcion(self, fsm: FSMTiquetera) -> None:
         assert "A nombre de freelancers" not in fsm._opciones_rol(_ctx(False))
-
 
 class TestFlujoANombreDeFreelancers:
     def test_elegir_opcion_pide_vendedor(self, fsm: FSMTiquetera) -> None:

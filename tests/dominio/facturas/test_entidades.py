@@ -21,14 +21,12 @@ def _make_factura(*, id: uuid.UUID | None = None) -> Factura:
         html_contenido="<html></html>",
     )
 
-
 def test_construccion_valores_por_defecto() -> None:
     factura = _make_factura()
 
     assert factura.cliente_nombre is None
     assert factura.abono is None
     assert factura.estado_envio is EstadoEnvioFactura.PENDIENTE
-
 
 def test_igualdad_por_id() -> None:
     id_comun = uuid.uuid4()
@@ -38,13 +36,11 @@ def test_igualdad_por_id() -> None:
     assert a == b
     assert hash(a) == hash(b)
 
-
 def test_distinto_id_no_es_igual() -> None:
     a = _make_factura()
     b = _make_factura()
 
     assert a != b
-
 
 def test_factura_no_es_igual_a_otro_tipo() -> None:
     factura = _make_factura()

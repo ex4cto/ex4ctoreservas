@@ -23,15 +23,12 @@ def mock_extractor_ia() -> MagicMock:
     mock = MagicMock(spec=ExtractorIA)
     return mock
 
-
 @pytest.fixture()
 def extractor(mock_extractor_ia: MagicMock) -> ExtractorReservaFoto:
     return ExtractorReservaFoto(extractor_ia=mock_extractor_ia)
 
-
 def _datos_vacios() -> DatosExtraidos:
     return DatosExtraidos()
-
 
 class TestExtractorReservaFoto:
     def test_mapeo_completo(

@@ -8,8 +8,6 @@ from __future__ import annotations
 import json
 from decimal import Decimal
 
-import pytest
-
 from garay.aplicacion._util.diff_campos import calcular_diff
 
 
@@ -36,7 +34,6 @@ class TestCampoUnico:
         campos = {t[0] for t in resultado}
         assert campos == {"precio", "activo"}
 
-
 class TestSerializacionDecimal:
     def test_decimal_serializado_via_str(self) -> None:
         viejo = {"monto": Decimal("50000")}
@@ -51,7 +48,6 @@ class TestSerializacionDecimal:
         viejo = {"monto": Decimal("50000")}
         nuevo = {"monto": Decimal("50000")}
         assert calcular_diff(viejo, nuevo) == []
-
 
 class TestCampoJson:
     def test_netos_por_horario_diff_como_json_canonico(self) -> None:

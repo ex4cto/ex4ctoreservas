@@ -11,7 +11,6 @@ from garay.dominio.infraestructura_monitor.servicio import (
 _RENOVACION = datetime.date(2027, 3, 15)
 _BANDAS_DEFAULT = (60, 30, 7, 1)
 
-
 def _servicio(
     fecha: datetime.date = _RENOVACION,
     bandas: tuple[int, ...] = _BANDAS_DEFAULT,
@@ -21,7 +20,6 @@ def _servicio(
         fecha_renovacion=fecha,
         bandas_aviso=bandas,
     )
-
 
 class TestDiasRestantes:
     def test_fecha_futura_60_dias(self) -> None:
@@ -35,7 +33,6 @@ class TestDiasRestantes:
     def test_mismo_dia_cero(self) -> None:
         s = _servicio()
         assert dias_restantes(s, datetime.date(2027, 3, 15)) == 0
-
 
 class TestBandaAlertaDeHoy:
     # --- Exact hits on default bands ---

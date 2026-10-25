@@ -21,14 +21,12 @@ def _make_update(user_id: int = 123) -> MagicMock:
     update.effective_message = AsyncMock()
     return update
 
-
 def _make_context(**bot_data_overrides: object) -> MagicMock:
     ctx = MagicMock()
     base: dict[str, object] = {}
     base.update(bot_data_overrides)
     ctx.bot_data = base
     return ctx
-
 
 @pytest.mark.asyncio
 async def test_cmd_mis_ventas_sin_repos() -> None:
@@ -47,9 +45,7 @@ async def test_cmd_mis_ventas_sin_repos() -> None:
     call_args = update.effective_message.reply_text.call_args[0][0]
     assert "Error" in call_args or "error" in call_args
 
-
 _FREELANCER_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
-
 
 @pytest.mark.asyncio
 async def test_cmd_mis_ventas_sin_ventas() -> None:
@@ -86,13 +82,11 @@ async def test_cmd_mis_ventas_sin_ventas() -> None:
     assert _FREELANCER_ID in all_args, f"freelancer.id not passed; got {all_args}"
     assert "Carlos" in all_args, f"freelancer.nombre not passed; got {all_args}"
 
-
 # ─── _contexto_a_comando id-capture (Phase 7) ────────────────────────────────
 
 _REGISTRANT_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 _COUNTERPART_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 _SRV_UUID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
-
 
 def _make_full_context(
     *,
@@ -116,7 +110,6 @@ def _make_full_context(
         vendedor_nombre=vendedor_nombre,
         cerrador_nombre=cerrador_nombre,
     )
-
 
 def _make_cmd_context(registrant_id: uuid.UUID = _REGISTRANT_ID) -> MagicMock:
     """Build a context mock with all repos needed by _contexto_a_comando."""
@@ -145,7 +138,6 @@ def _make_cmd_context(registrant_id: uuid.UUID = _REGISTRANT_ID) -> MagicMock:
     }
     return context
 
-
 def _make_cmd_update(user_id: int = 1) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -153,7 +145,6 @@ def _make_cmd_update(user_id: int = 1) -> MagicMock:
     update.callback_query = None
     update.message = None
     return update
-
 
 class TestContextoAComandoFacturaIdioma:
     """_contexto_a_comando carries ctx.factura_idioma onto the command."""
@@ -170,7 +161,6 @@ class TestContextoAComandoFacturaIdioma:
         cmd = _contexto_a_comando(_make_cmd_update(), _make_cmd_context(), ctx)
         assert cmd is not None
         assert cmd.factura_idioma == "es"
-
 
 class TestContextoAComandoIds:
     """Phase 7 — _contexto_a_comando captures vendedor_id / cerrador_id per rol."""
@@ -248,5 +238,4 @@ class TestContextoAComandoIds:
         assert cmd.participantes.vendedor_id == _COUNTERPART_ID
         assert cmd.participantes.cerrador_id == _COUNTERPART_ID
         assert cmd.participantes.vendedor_id == _COUNTERPART_ID
-
 

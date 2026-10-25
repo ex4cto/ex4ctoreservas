@@ -22,7 +22,6 @@ def _servicio(**kwargs: object) -> Servicio:
     defaults.update(kwargs)
     return Servicio(**defaults)  # type: ignore[arg-type]
 
-
 class TestNetosHorarioField:
     """Servicio.netos_por_horario field defaults and construction."""
 
@@ -50,7 +49,6 @@ class TestNetosHorarioField:
         )
         assert s.precio_neto_adulto == Decimal("50000")
         assert s.nombre == "CITY TOUR"
-
 
 class TestNetoPorHorario:
     """Servicio.neto_para_horario() resolution logic."""

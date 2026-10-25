@@ -20,7 +20,6 @@ _SOCIOS_DEFAULT = [
     SocioConfig(nombre="ryan", porcentaje=Decimal("25"), telegram_id=987654321),
 ]
 
-
 def _make_update(
     user_id: int = 999,
     callback_data: str | None = None,
@@ -43,7 +42,6 @@ def _make_update(
         update.message = None
     return update
 
-
 def _make_context(
     socios: list[SocioConfig] | None = None,
     user_data: dict | None = None,  # type: ignore[type-arg]
@@ -61,18 +59,15 @@ def _make_context(
     }
     return ctx
 
-
 def _fake_settings(propietario_ids: str = "999") -> MagicMock:
     s = MagicMock()
     s.propietario_telegram_ids = propietario_ids
     s.dev_telegram_ids = ""
     return s
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestConfigSociosFlujo:
     @pytest.mark.asyncio

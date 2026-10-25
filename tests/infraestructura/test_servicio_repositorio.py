@@ -19,7 +19,6 @@ def _make_sf() -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 def _servicio(**kwargs: object) -> Servicio:
     defaults: dict[str, object] = dict(
         id=uuid.uuid4(),
@@ -28,7 +27,6 @@ def _servicio(**kwargs: object) -> Servicio:
     )
     defaults.update(kwargs)
     return Servicio(**defaults)  # type: ignore[arg-type]
-
 
 class TestPrecioSugeridoRoundTrip:
     def test_persiste_ambos_valores_no_nulos(self) -> None:

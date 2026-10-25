@@ -24,7 +24,6 @@ def _make_servicio(**kwargs: object) -> Servicio:
     defaults.update(kwargs)
     return Servicio(**defaults)  # type: ignore[arg-type]
 
-
 def test_round_trip_both_fields_set(sf: sessionmaker[Session]) -> None:
     """Round-trip preserves both info_tour and observaciones when set."""
     repo = SQLAServicioRepository(sf)
@@ -38,7 +37,6 @@ def test_round_trip_both_fields_set(sf: sessionmaker[Session]) -> None:
     assert result.info_tour == "Salida 8am, almuerzo incluido"
     assert result.observaciones == "No apto para embarazadas"
 
-
 def test_round_trip_both_fields_none(sf: sessionmaker[Session]) -> None:
     """Round-trip returns None for both fields when not set."""
     repo = SQLAServicioRepository(sf)
@@ -48,7 +46,6 @@ def test_round_trip_both_fields_none(sf: sessionmaker[Session]) -> None:
     assert result is not None
     assert result.info_tour is None
     assert result.observaciones is None
-
 
 def test_round_trip_partial_only_info_tour(sf: sessionmaker[Session]) -> None:
     """Round-trip preserves info_tour when only that field is set."""

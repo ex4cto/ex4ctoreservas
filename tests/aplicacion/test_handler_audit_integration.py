@@ -29,7 +29,6 @@ def sf() -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
-
 def _make_servicio(sf: sessionmaker[Session]) -> Servicio:
     """Persist a fresh Servicio and return the domain object."""
     repo = SQLAServicioRepository(sf)
@@ -46,7 +45,6 @@ def _make_servicio(sf: sessionmaker[Session]) -> Servicio:
     )
     repo.guardar(s)
     return s
-
 
 class TestIntegracionAuditoria:
     def test_editar_servicio_emite_fila_recuperable(

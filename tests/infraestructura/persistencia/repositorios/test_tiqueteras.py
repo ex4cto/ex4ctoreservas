@@ -36,7 +36,6 @@ def _make_venta(sf: sessionmaker[Session]) -> uuid.UUID:
     venta_repo.guardar(venta)
     return venta_id
 
-
 def test_guardar_y_buscar_sin_datos_extraidos(sf: sessionmaker[Session]) -> None:
     venta_id = _make_venta(sf)
     repo = SQLATiqueteraRepository(sf)
@@ -48,11 +47,9 @@ def test_guardar_y_buscar_sin_datos_extraidos(sf: sessionmaker[Session]) -> None
     assert resultado.datos_extraidos is None
     assert resultado.procesada is False
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLATiqueteraRepository(sf)
     assert repo.buscar_por_venta_id(uuid.uuid4()) is None
-
 
 def test_round_trip_con_datos_extraidos(sf: sessionmaker[Session]) -> None:
     venta_id = _make_venta(sf)

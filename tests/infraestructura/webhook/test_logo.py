@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
-
 class TestLogoRoute:
     def test_logo_devuelve_png(self, client: TestClient) -> None:
         resp = client.get("/logo.png")

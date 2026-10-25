@@ -19,7 +19,6 @@ _SNAP = SnapshotReglas(
     TipoCliente.INTERNO, Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0")
 )
 
-
 def _venta(vid: uuid.UUID, valor: int, neto: int, servicio_ids: list[uuid.UUID]) -> Venta:
     return Venta(
         id=vid,
@@ -34,21 +33,20 @@ def _venta(vid: uuid.UUID, valor: int, neto: int, servicio_ids: list[uuid.UUID])
         canal_origen="Hotel",
     )
 
-
 def _com(vid: uuid.UUID, agencia: int) -> ComisionRegistrada:
     return ComisionRegistrada(
         venta_id=vid,
         desglose=DesgloseComision(
             vendedor=Dinero(0), cerrador=Dinero(0), punto_de_venta=Dinero(0),
             referido=Dinero(0), agencia=Dinero(agencia), snapshot=_SNAP,
-        ),
+            neto_vendedor=Dinero(0),
+            neto_cerrador=Dinero(0),
+),
         fecha=datetime.date(2026, 7, 5),
     )
 
-
 def _serv(sid: uuid.UUID, categoria: str) -> Servicio:
     return Servicio(id=sid, numero=1, nombre="Tour", categoria=categoria)
-
 
 def _svc(
     ventas: list[Venta], comisiones: list[ComisionRegistrada], servicios: list[Servicio]
@@ -60,7 +58,6 @@ def _svc(
     sr = MagicMock()
     sr.listar.return_value = servicios
     return RankingTourService(vr, cr, sr)
-
 
 def test_agrupa_por_familia() -> None:
     s1, s2 = uuid.uuid4(), uuid.uuid4()
@@ -80,7 +77,6 @@ def test_agrupa_por_familia() -> None:
     assert filas["PLAYA TRANQUILA"].vendidos == 1
     # ordenado por vendidos desc -> Islas primero
     assert r.filas[0].familia == "ISLAS DEL ROSARIO"
-
 
 def test_venta_sin_servicio_es_sin_categoria() -> None:
     v1 = uuid.uuid4()

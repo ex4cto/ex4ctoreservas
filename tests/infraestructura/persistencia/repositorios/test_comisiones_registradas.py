@@ -39,7 +39,6 @@ def _make_venta(sf: sessionmaker[Session]) -> uuid.UUID:
     )
     return venta_id
 
-
 def test_guardar_y_buscar_round_trip(sf: sessionmaker[Session]) -> None:
     venta_id = _make_venta(sf)
     repo = SQLAComisionRegistradaRepository(sf)
@@ -47,7 +46,6 @@ def test_guardar_y_buscar_round_trip(sf: sessionmaker[Session]) -> None:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20.00"),
         porcentaje_cerrador=Decimal("10.00"),
-        porcentaje_referido_maximo=Decimal("5.00"),
         porcentaje_capa_punto=Decimal("8.00"),
     )
     desglose = DesgloseComision(
@@ -57,7 +55,9 @@ def test_guardar_y_buscar_round_trip(sf: sessionmaker[Session]) -> None:
         referido=Dinero("0"),
         agencia=Dinero("558000"),
         snapshot=snapshot,
-    )
+        neto_vendedor=Dinero("180000"),
+        neto_cerrador=Dinero("90000"),
+)
     c = ComisionRegistrada(venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1))
     repo.guardar(c)
     resultado = repo.buscar_por_venta_id(venta_id)
@@ -70,11 +70,9 @@ def test_guardar_y_buscar_round_trip(sf: sessionmaker[Session]) -> None:
     assert s.porcentaje_vendedor == Decimal("20.00")
     assert s.porcentaje_capa_punto == Decimal("8.00")
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAComisionRegistradaRepository(sf)
     assert repo.buscar_por_venta_id(uuid.uuid4()) is None
-
 
 def test_listar_por_venta_ids_vacio() -> None:
     """listar_por_venta_ids([]) returns [] WITHOUT touching DB."""
@@ -87,7 +85,6 @@ def test_listar_por_venta_ids_vacio() -> None:
     assert result == []
     mock_sf.begin.assert_not_called()
 
-
 def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
     """listar_por_venta_ids returns all comisiones for given ids."""
     venta_id1 = _make_venta(sf)
@@ -97,7 +94,6 @@ def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20.00"),
         porcentaje_cerrador=Decimal("10.00"),
-        porcentaje_referido_maximo=Decimal("5.00"),
         porcentaje_capa_punto=Decimal("8.00"),
     )
     for venta_id in (venta_id1, venta_id2):
@@ -108,7 +104,9 @@ def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
             referido=Dinero("0"),
             agencia=Dinero("310000"),
             snapshot=snapshot,
-        )
+            neto_vendedor=Dinero("100000"),
+            neto_cerrador=Dinero("50000"),
+)
         repo.guardar(
             ComisionRegistrada(
                 venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)
@@ -116,7 +114,6 @@ def test_listar_por_venta_ids(sf: sessionmaker[Session]) -> None:
         )
     results = repo.listar_por_venta_ids([venta_id1, venta_id2])
     assert len(results) == 2
-
 
 def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
     """listar_por_venta_ids with subset of ids returns only matching ones."""
@@ -127,7 +124,6 @@ def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("20.00"),
         porcentaje_cerrador=Decimal("10.00"),
-        porcentaje_referido_maximo=Decimal("5.00"),
         porcentaje_capa_punto=Decimal("8.00"),
     )
     for venta_id in (venta_id1, venta_id2):
@@ -138,7 +134,9 @@ def test_listar_por_venta_ids_parcial(sf: sessionmaker[Session]) -> None:
             referido=Dinero("0"),
             agencia=Dinero("310000"),
             snapshot=snapshot,
-        )
+            neto_vendedor=Dinero("100000"),
+            neto_cerrador=Dinero("50000"),
+)
         repo.guardar(
             ComisionRegistrada(
                 venta_id=venta_id, desglose=desglose, fecha=datetime.date(2026, 7, 1)

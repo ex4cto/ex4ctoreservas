@@ -21,7 +21,6 @@ from garay.dominio.facturas.tipos import EstadoEnvioFactura
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_cliente(
     *,
     nombre: str = "Ana Garcia",
@@ -44,14 +43,12 @@ def _make_cliente(
     c.tipo = TipoCliente.EXTERNO
     return c
 
-
 def _make_servicio(numero: int = 1, nombre: str = "Tour Isla") -> MagicMock:
     s = MagicMock()
     s.id = uuid.uuid4()
     s.numero = numero
     s.nombre = nombre
     return s
-
 
 def _make_venta(
     *,
@@ -81,7 +78,6 @@ def _make_venta(
     v.factura_idioma = factura_idioma
     return v
 
-
 def _make_factura(venta_id: uuid.UUID | None = None) -> Factura:
     return Factura(
         id=uuid.uuid4(),
@@ -93,7 +89,6 @@ def _make_factura(venta_id: uuid.UUID | None = None) -> Factura:
         html_contenido="<html>original</html>",
         estado_envio=EstadoEnvioFactura.ENVIADO,
     )
-
 
 def _make_repos(
     *,
@@ -111,7 +106,6 @@ def _make_repos(
     servicios_repo = MagicMock()
     servicios_repo.buscar_por_id.return_value = servicio
     return ventas_repo, facturas_repo, clientes_repo, servicios_repo
-
 
 def _make_service(
     *,
@@ -137,11 +131,9 @@ def _make_service(
     )
     return svc, generador, email
 
-
 # ---------------------------------------------------------------------------
 # ResultadoRegenerarFactura enum
 # ---------------------------------------------------------------------------
-
 
 class TestResultadoEnum:
     def test_enum_values_exist(self) -> None:
@@ -150,11 +142,9 @@ class TestResultadoEnum:
         assert ResultadoRegenerarFactura.REENVIADA
         assert ResultadoRegenerarFactura.ERROR_ENVIO
 
-
 # ---------------------------------------------------------------------------
 # reconstruir_contexto
 # ---------------------------------------------------------------------------
-
 
 class TestReconstruirContexto:
     def test_cliente_fields_copied(self) -> None:
@@ -351,11 +341,9 @@ class TestReconstruirContexto:
 
         assert "15/10/2026" in html
 
-
 # ---------------------------------------------------------------------------
 # RegenerarFacturaService.ejecutar
 # ---------------------------------------------------------------------------
-
 
 class TestRegenerarFacturaService:
     def test_sin_venta_retorna_sin_venta(self) -> None:
@@ -535,11 +523,9 @@ class TestRegenerarFacturaService:
         assert last_factura.numero == "GT-ORIGINAL"
         assert last_factura.fecha_emision == original_fecha
 
-
 # ---------------------------------------------------------------------------
 # FIX 1: reconstruir_contexto — empty fechas_por_servicio guard
 # ---------------------------------------------------------------------------
-
 
 class TestReconstruirContextoEmptyFechas:
     def test_empty_fechas_por_servicio_no_crash(self) -> None:
@@ -582,11 +568,9 @@ class TestReconstruirContextoEmptyFechas:
         assert ctx.fechas_por_servicio == {1: dt_early}
         assert ctx.fecha_salida == dt_early
 
-
 # ---------------------------------------------------------------------------
 # FIX 2: invoice number preserved on resend
 # ---------------------------------------------------------------------------
-
 
 class TestInvoiceNumberPreservedOnResend:
     def test_regenerated_html_contains_original_numero(self) -> None:
@@ -668,11 +652,9 @@ class TestInvoiceNumberPreservedOnResend:
         today_str = _hoy_bogota().strftime("%Y%m%d")
         assert today_str in html
 
-
 # ---------------------------------------------------------------------------
 # FIX 3: empty destinatario returns SIN_FACTURA without sending email
 # ---------------------------------------------------------------------------
-
 
 class TestEmptyDestinatario:
     def test_no_email_on_either_source_returns_sin_factura(self) -> None:
@@ -708,11 +690,9 @@ class TestEmptyDestinatario:
         assert resultado is ResultadoRegenerarFactura.SIN_FACTURA
         email.enviar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Task 1.4/1.5: reconstruir_contexto — horarios_por_servicio mapping
 # ---------------------------------------------------------------------------
-
 
 class TestReconstruirContextoHorarios:
     def test_horarios_uuid_to_int_mapping(self) -> None:
@@ -767,11 +747,9 @@ class TestReconstruirContextoHorarios:
         # uuid_ghost was not in servicio_objects → skipped
         assert ctx.horarios_por_servicio == {}
 
-
 # ---------------------------------------------------------------------------
 # Task 2.7: Integration — regeneration preserves schedule end-to-end
 # ---------------------------------------------------------------------------
-
 
 class TestReconstruirContextoHorariosIntegracion:
     def test_regenerated_html_contains_am_pm_not_24h(self) -> None:

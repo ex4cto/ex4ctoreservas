@@ -23,7 +23,6 @@ _MIGRATION_FILE = (
     / "0020_add_registrado_en_to_ventas.py"
 )
 
-
 def _load_migration() -> ModuleType:
     if not _MIGRATION_FILE.exists():
         pytest.fail(f"Migration file not found: {_MIGRATION_FILE}.")
@@ -37,14 +36,12 @@ def _load_migration() -> ModuleType:
     spec.loader.exec_module(mod)
     return mod
 
-
 class TestMigration0020Upgrade:
     def test_upgrade_agrega_columna(self, sqlite_engine: Engine) -> None:
         build_ventas_at_0011(sqlite_engine)
         assert "registrado_en" not in table_columns(sqlite_engine, "ventas")
         run_migration_fn(sqlite_engine, _load_migration().upgrade)
         assert "registrado_en" in table_columns(sqlite_engine, "ventas")
-
 
 class TestMigration0020Downgrade:
     def test_downgrade_elimina_columna(self, sqlite_engine: Engine) -> None:
@@ -53,7 +50,6 @@ class TestMigration0020Downgrade:
         run_migration_fn(sqlite_engine, migration.upgrade)
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert "registrado_en" not in table_columns(sqlite_engine, "ventas")
-
 
 class TestMigration0020Chain:
     def test_revision(self) -> None:

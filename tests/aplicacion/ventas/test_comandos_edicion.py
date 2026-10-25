@@ -70,7 +70,6 @@ class TestEditarNetoVentaComando:
         )
         assert cmd.realizada_por_nombre is None
 
-
 class TestEditarValorVentaComando:
     def test_importable(self) -> None:
         from garay.aplicacion.ventas.comandos import EditarValorVentaComando

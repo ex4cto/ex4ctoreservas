@@ -28,18 +28,15 @@ from garay.infraestructura.telegram.handlers_freelancers import (
 
 _DEV_ID = 99999
 
-
 def _make_settings_with_dev(dev_id: int = _DEV_ID) -> MagicMock:
     settings = MagicMock()
     settings.dev_telegram_ids = str(dev_id)
     return settings
 
-
 def _make_settings_no_dev() -> MagicMock:
     settings = MagicMock()
     settings.dev_telegram_ids = ""
     return settings
-
 
 def _make_freelancer(
     nombre: str = "Ana",
@@ -54,14 +51,12 @@ def _make_freelancer(
         es_admin=False,
     )
 
-
 def _make_update() -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=1)
     update.effective_message = AsyncMock()
     update.callback_query = None
     return update
-
 
 def _make_context(freelancers: list[Freelancer]) -> MagicMock:
     ctx = MagicMock()
@@ -72,11 +67,9 @@ def _make_context(freelancers: list[Freelancer]) -> MagicMock:
     ctx.bot_data = {"freelancer_repo": repo}
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # cmd_listar_freelancers — dev excluded from list message
 # ---------------------------------------------------------------------------
-
 
 class TestCmdListarFreelancersDevFilter:
     @pytest.mark.asyncio
@@ -147,11 +140,9 @@ class TestCmdListarFreelancersDevFilter:
         msg = update.effective_message.reply_text.call_args[0][0]
         assert "Regular" in msg
 
-
 # ---------------------------------------------------------------------------
 # cmd_eliminar_freelancer — dev excluded from active list keyboard
 # ---------------------------------------------------------------------------
-
 
 class TestCmdEliminarFreelancerDevFilter:
     @pytest.mark.asyncio
@@ -209,11 +200,9 @@ class TestCmdEliminarFreelancerDevFilter:
 
         assert result == ConversationHandler.END
 
-
 # ---------------------------------------------------------------------------
 # cmd_editar_freelancer — dev excluded from all-freelancers keyboard
 # ---------------------------------------------------------------------------
-
 
 class TestCmdEditarFreelancerDevFilter:
     @pytest.mark.asyncio

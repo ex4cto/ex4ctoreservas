@@ -18,7 +18,6 @@ class TestExtractorClaudeInit:
         extractor = ExtractorClaude(api_key="sk-test")
         assert extractor is not None
 
-
 class TestExtractorClaudeExtraerDeFoto:
     def _make_response(self, payload: dict[str, object]) -> MagicMock:
         block = MagicMock(spec=TextBlock)

@@ -26,10 +26,8 @@ SERVICIOS_INICIAL: list[tuple[int, str, Decimal | None, Decimal | None, str, lis
 
 PUNTOS_TEST = ["Marie Real"]
 
-
 def _make_fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_INICIAL, puntos_venta=PUNTOS_TEST)
-
 
 def test_refrescar_servicios_rebuilds_servicios() -> None:
     """refrescar_servicios() replaces _servicios with new tuples."""
@@ -44,7 +42,6 @@ def test_refrescar_servicios_rebuilds_servicios() -> None:
     # Tour 3 is no longer in the list — should be absent.
     assert 3 not in fsm._servicios
 
-
 def test_refresh_rebuild_familias() -> None:
     """After refresh, _familias is rebuilt: empty families disappear."""
     fsm = _make_fsm()
@@ -56,7 +53,6 @@ def test_refresh_rebuild_familias() -> None:
     assert "ISLAS" not in fsm._familias
     assert "BARÚ" in fsm._familias
     assert fsm._familias["BARÚ"] == [1]
-
 
 def test_refresh_moved_tour_relocates() -> None:
     """A tour changing categoria moves from old bucket to new one."""
@@ -72,7 +68,6 @@ def test_refresh_moved_tour_relocates() -> None:
     assert "BARÚ" not in fsm._familias
     # Tour 1 is now in ISLAS.
     assert 1 in fsm._familias["ISLAS"]
-
 
 def test_refresh_does_not_touch_user_data() -> None:
     """Refresh replaces _servicios/_familias in place but does NOT affect
@@ -93,16 +88,13 @@ def test_refresh_does_not_touch_user_data() -> None:
     # user_data is untouched — the FSM holds no reference to it.
     assert simulated_user_data["contexto"] == snapshot_before
 
-
 # ── Phase 8.2 — integration: deactivated tour hidden from listar_activos ──────
-
 
 @pytest.fixture()
 def sf_mem() -> sessionmaker[Session]:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
-
 
 def test_desactivar_tour_oculto_en_listar_activos(sf_mem: sessionmaker[Session]) -> None:
     """After setting activo=False and saving, listar_activos() must NOT return
@@ -133,9 +125,7 @@ def test_desactivar_tour_oculto_en_listar_activos(sf_mem: sessionmaker[Session])
     # Must still be present in listar() (data not destroyed).
     assert any(s.id == tour.id for s in repo.listar())
 
-
 # ── freelancer roster refresh ────────────────────────────────────────────────
-
 
 def _fsm_con_freelancers(
     freelancers: list[tuple[uuid.UUID, str, bool]],
@@ -145,7 +135,6 @@ def _fsm_con_freelancers(
         puntos_venta=PUNTOS_TEST,
         freelancers=freelancers,
     )
-
 
 def test_refrescar_freelancers_agrega_nuevo() -> None:
     """A newly added freelancer appears in the sale picker after refresh."""
@@ -157,7 +146,6 @@ def test_refrescar_freelancers_agrega_nuevo() -> None:
     labels = [lbl for lbl, _ in fsm._opciones_freelancers(solo_activos=True)]
     assert labels == ["Ana", "Bruno"]
 
-
 def test_refrescar_freelancers_elimina_removido() -> None:
     """A freelancer no longer in the roster disappears from every picker."""
     id_a, id_b = uuid.uuid4(), uuid.uuid4()
@@ -168,7 +156,6 @@ def test_refrescar_freelancers_elimina_removido() -> None:
     valores = [val for _, val in fsm._opciones_freelancers(solo_activos=False)]
     assert valores == [f"fl:{id_a}"]
 
-
 def test_refrescar_freelancers_renombra() -> None:
     """Editing a freelancer's name is reflected after refresh."""
     id_a = uuid.uuid4()
@@ -178,7 +165,6 @@ def test_refrescar_freelancers_renombra() -> None:
 
     labels = [lbl for lbl, _ in fsm._opciones_freelancers(solo_activos=True)]
     assert labels == ["Ana Maria"]
-
 
 def test_refrescar_freelancers_conserva_inactivos_para_edicion() -> None:
     """Refresh MUST keep inactive freelancers: hidden from the sale picker but

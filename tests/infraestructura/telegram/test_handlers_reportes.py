@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_update(user_id: int = 123) -> MagicMock:
     update = MagicMock()
@@ -19,18 +18,15 @@ def _make_update(user_id: int = 123) -> MagicMock:
     update.callback_query = None
     return update
 
-
 def _make_context(**bot_data: object) -> MagicMock:
     ctx = MagicMock()
     ctx.bot_data = dict(bot_data)
     return ctx
 
-
 def _make_settings(*, propietario_ids: str = "999") -> MagicMock:
     s = MagicMock()
     s.propietario_telegram_ids = propietario_ids
     return s
-
 
 def _make_freelancer_repo(*, found: bool = True, es_admin: bool = True) -> MagicMock:
     repo = MagicMock()
@@ -41,7 +37,6 @@ def _make_freelancer_repo(*, found: bool = True, es_admin: bool = True) -> Magic
     else:
         repo.buscar_por_telegram_id.return_value = None
     return repo
-
 
 def _make_resumen_service(total_ventas: int = 0) -> MagicMock:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentas
@@ -58,7 +53,6 @@ def _make_resumen_service(total_ventas: int = 0) -> MagicMock:
     svc = MagicMock()
     svc.ejecutar.return_value = resumen
     return svc
-
 
 def _make_flujo_service() -> MagicMock:
     from garay.aplicacion.reportes.flujo_caja import FlujoCaja
@@ -78,11 +72,9 @@ def _make_flujo_service() -> MagicMock:
     svc.ejecutar.return_value = flujo
     return svc
 
-
 # ---------------------------------------------------------------------------
 # cmd_dashboard_ventas
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_cmd_dashboard_ventas_bloqueado_para_non_admin() -> None:
@@ -103,7 +95,6 @@ async def test_cmd_dashboard_ventas_bloqueado_para_non_admin() -> None:
     msg = update.effective_message.reply_text.call_args[0][0]
     assert "admin" in msg.lower() or "acceso" in msg.lower() or "administrador" in msg.lower()
 
-
 @pytest.mark.asyncio
 async def test_cmd_dashboard_ventas_funciona_para_admin() -> None:
     """Admin user with no ventas → reply contains sin_datos message."""
@@ -121,11 +112,9 @@ async def test_cmd_dashboard_ventas_funciona_para_admin() -> None:
     msg = update.effective_message.reply_text.call_args[0][0]
     assert "datos" in msg.lower() or "período" in msg.lower() or "periodo" in msg.lower()
 
-
 # ---------------------------------------------------------------------------
 # Callbacks
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_cb_dashboard_ventas_navega_a_diciembre_desde_enero() -> None:
@@ -160,10 +149,9 @@ async def test_cb_dashboard_ventas_navega_a_diciembre_desde_enero() -> None:
     svc.ejecutar.assert_called_once_with(1, 2026)
     query.edit_message_text.assert_called_once()
 
-
 def test_formatear_resumen_ventas_incluye_seccion_metodo_pago() -> None:
     """ResumenVentas with por_metodo_pago data → message includes the section."""
-    from garay.aplicacion.reportes.resumen_ventas import ResumenVendedor, ResumenVentas
+    from garay.aplicacion.reportes.resumen_ventas import ResumenVentas
     from garay.dominio.comun.dinero import Dinero
     from garay.dominio.comun.tipos import MetodoPago
     from garay.infraestructura.telegram.handlers_reportes import _formatear_resumen_ventas
@@ -184,7 +172,6 @@ def test_formatear_resumen_ventas_incluye_seccion_metodo_pago() -> None:
     assert "Transferencia" in txt
     assert "2" in txt
 
-
 def test_formatear_resumen_ventas_metodo_pago_none_muestra_sin_registrar() -> None:
     """None metodo_pago → displayed as 'Sin registrar'."""
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentas
@@ -202,7 +189,6 @@ def test_formatear_resumen_ventas_metodo_pago_none_muestra_sin_registrar() -> No
     )
     txt = _formatear_resumen_ventas(resumen, 7, 2026)
     assert "Sin registrar" in txt
-
 
 def test_formatear_resumen_ventas_escapa_nombre_html() -> None:
     """Slice 4: el nombre del vendedor (dato DB) debe escaparse en HTML."""

@@ -26,13 +26,11 @@ def _srv_mock(nombre: str = "Tour Playa", familia: str = "BARU", activo: bool = 
     srv.numero = 1
     return srv
 
-
 def test_teclado_campos_incluye_atras_y_cancelar() -> None:
     markup = _teclado_campos()
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert "edt_atras" in datas
     assert "edt_cancelar_flujo" in datas
-
 
 def test_atras_y_cancelar_usan_mensajes_centralizados() -> None:
     from garay.mensajes.catalogo import obtener_mensaje
@@ -44,12 +42,10 @@ def test_atras_y_cancelar_usan_mensajes_centralizados() -> None:
     assert etiqueta_por_data["edt_atras"] == obtener_mensaje("tour_boton_atras")
     assert etiqueta_por_data["edt_cancelar_flujo"] == obtener_mensaje("tour_boton_cancelar")
 
-
 def test_teclado_tours_incluye_atras_con_back_callback() -> None:
     markup = _teclado_tours([_srv_mock()], "BARU", "edt_tour:", back_callback="edt_volver_familias")
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert "edt_volver_familias" in datas
-
 
 def test_teclado_tours_atras_usa_mensaje_centralizado() -> None:
     from garay.mensajes.catalogo import obtener_mensaje
@@ -60,12 +56,10 @@ def test_teclado_tours_atras_usa_mensaje_centralizado() -> None:
     }
     assert etiqueta_por_data["edt_volver_familias"] == obtener_mensaje("tour_boton_atras")
 
-
 def test_teclado_tours_sin_back_callback_no_tiene_atras() -> None:
     markup = _teclado_tours([_srv_mock()], "BARU", "elt_tour:")
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert "edt_volver_familias" not in datas
-
 
 @pytest.mark.asyncio
 async def test_atras_en_lista_de_tours_vuelve_a_familias() -> None:
@@ -86,7 +80,6 @@ async def test_atras_en_lista_de_tours_vuelve_a_familias() -> None:
     markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
     datas = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert any(d.startswith("edt_familia:") for d in datas)
-
 
 @pytest.mark.asyncio
 async def test_atras_vuelve_a_la_lista_de_tours() -> None:

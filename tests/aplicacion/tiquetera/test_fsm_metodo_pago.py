@@ -16,11 +16,9 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 def _ctx_con_neto(**kwargs: object) -> ContextoVenta:
     """Build a ContextoVenta with enough fields to reach the MONTO_NETO handler."""
@@ -31,7 +29,6 @@ def _ctx_con_neto(**kwargs: object) -> ContextoVenta:
         **kwargs,  # type: ignore[arg-type]
     )
 
-
 def _ctx_post_neto(**kwargs: object) -> ContextoVenta:
     """Build a ContextoVenta that has neto filled — as if MONTO_NETO just completed."""
     return ContextoVenta(
@@ -40,7 +37,6 @@ def _ctx_post_neto(**kwargs: object) -> ContextoVenta:
         neto=Decimal("50000"),
         **kwargs,  # type: ignore[arg-type]
     )
-
 
 class TestMontoNetoTransicionAMetodoPago:
     def test_monto_neto_valido_va_a_metodo_pago(self, fsm: FSMTiquetera) -> None:
@@ -60,7 +56,6 @@ class TestMontoNetoTransicionAMetodoPago:
         assert obtener_mensaje("metodo_pago.efectivo") in resultado.opciones
         assert obtener_mensaje("metodo_pago.tarjeta") in resultado.opciones
 
-
 class TestMontoAbonoIgualValorTransicionAMetodoPago:
     def test_abono_con_neto_calculable_va_a_metodo_pago(self, fsm: FSMTiquetera) -> None:
         """When neto can be computed from the catalog after abono, goes to METODO_PAGO."""
@@ -73,7 +68,6 @@ class TestMontoAbonoIgualValorTransicionAMetodoPago:
         )
         resultado = fsm.procesar(EstadoFSM.MONTO_ABONO, "0", ctx)
         assert resultado.nuevo_estado == EstadoFSM.METODO_PAGO
-
 
 class TestMetodoPagoHandler:
     def test_entrada_invalida_permanece_en_estado(self, fsm: FSMTiquetera) -> None:

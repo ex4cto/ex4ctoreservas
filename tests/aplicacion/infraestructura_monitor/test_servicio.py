@@ -17,7 +17,6 @@ from garay.dominio.infraestructura_monitor.entidades import ServicioInfraestruct
 _RENOVACION = datetime.date(2027, 3, 15)
 _BANDAS = (60, 30, 7, 1)
 
-
 def _servicio(
     nombre: str = "Dominio garaytours.com",
     fecha: datetime.date = _RENOVACION,
@@ -28,7 +27,6 @@ def _servicio(
         fecha_renovacion=fecha,
         bandas_aviso=bandas,
     )
-
 
 class TestAvisosPara:
     def test_un_servicio_due_devuelve_aviso(self) -> None:

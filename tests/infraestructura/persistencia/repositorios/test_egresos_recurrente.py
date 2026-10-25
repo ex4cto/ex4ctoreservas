@@ -20,7 +20,6 @@ from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRe
 _DEFAULT_FECHA = datetime.date(2026, 7, 15)
 _DEFAULT_MONTO = Dinero("100000")
 
-
 def _make_egreso(
     *,
     fecha: datetime.date = _DEFAULT_FECHA,
@@ -39,7 +38,6 @@ def _make_egreso(
         referencia=referencia,
         gasto_recurrente_id=gasto_recurrente_id,
     )
-
 
 # ---------------------------------------------------------------------------
 # Round-trip tests
@@ -70,7 +68,6 @@ class TestGastoRecurrenteIdRoundTrip:
 
         assert resultado is not None
         assert resultado.gasto_recurrente_id is None
-
 
 # ---------------------------------------------------------------------------
 # sumar_por_recurrente_en_mes tests

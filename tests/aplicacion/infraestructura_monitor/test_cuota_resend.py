@@ -27,7 +27,6 @@ from garay.dominio.puertos.contador_facturas import ContadorFacturasEnviadas
 # Fake in-memory counter
 # ---------------------------------------------------------------------------
 
-
 class FakeContador(ContadorFacturasEnviadas):
     """In-memory stub: caller configures per-date and per-month counts."""
 
@@ -45,7 +44,6 @@ class FakeContador(ContadorFacturasEnviadas):
     def contar_dia(self, dia: datetime.date) -> int:
         return self._conteos_dia.get(dia, 0)
 
-
 # ---------------------------------------------------------------------------
 # Default config for most tests
 # ---------------------------------------------------------------------------
@@ -54,7 +52,6 @@ _CAP_MENSUAL = 3000
 _CAP_DIARIO = 100
 _BANDAS_MENSUAL = (0.80, 0.95, 1.0)  # -> (2400, 2850, 3000)
 _UMBRAL_DIARIO = 80
-
 
 def _make_service(
     contador: ContadorFacturasEnviadas,
@@ -71,11 +68,9 @@ def _make_service(
         umbral_diario=umbral_diario,
     )
 
-
 # ---------------------------------------------------------------------------
 # Monthly band tests
 # ---------------------------------------------------------------------------
-
 
 class TestAvisosParaMensual:
     # hoy=2026-08-16; ayer=2026-08-15; anteayer=2026-08-14
@@ -131,11 +126,9 @@ class TestAvisosParaMensual:
         assert len(mensual) == 1
         assert mensual[0].umbral == 2850
 
-
 # ---------------------------------------------------------------------------
 # Month-boundary reset test
 # ---------------------------------------------------------------------------
-
 
 class TestMesBoundaryReset:
     def test_conteo_previo_cero_cuando_anteayer_en_mes_anterior(self) -> None:
@@ -188,11 +181,9 @@ class TestMesBoundaryReset:
         assert len(mensual) == 1
         assert mensual[0].umbral == 2400
 
-
 # ---------------------------------------------------------------------------
 # Daily threshold tests
 # ---------------------------------------------------------------------------
-
 
 class TestAvisosParaDiario:
     _HOY = datetime.date(2026, 8, 16)
@@ -227,11 +218,9 @@ class TestAvisosParaDiario:
         diario = [a for a in avisos if a.tipo == "diario"]
         assert diario == []
 
-
 # ---------------------------------------------------------------------------
 # Both alerts simultaneously
 # ---------------------------------------------------------------------------
-
 
 class TestAmbosAvisosSimultaneos:
     def test_mensual_y_diario_al_mismo_tiempo(self) -> None:
@@ -258,11 +247,9 @@ class TestAmbosAvisosSimultaneos:
         avisos = service.avisos_para(datetime.date(2026, 8, 16))
         assert avisos == []
 
-
 # ---------------------------------------------------------------------------
 # AvisoCuota dataclass
 # ---------------------------------------------------------------------------
-
 
 class TestAvisoCuotaDataclass:
     def test_es_frozen(self) -> None:

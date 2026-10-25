@@ -33,7 +33,6 @@ class TestFormatearHtml:
         )
         assert resultado == "&lt;x&gt;: 5"
 
-
 class TestObtenerMensaje:
     def test_clave_existente_retorna_string(self) -> None:
         msg = obtener_mensaje("bienvenida")
@@ -43,7 +42,6 @@ class TestObtenerMensaje:
     def test_clave_inexistente_lanza_error(self) -> None:
         with pytest.raises(ErrorDeConfiguracion):
             obtener_mensaje("clave_que_no_existe")
-
 
 class TestClavesPropuestas:
     def test_solo_desarrolladores_existe(self) -> None:
@@ -59,7 +57,6 @@ class TestClavesPropuestas:
         msg = obtener_mensaje("propuestas.enviada").format(empresa="Acme")
         assert "Acme" in msg
 
-
 class TestClavesEsperandoFoto:
     def test_pregunta_enviar_foto_existe(self) -> None:
         msg = obtener_mensaje("pregunta_enviar_foto")
@@ -73,7 +70,6 @@ class TestClavesEsperandoFoto:
     def test_error_esperando_foto_texto_existe(self) -> None:
         msg = obtener_mensaje("error_esperando_foto_texto")
         assert "foto" in msg.lower()
-
 
 class TestClavesVentaRegistrada:
     def test_comision_por_rol_formatea(self) -> None:
@@ -91,7 +87,6 @@ class TestClavesVentaRegistrada:
         assert "Comisión: $112.000" in msg
         assert "/mis_ventas" in msg
 
-
 class TestClavesFormatoFecha:
     def test_pregunta_fecha_salida_incluye_formato_corto(self) -> None:
         msg = obtener_mensaje("pregunta_fecha_salida")
@@ -100,7 +95,6 @@ class TestClavesFormatoFecha:
     def test_error_fecha_invalida_incluye_formato_corto(self) -> None:
         msg = obtener_mensaje("error_fecha_invalida")
         assert "DD/MM/YY" in msg
-
 
 class TestClavesUnificacionBatchA:
     def test_pregunta_cliente_hotel_incluye_sufijo_sin_hotel(self) -> None:
@@ -111,7 +105,6 @@ class TestClavesUnificacionBatchA:
         msg = obtener_mensaje("pregunta_fecha_salida")
         assert "formato:" not in msg
         assert "DD/MM/YY" in msg
-
 
 class TestClavesNuevasBatchB:
     def test_pregunta_metodo_input(self) -> None:
@@ -206,7 +199,6 @@ class TestClavesNuevasBatchB:
         msg = obtener_mensaje("error_estado_no_manejable")
         assert len(msg) > 0
 
-
 class TestClavesTemplateBatchC:
     def test_info_destinos_acumulados_format(self) -> None:
         template = obtener_mensaje("info_destinos_acumulados")
@@ -231,7 +223,6 @@ class TestClavesTemplateBatchC:
         result = template.format(neto="$200.000", valor="$100.000")
         assert "{" not in result
         assert "$200.000" in result
-
 
 class TestClavesFotoExtraccion:
     """Tests for new catalog keys added in foto-validate-catalog change."""
@@ -303,7 +294,6 @@ class TestClavesFotoExtraccion:
         assert "{" not in result
         assert "Nombre del cliente" in result
 
-
 class TestClavesReportesDashboard:
     """Tests for dashboard report catalog keys — Etapa 8."""
 
@@ -344,7 +334,6 @@ class TestClavesReportesDashboard:
         assert "Agosto 2026" in result
         assert "{" not in result
 
-
 class TestClavesMovimientosRecientes:
     """Tests for /movimientos catalog keys."""
 
@@ -378,7 +367,6 @@ class TestClavesMovimientosRecientes:
     def test_tag_reenvio_es_corto(self) -> None:
         msg = obtener_mensaje("movimientos.tag_reenvio")
         assert len(msg) <= 20
-
 
 class TestConfirmacionResumenEspecialE:
     def test_confirmacion_resumen_no_tiene_numero_ticket(self) -> None:
@@ -420,7 +408,6 @@ class TestConfirmacionResumenEspecialE:
         assert "Tour Playa Blanca" in result
         assert "Ticket" not in result
         assert "Vendedor: (tú)" in result
-
 
 class TestClavesFreelancerIdentityA1:
     """New freelancer.* catalog keys added in Slice A1 (WU-2)."""
@@ -474,7 +461,6 @@ class TestClavesFreelancerIdentityA1:
         with pytest.raises(ErrorDeConfiguracion):
             obtener_mensaje("freelancer.error_nombre_duplicado")
 
-
 class TestClavesFreelancerEditar:
     """New freelancer.editar_* catalog keys added in Slice A2."""
 
@@ -511,7 +497,6 @@ class TestClavesFreelancerEditar:
         assert "{" not in result
         assert "Ana" in result
 
-
 class TestClavesMovimientosPlainText:
     """FIX 2: movimientos templates must NOT contain Markdown asterisks."""
 
@@ -526,7 +511,6 @@ class TestClavesMovimientosPlainText:
     def test_seccion_egresos_sin_asteriscos(self) -> None:
         msg = obtener_mensaje("movimientos.seccion_egresos")
         assert "*" not in msg, f"'movimientos.seccion_egresos' must not contain '*': {msg!r}"
-
 
 class TestClavesEgresosDestinatario:
     """Phase 10 — catalog keys for the egresos-por-destinatario dashboard section."""

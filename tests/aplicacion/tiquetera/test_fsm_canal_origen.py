@@ -16,16 +16,13 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
-
 @pytest.fixture()
 def ctx() -> ContextoVenta:
     return ContextoVenta()
-
 
 def _ctx_completo_con_canal(canal: str | None = "WhatsApp") -> ContextoVenta:
     """Return a fully-filled context for DIGITAL sale with an optional canal."""
@@ -47,7 +44,6 @@ def _ctx_completo_con_canal(canal: str | None = "WhatsApp") -> ContextoVenta:
     ctx.rol_registrante = "ambos"
     return ctx
 
-
 def _ctx_externo_completo() -> ContextoVenta:
     """Return a fully-filled context for EXTERNO sale (no canal_origen)."""
     ctx = ContextoVenta()
@@ -67,7 +63,6 @@ def _ctx_externo_completo() -> ContextoVenta:
     ctx.neto = Decimal("150000")
     ctx.rol_registrante = "ambos"
     return ctx
-
 
 class TestTipoReservaDigitalVaACanalOrigen:
     """After Slice 3: DIGITAL is decided at MODALIDAD_VENTA (not TIPO_RESERVA).
@@ -99,7 +94,6 @@ class TestTipoReservaDigitalVaACanalOrigen:
         # After Slice 3: TIPO_RESERVA comes after PUNTO_DE_VENTA, routes to FAMILIA
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "EXTERNO", ctx)
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
-
 
 class TestCanalOrigenHandler:
     def test_canal_valido_va_a_familia(
@@ -138,7 +132,6 @@ class TestCanalOrigenHandler:
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "Facebook", ctx)
         assert salida.nuevo_estado == EstadoFSM.CONFIRMACION
 
-
 class TestCanalOrigenEnResumen:
     def test_confirmacion_muestra_canal_para_digital(
         self, fsm: FSMTiquetera
@@ -169,7 +162,6 @@ class TestCanalOrigenEnResumen:
         assert isinstance(result, str)
         assert "Canal: None" not in result
 
-
 class TestEditorSelectorCanalOrigen:
     def test_editar_selector_muestra_canal_para_digital(
         self, fsm: FSMTiquetera
@@ -196,7 +188,6 @@ class TestEditorSelectorCanalOrigen:
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Canal de origen", ctx)
         assert salida.nuevo_estado == EstadoFSM.EDITAR_SELECTOR
 
-
 class TestEditarTipoLimpiaCanal:
     def test_editar_tipo_digital_a_interno_limpia_canal(
         self, fsm: FSMTiquetera
@@ -205,7 +196,6 @@ class TestEditarTipoLimpiaCanal:
         ctx.modo_edicion = True
         salida = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ctx)
         assert salida.contexto.canal_origen is None
-
 
 class TestFotoModoDigitalConCanal:
     def test_foto_modo_digital_flujo_completo_canal_a_participante_rol(
@@ -223,7 +213,6 @@ class TestFotoModoDigitalConCanal:
         assert salida.contexto.canal_origen == "Instagram"
         assert salida.contexto.foto_modo is False
         assert salida.nuevo_estado == EstadoFSM.METODO_PAGO
-
 
 class TestValidacionConfirmacionCanal:
     def test_validar_confirmacion_exige_canal_para_digital(

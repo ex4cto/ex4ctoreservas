@@ -18,7 +18,6 @@ def _build_app() -> Application:  # type: ignore[type-arg]
         mock_settings.return_value = settings
         return crear_aplicacion(token)
 
-
 class TestBotToursWiring:
     def test_editar_tour_conv_handler_registered(self) -> None:
         """editar_tour_conv_handler must be registered in the application."""

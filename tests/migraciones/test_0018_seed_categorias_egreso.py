@@ -41,7 +41,6 @@ _EXPECTED_NOMBRES = {
     "otro",
 }
 
-
 def _load_migration() -> ModuleType:
     """Dynamically load the 0018 migration module."""
     if not _MIGRATION_FILE.exists():
@@ -59,7 +58,6 @@ def _load_migration() -> ModuleType:
     spec.loader.exec_module(mod)
     return mod
 
-
 def _build_categorias_egreso(engine: Engine) -> None:
     """Create categorias_egreso table matching the schema from ff243581ce06."""
     with engine.begin() as conn:
@@ -74,18 +72,15 @@ def _build_categorias_egreso(engine: Engine) -> None:
             """)
         )
 
-
 def _nombres(engine: Engine) -> set[str]:
     with engine.connect() as conn:
         rows = conn.execute(text("SELECT nombre FROM categorias_egreso")).fetchall()
     return {row[0] for row in rows}
 
-
 def _count(engine: Engine) -> int:
     with engine.connect() as conn:
         row = conn.execute(text("SELECT COUNT(*) FROM categorias_egreso")).fetchone()
     return int(row[0]) if row else 0
-
 
 class TestMigration0018Upgrade:
     def test_upgrade_inserta_las_categorias_esperadas(self, sqlite_engine: Engine) -> None:
@@ -132,7 +127,6 @@ class TestMigration0018Upgrade:
         assert "transporte" in _nombres(sqlite_engine)
         assert _count(sqlite_engine) == len(_EXPECTED_NOMBRES) + 1
 
-
 class TestMigration0018Downgrade:
     def test_downgrade_elimina_las_sembradas(self, sqlite_engine: Engine) -> None:
         _build_categorias_egreso(sqlite_engine)
@@ -143,7 +137,6 @@ class TestMigration0018Downgrade:
 
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert _nombres(sqlite_engine).isdisjoint(_EXPECTED_NOMBRES)
-
 
 class TestMigration0018Chain:
     def test_revision_identifica_la_migracion(self) -> None:

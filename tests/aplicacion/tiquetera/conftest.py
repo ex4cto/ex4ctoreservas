@@ -15,7 +15,6 @@ CatalogoTuple = tuple[int, str, Decimal | None, Decimal | None, str, list[str], 
 
 _DEFAULT_ENTRY: CatalogoTuple = (1, "Tour", Decimal("50"), Decimal("25"), "cat", [], {})
 
-
 def catalogo_fsm(*overrides: dict[str, object]) -> list[CatalogoTuple]:
     """Build a list of 7-tuple catalog entries for FSMTiquetera tests.
 
@@ -56,7 +55,6 @@ def catalogo_fsm(*overrides: dict[str, object]) -> list[CatalogoTuple]:
         )
         result.append((numero, nombre, neto_a, neto_n, categoria, horarios, netos_por_horario))
     return result
-
 
 @pytest.fixture()
 def sf() -> sessionmaker[Session]:

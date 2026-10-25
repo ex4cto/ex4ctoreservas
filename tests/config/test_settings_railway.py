@@ -29,7 +29,6 @@ class TestRailwayApiToken:
         settings = Settings()
         assert settings.railway_api_token == "tok_abc123"
 
-
 class TestRailwayProjectId:
     def test_default_es_string_vacio(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("RAILWAY_PROJECT_ID", raising=False)
@@ -59,7 +58,6 @@ class TestRailwayProjectId:
         settings = Settings()
         assert settings.railway_project_id == ""
 
-
 class TestRailwayUmbralCosto:
     def test_default_es_20(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("GARAY_RAILWAY_UMBRAL_COSTO", raising=False)
@@ -70,7 +68,6 @@ class TestRailwayUmbralCosto:
         monkeypatch.setenv("GARAY_RAILWAY_UMBRAL_COSTO", "35.0")
         settings = Settings()
         assert settings.railway_umbral_costo == 35.0
-
 
 class TestRailwayPrecios:
     def test_precio_memoria_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -92,7 +89,6 @@ class TestRailwayPrecios:
         monkeypatch.delenv("GARAY_RAILWAY_PRECIO_VOLUMEN_GB_MIN", raising=False)
         settings = Settings()
         assert settings.railway_precio_volumen_gb_min == pytest.approx(0.000003)
-
 
 class TestRailwayPlanFee:
     def test_default_es_5(self, monkeypatch: pytest.MonkeyPatch) -> None:

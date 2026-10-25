@@ -26,7 +26,6 @@ from garay.infraestructura.telegram.handlers_tours import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _servicio(
     nombre: str = "City Tour",
     categoria: str = "PLAYERO",
@@ -45,7 +44,6 @@ def _servicio(
         precio_sugerido_adulto=Decimal("50000"),
     )
 
-
 def _make_update(callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock(id=42, full_name="Test Admin")
@@ -59,7 +57,6 @@ def _make_update(callback_data: str | None = None) -> MagicMock:
         update.callback_query = None
     return update
 
-
 def _mock_notif_svc() -> MagicMock:
     """Build a mock NotificarCambioCatalogoServicio."""
     from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
@@ -67,7 +64,6 @@ def _mock_notif_svc() -> MagicMock:
     svc.registrar_cambio = AsyncMock()
     svc._repo = MagicMock()
     return svc
-
 
 def _make_context_nvt(
     user_data: dict[str, object] | None = None,
@@ -83,7 +79,6 @@ def _make_context_nvt(
         "fsm": fsm,
     }
     return ctx
-
 
 def _make_context_edt(
     servicios: list[Servicio] | None = None,
@@ -108,11 +103,9 @@ def _make_context_edt(
     }
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # T2.23: Trigger tests
 # ---------------------------------------------------------------------------
-
 
 class TestNvtCrearTrigger:
     """After /nuevo_tour create success, application.create_task(registrar_cambio(...)) fires."""
@@ -137,7 +130,6 @@ class TestNvtCrearTrigger:
         await handle_nvt_crear(update, ctx)
 
         ctx.application.create_task.assert_called_once()
-
 
 class TestEdtConfirmaTrigger:
     """After EDF_CONFIRMA success, application.create_task(registrar_cambio(...)) fires."""
@@ -200,7 +192,6 @@ class TestEdtConfirmaTrigger:
         await handle_edt_confirma(update, ctx)
 
         ctx.application.create_task.assert_not_called()
-
 
 class TestEltConfirmaTrigger:
     """After deactivate success, application.create_task(registrar_cambio(...)) fires."""

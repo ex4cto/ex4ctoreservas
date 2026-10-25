@@ -19,7 +19,6 @@ def _make_service(categorias: list[str] | None = None) -> RegistrarEgresoManualS
     categoria_repo.listar_activas.return_value = categorias or ["arriendo", "nomina", "otro"]
     return RegistrarEgresoManualService(egreso_repo=egreso_repo, categoria_repo=categoria_repo)
 
-
 class TestRegistrarEgresoManual:
     def test_registrar_crea_egreso_con_campos_correctos(self) -> None:
         service = _make_service()

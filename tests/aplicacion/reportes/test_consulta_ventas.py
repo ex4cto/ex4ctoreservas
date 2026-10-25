@@ -21,17 +21,14 @@ from garay.dominio.ventas.valor_objetos import Participantes
 _UUID_F = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 _UUID_G = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
-
 def _make_freelancer(fid: uuid.UUID, nombre: str, display: str | None) -> Freelancer:
     return Freelancer(id=fid, nombre=nombre, display=display, activo=True)
-
 
 def _repo_vacio(metodo: str) -> MagicMock:
     """MagicMock repo whose ``metodo`` returns an empty list."""
     repo = MagicMock()
     getattr(repo, metodo).return_value = []
     return repo
-
 
 def _make_venta_con_ids(
     *,
@@ -56,7 +53,6 @@ def _make_venta_con_ids(
         ),
     )
 
-
 def test_ejecutar_resuelve_fks_y_aplana() -> None:
     cliente_id = uuid.uuid4()
     serv_a = uuid.uuid4()
@@ -75,7 +71,7 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
             vendedor_nombre="Carlos",
             cerrador_nombre="Maria",
             punto_de_venta_id=punto_id,
-            referido_nombre="Pedro",
+            referido_alias="Pedro",
         ),
         adultos=2,
         ninos=1,
@@ -180,7 +176,6 @@ def test_ejecutar_resuelve_fks_y_aplana() -> None:
         datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
 
-
 def test_venta_sin_comision_ni_factura_deja_campos_none() -> None:
     venta = Venta(
         id=uuid.uuid4(),
@@ -211,7 +206,6 @@ def test_venta_sin_comision_ni_factura_deja_campos_none() -> None:
     assert fila.factura_numero is None
     assert fila.factura_estado is None
 
-
 def test_cliente_desconocido_usa_placeholder() -> None:
     venta = Venta(
         id=uuid.uuid4(),
@@ -239,7 +233,6 @@ def test_cliente_desconocido_usa_placeholder() -> None:
     assert filas[0].cliente_nombre == "—"
     assert filas[0].servicios == ""
 
-
 def test_sin_ventas_devuelve_vacio() -> None:
     ventas = MagicMock()
     ventas.listar_por_periodo.return_value = []
@@ -256,9 +249,7 @@ def test_sin_ventas_devuelve_vacio() -> None:
 
     assert filas == []
 
-
 # ─── SC-10, SC-11, SC-12, SC-17: display name resolution ─────────────────────
-
 
 def _make_consulta_service(
     lista_ventas: list[Venta],
@@ -277,7 +268,6 @@ def _make_consulta_service(
         comisiones=_repo_vacio("listar_por_venta_ids"),
         facturas=_repo_vacio("listar_por_venta_ids"),
     )
-
 
 class TestConsultaVentasDisplayResolution:
     """SC-10 — id-keyed row resolves display name."""

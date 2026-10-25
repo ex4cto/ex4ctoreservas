@@ -45,7 +45,6 @@ def _venta(
         abono=abono,
     )
 
-
 class TestGanancia:
     def test_ganancia_calculada_correctamente(self) -> None:
         venta = _venta(Dinero(1_000_000), Dinero(900_000))
@@ -59,7 +58,6 @@ class TestGanancia:
         venta = _venta(Dinero("1000.75"), Dinero("900.25"))
         assert venta.ganancia == Dinero("100.50")
 
-
 class TestValidaciones:
     def test_neto_mayor_que_venta_levanta_ganancia_negativa(self) -> None:
         with pytest.raises(GananciaNegativa):
@@ -72,7 +70,6 @@ class TestValidaciones:
     def test_monedas_incompatibles_levanta_error(self) -> None:
         with pytest.raises(MonedaIncompatible):
             _venta(Dinero(1_000_000, "COP"), Dinero(900_000, "USD"))
-
 
 class TestIdentidad:
     def test_dos_ventas_con_mismo_id_son_iguales(self) -> None:
@@ -90,7 +87,6 @@ class TestIdentidad:
     def test_estado_inicial_es_pendiente(self) -> None:
         assert _venta().estado == EstadoVenta.PENDIENTE
 
-
 class TestPax:
     def test_adultos_cero_invalido(self) -> None:
         with pytest.raises(CantidadInvalida):
@@ -104,7 +100,6 @@ class TestPax:
         with pytest.raises(CantidadInvalida):
             _venta(ninos=-1)
 
-
 class TestAbono:
     def test_venta_abono_supera_valor_invalido(self) -> None:
         with pytest.raises(AbonoSuperaValorVenta):
@@ -117,7 +112,6 @@ class TestAbono:
     def test_venta_sin_abono_es_none(self) -> None:
         venta = _venta()
         assert venta.abono is None
-
 
 class TestCambiarFecha:
     """B3: cambiar_fecha mutates fecha (and fechas_por_servicio when 1 entry)."""
@@ -188,7 +182,6 @@ class TestCambiarFecha:
         with pytest.raises(VentaYaAnulada):
             venta.cambiar_fecha(nueva)
 
-
 class TestAnular:
     """B1: soft-delete via Venta.anular()."""
 
@@ -205,7 +198,6 @@ class TestAnular:
         venta.anular()
         with pytest.raises(VentaYaAnulada):
             venta.anular()
-
 
 class TestDigitalConPuntoDeVenta:
     """WU-3: DigitalConPuntoDeVenta domain invariant (REQ-04)."""
@@ -266,7 +258,6 @@ class TestDigitalConPuntoDeVenta:
         )
         assert venta.tipo_cliente == TipoCliente.INTERNO
 
-
 class TestFacturaIdioma:
     """factura_idioma persists the client's chosen invoice language on the sale."""
 
@@ -289,11 +280,9 @@ class TestFacturaIdioma:
         )
         assert venta.factura_idioma == "en"
 
-
 # ---------------------------------------------------------------------------
 # Task-1 RED: MismoCanal and PuntoDeVentaRequerido error classes
 # ---------------------------------------------------------------------------
-
 
 class TestDomainErrorsCanal:
     """editar-canal-venta: new domain error classes must exist and be ErrorDeDominio."""
@@ -322,11 +311,9 @@ class TestDomainErrorsCanal:
         err = PuntoDeVentaRequerido("punto required")
         assert "punto required" in str(err)
 
-
 # ---------------------------------------------------------------------------
 # Task-3 RED: AccionAuditoria.EDITAR_CANAL enum member
 # ---------------------------------------------------------------------------
-
 
 class TestAccionAuditoriaEditarCanal:
     """editar-canal-venta: AccionAuditoria.EDITAR_CANAL must exist."""
@@ -341,11 +328,9 @@ class TestAccionAuditoriaEditarCanal:
 
         assert "EDITAR_CANAL" in [a.value for a in AccionAuditoria]
 
-
 # ---------------------------------------------------------------------------
 # Task-5 RED: Venta.cambiar_tipo_cliente — all 7 branches
 # ---------------------------------------------------------------------------
-
 
 def _venta_externo(punto_id: uuid.UUID | None = None) -> Venta:
     """EXTERNO venta with optional punto_de_venta_id (for INTERNO tests)."""
@@ -359,7 +344,6 @@ def _venta_externo(punto_id: uuid.UUID | None = None) -> Venta:
         fecha=datetime.date(2024, 1, 15),
         participantes=Participantes(punto_de_venta_id=punto_id),
     )
-
 
 def _venta_interno(punto_id: uuid.UUID | None = None) -> Venta:
     """INTERNO venta with a punto_de_venta_id set."""
@@ -375,7 +359,6 @@ def _venta_interno(punto_id: uuid.UUID | None = None) -> Venta:
         participantes=Participantes(punto_de_venta_id=pid),
     )
 
-
 def _venta_digital() -> Venta:
     return Venta(
         id=uuid.uuid4(),
@@ -387,7 +370,6 @@ def _venta_digital() -> Venta:
         fecha=datetime.date(2024, 1, 15),
         participantes=Participantes(punto_de_venta_id=None),
     )
-
 
 class TestCambiarTipoCliente:
     """editar-canal-venta: Venta.cambiar_tipo_cliente — all 7 branches."""
@@ -472,11 +454,9 @@ class TestCambiarTipoCliente:
         # A new Participantes instance must have been created
         assert venta.participantes is not old_participantes
 
-
 # ---------------------------------------------------------------------------
 # Venta.cambiar_participantes
 # ---------------------------------------------------------------------------
-
 
 def _venta_con_participantes(
     vendedor_id: uuid.UUID | None = None,
@@ -500,10 +480,8 @@ def _venta_con_participantes(
         ),
     )
 
-
 class TestVentaCambiarParticipantes:
     def test_cambia_vendedor_correctamente(self) -> None:
-        from garay.dominio.ventas.errores import MismosParticipantes
 
         venta = _venta_con_participantes()
         nuevo_id = uuid.uuid4()
@@ -575,11 +553,9 @@ class TestVentaCambiarParticipantes:
 
         assert venta.participantes is not old
 
-
 # ---------------------------------------------------------------------------
 # TestCambiarMetodoPago
 # ---------------------------------------------------------------------------
-
 
 class TestCambiarMetodoPago:
     def test_success_cambia_metodo_pago(self) -> None:

@@ -15,7 +15,7 @@ class TestParticipantes:
         assert p.vendedor_nombre is None
         assert p.cerrador_nombre is None
         assert p.punto_de_venta_id is None
-        assert p.referido_nombre is None
+        assert p.referido_alias is None
 
     def test_participantes_es_frozen(self) -> None:
         p = Participantes(vendedor_nombre="Ana")
@@ -27,7 +27,6 @@ class TestParticipantes:
         p1 = Participantes(vendedor_nombre="Ana", punto_de_venta_id=uid)
         p2 = Participantes(vendedor_nombre="Ana", punto_de_venta_id=uid)
         assert p1 == p2
-
 
 class TestParticipantesFreelancerIds:
     """Slice B — vendedor_id / cerrador_id nullable UUID fields."""

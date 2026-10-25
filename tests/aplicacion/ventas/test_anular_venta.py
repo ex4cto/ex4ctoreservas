@@ -27,9 +27,7 @@ def _make_venta(anulada: bool = False) -> MagicMock:
     venta.anular.side_effect = _anular
     return venta
 
-
 _SENTINEL: MagicMock = MagicMock()  # module-level singleton avoids B008
-
 
 def _make_repos(venta: MagicMock | None = _SENTINEL) -> tuple[MagicMock, MagicMock]:
     """Build repo mocks. Pass venta=None to simulate 'not found' in the repo."""
@@ -38,7 +36,6 @@ def _make_repos(venta: MagicMock | None = _SENTINEL) -> tuple[MagicMock, MagicMo
     ventas_repo.buscar_por_id.return_value = resolved
     auditoria_repo = MagicMock()
     return ventas_repo, auditoria_repo
-
 
 class TestAnularVentaService:
     def test_success_marca_venta_anulada_y_guarda(self) -> None:

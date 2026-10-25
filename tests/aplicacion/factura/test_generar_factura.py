@@ -19,10 +19,8 @@ _SNAPSHOT = SnapshotReglas(
     tipo_cliente=TipoCliente.EXTERNO,
     porcentaje_vendedor=Decimal("0"),
     porcentaje_cerrador=Decimal("0"),
-    porcentaje_referido_maximo=Decimal("0"),
     porcentaje_capa_punto=Decimal("0"),
 )
-
 
 def _resultado(venta_id: uuid.UUID | None = None) -> ResultadoRegistrarVenta:
     _id = venta_id or uuid.UUID("a3f7b200-0000-0000-0000-000000000000")
@@ -35,9 +33,10 @@ def _resultado(venta_id: uuid.UUID | None = None) -> ResultadoRegistrarVenta:
             referido=_CERO,
             agencia=_CERO,
             snapshot=_SNAPSHOT,
+            neto_vendedor=_CERO,
+            neto_cerrador=_CERO,
         ),
     )
-
 
 def _ctx_completo() -> ContextoVenta:
     ctx = ContextoVenta()
@@ -52,12 +51,10 @@ def _ctx_completo() -> ContextoVenta:
     ctx.neto = Decimal("300000")
     return ctx
 
-
 def _venta_id(resultado: ResultadoRegistrarVenta | None = None) -> uuid.UUID:
     if resultado is not None:
         return resultado.venta_id
     return uuid.UUID("a3f7b200-0000-0000-0000-000000000000")
-
 
 class TestGenerarFacturaIdioma:
     """Invoice renders in Spanish ("es", default) or English ("en")."""
@@ -90,7 +87,6 @@ class TestGenerarFacturaIdioma:
         ctx.factura_idioma = "en"
         html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "$500.000" in html
-
 
 class TestGenerarFacturaHtml:
     def test_generar_devuelve_string_html(self) -> None:
@@ -186,7 +182,6 @@ class TestGenerarFacturaHtml:
         html = servicio.generar(_ctx_completo(), _venta_id(_resultado()))
         assert "nequi" not in html.lower()
 
-
 class TestFacturaFechasPorTour:
     """Per-tour date rendering in the invoice 'Fecha del tour' cell (Slice 3)."""
 
@@ -257,7 +252,6 @@ class TestFacturaFechasPorTour:
         assert "15/08/2026" in html
         assert "00:00" not in html
 
-
 class TestFacturaAsesor:
     """Vendor/closer attribution rows in the service-detail table."""
 
@@ -318,7 +312,6 @@ class TestFacturaAsesor:
         assert "Asesor" in html
         assert html.count("Carlos López") == 1
 
-
 class TestDatosEmpresa:
     """Company contact data (NIT, RNT, address, phone, email) is injectable."""
 
@@ -365,7 +358,6 @@ class TestDatosEmpresa:
         html = GenerarFacturaService().generar(ctx, _venta_id(_resultado()))
         assert "Sales rep" in html
         assert "Closer" in html
-
 
 class TestMediosPago:
     """Payment methods block shows Sharimel primary, Garay secondary."""

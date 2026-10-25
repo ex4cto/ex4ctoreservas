@@ -22,11 +22,9 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real", "Mama Waldi"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 def _ctx_digital_completo_sin_punto(fsm: FSMTiquetera) -> ContextoVenta:
     """DIGITAL context with all required fields except punto_de_venta_nombre."""
@@ -48,7 +46,6 @@ def _ctx_digital_completo_sin_punto(fsm: FSMTiquetera) -> ContextoVenta:
     ctx.rol_registrante = "ambos"
     return ctx
 
-
 class TestCanalOrigenNormalVaAFamilia:
     """Cambio 1: _handle_canal_origen normal path must go to FAMILIA (destination picker)."""
 
@@ -66,7 +63,6 @@ class TestCanalOrigenNormalVaAFamilia:
         ctx.tipo_cliente = TipoCliente.DIGITAL
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "Instagram", ctx)
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
-
 
 class TestCanalOrigenFotoModoVaAMetodoPago:
     """Cambio 2: when foto_modo=True, _handle_canal_origen must go to METODO_PAGO."""
@@ -92,7 +88,6 @@ class TestCanalOrigenFotoModoVaAMetodoPago:
         salida = fsm.procesar(EstadoFSM.CANAL_ORIGEN, "Facebook", ctx)
         assert salida.contexto.foto_modo is False
 
-
 class TestValidacionDigitalSinPuntoNoLoExige:
     """Cambio 3: _validar_datos_confirmacion must NOT require punto_de_venta for DIGITAL."""
 
@@ -108,7 +103,6 @@ class TestValidacionDigitalSinPuntoNoLoExige:
         faltantes = fsm._validar_datos_confirmacion(ctx)
         assert "Punto de venta" in faltantes
 
-
 class TestOpcionesEditablesExcluyePuntoParaDigital:
     """Cambio 4: _opciones_editables must exclude 'Punto de venta' for DIGITAL clients."""
 
@@ -123,7 +117,6 @@ class TestOpcionesEditablesExcluyePuntoParaDigital:
         ctx.tipo_cliente = TipoCliente.EXTERNO
         opciones = fsm._opciones_editables(ctx)
         assert "Punto de venta" in opciones
-
 
 class TestGuardEditarSelectorPuntoVentaEnDigital:
     """Cambio 5: editing 'Punto de venta' for DIGITAL must bounce back to EDITAR_SELECTOR."""
@@ -141,7 +134,6 @@ class TestGuardEditarSelectorPuntoVentaEnDigital:
         ctx = _ctx_digital_completo_sin_punto(fsm)
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Punto de venta", ctx)
         assert salida.contexto.modo_edicion is False
-
 
 class TestTipoReservaRoutingInteligente:
     """After Slice 3: smart modal routing moved from TIPO_RESERVA to MODALIDAD_VENTA.
@@ -172,7 +164,6 @@ class TestTipoReservaRoutingInteligente:
         ctx.modo_edicion = True
         salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "Digital", ctx)
         assert salida.nuevo_estado == EstadoFSM.CANAL_ORIGEN
-
 
 class TestConstruirResumenDigitalMuestraGuion:
     """Cambio 7: _construir_resumen must show '—' for DIGITAL when punto_de_venta is None."""
