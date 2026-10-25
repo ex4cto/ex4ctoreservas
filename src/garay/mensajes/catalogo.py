@@ -1160,6 +1160,38 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "Por: {actor}"
         )
     },
+    "gestion_ventas.campo_referido": {Idioma.ES: "🤝 Referido"},
+    "gestion_ventas.referido_vacio": {
+        Idioma.ES: (
+            "⚠️ El alias del referido no puede estar vacío. "
+            "Envía el nombre del referido o pulsa el botón para cancelar."
+        )
+    },
+    "gestion_ventas.prompt_referido_sin_actual": {
+        Idioma.ES: (
+            "🤝 <b>Editar referido</b>\n"
+            "Esta venta no tiene referido registrado.\n\n"
+            "Escribe el alias del referido (p.ej. \"taxi\", \"moto\"):"
+        )
+    },
+    "gestion_ventas.prompt_referido_con_actual": {
+        Idioma.ES: (
+            "🤝 <b>Editar referido</b>\n"
+            "Referido actual: <b>{alias}</b>\n\n"
+            "Escribe el nuevo alias o pulsa el botón para quitar el referido:"
+        )
+    },
+    "gestion_ventas.confirmar_editar_referido": {
+        Idioma.ES: (
+            "❓ <b>Confirmar cambio de referido</b>\n"
+            "Referido anterior: <b>{anterior}</b>\n"
+            "Referido nuevo: <b>{nuevo}</b>\n"
+            "Motivo: {motivo}"
+        )
+    },
+    "gestion_ventas.referido_editado": {Idioma.ES: "✅ Referido actualizado correctamente."},
+    "gestion_ventas.referido_igual": {Idioma.ES: "⚠️ El referido ya tiene ese valor."},
+    "gestion_ventas.sin_referido": {Idioma.ES: "Sin referido"},
     # --- Tours ---
     "tour_selecciona_familia": {Idioma.ES: "Selecciona la familia de tours:"},
     "tour_selecciona_tour": {Idioma.ES: "Selecciona el tour:"},
@@ -1625,6 +1657,13 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: "🗑️ ¿Anular este pago?\n\n{monto} — {nombre}\n\nEsta acción no se puede deshacer."
     },
     "liquidaciones.anular_ok": {Idioma.ES: "✅ Pago anulado correctamente."},
+    "liquidaciones.resumen_referido": {
+        Idioma.ES: (
+            "🤝 <b>Referido — {alias}</b>\n"
+            "Período: {desde} – {hasta}\n"
+            "Total: <b>{total}</b>"
+        )
+    },
     # --- Auditoría de entidades (dashboard) ---
     "auditoria.titulo": {Idioma.ES: "Auditoría de entidades"},
     "auditoria.filtro_tipo": {Idioma.ES: "Tipo de entidad"},

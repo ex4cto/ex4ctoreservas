@@ -148,6 +148,20 @@ def _construir_mensaje_privado(
     if desglose.punto_de_venta.monto > 0:
         pct_punto = f"{snap.porcentaje_capa_punto.normalize():f}"
         lineas.append(f"🏪 Punto de venta ({pct_punto}%): {fmt_cop(desglose.punto_de_venta)}")
+    if desglose.referido.monto > 0 and cmd.participantes.referido_alias is not None:
+        referido_alias = cmd.participantes.referido_alias
+        # Show post-referido neto for vendedor and cerrador (only if they have a role)
+        if desglose.vendedor.monto > 0 and desglose.neto_vendedor != desglose.vendedor:
+            lineas.append(
+                f"   → Neto vendedor: {fmt_cop(desglose.neto_vendedor)}"
+            )
+        if desglose.cerrador.monto > 0 and desglose.neto_cerrador != desglose.cerrador:
+            lineas.append(
+                f"   → Neto cerrador: {fmt_cop(desglose.neto_cerrador)}"
+            )
+        lineas.append(
+            f"🤝 Referido — {_esc(referido_alias)}: {fmt_cop(desglose.referido)}"
+        )
 
     lineas.append(f"🏢 Agencia neta: {fmt_cop(agencia_neta)}")
 
