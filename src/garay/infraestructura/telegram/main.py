@@ -24,7 +24,10 @@ from garay.aplicacion.infraestructura_monitor.cuota_resend import MonitorCuotaRe
 from garay.aplicacion.infraestructura_monitor.servicio import (
     MonitorServiciosInfraestructuraService,
 )
-from garay.aplicacion.liquidaciones.servicio import LiquidarFreelancerService
+from garay.aplicacion.liquidaciones.servicio import (
+    LiquidarFreelancerService,
+    LiquidarReferidoService,
+)
 from garay.aplicacion.propuestas.contratos import (
     GenerarContratoAudiovisualService,
     GenerarContratoSoftwareService,
@@ -94,6 +97,9 @@ from garay.infraestructura.persistencia.repositorios.gastos_recurrentes import (
 from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngresoRepository
 from garay.infraestructura.persistencia.repositorios.obligaciones_hotel import (
     SQLAObligacionHotelRepository,
+)
+from garay.infraestructura.persistencia.repositorios.pago_referido import (
+    SQLAPagoReferidoRepository,
 )
 from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
@@ -279,6 +285,12 @@ def main() -> None:
         pagos_socio=pago_socio_repo,
     )
     pago_freelancer_repo = PagoFreelancerSQLAlchemy(sf)
+    pago_referido_repo = SQLAPagoReferidoRepository(sf)
+    liquidar_referido_service = LiquidarReferidoService(
+        ventas_repo=ventas_repo,
+        comisiones_repo=comisiones_repo,
+        pago_referido_repo=pago_referido_repo,
+    )
     liquidar_service = LiquidarFreelancerService(
         freelancer_repo=freelancer_repo,
         ventas_repo=ventas_repo,
@@ -538,6 +550,7 @@ def main() -> None:
             "movimientos_service": movimientos_service,
             "split_socios_service": split_socios_service,
             "liquidar_service": liquidar_service,
+            "liquidar_referido_service": liquidar_referido_service,
             "pago_freelancer_repo": pago_freelancer_repo,
             "pagos_socio_repo": pago_socio_repo,
             "socios_config_repo": socios_config_repo,
