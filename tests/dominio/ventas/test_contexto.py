@@ -48,7 +48,6 @@ class TestContextoVentaFreelancerIds:
         assert ctx.vendedor_id == v_id
         assert ctx.cerrador_id == c_id
 
-
 class TestContextoVentaFacturaIdioma:
     """factura_idioma — ES/EN selector captured after the client email step."""
 

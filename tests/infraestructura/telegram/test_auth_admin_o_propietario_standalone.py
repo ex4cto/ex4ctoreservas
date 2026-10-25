@@ -22,7 +22,6 @@ def _make_update(user_id: int | None = 123) -> MagicMock:
     update.effective_message = AsyncMock()
     return update
 
-
 def _make_context(freelancer: MagicMock | None = None) -> MagicMock:
     ctx = MagicMock()
     repo = MagicMock()
@@ -30,14 +29,11 @@ def _make_context(freelancer: MagicMock | None = None) -> MagicMock:
     ctx.bot_data = {"freelancer_repo": repo}
     return ctx
 
-
 async def _dummy(update: object, context: object) -> int:
     return 42
 
-
 def _settings(*, dev: str = "", propietario: str = "") -> MagicMock:
     return MagicMock(dev_telegram_ids=dev, propietario_telegram_ids=propietario)
-
 
 class TestRequiereAdminOPropietarioStandalone:
     @pytest.mark.asyncio

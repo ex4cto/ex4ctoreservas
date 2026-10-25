@@ -33,7 +33,6 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_venta(
     venta_id: uuid.UUID | None = None,
     cliente_id: uuid.UUID | None = None,
@@ -64,7 +63,6 @@ def _make_venta(
     v.participantes.punto_de_venta_id = None
     return v
 
-
 def _make_update(
     user_id: int = 123,
     callback_data: str | None = None,
@@ -87,13 +85,11 @@ def _make_update(
         update.message = None
     return update
 
-
 def _make_admin_freelancer() -> MagicMock:
     f = MagicMock()
     f.es_admin = True
     f.nombre = "Admin"
     return f
-
 
 def _make_context(
     ventas: list[MagicMock] | None = None,
@@ -155,11 +151,9 @@ def _make_context(
     }
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # cmd_gestionar_ventas
 # ---------------------------------------------------------------------------
-
 
 class TestCmdGestionarVentas:
     @pytest.mark.asyncio
@@ -217,23 +211,19 @@ class TestCmdGestionarVentas:
         ctx.bot_data["venta_repo"].listar_para_gestion.assert_not_called()
         ctx.bot_data["venta_repo"].listar_por_periodo.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Button label — vendedor / cerrador / fecha / monto
 # ---------------------------------------------------------------------------
-
 
 def _extract_buttons(update: MagicMock) -> list:  # type: ignore[type-arg]
     """Flatten the InlineKeyboardMarkup rows from the reply_text call."""
     markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
 
-
 def _extract_buttons_from_edit(update: MagicMock) -> list:  # type: ignore[type-arg]
     """Flatten the InlineKeyboardMarkup rows from the edit_message_text call."""
     markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
-
 
 class TestCmdGestionarVentasBotonLabel:
     @pytest.mark.asyncio
@@ -276,11 +266,9 @@ class TestCmdGestionarVentasBotonLabel:
         (button,) = markup.inline_keyboard[0]
         assert "—" in button.text
 
-
 # ---------------------------------------------------------------------------
 # Item D: list by REGISTRATION recency (últimos 2 días), not tour date
 # ---------------------------------------------------------------------------
-
 
 class TestCmdGestionarVentasPorRegistro:
     @pytest.mark.asyncio
@@ -317,11 +305,9 @@ class TestCmdGestionarVentasPorRegistro:
         assert "Primera" in buttons[0].text
         assert "Segunda" in buttons[1].text
 
-
 # ---------------------------------------------------------------------------
 # handle_gv_seleccionar
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvSeleccionar:
     @pytest.mark.asyncio
@@ -347,11 +333,9 @@ class TestHandleGvSeleccionar:
 
         assert result == ConversationHandler.END
 
-
 # ---------------------------------------------------------------------------
 # #4: seleccionar edits the list message (hides list) + Atrás button
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvSeleccionarHidesList:
     @pytest.mark.asyncio
@@ -379,7 +363,6 @@ class TestHandleGvSeleccionarHidesList:
         callbacks = [b.callback_data for b in _extract_buttons_from_edit(update)]
         assert "gv_atras" in callbacks
 
-
 class TestGvDetallePatternCoversKeyboard:
     def test_todos_los_callbacks_del_detalle_matchean_el_patron(self) -> None:
         """Every detail-keyboard callback_data must be routed by GV_DETALLE_PATTERN.
@@ -400,7 +383,6 @@ class TestGvDetallePatternCoversKeyboard:
         assert "gv_atras" in callbacks  # the button that regressed
         for cb in callbacks:
             assert re.match(GV_DETALLE_PATTERN, str(cb)), f"{cb} no matchea el patrón"
-
 
 class TestHandleGvAtras:
     @pytest.mark.asyncio
@@ -433,11 +415,9 @@ class TestHandleGvAtras:
         assert "gv_atras" in callbacks
         assert "gv_cancelar" in callbacks
 
-
 # ---------------------------------------------------------------------------
 # handle_gv_detalle
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvDetalle:
     @pytest.mark.asyncio
@@ -470,11 +450,9 @@ class TestHandleGvDetalle:
 
         assert result == ConversationHandler.END
 
-
 # ---------------------------------------------------------------------------
 # handle_gv_motivo
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvMotivo:
     @pytest.mark.asyncio
@@ -532,11 +510,9 @@ class TestHandleGvMotivo:
             parse_mode="HTML",
         )
 
-
 # ---------------------------------------------------------------------------
 # handle_gv_confirmar
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvConfirmar:
     @pytest.mark.asyncio
@@ -645,7 +621,6 @@ class TestHandleGvConfirmar:
         assert result == ConversationHandler.END
         update.effective_message.reply_text.assert_called()
 
-
 class TestAnularDmSocios:
     """K — cancellation must DM socios and admins, not only the group."""
 
@@ -699,7 +674,6 @@ class TestAnularDmSocios:
         ]
         assert None not in chat_ids
 
-
 class TestCmdGestionarVentasClearsStaleKeys:
     @pytest.mark.asyncio
     async def test_entry_clears_stale_gv_keys(self) -> None:
@@ -721,11 +695,9 @@ class TestCmdGestionarVentasClearsStaleKeys:
         assert "gv_venta_id" not in ctx.user_data
         assert "gv_motivo" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # B3: handle_gv_detalle — gv_editar branch
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvDetalleEditar:
     @pytest.mark.asyncio
@@ -760,11 +732,9 @@ class TestHandleGvDetalleEditar:
         assert result == GV_MOTIVO
         assert ctx.user_data.get("gv_accion") == "anular"
 
-
 # ---------------------------------------------------------------------------
 # B3: handle_gv_edit_fecha
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditFecha:
     @pytest.mark.asyncio
@@ -841,11 +811,9 @@ class TestHandleGvEditFecha:
             parse_mode="HTML",
         )
 
-
 # ---------------------------------------------------------------------------
 # B3: handle_gv_confirmar — editar branch
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvConfirmarEditar:
     @pytest.mark.asyncio
@@ -951,11 +919,9 @@ class TestHandleGvConfirmarEditar:
         assert result == ConversationHandler.END
         ctx.bot_data["anular_venta_service"].ejecutar.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # B3: _limpiar clears gv_accion and gv_nueva_fecha
 # ---------------------------------------------------------------------------
-
 
 class TestLimpiarClearsB3Keys:
     @pytest.mark.asyncio
@@ -973,11 +939,9 @@ class TestLimpiarClearsB3Keys:
         assert "gv_accion" not in ctx.user_data
         assert "gv_nueva_fecha" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # C2: handle_gv_seleccionar — stash cliente/tour names
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvSeleccionarStashNames:
     @pytest.mark.asyncio
@@ -1019,11 +983,9 @@ class TestHandleGvSeleccionarStashNames:
         assert "gv_cliente_nombre" not in ctx.user_data
         assert "gv_tours" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # C2: group notification on anular
 # ---------------------------------------------------------------------------
-
 
 class TestNotificarGrupoAnular:
     @pytest.mark.asyncio
@@ -1154,11 +1116,9 @@ class TestNotificarGrupoAnular:
         # First reply is the confirmation; cerrar_flujo then adds the submenu.
         assert update.effective_message.reply_text.call_args_list[0].args[0] == expected
 
-
 # ---------------------------------------------------------------------------
 # C2: group notification on editar fecha
 # ---------------------------------------------------------------------------
-
 
 class TestNotificarGrupoEditar:
     @pytest.mark.asyncio
@@ -1284,11 +1244,9 @@ class TestNotificarGrupoEditar:
         # First reply is the confirmation; cerrar_flujo then adds the submenu.
         assert update.effective_message.reply_text.call_args_list[0].args[0] == expected
 
-
 # ---------------------------------------------------------------------------
 # C3: regenerar factura after editar fecha
 # ---------------------------------------------------------------------------
-
 
 def _editar_ctx(venta_id: uuid.UUID | None = None) -> MagicMock:
     """Return a context pre-wired for a successful editar flow including C3 keys."""
@@ -1306,7 +1264,6 @@ def _editar_ctx(venta_id: uuid.UUID | None = None) -> MagicMock:
     ctx.user_data["gv_cliente_nombre"] = "Juan Perez"
     ctx.user_data["gv_tours"] = "Tour Isla"
     return ctx
-
 
 class TestRegenerarFacturaTrasEditar:
     @pytest.mark.asyncio
@@ -1415,11 +1372,9 @@ class TestRegenerarFacturaTrasEditar:
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.editada") in calls
 
-
 # ---------------------------------------------------------------------------
 # Slice 3: field submenu + client-field edit flow
 # ---------------------------------------------------------------------------
-
 
 class TestGvEditCampoPatternCoversKeyboard:
     def test_todos_los_callbacks_del_submenu_matchean_el_patron(self) -> None:
@@ -1436,7 +1391,6 @@ class TestGvEditCampoPatternCoversKeyboard:
         assert "gv_volver_detalle" in callbacks
         for cb in callbacks:
             assert re.match(GV_EDIT_CAMPO_PATTERN, str(cb)), f"{cb} no matchea"
-
 
 class TestHandleGvEditCampo:
     @pytest.mark.asyncio
@@ -1505,7 +1459,6 @@ class TestHandleGvEditCampo:
 
         assert result == GV_DETALLE
 
-
 class TestHandleGvEditValor:
     @pytest.mark.asyncio
     async def test_valor_vacio_stays(self) -> None:
@@ -1526,7 +1479,6 @@ class TestHandleGvEditValor:
         assert result == GV_MOTIVO
         assert ctx.user_data.get("gv_nuevo_valor") == "3009998877"
 
-
 class TestGvMotivoConfirmEditarCliente:
     @pytest.mark.asyncio
     async def test_confirmacion_muestra_antes_y_despues(self) -> None:
@@ -1543,7 +1495,6 @@ class TestGvMotivoConfirmEditarCliente:
         confirm_text = update.effective_message.reply_text.call_args.args[0]
         assert "3001112233" in confirm_text  # antes
         assert "3009998877" in confirm_text  # después
-
 
 class TestHandleGvConfirmarEditarCliente:
     @pytest.mark.asyncio
@@ -1643,11 +1594,9 @@ class TestHandleGvConfirmarEditarCliente:
             f"got: {text!r}"
         )
 
-
 # ---------------------------------------------------------------------------
 # Task-15 RED: GV_EDIT_CANAL_TIPO, GV_EDIT_CANAL_PUNTO constants and routing
 # ---------------------------------------------------------------------------
-
 
 class TestEditarCanalConstants:
     """GV_EDIT_CANAL_TIPO = 229 and GV_EDIT_CANAL_PUNTO = 230 must exist."""
@@ -1662,7 +1611,6 @@ class TestEditarCanalConstants:
 
         assert GV_EDIT_CANAL_PUNTO == 230
 
-
 class TestTecladoCamposIncludeCanal:
     """_construir_teclado_campos must include canal button with gv_campo:tipo_cliente."""
 
@@ -1672,7 +1620,6 @@ class TestTecladoCamposIncludeCanal:
         markup = _construir_teclado_campos()
         all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
         assert "gv_campo:tipo_cliente" in all_data
-
 
 class TestRoutingGvCampoTipoCliente:
     """handle_gv_edit_campo routing: gv_campo:tipo_cliente sets gv_accion=editar_canal."""
@@ -1712,11 +1659,9 @@ class TestRoutingGvCampoTipoCliente:
 
         update.callback_query.edit_message_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Task-17 RED: handle_gv_edit_canal_tipo and handle_gv_edit_canal_punto
 # ---------------------------------------------------------------------------
-
 
 def _make_context_canal(
     ventas: list[MagicMock] | None = None,
@@ -1737,7 +1682,6 @@ def _make_context_canal(
     ctx.bot_data["editar_canal_venta_service"] = editar_canal_service
     ctx.bot_data["venta_repo"].buscar_por_id.return_value = _make_venta()
     return ctx
-
 
 class TestHandleGvEditCanalTipo:
     """handle_gv_edit_canal_tipo state handler."""
@@ -1800,7 +1744,6 @@ class TestHandleGvEditCanalTipo:
 
         assert result == GV_MOTIVO
 
-
 class TestHandleGvEditCanalPunto:
     """handle_gv_edit_canal_punto state handler."""
 
@@ -1834,11 +1777,9 @@ class TestHandleGvEditCanalPunto:
 
         update.effective_message.reply_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Task-19 RED: _handle_confirmar_editar_canal dispatch and exception mapping
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvConfirmarEditarCanal:
     """handle_gv_confirmar with gv_accion="editar_canal"."""
@@ -2040,11 +1981,9 @@ class TestHandleGvConfirmarEditarCanal:
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.motivo_vacio") in calls
 
-
 # ---------------------------------------------------------------------------
 # Editar participantes (vendedor/cerrador) — handler tests
 # ---------------------------------------------------------------------------
-
 
 def _make_context_participantes(
     ventas: list[MagicMock] | None = None,
@@ -2066,7 +2005,6 @@ def _make_context_participantes(
     ctx.bot_data["freelancer_repo"] = freelancer_repo
     return ctx
 
-
 class TestEditarParticipantesConstant:
     """GV_EDIT_PARTICIPANTE = 231 must exist."""
 
@@ -2074,7 +2012,6 @@ class TestEditarParticipantesConstant:
         from garay.infraestructura.telegram.handlers_gestion_ventas import GV_EDIT_PARTICIPANTE
 
         assert GV_EDIT_PARTICIPANTE == 231
-
 
 class TestTecladoCamposWithVendedor:
     """_construir_teclado_campos(venta) shows vendedor/cerrador when non-null."""
@@ -2110,7 +2047,6 @@ class TestTecladoCamposWithVendedor:
         all_data = [btn.callback_data for row in markup.inline_keyboard for btn in row]
         assert "gv_campo:vendedor" not in all_data
         assert "gv_campo:cerrador" in all_data
-
 
 class TestRoutingGvCampoVendedor:
     """handle_gv_edit_campo routing: gv_campo:vendedor → GV_EDIT_PARTICIPANTE."""
@@ -2156,7 +2092,6 @@ class TestRoutingGvCampoVendedor:
 
         assert result == GV_EDIT_PARTICIPANTE
         assert ctx.user_data.get("gv_accion") == "editar_cerrador"
-
 
 class TestHandleGvEditParticipante:
     """handle_gv_edit_participante state handler."""
@@ -2229,7 +2164,6 @@ class TestHandleGvEditParticipante:
         result = await handle_gv_edit_participante(update, ctx)
 
         assert result == ConversationHandler.END
-
 
 class TestHandleGvConfirmarEditarParticipante:
     """handle_gv_confirmar with gv_accion="editar_vendedor" / "editar_cerrador"."""
@@ -2391,7 +2325,6 @@ class TestHandleGvConfirmarEditarParticipante:
         only appear in the full _construir_textos_edicion_financiera summary, NOT
         in the short correccion_edicion_participante template.
         """
-        from garay.mensajes.catalogo import obtener_mensaje
 
         stale_venta = _make_venta()
         stale_venta.mensaje_grupo_id = None  # no prior message → straight send
@@ -2435,11 +2368,9 @@ class TestHandleGvConfirmarEditarParticipante:
             "only the short correction note was sent"
         )
 
-
 # ---------------------------------------------------------------------------
 # Feature I: handle_gv_edit_adultos / handle_gv_edit_ninos / confirmar editar_pax
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditAdultos:
     @pytest.mark.asyncio
@@ -2513,7 +2444,6 @@ class TestHandleGvEditAdultos:
         called_text = update.effective_message.reply_text.call_args.args[0]
         assert "2" in called_text  # adultos count reflected in prompt
 
-
 class TestHandleGvEditNinos:
     @pytest.mark.asyncio
     async def test_texto_no_entero_stays_en_estado(self) -> None:
@@ -2572,7 +2502,6 @@ class TestHandleGvEditNinos:
 
         assert result == GV_MOTIVO
         assert ctx.user_data.get("gv_nuevo_ninos") == 2
-
 
 class TestHandleGvConfirmarEditarPax:
     @pytest.mark.asyncio
@@ -2705,12 +2634,10 @@ class TestHandleGvConfirmarEditarPax:
         calls = [c.args[0] for c in update.effective_message.reply_text.call_args_list]
         assert obtener_mensaje("gestion_ventas.error_generico") in calls
 
-
 # ---------------------------------------------------------------------------
 # Fix 2 — _notificar_edicion uses narrow actualizar_mensaje_grupo_id
 # Fix 3 — _anterior_nombre captured BEFORE reload
 # ---------------------------------------------------------------------------
-
 
 class TestNotificarEdicionNarrowUpdate:
     """_notificar_edicion must call actualizar_mensaje_grupo_id, NOT guardar(venta)."""
@@ -2785,7 +2712,6 @@ class TestNotificarEdicionNarrowUpdate:
                 campo_label="Campo",
                 es_financiero=False,
             )
-
 
 class TestAnteriorNombreCapturedBeforeReload:
     """_anterior_nombre must reflect the OLD name (before service.ejecutar runs)."""

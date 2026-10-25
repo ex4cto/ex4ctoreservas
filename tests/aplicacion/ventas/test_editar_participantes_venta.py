@@ -5,23 +5,20 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import uuid
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
 from garay.dominio.ventas.auditoria import AccionAuditoria
 from garay.dominio.ventas.errores import (
-    LimiteEdicionesAlcanzado,
     MotivoRequerido,
     VentaNoEncontrada,
     VentaYaAnulada,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_venta_mock(
     vendedor_id: uuid.UUID | None = None,
@@ -73,7 +70,6 @@ def _make_venta_mock(
     v.cambiar_participantes.side_effect = _cambiar_participantes
     return v
 
-
 def _make_repos(
     venta: MagicMock | None = None,
     auditoria_records: list[MagicMock] | None = None,
@@ -95,12 +91,10 @@ def _make_repos(
 
     return ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -123,7 +117,6 @@ def _make_cmd(
         realizada_por_nombre="Admin",
     )
 
-
 def _make_service(
     ventas_repo: MagicMock,
     auditoria_repo: MagicMock,
@@ -143,17 +136,14 @@ def _make_service(
         motor=motor or _make_motor(),
     )
 
-
 def _rec(accion: AccionAuditoria) -> MagicMock:
     r = MagicMock()
     r.accion = accion
     return r
 
-
 # ---------------------------------------------------------------------------
 # EditarParticipantesVentaComando shape
 # ---------------------------------------------------------------------------
-
 
 class TestEditarParticipantesVentaComando:
     def test_comando_is_importable(self) -> None:
@@ -192,11 +182,9 @@ class TestEditarParticipantesVentaComando:
         with pytest.raises((dataclasses.FrozenInstanceError, TypeError, AttributeError)):
             cmd.motivo = "changed"  # type: ignore[misc]
 
-
 # ---------------------------------------------------------------------------
 # EDITAR_PARTICIPANTES in ACCIONES_EDICION
 # ---------------------------------------------------------------------------
-
 
 class TestAccionesEdicionIncludeEditarParticipantes:
     def test_editar_participantes_not_in_acciones_financieras(self) -> None:
@@ -210,11 +198,9 @@ class TestAccionesEdicionIncludeEditarParticipantes:
 
         assert AccionAuditoria.EDITAR_PARTICIPANTES not in ACCIONES_FINANCIERAS
 
-
 # ---------------------------------------------------------------------------
 # EditarParticipantesVentaService — all scenarios
 # ---------------------------------------------------------------------------
-
 
 class TestEditarParticipantesVentaService:
     def test_motivo_vacio_raises_motivo_requerido(self) -> None:

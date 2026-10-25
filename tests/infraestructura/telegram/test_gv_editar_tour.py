@@ -18,7 +18,6 @@ from garay.dominio.comun.dinero import Dinero
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_servicio(
     servicio_id: uuid.UUID | None = None,
     nombre: str = "Tour Isla",
@@ -36,7 +35,6 @@ def _make_servicio(
     s.precio_neto_nino = None
     s.neto_para_horario.return_value = precio_neto_adulto
     return s
-
 
 def _make_venta(
     servicio_id: uuid.UUID | None = None,
@@ -76,7 +74,6 @@ def _make_venta(
     v.participantes.punto_de_venta_id = None
     return v
 
-
 def _make_update(callback_data: str | None = None, text: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -96,7 +93,6 @@ def _make_update(callback_data: str | None = None, text: str | None = None) -> M
         update.callback_query = None
         update.message = None
     return update
-
 
 def _make_context(
     venta: MagicMock | None = None,
@@ -143,11 +139,9 @@ def _make_context(
     }
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.3: Tour button appears in _construir_teclado_campos
 # ---------------------------------------------------------------------------
-
 
 class TestCampoTourButton:
     def test_campo_tour_button_present_when_admin(self) -> None:
@@ -182,11 +176,9 @@ class TestCampoTourButton:
         ]
         assert "gv_campo:tour" not in callback_datas
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.5: handle_gv_iniciar_edicion_tour — multiples guard
 # ---------------------------------------------------------------------------
-
 
 class TestIniciarEdicionTour:
     @pytest.mark.asyncio
@@ -231,11 +223,9 @@ class TestIniciarEdicionTour:
         # familia_tour data stored
         assert "gv_familias_tour" in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.6: handle_gv_edit_familia — shows tours in a family
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditFamilia:
     @pytest.mark.asyncio
@@ -259,11 +249,9 @@ class TestHandleGvEditFamilia:
         # family was stored
         assert ctx.user_data.get("gv_familia_seleccionada") == "Islas"
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.7: handle_gv_edit_servicio — same tour guard
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditServicio:
     @pytest.mark.asyncio
@@ -355,11 +343,9 @@ class TestHandleGvEditServicio:
         assert ctx.user_data.get("gv_nuevo_servicio_nombre") == "Tour Playas"
         assert ctx.user_data.get("gv_nuevo_neto") == neto_calculado
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.8: handle_gv_edit_tour_valor — valor_venta change paths
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditTourValor:
     @pytest.mark.asyncio
@@ -431,11 +417,9 @@ class TestHandleGvEditTourValor:
         assert stored is not None
         assert stored.monto == Decimal("750000")
 
-
 # ---------------------------------------------------------------------------
 # FASE 5.10: _handle_confirmar_editar_servicio — calls service correctly
 # ---------------------------------------------------------------------------
-
 
 class TestHandleConfirmarEditarServicio:
     @pytest.mark.asyncio
@@ -519,11 +503,9 @@ class TestHandleConfirmarEditarServicio:
         # The message key is "gestion_ventas.limite_ediciones" → contains "ediciones"
         assert "ediciones" in first_call_text.lower() or "máximo" in first_call_text.lower()
 
-
 # ---------------------------------------------------------------------------
 # FASE 6: Wiring tests — new states registered in ConversationHandler
 # ---------------------------------------------------------------------------
-
 
 def _build_gv_handler() -> ConversationHandler:  # type: ignore[type-arg]
     """Build the gestionar_ventas ConversationHandler from crear_aplicacion."""
@@ -543,7 +525,6 @@ def _build_gv_handler() -> ConversationHandler:  # type: ignore[type-arg]
             if isinstance(handler, ConversationHandler) and GV_EDIT_NETO in handler.states:
                 return handler
     raise AssertionError("gestionar_ventas ConversationHandler not found")
-
 
 class TestGvEditTourWiring:
     def test_gv_edit_familia_state_registered(self) -> None:
@@ -590,11 +571,9 @@ class TestGvEditTourWiring:
         assert any(isinstance(h, CallbackQueryHandler) for h in handlers)
         assert any(isinstance(h, MessageHandler) for h in handlers)
 
-
 # ---------------------------------------------------------------------------
 # Bug I — handle_gv_edit_familia: tours ordenados por numero (igual que FSM)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleGvEditFamiliaTourOrder:
     """Tours dentro de una familia deben aparecer en orden ascendente de numero."""

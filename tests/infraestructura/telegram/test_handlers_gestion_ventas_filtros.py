@@ -27,7 +27,6 @@ from garay.infraestructura.telegram.handlers_gestion_ventas import (
 # Helpers (mirror the pattern from test_handlers_gestion_ventas.py)
 # ---------------------------------------------------------------------------
 
-
 def _make_venta(
     venta_id: uuid.UUID | None = None,
     registrado_en: datetime.datetime | None = None,
@@ -45,7 +44,6 @@ def _make_venta(
     v.participantes.vendedor_nombre = "Ana"
     v.participantes.cerrador_nombre = "Luis"
     return v
-
 
 def _make_update(
     callback_data: str | None = None,
@@ -68,7 +66,6 @@ def _make_update(
         update.callback_query = None
         update.message = None
     return update
-
 
 def _make_context(
     ventas: list[MagicMock] | None = None,
@@ -99,23 +96,19 @@ def _make_context(
     }
     return ctx
 
-
 def _extract_buttons_from_reply(update: MagicMock) -> list[Any]:
     """Flatten InlineKeyboardMarkup from reply_text call."""
     markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
-
 
 def _extract_buttons_from_edit(update: MagicMock) -> list[Any]:
     """Flatten InlineKeyboardMarkup from edit_message_text call."""
     markup = update.callback_query.edit_message_text.call_args.kwargs["reply_markup"]
     return [btn for row in markup.inline_keyboard for btn in row]
 
-
 # ---------------------------------------------------------------------------
 # Test 1: entry shows filter screen (GV_FILTRO)
 # ---------------------------------------------------------------------------
-
 
 class TestEntryMuestraFiltros:
     @pytest.mark.asyncio
@@ -171,11 +164,9 @@ class TestEntryMuestraFiltros:
         assert "gv_desde" not in ctx.user_data
         assert "gv_hasta" not in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # Test 2: gv_f_7d loads ventas list
 # ---------------------------------------------------------------------------
-
 
 class TestFiltro7Dias:
     @pytest.mark.asyncio
@@ -217,11 +208,9 @@ class TestFiltro7Dias:
         assert "gv_desde" in ctx.user_data
         assert "gv_hasta" in ctx.user_data
 
-
 # ---------------------------------------------------------------------------
 # Test 3: gv_f_mes uses first day of current month
 # ---------------------------------------------------------------------------
-
 
 class TestFiltroMesActual:
     @pytest.mark.asyncio
@@ -251,11 +240,9 @@ class TestFiltroMesActual:
 
         assert result == GV_SELECCIONAR
 
-
 # ---------------------------------------------------------------------------
 # Test 4: gv_f_rango asks for text input
 # ---------------------------------------------------------------------------
-
 
 class TestFiltroRangoPideTexto:
     @pytest.mark.asyncio
@@ -279,11 +266,9 @@ class TestFiltroRangoPideTexto:
 
         ctx.bot_data["venta_repo"].listar_para_gestion.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Test 5: GV_RANGO_INPUT — invalid text stays in state
 # ---------------------------------------------------------------------------
-
 
 class TestRangoInputInvalido:
     @pytest.mark.asyncio
@@ -316,11 +301,9 @@ class TestRangoInputInvalido:
 
         update.effective_message.reply_text.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Test 6: GV_RANGO_INPUT — valid text parses and loads list
 # ---------------------------------------------------------------------------
-
 
 class TestRangoInputValido:
     @pytest.mark.asyncio
@@ -373,11 +356,9 @@ class TestRangoInputValido:
         assert f"gv_sel:{dentro.id}" in callbacks
         assert f"gv_sel:{fuera.id}" not in callbacks
 
-
 # ---------------------------------------------------------------------------
 # Test 7: venta list markup includes gv_atras button
 # ---------------------------------------------------------------------------
-
 
 class TestListaTieneBotonAtras:
     @pytest.mark.asyncio
@@ -417,11 +398,9 @@ class TestListaTieneBotonAtras:
         callbacks = [b.callback_data for row in markup.inline_keyboard for b in row]
         assert "gv_atras" in callbacks
 
-
 # ---------------------------------------------------------------------------
 # Test 8: gv_atras from GV_SELECCIONAR returns GV_FILTRO
 # ---------------------------------------------------------------------------
-
 
 class TestAtrasDesdeListaVuelveAFiltros:
     @pytest.mark.asyncio
@@ -450,11 +429,9 @@ class TestAtrasDesdeListaVuelveAFiltros:
         assert "gv_f_mes_ant" in callbacks
         assert "gv_f_rango" in callbacks
 
-
 # ---------------------------------------------------------------------------
 # Misc: mes anterior
 # ---------------------------------------------------------------------------
-
 
 class TestFiltroMesAnterior:
     @pytest.mark.asyncio
@@ -495,11 +472,9 @@ class TestFiltroMesAnterior:
         stored_hasta = datetime.date.fromisoformat(ctx.user_data["gv_hasta"])
         assert stored_hasta == expected_hasta
 
-
 # ---------------------------------------------------------------------------
 # Client-side hasta filter for gv_f_7d
 # ---------------------------------------------------------------------------
-
 
 class TestClienteSideHastaFilter:
     @pytest.mark.asyncio

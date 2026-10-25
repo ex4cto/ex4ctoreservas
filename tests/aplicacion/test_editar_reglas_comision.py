@@ -20,11 +20,9 @@ def _regla(**kwargs: object) -> ReglasComision:
         "tipo_cliente": TipoCliente.INTERNO,
         "porcentaje_vendedor": Decimal("20"),
         "porcentaje_cerrador": Decimal("10"),
-        "porcentaje_referido_maximo": Decimal("5"),
     }
     defaults.update(kwargs)
     return ReglasComision(**defaults)  # type: ignore[arg-type]
-
 
 def _make_service(
     regla: ReglasComision,
@@ -37,7 +35,6 @@ def _make_service(
         repo,
         auditoria,
     )
-
 
 class TestCampoUnico:
     def test_cambiar_porcentaje_vendedor_emite_registro(self) -> None:
@@ -66,16 +63,6 @@ class TestCampoUnico:
         registro = auditoria.guardar.call_args[0][0]
         assert registro.campo == "porcentaje_cerrador"
 
-    def test_cambiar_porcentaje_referido(self) -> None:
-        r = _regla()
-        service, _, auditoria = _make_service(r)
-        service.editar(
-            r.id, porcentaje_referido_maximo=Decimal("3"), por_telegram_id=1, por_nombre="A"
-        )
-        assert auditoria.guardar.call_count == 1
-        registro = auditoria.guardar.call_args[0][0]
-        assert registro.campo == "porcentaje_referido_maximo"
-
 
 class TestMultiplesCampos:
     def test_dos_campos_emiten_dos_registros(self) -> None:
@@ -90,7 +77,6 @@ class TestMultiplesCampos:
         )
         assert auditoria.guardar.call_count == 2
 
-
 class TestSinCambios:
     def test_mismos_valores_no_emite_registros(self) -> None:
         r = _regla()
@@ -102,7 +88,6 @@ class TestSinCambios:
             por_nombre="A",
         )
         auditoria.guardar.assert_not_called()
-
 
 class TestMissingActor:
     def test_actor_none_lanza_antes_de_guardar(self) -> None:
@@ -117,7 +102,6 @@ class TestMissingActor:
             )
         repo.guardar.assert_not_called()
         auditoria.guardar.assert_not_called()
-
 
 class TestEntidadNoEncontrada:
     def test_regla_inexistente_lanza_value_error(self) -> None:

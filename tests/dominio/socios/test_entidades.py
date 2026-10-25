@@ -54,7 +54,6 @@ class TestSocioConfig:
         with pytest.raises(FrozenInstanceError):
             config.nombre = "otro"  # type: ignore[misc]
 
-
 class TestPagoSocio:
     def _pago(self, tipo: str = "total") -> PagoSocio:
         return PagoSocio(

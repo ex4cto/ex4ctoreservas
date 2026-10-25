@@ -7,10 +7,9 @@ import uuid
 
 import pytest
 
-from garay.dominio.comun.dinero import Dinero
+from garay.dominio.comun.dinero import Dinero, MontoInvalido
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.ventas.entidades import Venta
-from garay.dominio.comun.dinero import MontoInvalido
 from garay.dominio.ventas.errores import (
     MismoNeto,
     NetoIgualOSuperaValorVenta,
@@ -35,7 +34,6 @@ def _venta(
         participantes=Participantes(),
         abono=abono,
     )
-
 
 class TestCambiarNeto:
     """Venta.cambiar_neto() must enforce edit-time rules."""

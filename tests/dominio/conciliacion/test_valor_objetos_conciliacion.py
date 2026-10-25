@@ -27,7 +27,6 @@ def _make_venta(valor: int = 100_000) -> Venta:
         participantes=Participantes(vendedor_nombre="Ana", cerrador_nombre="Ana"),
     )
 
-
 class TestCandidatoMatch:
     def test_creacion_basica(self) -> None:
         venta = _make_venta()
@@ -56,7 +55,6 @@ class TestCandidatoMatch:
         b = CandidatoMatch(venta=_make_venta(), score=Decimal("0.9"), diferencia_monto=Dinero(0))
         assert a != b
 
-
 class TestResultadoConciliacion:
     def test_creacion_basica(self) -> None:
         r = ResultadoConciliacion(matcheados=5, sin_match=2, pendientes=3)
@@ -68,7 +66,6 @@ class TestResultadoConciliacion:
         r = ResultadoConciliacion(matcheados=1, sin_match=0, pendientes=0)
         with pytest.raises((AttributeError, TypeError)):
             r.matcheados = 99  # type: ignore[misc]
-
 
 class TestConciliacionConScore:
     def test_score_y_confianza_opcionales(self) -> None:

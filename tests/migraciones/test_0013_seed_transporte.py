@@ -29,7 +29,6 @@ _MIGRATION_FILE = (
     / "0013_seed_categoria_transporte.py"
 )
 
-
 def _load_migration() -> ModuleType:
     """Dynamically load the 0013 migration module."""
     if not _MIGRATION_FILE.exists():
@@ -47,7 +46,6 @@ def _load_migration() -> ModuleType:
     spec.loader.exec_module(mod)
     return mod
 
-
 def _build_categorias_egreso(engine: Engine) -> None:
     """Create categorias_egreso table matching the schema from ff243581ce06."""
     with engine.begin() as conn:
@@ -62,7 +60,6 @@ def _build_categorias_egreso(engine: Engine) -> None:
             """)
         )
 
-
 def _count_transporte(engine: Engine) -> int:
     """Return number of rows with nombre='transporte' in categorias_egreso."""
     with engine.connect() as conn:
@@ -71,7 +68,6 @@ def _count_transporte(engine: Engine) -> int:
         )
         row = result.fetchone()
         return int(row[0]) if row else 0
-
 
 class TestMigration0013Upgrade:
     def test_upgrade_inserta_fila_transporte(self, sqlite_engine: Engine) -> None:
@@ -113,7 +109,6 @@ class TestMigration0013Upgrade:
         assert bool(row[1]) is True
         assert row[2] == 8
 
-
 class TestMigration0013Downgrade:
     def test_downgrade_elimina_fila_transporte(self, sqlite_engine: Engine) -> None:
         """downgrade() removes the transporte row from categorias_egreso."""
@@ -125,7 +120,6 @@ class TestMigration0013Downgrade:
 
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert _count_transporte(sqlite_engine) == 0
-
 
 class TestMigration0013Chain:
     """FIX 5: verify the migration chain links are correct so a broken chain is caught."""

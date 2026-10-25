@@ -32,11 +32,9 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 @pytest.fixture()
 def fsm_multi() -> FSMTiquetera:
@@ -46,11 +44,9 @@ def fsm_multi() -> FSMTiquetera:
         multi_tour_habilitado=True,
     )
 
-
 # ---------------------------------------------------------------------------
 # Task 1a: Normal one-tour registration path
 # ---------------------------------------------------------------------------
-
 
 class TestDestinosNombresNormalPath:
     """After picking a tour, destinos_nombres must contain the tour name."""
@@ -94,11 +90,9 @@ class TestDestinosNombresNormalPath:
         assert salida.contexto.destinos_numeros.count(1) == 1
         assert salida.contexto.destinos_nombres.count("Tour Playa Blanca") == 1
 
-
 # ---------------------------------------------------------------------------
 # Task 1b: Accumulator removal keeps lists in sync (del:{numero} path)
 # ---------------------------------------------------------------------------
-
 
 class TestDelRemovalKeepsSync:
     """del:{numero} in DESTINO handler must remove the aligned name too."""
@@ -137,11 +131,9 @@ class TestDelRemovalKeepsSync:
         assert salida.contexto.destinos_nombres == []
         assert salida.contexto.destinos_numeros == []
 
-
 # ---------------------------------------------------------------------------
 # Task 1c: tour_adicional path also populates destinos_nombres
 # ---------------------------------------------------------------------------
-
 
 class TestDestinosNombresTourAdicional:
     """When tour_adicional=True, picking a tour still populates destinos_nombres."""
@@ -155,11 +147,9 @@ class TestDestinosNombresTourAdicional:
         salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert salida.contexto.destinos_nombres == ["Tour Playa Blanca"]
 
-
 # ---------------------------------------------------------------------------
 # Task 1d: edit mode path also populates destinos_nombres
 # ---------------------------------------------------------------------------
-
 
 class TestDestinosNombresModoEdicion:
     """In modo_edicion, picking a tour must also populate destinos_nombres."""

@@ -11,11 +11,9 @@ def test_secret_correcto_pasa() -> None:
     # Should not raise
     validar_secret("mi-secreto-super-seguro", expected="mi-secreto-super-seguro")
 
-
 def test_secret_incorrecto_lanza_error() -> None:
     with pytest.raises(ErrorSecretInvalido, match="Secret invalido"):
         validar_secret("incorrecto", expected="correcto")
-
 
 def test_secret_vacio_lanza_error() -> None:
     with pytest.raises(ErrorSecretInvalido):

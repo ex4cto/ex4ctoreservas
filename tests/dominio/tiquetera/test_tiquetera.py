@@ -19,10 +19,8 @@ def _tiquetera(**kwargs: object) -> Tiquetera:
     defaults.update(kwargs)
     return Tiquetera(**defaults)  # type: ignore[arg-type]
 
-
 def _datos() -> DatosExtraidos:
     return DatosExtraidos(confianza=Decimal("0.95"))
-
 
 class TestTiquetera:
     def test_creacion_valida(self) -> None:

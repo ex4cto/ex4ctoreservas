@@ -22,10 +22,8 @@ def _snapshot() -> SnapshotReglas:
         tipo_cliente=TipoCliente.DIGITAL,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("3"),
         porcentaje_capa_punto=Decimal("2"),
     )
-
 
 def _make_venta(
     tipo: TipoCliente = TipoCliente.DIGITAL,
@@ -44,7 +42,6 @@ def _make_venta(
         canal_origen=canal,
     )
 
-
 def _make_comision(venta_id: uuid.UUID, agencia: int = 200_000) -> ComisionRegistrada:
     return ComisionRegistrada(
         venta_id=venta_id,
@@ -55,10 +52,11 @@ def _make_comision(venta_id: uuid.UUID, agencia: int = 200_000) -> ComisionRegis
             referido=Dinero(0),
             agencia=Dinero(agencia),
             snapshot=_snapshot(),
-        ),
+            neto_vendedor=Dinero(50_000),
+            neto_cerrador=Dinero(25_000),
+),
         fecha=datetime.date(2026, 7, 10),
     )
-
 
 def _make_service(
     ventas: list[Venta], comisiones: list[ComisionRegistrada]
@@ -74,7 +72,6 @@ def _make_service(
         comisiones=comisiones_repo,
         freelancers=freelancer_repo,
     )
-
 
 class TestResumenCanalOrigen:
     def test_resumen_ventas_tiene_campo_por_canal(self) -> None:

@@ -17,7 +17,6 @@ from garay.dominio.puertos.repositorios import (
     VentaRepository,
 )
 
-
 # ---------------------------------------------------------------------------
 # DTOs
 # ---------------------------------------------------------------------------
@@ -200,7 +199,7 @@ class LiquidarFreelancerService:
             monto=cmd.monto,
             desde=cmd.desde,
             hasta=cmd.hasta,
-            fecha_pago=datetime.datetime.now(tz=datetime.timezone.utc),
+            fecha_pago=datetime.datetime.now(tz=datetime.UTC),
             registrado_por_telegram_id=cmd.registrado_por_telegram_id,
             registrado_por_nombre=cmd.registrado_por_nombre,
         )

@@ -34,7 +34,6 @@ def test_auditoria_venta_holds_fields() -> None:
     assert registro.realizada_at == at
     assert registro.datos_previos == datos
 
-
 def test_auditoria_venta_datos_previos_defaults_to_none() -> None:
     registro = AuditoriaVenta(
         id=uuid.uuid4(),
@@ -46,7 +45,6 @@ def test_auditoria_venta_datos_previos_defaults_to_none() -> None:
         realizada_at=datetime.datetime(2026, 8, 11, 12, 0, 0),
     )
     assert registro.datos_previos is None
-
 
 def test_accion_auditoria_values() -> None:
     assert AccionAuditoria.ANULAR == "ANULAR"

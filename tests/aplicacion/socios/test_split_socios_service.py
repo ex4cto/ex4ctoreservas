@@ -24,10 +24,8 @@ def _make_snapshot() -> SnapshotReglas:
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("10"),
         porcentaje_cerrador=Decimal("5"),
-        porcentaje_referido_maximo=Decimal("3"),
         porcentaje_capa_punto=Decimal("2"),
     )
-
 
 def _make_venta(valor: int = 1_000_000) -> Venta:
     return Venta(
@@ -46,7 +44,6 @@ def _make_venta(valor: int = 1_000_000) -> Venta:
         ),
     )
 
-
 def _make_comision(venta_id: uuid.UUID, agencia: int) -> ComisionRegistrada:
     return ComisionRegistrada(
         venta_id=venta_id,
@@ -57,10 +54,11 @@ def _make_comision(venta_id: uuid.UUID, agencia: int) -> ComisionRegistrada:
             referido=Dinero("5000"),
             agencia=Dinero(agencia),
             snapshot=_make_snapshot(),
-        ),
+            neto_vendedor=Dinero("50000"),
+            neto_cerrador=Dinero("25000"),
+),
         fecha=datetime.date(2026, 9, 1),
     )
-
 
 def _make_pago(nombre_socio: str, monto: int) -> PagoSocio:
     return PagoSocio(
@@ -73,12 +71,10 @@ def _make_pago(nombre_socio: str, monto: int) -> PagoSocio:
         registrado_en=datetime.datetime(2026, 9, 10, 12, 0, 0),
     )
 
-
 def _make_config(nombre: str, porcentaje: str) -> SocioConfig:
     return SocioConfig(
         nombre=nombre, porcentaje=Decimal(porcentaje), telegram_id=None
     )
-
 
 def _make_service(
     ventas: list[Venta],
@@ -105,7 +101,6 @@ def _make_service(
         pagos_socio=repo_pagos,
     )
 
-
 def _make_service_periodo(
     ventas_periodo: list[Venta],
     comisiones: list[ComisionRegistrada],
@@ -129,7 +124,6 @@ def _make_service_periodo(
         socios_config=repo_configs,
         pagos_socio=repo_pagos,
     )
-
 
 class TestSplitSociosServiceCalcularAcumulado:
     def test_acumulado_correcto_con_ventas_y_comisiones(self) -> None:
@@ -255,7 +249,6 @@ class TestSplitSociosServiceCalcularAcumulado:
         nombres = [r.nombre for r in resultado.por_socio]
         assert nombres == ["empresa", "garay", "ryan"]
 
-
 class TestSplitSociosServiceCalcularPeriodo:
     """TDD tests for calcular_periodo — RED → GREEN."""
 
@@ -282,7 +275,9 @@ class TestSplitSociosServiceCalcularPeriodo:
                 referido=Dinero(0),
                 agencia=Dinero(agencia),
                 snapshot=_make_snapshot(),
-            ),
+                neto_vendedor=Dinero(vendedor),
+                neto_cerrador=Dinero(cerrador),
+),
             fecha=datetime.date(2026, 9, 5),
         )
 
@@ -406,7 +401,6 @@ class TestSplitSociosServiceCalcularPeriodo:
 
         repo_ventas.listar_por_periodo.assert_called_once_with(self._DESDE, self._HASTA)
 
-
 class TestResumenVentaDetalleDTO:
     """Tests for ResumenVentaDetalle and ResumenFreelancerPeriodo DTOs."""
 
@@ -450,7 +444,6 @@ class TestResumenVentaDetalleDTO:
 
     def test_resumen_split_periodo_has_new_fields(self) -> None:
         """ResumenSplitPeriodo has ventas_detalle and por_freelancer fields."""
-        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo, ResumenVentaDetalle
 
         resultado = ResumenSplitPeriodo(
             por_socio=(),
@@ -497,7 +490,6 @@ class TestResumenVentaDetalleDTO:
         assert len(resultado.por_freelancer) == 1
         assert resultado.por_freelancer[0] == fl
 
-
 class TestCalcularPeriodoVentaDetalle:
     """Tests for calcular_periodo populating ventas_detalle and por_freelancer."""
 
@@ -541,7 +533,9 @@ class TestCalcularPeriodoVentaDetalle:
                 referido=Dinero(0),
                 agencia=Dinero(agencia),
                 snapshot=_make_snapshot(),
-            ),
+                neto_vendedor=Dinero(vendedor),
+                neto_cerrador=Dinero(cerrador),
+),
             fecha=datetime.date(2026, 9, 19),
         )
 
@@ -604,7 +598,6 @@ class TestCalcularPeriodoVentaDetalle:
 
     def test_por_freelancer_aggregates_vendedor(self) -> None:
         """por_freelancer sums vendedor commission across sales."""
-        from garay.aplicacion.socios.split import ResumenFreelancerPeriodo
 
         venta1 = self._make_venta(vendedor_nombre="Juan García")
         venta2 = self._make_venta(vendedor_nombre="Juan García")
@@ -667,7 +660,6 @@ class TestCalcularPeriodoVentaDetalle:
         assert empresa.acumulado == Dinero(270_000)
         assert ryan.acumulado == Dinero(270_000)
 
-
 class TestSaldoPendienteEnDetalle:
     """Feature E — saldo_pendiente field in ResumenVentaDetalle."""
 
@@ -697,7 +689,9 @@ class TestSaldoPendienteEnDetalle:
                 referido=Dinero(0),
                 agencia=Dinero(540_000),
                 snapshot=_make_snapshot(),
-            ),
+                neto_vendedor=Dinero(60_000),
+                neto_cerrador=Dinero(0),
+),
             fecha=datetime.date(2026, 9, 19),
         )
 

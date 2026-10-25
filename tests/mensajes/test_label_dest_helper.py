@@ -22,7 +22,6 @@ def _label_dest(d: str | None) -> str:
     """Production-identical implementation of the dashboard helper."""
     return obtener_mensaje("egresos_sin_destinatario") if d is None else d
 
-
 class TestLabelDestHelper:
     def test_none_maps_to_mensajes_key(self) -> None:
         """None must produce the string from garay.mensajes, not a hardcoded literal."""

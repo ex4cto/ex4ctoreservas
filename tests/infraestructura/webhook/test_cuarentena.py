@@ -17,9 +17,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
-from garay.infraestructura.webhook.app import crear_app
 from garay.infraestructura.telegram.errores import NotificadorError
 from garay.infraestructura.webhook.alertas import construir_alerta_dev
+from garay.infraestructura.webhook.app import crear_app
 from tests.infraestructura.webhook.conftest import _SECRET
 
 # ---------------------------------------------------------------------------
@@ -53,11 +53,9 @@ _PAYLOAD_BANCOLOMBIA_EGRESO = {
 _DEV_IDS_STR = "111111111,222222222"
 _GRUPO_ID = "-100987654321"
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_client(
     mock_ingreso_repo: MagicMock,
@@ -85,11 +83,9 @@ def _make_client(
     )
     return TestClient(app)
 
-
 # ---------------------------------------------------------------------------
 # Route quarantine tests
 # ---------------------------------------------------------------------------
-
 
 def test_ingreso_parse_error_cuarentena_y_200(
     mock_ingreso_repo: MagicMock,
@@ -129,7 +125,6 @@ def test_ingreso_parse_error_cuarentena_y_200(
     assert correo.procesado is False
     assert "parseo fallido" in correo.error_parseo
 
-
 def test_egreso_parse_error_cuarentena_y_200(
     mock_ingreso_repo: MagicMock,
     mock_egreso_repo: MagicMock,
@@ -167,7 +162,6 @@ def test_egreso_parse_error_cuarentena_y_200(
     assert correo.banco == "Bancolombia"
     assert correo.procesado is False
 
-
 def test_parse_error_envia_alerta_dev(
     mock_ingreso_repo: MagicMock,
     mock_egreso_repo: MagicMock,
@@ -204,7 +198,6 @@ def test_parse_error_envia_alerta_dev(
         if call[0][1] in ("111111111", "222222222")
     ]
     assert len(dev_calls) == 2
-
 
 def test_parse_error_nunca_alerta_grupo(
     mock_ingreso_repo: MagicMock,
@@ -257,7 +250,6 @@ def test_parse_error_nunca_alerta_grupo(
     ]
     assert len(dev_calls) == 2
 
-
 def test_alerta_falla_no_rompe_200(
     mock_ingreso_repo: MagicMock,
     mock_egreso_repo: MagicMock,
@@ -292,7 +284,6 @@ def test_alerta_falla_no_rompe_200(
     assert response.json() == {"estado": "ok"}
     mock_correo_repo.guardar.assert_called_once()
 
-
 def test_dev_telegram_ids_vacio_no_alerta(
     mock_ingreso_repo: MagicMock,
     mock_egreso_repo: MagicMock,
@@ -325,7 +316,6 @@ def test_dev_telegram_ids_vacio_no_alerta(
 
     assert response.status_code == 200
     mock_notificador.notificar.assert_not_called()
-
 
 def test_cuarentena_duplicada_no_inserta(
     mock_ingreso_repo: MagicMock,
@@ -362,11 +352,9 @@ def test_cuarentena_duplicada_no_inserta(
     assert response.status_code == 200
     assert response.json() == {"estado": "ok"}
 
-
 # ---------------------------------------------------------------------------
 # Unit tests for alert builders
 # ---------------------------------------------------------------------------
-
 
 def test_snippet_html_escapado() -> None:
     """A body containing HTML tags must appear escaped in the dev alert."""
@@ -383,7 +371,6 @@ def test_snippet_html_escapado() -> None:
     assert "<b>Hello</b>" not in msg
     assert "&lt;b&gt;" in msg
 
-
 def test_construir_alerta_dev_trunca_snippet() -> None:
     """Snippets longer than 500 chars are truncated before escaping."""
     long_body = "A" * 600
@@ -399,5 +386,4 @@ def test_construir_alerta_dev_trunca_snippet() -> None:
     assert "A" * 501 not in msg
     # But the first 500 'A's should be present (after escaping, they remain 'A')
     assert "A" * 500 in msg
-
 

@@ -35,7 +35,6 @@ _EXPECTED_COLS = {
     "realizada_at",
 }
 
-
 def _load_migration() -> ModuleType:
     if not _MIGRATION_FILE.exists():
         pytest.fail(f"Migration file not found: {_MIGRATION_FILE}.")
@@ -49,13 +48,11 @@ def _load_migration() -> ModuleType:
     spec.loader.exec_module(mod)
     return mod
 
-
 class TestMigration0019Upgrade:
     def test_upgrade_crea_tabla_con_columnas(self, sqlite_engine: Engine) -> None:
         migration = _load_migration()
         run_migration_fn(sqlite_engine, migration.upgrade)
         assert table_columns(sqlite_engine, "auditoria_egresos") >= _EXPECTED_COLS
-
 
 class TestMigration0019Downgrade:
     def test_downgrade_elimina_tabla(self, sqlite_engine: Engine) -> None:
@@ -63,7 +60,6 @@ class TestMigration0019Downgrade:
         run_migration_fn(sqlite_engine, migration.upgrade)
         run_migration_fn(sqlite_engine, migration.downgrade)
         assert "auditoria_egresos" not in sa.inspect(sqlite_engine).get_table_names()
-
 
 class TestMigration0019Chain:
     def test_revision(self) -> None:

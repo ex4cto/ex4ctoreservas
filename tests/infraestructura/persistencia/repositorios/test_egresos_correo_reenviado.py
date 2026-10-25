@@ -15,7 +15,6 @@ from garay.infraestructura.persistencia.repositorios.egresos import SQLAEgresoRe
 
 _UTC = datetime.UTC
 
-
 def _make_egreso(
     *,
     referencia: str | None = None,
@@ -37,7 +36,6 @@ def _make_egreso(
         fecha_recibido=fecha_recibido,
     )
 
-
 def test_correo_origen_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     egreso = _make_egreso(referencia="MSG-EA", correo_origen="alertas@bancolombia.com")
@@ -47,7 +45,6 @@ def test_correo_origen_round_trip(sf: sessionmaker[Session]) -> None:
 
     assert resultado is not None
     assert resultado.correo_origen == "alertas@bancolombia.com"
-
 
 def test_reenviado_true_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
@@ -59,7 +56,6 @@ def test_reenviado_true_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.reenviado is True
 
-
 def test_correo_origen_none_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     egreso = _make_egreso(referencia="MSG-EC")
@@ -70,7 +66,6 @@ def test_correo_origen_none_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.correo_origen is None
 
-
 def test_reenviado_defaults_false(sf: sessionmaker[Session]) -> None:
     repo = SQLAEgresoRepository(sf)
     egreso = _make_egreso(referencia="MSG-ED")
@@ -80,7 +75,6 @@ def test_reenviado_defaults_false(sf: sessionmaker[Session]) -> None:
 
     assert resultado is not None
     assert resultado.reenviado is False
-
 
 def test_listar_recientes_retorna_solo_los_de_los_ultimos_n_minutos(
     sf: sessionmaker[Session],
@@ -106,7 +100,6 @@ def test_listar_recientes_retorna_solo_los_de_los_ultimos_n_minutos(
     assert reciente.id in ids
     assert viejo.id not in ids
 
-
 def test_listar_recientes_sin_fecha_recibido_no_aparece(
     sf: sessionmaker[Session],
 ) -> None:
@@ -116,7 +109,6 @@ def test_listar_recientes_sin_fecha_recibido_no_aparece(
 
     resultado = repo.listar_recientes(5)
     assert resultado == []
-
 
 def test_listar_recientes_vacio_si_no_hay_recientes(
     sf: sessionmaker[Session],

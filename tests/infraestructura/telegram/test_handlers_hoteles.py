@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -13,14 +13,12 @@ from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso, ObligacionHotel
 from garay.dominio.conciliacion.tipos import TipoEgreso
 
-
 # ---------------------------------------------------------------------------
 # Shared test fixtures
 # ---------------------------------------------------------------------------
 
 _HOTEL_ID = uuid.UUID("11111111-0001-0001-0001-111111111111")
 _HOTEL_ID_2 = uuid.UUID("11111111-0002-0002-0002-222222222222")
-
 
 def _make_obligacion(
     hotel_id: uuid.UUID = _HOTEL_ID,
@@ -45,7 +43,6 @@ def _make_obligacion(
         activa=True,
     )
 
-
 def _make_egreso(
     obligacion_id: uuid.UUID = _HOTEL_ID,
     monto: Decimal = Decimal("1000000"),
@@ -63,14 +60,12 @@ def _make_egreso(
         obligacion_hotel_id=obligacion_id,
     )
 
-
 def _make_admin_repo(es_admin: bool = True) -> MagicMock:
     repo = MagicMock()
     freelancer = MagicMock()
     freelancer.es_admin = es_admin
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
-
 
 def _make_hotel_service(
     hoteles: list[ObligacionHotel] | None = None,
@@ -87,7 +82,6 @@ def _make_hotel_service(
     svc.registrar_pago.return_value = _make_egreso()
     svc.historial.return_value = historial or []
     return svc
-
 
 def _make_update(
     callback_data: str | None = None,
@@ -112,7 +106,6 @@ def _make_update(
         update.callback_query = None
     return update
 
-
 def _make_context(
     hotel_service: MagicMock | None = None,
     es_admin: bool = True,
@@ -126,7 +119,6 @@ def _make_context(
     }
     return ctx
 
-
 def _callback_datas(update: MagicMock) -> list[str]:
     """Extract all callback_data values from the last reply keyboard."""
     if update.callback_query is not None:
@@ -136,7 +128,6 @@ def _callback_datas(update: MagicMock) -> list[str]:
     if markup is None:
         return []
     return [btn.callback_data for row in markup.inline_keyboard for btn in row]
-
 
 def _replied_text(update: MagicMock) -> str:
     """Return the text of the last reply sent."""
@@ -148,7 +139,6 @@ def _replied_text(update: MagicMock) -> str:
         return ""
     return call.args[0] if call.args else call.kwargs.get("text", "")
 
-
 # ---------------------------------------------------------------------------
 # Import the module under test
 # ---------------------------------------------------------------------------
@@ -158,9 +148,8 @@ from garay.infraestructura.telegram.handlers_hoteles import (  # noqa: E402
     CB_HOTEL_HISTORIAL,
     CB_HOTEL_OMITIR_CONCEPTO,
     CB_HOTEL_PAGAR,
-    CB_HOTEL_PAGO_CONFIRMAR,
-    CB_HOTEL_PAGO_EDITAR,
     CB_HOTEL_PAGO_CANCELAR,
+    CB_HOTEL_PAGO_CONFIRMAR,
     CB_HOTEL_USAR_SUGERIDO,
     CB_HOTEL_VOLVER_DETALLE,
     CB_HUB_HOTELES,
@@ -179,7 +168,6 @@ from garay.infraestructura.telegram.handlers_hoteles import (  # noqa: E402
     handle_pago_fecha,
     handle_pago_monto,
 )
-
 
 # ---------------------------------------------------------------------------
 # Tests: state constants are in the 200-219 range
@@ -213,7 +201,6 @@ class TestStateConstants:
                   HOTEL_PAGO_CONCEPTO, HOTEL_PAGO_CONFIRMAR, HOTEL_HISTORIAL]
         for s in states:
             assert 200 <= s <= 219, f"State {s} is out of expected range 200-219"
-
 
 # ---------------------------------------------------------------------------
 # Tests: handle_hotel_lista — entry point from hub callback
@@ -259,7 +246,6 @@ class TestHotelLista:
 
         datas = _callback_datas(update)
         assert CB_HOTEL_ATRAS in datas
-
 
 # ---------------------------------------------------------------------------
 # Tests: handle_hotel_detalle — state HOTEL_LIST
@@ -328,7 +314,6 @@ class TestHotelDetalle:
 
         assert resultado == HOTEL_LIST
 
-
 # ---------------------------------------------------------------------------
 # Tests: handle_pago_monto — state HOTEL_DETALLE (after "Registrar pago")
 # ---------------------------------------------------------------------------
@@ -381,7 +366,6 @@ class TestPagoMonto:
 
         assert resultado == HOTEL_PAGO_MONTO
 
-
 # ---------------------------------------------------------------------------
 # Tests: handle_pago_fecha — state HOTEL_PAGO_MONTO
 # ---------------------------------------------------------------------------
@@ -419,7 +403,6 @@ class TestPagoFecha:
         resultado = await handle_pago_fecha(update, ctx)
 
         assert resultado == HOTEL_PAGO_FECHA
-
 
 # ---------------------------------------------------------------------------
 # Tests: handle_pago_concepto — state HOTEL_PAGO_FECHA
@@ -460,7 +443,6 @@ class TestPagoConcepto:
         assert resultado == HOTEL_PAGO_CONFIRMAR
         assert ctx.user_data["hotel_pago_concepto"] == "cuota 15 sep"
 
-
 # ---------------------------------------------------------------------------
 # Tests: handle_pago_confirmar — state HOTEL_PAGO_CONFIRMAR
 # ---------------------------------------------------------------------------
@@ -477,7 +459,6 @@ class TestPagoConfirmar:
     @pytest.mark.asyncio
     async def test_confirmar_registra_pago(self) -> None:
         """Confirming calls ServicioHoteles.registrar_pago and ends conversation."""
-        from telegram.ext import ConversationHandler
 
         hotel = _make_obligacion()
         svc = _make_hotel_service(hoteles=[hotel])
@@ -510,7 +491,6 @@ class TestPagoConfirmar:
 
         svc.registrar_pago.assert_not_called()
         assert resultado == ConversationHandler.END
-
 
 # ---------------------------------------------------------------------------
 # Tests: handle_hotel_historial — state HOTEL_DETALLE (after "Ver historial")
@@ -570,7 +550,6 @@ class TestHotelHistorial:
         resultado = await handle_hotel_historial(update, ctx)
 
         assert resultado == HOTEL_DETALLE
-
 
 # ---------------------------------------------------------------------------
 # Tests: hub modification — hotel button appears first in egresos hub

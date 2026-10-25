@@ -2,9 +2,6 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
-
-import pytest
 
 from garay.dominio.comun.dinero import Dinero
 
@@ -42,7 +39,6 @@ class TestDetectarOperador:
         from garay.aplicacion.operadores.notificaciones import detectar_operador
         assert detectar_operador([]) is None
 
-
 def _make_datos(
     servicio_nombres: list[str] | None = None,
     cliente_nombre: str = "Juan Pérez",
@@ -69,7 +65,6 @@ def _make_datos(
         abono=abono,
         ganancia=ganancia or Dinero(50_000),
     )
-
 
 class TestFormatearNotificacion:
     def test_palmarito_includes_formato_pasadia_header(self) -> None:
@@ -123,7 +118,6 @@ class TestFormatearNotificacion:
         from garay.aplicacion.operadores.notificaciones import formatear_notificacion
         datos = _make_datos()
         assert formatear_notificacion("desconocido", datos) is None
-
 
 class TestContactoWA:
     def test_palmarito_returns_contact(self) -> None:

@@ -31,23 +31,19 @@ class _FakeCategoriaRepo(CategoriaEgresoRepository):
     def guardar(self, categoria: CategoriaEgreso) -> None:
         self._items[categoria.nombre] = categoria
 
-
 def _seed(repo: _FakeCategoriaRepo, *nombres: str) -> None:
     for i, nombre in enumerate(nombres, start=1):
         repo.guardar(CategoriaEgreso(nombre=nombre, descripcion="", activo=True, orden=i))
 
-
 def _make_service() -> tuple[GestionarCategoriasService, _FakeCategoriaRepo]:
     repo = _FakeCategoriaRepo()
     return GestionarCategoriasService(repo), repo
-
 
 class TestListar:
     def test_listar_todas_delega_al_repo(self) -> None:
         service, repo = _make_service()
         _seed(repo, "comisiones", "marketing")
         assert [c.nombre for c in service.listar_todas()] == ["comisiones", "marketing"]
-
 
 class TestCrear:
     def test_crear_agrega_con_orden_siguiente(self) -> None:
@@ -86,7 +82,6 @@ class TestCrear:
         creada = service.crear("software")
         assert creada.orden == 1
 
-
 class TestSugerirParecida:
     def test_sugiere_parecida(self) -> None:
         service, repo = _make_service()
@@ -97,7 +92,6 @@ class TestSugerirParecida:
         service, repo = _make_service()
         _seed(repo, "comisiones")
         assert service.sugerir_parecida("software") is None
-
 
 class TestActivarDesactivar:
     def test_desactivar_marca_inactiva(self) -> None:
@@ -131,7 +125,6 @@ class TestActivarDesactivar:
         service, _ = _make_service()
         with pytest.raises(ValueError):
             service.desactivar("no_existe")
-
 
 class TestEditarDescripcion:
     def test_editar_descripcion_actualiza(self) -> None:

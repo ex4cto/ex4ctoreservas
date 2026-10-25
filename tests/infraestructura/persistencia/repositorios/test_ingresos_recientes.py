@@ -13,7 +13,6 @@ from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngreso
 
 _UTC = datetime.UTC
 
-
 def _make_ingreso(
     *,
     referencia: str = "MSG-001",
@@ -31,7 +30,6 @@ def _make_ingreso(
         clasificado=clasificado,
         fecha_recibido=fecha_recibido,
     )
-
 
 def test_listar_recientes_retorna_solo_los_de_los_ultimos_n_minutos(
     sf: sessionmaker[Session],
@@ -51,7 +49,6 @@ def test_listar_recientes_retorna_solo_los_de_los_ultimos_n_minutos(
     assert reciente.id in ids
     assert viejo.id not in ids
 
-
 def test_listar_recientes_lista_vacia_cuando_no_hay_ingresos_recientes(
     sf: sessionmaker[Session],
 ) -> None:
@@ -64,7 +61,6 @@ def test_listar_recientes_lista_vacia_cuando_no_hay_ingresos_recientes(
     resultado = repo.listar_recientes(5)
     assert resultado == []
 
-
 def test_listar_recientes_ingreso_sin_fecha_recibido_no_aparece(
     sf: sessionmaker[Session],
 ) -> None:
@@ -76,7 +72,6 @@ def test_listar_recientes_ingreso_sin_fecha_recibido_no_aparece(
 
     resultado = repo.listar_recientes(5)
     assert resultado == []
-
 
 def test_listar_recientes_en_limite_exacto_incluido(
     sf: sessionmaker[Session],

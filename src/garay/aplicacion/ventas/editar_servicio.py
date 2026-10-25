@@ -142,7 +142,7 @@ class EditarServicioVentaService:
             )
 
         # porcentaje_referido = Decimal("0") per ADR-2
-        desglose = self._motor.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = self._motor.calcular(venta, reglas, punto)
 
         # Step 12: build audit record
         registro = AuditoriaVenta(

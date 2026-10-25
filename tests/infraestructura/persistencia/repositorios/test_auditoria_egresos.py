@@ -27,7 +27,6 @@ def _egreso(tipo: TipoEgreso, fecha: datetime.date) -> Egreso:
         tipo=tipo,
     )
 
-
 class TestListarManuales:
     def test_solo_retorna_manuales(self, sf: sessionmaker[Session]) -> None:
         repo = SQLAEgresoRepository(sf)
@@ -50,7 +49,6 @@ class TestListarManuales:
     def test_vacio(self, sf: sessionmaker[Session]) -> None:
         repo = SQLAEgresoRepository(sf)
         assert repo.listar_manuales(10) == []
-
 
 class TestAuditoriaEgresoRepo:
     def test_guardar_y_listar_por_egreso_id(self, sf: sessionmaker[Session]) -> None:

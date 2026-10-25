@@ -35,12 +35,10 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm_one_tour() -> FSMTiquetera:
     """Default FSM — multi_tour_habilitado=False (one-tour mode)."""
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 @pytest.fixture()
 def fsm_multi_tour() -> FSMTiquetera:
@@ -51,16 +49,13 @@ def fsm_multi_tour() -> FSMTiquetera:
         multi_tour_habilitado=True,
     )
 
-
 def _ctx_baru() -> ContextoVenta:
     """ContextoVenta with BARÚ already selected as the active family."""
     return ContextoVenta(familia_seleccionada="BARÚ")
 
-
 # ---------------------------------------------------------------------------
 # One-tour mode: normal registration path
 # ---------------------------------------------------------------------------
-
 
 class TestOneTourModeNormalPath:
     """Flag False (default): picking a tour skips DESTINO, goes to CLIENTE_NOMBRE."""
@@ -106,11 +101,9 @@ class TestOneTourModeNormalPath:
         salida = fsm_one_tour.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
         assert salida.mensaje == obtener_mensaje("pregunta_cliente_nombre")
 
-
 # ---------------------------------------------------------------------------
 # One-tour mode: modo_edicion path (editing "Destinos" from CONFIRMACION)
 # ---------------------------------------------------------------------------
-
 
 class TestOneTourModeModoEdicion:
     """Flag False: edit path picks ONE tour and returns to CONFIRMACION with neto."""
@@ -199,11 +192,9 @@ class TestOneTourModeModoEdicion:
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
         assert salida.contexto.modo_edicion is True
 
-
 # ---------------------------------------------------------------------------
 # Multi-tour mode: accumulator preserved (flag True)
 # ---------------------------------------------------------------------------
-
 
 class TestMultiTourModePreserved:
     """Flag True: picking a tour still shows the DESTINO accumulator."""
@@ -239,11 +230,9 @@ class TestMultiTourModePreserved:
             labels = list(salida.opciones)
         assert any("Confirmar" in lbl for lbl in labels)
 
-
 # ---------------------------------------------------------------------------
 # Slice 2: iniciar_otro_tour
 # ---------------------------------------------------------------------------
-
 
 def _ctx_completo() -> ContextoVenta:
     """A fully-filled ContextoVenta representing a completed first-tour registration."""
@@ -278,12 +267,11 @@ def _ctx_completo() -> ContextoVenta:
         vendedor_id=uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
         cerrador_nombre="Pedro Gomez",
         cerrador_id=uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-        referido_nombre="Carlos",
+        referido_alias="Carlos",
         rol_registrante="ambos",
         modo_edicion=False,
         tour_adicional=False,
     )
-
 
 class TestIniciarOtroTour:
     """Slice 2 — FSMTiquetera.iniciar_otro_tour resets per-tour fields, keeps client."""
@@ -413,10 +401,10 @@ class TestIniciarOtroTour:
         salida = fsm_one_tour.iniciar_otro_tour(ctx)
         assert salida.contexto.cerrador_id is None
 
-    def test_clears_referido_nombre(self, fsm_one_tour: FSMTiquetera) -> None:
+    def test_clears_referido_alias(self, fsm_one_tour: FSMTiquetera) -> None:
         ctx = _ctx_completo()
         salida = fsm_one_tour.iniciar_otro_tour(ctx)
-        assert salida.contexto.referido_nombre is None
+        assert salida.contexto.referido_alias is None
 
     def test_clears_rol_registrante(self, fsm_one_tour: FSMTiquetera) -> None:
         ctx = _ctx_completo()
@@ -454,11 +442,9 @@ class TestIniciarOtroTour:
         salida = fsm_one_tour.iniciar_otro_tour(ctx)
         assert salida.contexto.tipo_cliente == TipoCliente.EXTERNO
 
-
 # ---------------------------------------------------------------------------
 # Slice 2: servicio_en_familia with tour_adicional=True
 # ---------------------------------------------------------------------------
-
 
 class TestServicioEnFamiliaTourAdicional:
     """When tour_adicional=True, skip client capture and route to FECHA_SALIDA."""

@@ -29,7 +29,6 @@ def _venta_base(**kwargs: object) -> Venta:
     defaults.update(kwargs)
     return Venta(**defaults)
 
-
 class TestCanalOrigenEnum:
     def test_canal_origen_tiene_6_valores(self) -> None:
         assert len(CanalOrigen) == 6
@@ -54,7 +53,6 @@ class TestCanalOrigenEnum:
         with pytest.raises(ValueError):
             CanalOrigen("TELEGRAM")
 
-
 class TestContextoVentaCanalOrigen:
     def test_contexto_venta_canal_origen_default_none(self) -> None:
         ctx = ContextoVenta()
@@ -64,7 +62,6 @@ class TestContextoVentaCanalOrigen:
         ctx = ContextoVenta()
         ctx.canal_origen = "WhatsApp"
         assert ctx.canal_origen == "WhatsApp"
-
 
 class TestVentaCanalOrigen:
     def test_venta_canal_origen_default_none(self) -> None:

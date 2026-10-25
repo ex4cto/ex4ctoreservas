@@ -17,13 +17,11 @@ from garay.dominio.servicios.entidades import Servicio
 from garay.dominio.ventas.entidades import Venta
 from garay.dominio.ventas.valor_objetos import Participantes
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _HOY = datetime.date(2026, 1, 15)
-
 
 def _servicio(sid: uuid.UUID, nombre: str) -> Servicio:
     return Servicio(
@@ -42,7 +40,6 @@ def _servicio(sid: uuid.UUID, nombre: str) -> Servicio:
         precio_sugerido_nino=None,
     )
 
-
 def _venta(servicio_ids: list[uuid.UUID]) -> Venta:
     return Venta(
         id=uuid.uuid4(),
@@ -57,7 +54,6 @@ def _venta(servicio_ids: list[uuid.UUID]) -> Venta:
         adultos=2,
         ninos=0,
     )
-
 
 def _make_service(
     servicios: list[Servicio],
@@ -83,11 +79,9 @@ def _make_service(
         settings=settings,
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestBuscarVentasIslaPalma:
     """buscar_ventas_isla_palma() returns only ventas with Isla Palma services."""

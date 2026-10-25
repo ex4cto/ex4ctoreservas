@@ -30,7 +30,6 @@ def _make_update(callback_data: str | None = None) -> MagicMock:
         update.callback_query = None
     return update
 
-
 def _make_admin_repo(es_admin: bool = True) -> MagicMock:
     repo = MagicMock()
     freelancer = MagicMock()
@@ -38,18 +37,15 @@ def _make_admin_repo(es_admin: bool = True) -> MagicMock:
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
 
-
 def _make_context(es_admin: bool = True) -> MagicMock:
     ctx = MagicMock()
     ctx.user_data = {}
     ctx.bot_data = {"freelancer_repo": _make_admin_repo(es_admin)}
     return ctx
 
-
 def _labels_datas(update: MagicMock) -> list[str]:
     markup = update.effective_message.reply_text.call_args.kwargs["reply_markup"]
     return [btn.callback_data for row in markup.inline_keyboard for btn in row]
-
 
 class TestHubMenu:
     @pytest.mark.asyncio
@@ -71,7 +67,6 @@ class TestHubMenu:
         # requiere_admin envía un mensaje de denegación SIN los botones del hub.
         markup = update.effective_message.reply_text.call_args.kwargs.get("reply_markup")
         assert markup is None
-
 
 class TestHubCancelar:
     @pytest.mark.asyncio

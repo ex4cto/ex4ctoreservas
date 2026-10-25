@@ -274,7 +274,9 @@ class Venta:
             raise VentaYaAnulada("No se puede editar el servicio de una venta ya anulada.")
         if sorted(nuevos_ids) == sorted(self.servicio_ids):
             raise MismoServicio("Los servicios ya son los mismos. No se realizó ningún cambio.")
-        effective_valor_venta = nuevo_valor_venta if nuevo_valor_venta is not None else self.valor_venta
+        effective_valor_venta = (
+            nuevo_valor_venta if nuevo_valor_venta is not None else self.valor_venta
+        )
         if nuevo_neto.moneda != self.valor_venta.moneda:
             raise MonedaIncompatible(
                 f"nuevo_neto ({nuevo_neto.moneda}) y valor_venta ({self.valor_venta.moneda})"

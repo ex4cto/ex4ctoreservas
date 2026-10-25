@@ -66,7 +66,6 @@ class TestBotMenusDesdesCatalogo:
         for bc, ex in zip(admin_cmds, expected, strict=True):
             assert bc.command == ex.command
 
-
 class TestListaPreciosCatalogEntry:
     """Spec: lista-precios-catalog-entry — /lista_precios must be in CATALOGO_COMANDOS."""
 
@@ -92,7 +91,6 @@ class TestListaPreciosCatalogEntry:
         entry = next((c for c in CATALOGO_COMANDOS if c.comando == "lista_precios"), None)
         assert entry is not None
         assert entry.grupo == GrupoComando.VENTAS
-
 
 class TestDeletedCommandsNotInCatalog:
     """Spec: catalog-entry-* (REMOVED) — deleted commands must not appear in catalog."""

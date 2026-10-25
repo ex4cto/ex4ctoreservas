@@ -15,7 +15,6 @@ def _cmd(vendedor_id: uuid.UUID | None, cerrador_id: uuid.UUID | None) -> MagicM
     cmd.participantes.cerrador_id = cerrador_id
     return cmd
 
-
 def test_ambos_sincroniza_cerrador_id() -> None:
     # 'ambos': the FSM left ctx.cerrador_id None; the command resolved it.
     yo = uuid.uuid4()
@@ -25,14 +24,12 @@ def test_ambos_sincroniza_cerrador_id() -> None:
     assert ctx.vendedor_id == yo
     assert ctx.cerrador_id == yo
 
-
 def test_solo_cerrador_sincroniza_cerrador_id() -> None:
     vendedor = uuid.uuid4()
     cerrador = uuid.uuid4()
     ctx = ContextoVenta()
     _sincronizar_ids_participantes(ctx, _cmd(vendedor, cerrador))
     assert ctx.cerrador_id == cerrador
-
 
 def test_solo_vendedor_preserva_cerrador_del_picker() -> None:
     vendedor = uuid.uuid4()

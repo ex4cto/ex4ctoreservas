@@ -13,7 +13,6 @@ from garay.infraestructura.persistencia.repositorios.ingresos import SQLAIngreso
 
 _UTC = datetime.UTC
 
-
 def _make_ingreso(
     *,
     referencia: str = "MSG-001",
@@ -31,7 +30,6 @@ def _make_ingreso(
         reenviado=reenviado,
     )
 
-
 def test_correo_origen_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso(referencia="MSG-A", correo_origen="alertas@bancolombia.com")
@@ -41,7 +39,6 @@ def test_correo_origen_round_trip(sf: sessionmaker[Session]) -> None:
 
     assert resultado is not None
     assert resultado.correo_origen == "alertas@bancolombia.com"
-
 
 def test_reenviado_true_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
@@ -53,7 +50,6 @@ def test_reenviado_true_round_trip(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.reenviado is True
 
-
 def test_correo_origen_none_round_trip(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)
     ingreso = _make_ingreso(referencia="MSG-C", correo_origen=None)
@@ -63,7 +59,6 @@ def test_correo_origen_none_round_trip(sf: sessionmaker[Session]) -> None:
 
     assert resultado is not None
     assert resultado.correo_origen is None
-
 
 def test_reenviado_defaults_false(sf: sessionmaker[Session]) -> None:
     repo = SQLAIngresoRepository(sf)

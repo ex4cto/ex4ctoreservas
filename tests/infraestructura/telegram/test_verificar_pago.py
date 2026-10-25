@@ -14,7 +14,6 @@ from garay.infraestructura.telegram.handlers import cmd_verificar_pago
 
 _UTC = datetime.UTC
 
-
 def _make_ingreso(
     *,
     monto: str = "150000",
@@ -33,7 +32,6 @@ def _make_ingreso(
         fecha_recibido=now - datetime.timedelta(minutes=minutos_atras),
     )
 
-
 def _make_update() -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -41,14 +39,12 @@ def _make_update() -> MagicMock:
     update.effective_message = AsyncMock()
     return update
 
-
 def _make_context(**bot_data_overrides: object) -> MagicMock:
     ctx = MagicMock()
     base: dict[str, object] = {}
     base.update(bot_data_overrides)
     ctx.bot_data = base
     return ctx
-
 
 @pytest.mark.asyncio
 async def test_verificar_pago_con_pagos_responde_lista_formateada() -> None:
@@ -79,7 +75,6 @@ async def test_verificar_pago_con_pagos_responde_lista_formateada() -> None:
     assert "MARIA LOPEZ" in msg
     assert "Nequi" in msg
 
-
 @pytest.mark.asyncio
 async def test_verificar_pago_sin_pagos_responde_mensaje_vacio() -> None:
     """With no recent ingresos, response indicates no payments found."""
@@ -95,7 +90,6 @@ async def test_verificar_pago_sin_pagos_responde_mensaje_vacio() -> None:
     msg: str = update.effective_message.reply_text.call_args[0][0]
     assert "Sin pagos" in msg or "sin pagos" in msg
 
-
 @pytest.mark.asyncio
 async def test_verificar_pago_sin_repo_responde_error_interno() -> None:
     """Missing ingreso_repo → reply error message."""
@@ -107,7 +101,6 @@ async def test_verificar_pago_sin_repo_responde_error_interno() -> None:
     update.effective_message.reply_text.assert_called_once()
     msg: str = update.effective_message.reply_text.call_args[0][0]
     assert "error" in msg.lower() or "Error" in msg
-
 
 @pytest.mark.asyncio
 async def test_verificar_pago_formatea_hace_n_min_correctamente() -> None:
@@ -125,7 +118,6 @@ async def test_verificar_pago_formatea_hace_n_min_correctamente() -> None:
     msg: str = update.effective_message.reply_text.call_args[0][0]
     assert "min" in msg
 
-
 @pytest.mark.asyncio
 async def test_verificar_pago_remitente_none_no_rompe() -> None:
     """Ingreso with remitente=None should still render without crash."""
@@ -140,7 +132,6 @@ async def test_verificar_pago_remitente_none_no_rompe() -> None:
     await cmd_verificar_pago.__wrapped__(update, context)  # type: ignore[attr-defined]
 
     update.effective_message.reply_text.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_verificar_pago_escapa_datos_externos_html() -> None:
@@ -161,12 +152,10 @@ async def test_verificar_pago_escapa_datos_externos_html() -> None:
         update.effective_message.reply_text.call_args.kwargs.get("parse_mode") == "HTML"
     )
 
-
 # ---------------------------------------------------------------------------
 # Spec: verificar-pago-loose-strings-fixed
 # These tests verify that both user-facing strings come from the catalog.
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
 async def test_sin_pagos_usa_clave_catalogo() -> None:
@@ -183,7 +172,6 @@ async def test_sin_pagos_usa_clave_catalogo() -> None:
 
     msg: str = update.effective_message.reply_text.call_args[0][0]
     assert msg == obtener_mensaje("verificar_pago.sin_pagos")
-
 
 @pytest.mark.asyncio
 async def test_error_interno_usa_clave_catalogo() -> None:

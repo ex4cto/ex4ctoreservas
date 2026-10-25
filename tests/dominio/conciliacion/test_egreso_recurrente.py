@@ -21,7 +21,6 @@ def _egreso(**kwargs: object) -> Egreso:
     defaults.update(kwargs)
     return Egreso(**defaults)  # type: ignore[arg-type]
 
-
 class TestEgresoGastoRecurrenteId:
     def test_gasto_recurrente_id_es_none_por_defecto(self) -> None:
         e = _egreso()

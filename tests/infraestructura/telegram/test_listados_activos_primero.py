@@ -20,7 +20,6 @@ def _srv(nombre: str, activo: bool, familia: str = "BARU", numero: int = 1) -> M
     s.numero = numero
     return s
 
-
 def _fl(nombre: str, activo: bool, tg: int | None) -> MagicMock:
     f = MagicMock()
     f.nombre = nombre
@@ -28,7 +27,6 @@ def _fl(nombre: str, activo: bool, tg: int | None) -> MagicMock:
     f.telegram_user_id = tg
     f.es_admin = False
     return f
-
 
 def test_teclado_tours_activos_primero() -> None:
     from garay.infraestructura.telegram.handlers_tours import _teclado_tours
@@ -46,7 +44,6 @@ def test_teclado_tours_activos_primero() -> None:
     assert not labels[1].startswith("❌")
     assert labels[2].startswith("❌")
     assert labels[3].startswith("❌")
-
 
 @pytest.mark.asyncio
 async def test_listar_freelancers_activos_primero(monkeypatch: pytest.MonkeyPatch) -> None:

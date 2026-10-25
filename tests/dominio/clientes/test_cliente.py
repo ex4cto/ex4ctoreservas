@@ -51,7 +51,6 @@ class TestCliente:
         assert c.hotel is None
         assert c.numero_habitacion is None
 
-
 class TestActualizarCampo:
     def _cliente(self) -> Cliente:
         return Cliente(id=uuid.uuid4(), nombre="Juan Perez", tipo=TipoCliente.EXTERNO)

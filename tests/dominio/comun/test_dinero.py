@@ -35,7 +35,6 @@ class TestCreacion:
         with pytest.raises(AttributeError):
             dinero.monto = Decimal("2000")  # type: ignore[misc]
 
-
 class TestIgualdad:
     def test_igual_mismo_monto_y_moneda(self) -> None:
         assert Dinero(1000) == Dinero("1000")
@@ -48,7 +47,6 @@ class TestIgualdad:
 
     def test_hasheable(self) -> None:
         assert len({Dinero(1000), Dinero("1000"), Dinero(500)}) == 2
-
 
 class TestAritmetica:
     def test_suma(self) -> None:
@@ -71,7 +69,6 @@ class TestAritmetica:
         with pytest.raises(MontoInvalido):
             Dinero(1000) * 0.2  # type: ignore[operator]
 
-
 class TestPorcentaje:
     def test_aplica_porcentaje_entero(self) -> None:
         assert Dinero(1000).aplicar_porcentaje(Decimal("20")) == Dinero(200)
@@ -79,7 +76,6 @@ class TestPorcentaje:
     def test_aplica_porcentaje_redondea_half_up(self) -> None:
         # 33.333% de 100 = 33.333 -> 33.33
         assert Dinero("100").aplicar_porcentaje(Decimal("33.333")) == Dinero("33.33")
-
 
 class TestComparacion:
     def test_orden(self) -> None:

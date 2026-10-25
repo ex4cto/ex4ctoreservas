@@ -16,26 +16,21 @@ def test_obtener_parser_bancolombia() -> None:
     parser = obtener_parser("Bancolombia")
     assert isinstance(parser, ParserBancolombia)
 
-
 def test_obtener_parser_nequi() -> None:
     parser = obtener_parser("Nequi")
     assert isinstance(parser, ParserNequi)
-
 
 def test_banco_no_soportado_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco, match="Banco no soportado"):
         obtener_parser("DaviPlata")
 
-
 def test_obtener_parser_egreso_uber() -> None:
     parser = obtener_parser_egreso(BANCO_UBER)
     assert isinstance(parser, ParserUberEgreso)
 
-
 def test_obtener_parser_egreso_didi() -> None:
     parser = obtener_parser_egreso(BANCO_DIDI)
     assert isinstance(parser, ParserDiDiEgreso)
-
 
 def test_banco_egreso_no_soportado_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco, match="Banco no soportado"):

@@ -24,16 +24,13 @@ from garay.dominio.ventas.valor_objetos import Participantes
 HOY = datetime.date(2026, 9, 15)
 FID = uuid.uuid4()
 
-
 def _snap() -> SnapshotReglas:
     return SnapshotReglas(
         tipo_cliente=TipoCliente.EXTERNO,
         porcentaje_vendedor=Decimal("0"),
         porcentaje_cerrador=Decimal("0"),
-        porcentaje_referido_maximo=Decimal("0"),
         porcentaje_capa_punto=Decimal("0"),
     )
-
 
 def _venta(
     fecha: datetime.date,
@@ -60,7 +57,6 @@ def _venta(
         ),
     )
 
-
 def _comision(venta_id: uuid.UUID, vendedor: int, cerrador: int) -> ComisionRegistrada:
     return ComisionRegistrada(
         venta_id=venta_id,
@@ -71,10 +67,11 @@ def _comision(venta_id: uuid.UUID, vendedor: int, cerrador: int) -> ComisionRegi
             referido=Dinero(0),
             agencia=Dinero(0),
             snapshot=_snap(),
-        ),
+            neto_vendedor=Dinero(vendedor),
+            neto_cerrador=Dinero(cerrador),
+),
         fecha=HOY,
     )
-
 
 def _service(ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> MisVentasService:
     ventas_repo = MagicMock()
@@ -82,7 +79,6 @@ def _service(ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> MisVe
     comisiones_repo = MagicMock()
     comisiones_repo.listar_por_venta_ids.return_value = comisiones
     return MisVentasService(ventas=ventas_repo, comisiones=comisiones_repo)
-
 
 def test_split_realizados_y_proximos_por_fecha() -> None:
     pasado = _venta(datetime.date(2026, 9, 10), vendedor_id=FID, cerrador_id=FID)
@@ -95,7 +91,6 @@ def test_split_realizados_y_proximos_por_fecha() -> None:
     assert [linea.fecha for linea in res.realizados] == [datetime.date(2026, 9, 10)]
     assert [linea.fecha for linea in res.proximos] == [datetime.date(2026, 9, 20)]
 
-
 def test_comision_solo_vendedor_no_suma_cerrador_ajeno() -> None:
     otro = uuid.uuid4()
     v = _venta(datetime.date(2026, 9, 10), vendedor_id=FID, cerrador_id=otro,
@@ -104,13 +99,11 @@ def test_comision_solo_vendedor_no_suma_cerrador_ajeno() -> None:
     res = svc.ejecutar(FID, "Ryan", HOY)
     assert res.comision_total == Dinero(40_000)
 
-
 def test_comision_ambos_roles_suma_los_dos() -> None:
     v = _venta(datetime.date(2026, 9, 10), vendedor_id=FID, cerrador_id=FID)
     svc = _service([v], [_comision(v.id, 40_000, 40_000)])
     res = svc.ejecutar(FID, "Ryan", HOY)
     assert res.comision_total == Dinero(80_000)
-
 
 def test_comision_match_por_nombre_cuando_id_es_none() -> None:
     v = _venta(datetime.date(2026, 9, 10), vendedor_id=None, cerrador_id=None,
@@ -118,7 +111,6 @@ def test_comision_match_por_nombre_cuando_id_es_none() -> None:
     svc = _service([v], [_comision(v.id, 40_000, 30_000)])
     res = svc.ejecutar(FID, "Ryan", HOY)
     assert res.comision_total == Dinero(40_000)
-
 
 def test_totales_y_conteo() -> None:
     v1 = _venta(datetime.date(2026, 9, 10), vendedor_id=FID, cerrador_id=FID, valor=1_000_000)
@@ -129,7 +121,6 @@ def test_totales_y_conteo() -> None:
     assert res.valor_total == Dinero(1_500_000)
     assert res.comision_total == Dinero(30_000)
 
-
 def test_vacio_devuelve_ceros() -> None:
     svc = _service([], [])
     res = svc.ejecutar(FID, "Ryan", HOY)
@@ -137,7 +128,6 @@ def test_vacio_devuelve_ceros() -> None:
     assert res.realizados == ()
     assert res.proximos == ()
     assert res.comision_total == Dinero(0)
-
 
 def test_consulta_usa_primer_dia_de_mes_y_date_max() -> None:
     """Option B: desde = first of month, hasta = date.max (no upper bound)."""

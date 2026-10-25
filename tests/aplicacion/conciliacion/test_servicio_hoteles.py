@@ -7,21 +7,13 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from decimal import Decimal
-from typing import Sequence
-from unittest.mock import MagicMock
-
-import pytest
 
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.conciliacion.entidades import Egreso, ObligacionHotel
-from garay.dominio.conciliacion.tipos import TipoEgreso
-
 
 # ---------------------------------------------------------------------------
 # Fake repositories
 # ---------------------------------------------------------------------------
-
 
 class FakeObligacionRepo:
     def __init__(self, obligaciones: list[ObligacionHotel] | None = None) -> None:
@@ -36,7 +28,6 @@ class FakeObligacionRepo:
     def guardar(self, obligacion: ObligacionHotel) -> None:
         self._items = [o for o in self._items if o.id != obligacion.id]
         self._items.append(obligacion)
-
 
 class FakeEgresoRepo:
     def __init__(self, egresos: list[Egreso] | None = None) -> None:
@@ -82,11 +73,9 @@ class FakeEgresoRepo:
     ) -> Dinero:
         return Dinero(0)
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _hotel(
     deuda_inicial: int = 2_400_000,
@@ -108,7 +97,6 @@ def _hotel(
         activa=True,
     )
 
-
 def _egreso(obligacion_id: uuid.UUID, monto: int, fecha: datetime.date) -> Egreso:
     return Egreso(
         id=uuid.uuid4(),
@@ -118,7 +106,6 @@ def _egreso(obligacion_id: uuid.UUID, monto: int, fecha: datetime.date) -> Egres
         categoria="cuota_hotel",
         obligacion_hotel_id=obligacion_id,
     )
-
 
 def _make_service(
     obligaciones: list[ObligacionHotel] | None = None,
@@ -131,11 +118,9 @@ def _make_service(
         egresos=FakeEgresoRepo(egresos),
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests — saldo_actual
 # ---------------------------------------------------------------------------
-
 
 class TestSaldoActual:
     def test_sin_pagos_saldo_es_deuda_inicial(self) -> None:
@@ -184,11 +169,9 @@ class TestSaldoActual:
         # hotel_b tiene un pago que cubre la deuda
         assert svc_typed.saldo_actual(hotel_b.id) == Dinero(0)
 
-
 # ---------------------------------------------------------------------------
 # Tests — registrar_pago
 # ---------------------------------------------------------------------------
-
 
 class TestRegistrarPago:
     def test_registrar_pago_crea_egreso(self) -> None:
@@ -241,11 +224,9 @@ class TestRegistrarPago:
         assert egreso.descripcion  # not empty
         assert len(egreso.descripcion) > 0
 
-
 # ---------------------------------------------------------------------------
 # Tests — monto_sugerido
 # ---------------------------------------------------------------------------
-
 
 class TestMontoSugerido:
     def test_antes_del_dia_1_usa_cuota_1(self) -> None:
@@ -286,11 +267,9 @@ class TestMontoSugerido:
         resultado_inicio = monto_sugerido(hotel, datetime.date(2026, 9, 3))
         assert resultado_inicio == Dinero(750_000)
 
-
 # ---------------------------------------------------------------------------
 # Tests — listar_con_saldo
 # ---------------------------------------------------------------------------
-
 
 class TestListarConSaldo:
     def test_lista_hoteles_activos_con_saldo(self) -> None:
@@ -330,11 +309,9 @@ class TestListarConSaldo:
         assert hotel_activo.id in ids
         assert hotel_inactivo.id not in ids
 
-
 # ---------------------------------------------------------------------------
 # Tests — historial
 # ---------------------------------------------------------------------------
-
 
 class TestHistorial:
     def test_historial_devuelve_pagos_en_orden_inverso(self) -> None:

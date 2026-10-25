@@ -18,7 +18,6 @@ _SNAP = SnapshotReglas(
     TipoCliente.INTERNO, Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0")
 )
 
-
 def _venta(vid: uuid.UUID, valor: int, neto: int, canal: str = "Hotel") -> Venta:
     return Venta(
         id=vid,
@@ -33,7 +32,6 @@ def _venta(vid: uuid.UUID, valor: int, neto: int, canal: str = "Hotel") -> Venta
         canal_origen=canal,
     )
 
-
 def _comision(vid: uuid.UUID, agencia: int) -> ComisionRegistrada:
     desglose = DesgloseComision(
         vendedor=Dinero(0),
@@ -42,9 +40,10 @@ def _comision(vid: uuid.UUID, agencia: int) -> ComisionRegistrada:
         referido=Dinero(0),
         agencia=Dinero(agencia),
         snapshot=_SNAP,
-    )
+        neto_vendedor=Dinero(0),
+        neto_cerrador=Dinero(0),
+)
     return ComisionRegistrada(venta_id=vid, desglose=desglose, fecha=datetime.date(2026, 7, 5))
-
 
 def _svc(ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> WaterfallVentasService:
     vr = MagicMock()
@@ -52,7 +51,6 @@ def _svc(ventas: list[Venta], comisiones: list[ComisionRegistrada]) -> Waterfall
     cr = MagicMock()
     cr.listar_por_venta_ids.return_value = comisiones
     return WaterfallVentasService(vr, cr)
-
 
 def test_cascada() -> None:
     v1 = uuid.uuid4()
@@ -63,7 +61,6 @@ def test_cascada() -> None:
     assert r.margen == Dinero(220000)
     assert r.ganancia_agencia == Dinero(132000)
     assert r.comisiones == Dinero(88000)  # margen - agencia
-
 
 def test_sin_ventas_da_cero() -> None:
     svc = _svc([], [])

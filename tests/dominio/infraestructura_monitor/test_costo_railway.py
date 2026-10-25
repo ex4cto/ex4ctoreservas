@@ -29,11 +29,9 @@ _PRECIOS = PreciosRailway(
     precio_volumen_gb_min=0.000003,
 )
 
-
 # ---------------------------------------------------------------------------
 # PreciosRailway value object
 # ---------------------------------------------------------------------------
-
 
 class TestPreciosRailway:
     def test_es_frozen(self) -> None:
@@ -47,11 +45,9 @@ class TestPreciosRailway:
         b = PreciosRailway(0.000231, 0.000463, 0.05, 0.000003)
         assert a == b
 
-
 # ---------------------------------------------------------------------------
 # costo_uso
 # ---------------------------------------------------------------------------
-
 
 class TestCostoUso:
     def test_suma_cuatro_mediciones_conocidas(self) -> None:
@@ -97,11 +93,9 @@ class TestCostoUso:
         result = costo_uso(recursos, _PRECIOS)
         assert result == pytest.approx(1000.0 * 0.000463)
 
-
 # ---------------------------------------------------------------------------
 # costo_factura
 # ---------------------------------------------------------------------------
-
 
 class TestCostoFactura:
     def test_retorna_costo_uso_cuando_supera_plan_fee(self) -> None:
@@ -124,11 +118,9 @@ class TestCostoFactura:
         result = costo_factura(costo_uso_val=0.0, plan_fee=5.0)
         assert result == pytest.approx(5.0)
 
-
 # ---------------------------------------------------------------------------
 # cruza_umbral
 # ---------------------------------------------------------------------------
-
 
 class TestCruzaUmbral:
     # previo < umbral <= actual → crossing fires

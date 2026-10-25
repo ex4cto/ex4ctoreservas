@@ -9,6 +9,7 @@ import pytest
 
 from garay.aplicacion.ventas.comandos import EditarMetodoPagoVentaComando
 from garay.aplicacion.ventas.editar_metodo_pago import EditarMetodoPagoVentaService
+from garay.aplicacion.ventas.limite_ediciones import ACCIONES_FINANCIERAS
 from garay.dominio.comun.tipos import MetodoPago
 from garay.dominio.ventas.auditoria import AccionAuditoria
 from garay.dominio.ventas.errores import (
@@ -17,12 +18,10 @@ from garay.dominio.ventas.errores import (
     VentaNoEncontrada,
     VentaYaAnulada,
 )
-from garay.aplicacion.ventas.limite_ediciones import ACCIONES_FINANCIERAS
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_venta(
     metodo_pago: MetodoPago = MetodoPago.TRANSFERENCIA,
@@ -43,14 +42,12 @@ def _make_venta(
     venta.cambiar_metodo_pago.side_effect = _cambiar_metodo_pago
     return venta
 
-
 def _make_repos(venta: MagicMock | None = None) -> tuple[MagicMock, MagicMock]:
     ventas_repo = MagicMock()
     ventas_repo.buscar_por_id.return_value = venta
     auditoria_repo = MagicMock()
     auditoria_repo.listar_por_venta_id.return_value = []
     return ventas_repo, auditoria_repo
-
 
 def _make_cmd(
     venta_id: uuid.UUID | None = None,
@@ -65,11 +62,9 @@ def _make_cmd(
         realizada_por_nombre="Admin",
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestEditarMetodoPagoVentaService:
     def test_motivo_vacio_raises_motivo_requerido(self) -> None:

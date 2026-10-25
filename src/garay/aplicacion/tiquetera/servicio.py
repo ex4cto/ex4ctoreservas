@@ -275,7 +275,7 @@ class RegistrarVentaService:
             )
 
         # 5. Calculate commission breakdown
-        desglose = self._motor.calcular(venta, reglas, punto, cmd.porcentaje_referido)
+        desglose = self._motor.calcular(venta, reglas, punto)
 
         # 6. Persist the sale
         self._ventas.guardar(venta)

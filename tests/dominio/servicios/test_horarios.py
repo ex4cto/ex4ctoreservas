@@ -18,7 +18,6 @@ from garay.dominio.servicios.horarios import (
 
 # ── Task 1.1: normalizar_horario — 14-case table ──────────────────────────────
 
-
 class TestNormalizarHorario:
     @pytest.mark.parametrize(
         "entrada,esperado",
@@ -72,9 +71,7 @@ class TestNormalizarHorario:
         with pytest.raises(HorarioInvalido):
             normalizar_horario("1930")
 
-
 # ── Task 1.2: formato_display ─────────────────────────────────────────────────
-
 
 class TestFormatoDisplay:
     @pytest.mark.parametrize(
@@ -91,9 +88,7 @@ class TestFormatoDisplay:
     def test_display_correcto(self, canonico: str, esperado: str) -> None:
         assert formato_display(canonico) == esperado
 
-
 # ── Task 1.3: agregar_horario ─────────────────────────────────────────────────
-
 
 class TestAgregarHorario:
     def test_agrega_y_ordena(self) -> None:
@@ -126,9 +121,7 @@ class TestAgregarHorario:
         with pytest.raises(HorarioInvalido):
             agregar_horario([], "abc")
 
-
 # ── Task 1.4: quitar_horario ──────────────────────────────────────────────────
-
 
 class TestQuitarHorario:
     def test_quita_por_canonico(self) -> None:

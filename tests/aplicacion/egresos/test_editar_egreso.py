@@ -28,13 +28,11 @@ def _egreso(tipo: TipoEgreso = TipoEgreso.MANUAL) -> Egreso:
         destinatario="Proveedor A",
     )
 
-
 def _make_service(egreso: Egreso) -> tuple[EditarEgresoService, MagicMock, MagicMock]:
     egresos = MagicMock()
     egresos.buscar_por_id.return_value = egreso
     auditoria = MagicMock()
     return EditarEgresoService(egresos=egresos, auditoria=auditoria), egresos, auditoria
-
 
 class TestListarEditables:
     def test_delega_en_listar_manuales(self) -> None:
@@ -44,7 +42,6 @@ class TestListarEditables:
         service = EditarEgresoService(egresos=egresos, auditoria=auditoria)
         assert service.listar_editables(limite=5) == ["x", "y"]
         egresos.listar_manuales.assert_called_once_with(5)
-
 
 class TestEditarCampos:
     def test_editar_categoria_actualiza_y_audita(self) -> None:
@@ -102,7 +99,6 @@ class TestEditarCampos:
         )
         assert actualizado.destinatario == "Proveedor B"
         assert auditoria.guardar.call_args[0][0].campo == "destinatario"
-
 
 class TestSoloManuales:
     def test_editar_egreso_automatico_lanza_y_no_guarda(self) -> None:

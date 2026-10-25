@@ -9,7 +9,6 @@ from garay.dominio.comun.tipos import TipoCliente
 
 _CIEN = Decimal("100")
 _CERO = Decimal("0")
-_TECHO_REFERIDO = Decimal("10")
 
 
 @dataclass(eq=False)
@@ -20,7 +19,6 @@ class ReglasComision:
     tipo_cliente: TipoCliente
     porcentaje_vendedor: Decimal
     porcentaje_cerrador: Decimal
-    porcentaje_referido_maximo: Decimal
 
     punto_de_venta_nombre: str | None = None
     numero_personas: int | None = None
@@ -36,11 +34,6 @@ class ReglasComision:
             raise PorcentajeInvalidoRegla(
                 "La suma de porcentaje_vendedor y porcentaje_cerrador no puede superar 100. "
                 f"Recibido: {self.porcentaje_vendedor + self.porcentaje_cerrador}."
-            )
-        if not (_CERO <= self.porcentaje_referido_maximo <= _TECHO_REFERIDO):
-            raise PorcentajeInvalidoRegla(
-                f"El referido no puede superar el {_TECHO_REFERIDO}%. "
-                f"Recibido: {self.porcentaje_referido_maximo}."
             )
         if self.numero_personas not in (None, 1, 2):
             raise ValueError(

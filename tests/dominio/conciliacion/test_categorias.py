@@ -20,7 +20,6 @@ class TestConstantes:
     def test_categoria_otro_valor(self) -> None:
         assert CATEGORIA_OTRO == "otro"
 
-
 class TestBancoACategoria:
     def test_uber_retorna_transporte(self) -> None:
         assert banco_a_categoria("Uber") == "transporte"
@@ -40,7 +39,6 @@ class TestBancoACategoria:
     def test_banco_desconocido_retorna_otro(self) -> None:
         assert banco_a_categoria("unknown_bank") == "otro"
 
-
 class TestCategoriasProtegidas:
     def test_transporte_es_protegida(self) -> None:
         assert es_categoria_protegida("transporte") is True
@@ -58,7 +56,6 @@ class TestCategoriasProtegidas:
     def test_conjunto_protegidas(self) -> None:
         assert frozenset({CATEGORIA_TRANSPORTE, CATEGORIA_OTRO}) == CATEGORIAS_PROTEGIDAS
 
-
 class TestEsCategoriaDuplicada:
     def test_duplicada_case_insensitive(self) -> None:
         assert es_categoria_duplicada("Comisiones", ["comisiones", "marketing"]) is True
@@ -71,7 +68,6 @@ class TestEsCategoriaDuplicada:
 
     def test_lista_vacia(self) -> None:
         assert es_categoria_duplicada("comisiones", []) is False
-
 
 class TestSugerirCategoriaParecida:
     def test_sugiere_parecida_por_typo(self) -> None:

@@ -22,7 +22,6 @@ def _build_app() -> Application:  # type: ignore[type-arg]
         mock_settings.return_value = settings
         return crear_aplicacion("fake:token")
 
-
 def _conversation_handlers(app: Application) -> list[ConversationHandler]:  # type: ignore[type-arg]
     return [
         h
@@ -31,12 +30,10 @@ def _conversation_handlers(app: Application) -> list[ConversationHandler]:  # ty
         if isinstance(h, ConversationHandler)
     ]
 
-
 def _tiene_start_en_fallbacks(conv: ConversationHandler) -> bool:  # type: ignore[type-arg]
     return any(
         isinstance(h, CommandHandler) and "start" in h.commands for h in conv.fallbacks
     )
-
 
 class TestStartEscapaCualquierFlujo:
     def test_hay_varios_conversation_handlers(self) -> None:

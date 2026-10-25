@@ -19,7 +19,6 @@ _SERVICIO_ID = uuid.uuid4()
 _CLIENTE_ID = uuid.uuid4()
 _FECHA = datetime.date(2026, 7, 1)
 
-
 def _build_service(**kwargs: object) -> RegistrarVentaService:
     defaults: dict[str, Any] = dict(
         ventas=MagicMock(),
@@ -37,7 +36,6 @@ def _build_service(**kwargs: object) -> RegistrarVentaService:
     defaults.update(kwargs)
     return RegistrarVentaService(**defaults)
 
-
 def _cmd(**kwargs: object) -> RegistrarVentaComando:
     defaults: dict[str, Any] = dict(
         valor_venta=_VALOR,
@@ -53,14 +51,12 @@ def _cmd(**kwargs: object) -> RegistrarVentaComando:
     defaults.update(kwargs)
     return RegistrarVentaComando(**defaults)
 
-
 class TestRegistrarVentaComandoFacturaIdioma:
     def test_comando_acepta_factura_idioma(self) -> None:
         assert _cmd(factura_idioma="en").factura_idioma == "en"
 
     def test_comando_factura_idioma_default_es(self) -> None:
         assert _cmd().factura_idioma == "es"
-
 
 class TestRegistrarVentaServiceFacturaIdioma:
     def test_servicio_pasa_idioma_a_venta(self) -> None:
@@ -80,7 +76,6 @@ class TestRegistrarVentaServiceFacturaIdioma:
 
         venta_guardada = ventas_mock.guardar.call_args[0][0]
         assert venta_guardada.factura_idioma == "en"
-
 
 class TestRegistrarVentaServiceRegistradoEn:
     def test_servicio_sella_registrado_en_utc(self) -> None:

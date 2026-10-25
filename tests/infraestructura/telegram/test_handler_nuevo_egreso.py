@@ -64,7 +64,6 @@ class TestParsearMontoCop:
         assert _parsear_monto_cop("abc") is None
         assert _parsear_monto_cop("") is None
 
-
 def _make_update(text: str | None = None, callback_data: str | None = None) -> MagicMock:
     update = MagicMock()
     update.effective_user = MagicMock()
@@ -83,7 +82,6 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _make_admin_repo() -> MagicMock:
     """Freelancer repo whose lookup returns an admin — satisfies requiere_admin_conv."""
     repo = MagicMock()
@@ -91,7 +89,6 @@ def _make_admin_repo() -> MagicMock:
     freelancer.es_admin = True
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
-
 
 def _make_context(
     categorias: list[str] | None = None,
@@ -112,7 +109,6 @@ def _make_context(
     }
     return ctx
 
-
 class TestCmdNuevoEgreso:
     @pytest.mark.asyncio
     async def test_inicia_y_pide_seleccion(self) -> None:
@@ -131,7 +127,6 @@ class TestCmdNuevoEgreso:
         repo.buscar_por_telegram_id.return_value.es_admin = False
         result = await cmd_nuevo_egreso(update, ctx)
         assert result == ConversationHandler.END
-
 
 class TestHandleEgresoMonto:
     @pytest.mark.asyncio
@@ -165,7 +160,6 @@ class TestHandleEgresoMonto:
         assert result == EGRESO_FECHA
         assert ctx.user_data["egreso_monto"] == Decimal("500000")
 
-
 class TestHandleEgresoDescripcion:
     @pytest.mark.asyncio
     async def test_guarda_descripcion_y_avanza(self) -> None:
@@ -189,7 +183,6 @@ class TestHandleEgresoDescripcion:
         await handle_egreso_descripcion(update, ctx)
         update.effective_message.reply_text.assert_called_once()
 
-
 class TestHandleEgresoCategoria:
     @pytest.mark.asyncio
     async def test_categoria_valida_avanza(self) -> None:
@@ -205,7 +198,6 @@ class TestHandleEgresoCategoria:
         ctx = _make_context(categorias=["arriendo"])
         result = await handle_egreso_categoria(update, ctx)
         assert result == EGRESO_CATEGORIA
-
 
 class TestHandleEgresoDestinatario:
     @pytest.mark.asyncio
@@ -241,7 +233,6 @@ class TestHandleEgresoDestinatario:
         assert result == EGRESO_CONFIRMACION
         assert ctx.user_data["egreso_destinatario"] == "Proveedor X"
         assert not ctx.user_data.get("editando")
-
 
 class TestHandleEgresoFecha:
     @pytest.mark.asyncio
@@ -284,7 +275,6 @@ class TestHandleEgresoFecha:
         result = await handle_egreso_fecha(update, ctx)
         assert result == EGRESO_FECHA
 
-
 class TestHandleEgresoConfirmacion:
     @pytest.mark.asyncio
     async def test_confirmar_llama_service_y_termina(self) -> None:
@@ -311,7 +301,6 @@ class TestHandleEgresoConfirmacion:
         assert result == ConversationHandler.END
         service = ctx.bot_data["egreso_service"]
         service.registrar.assert_not_called()
-
 
 class TestCmdNuevoEgresoSeleccion:
     @pytest.mark.asyncio
@@ -366,7 +355,6 @@ class TestCmdNuevoEgresoSeleccion:
         assert ctx.user_data["rec_categoria"] == "arriendo"
         assert ctx.user_data["rec_monto_sugerido"] == Decimal("800000")
 
-
 class TestHandleEgresoRecMonto:
     @pytest.mark.asyncio
     async def test_usar_sugerido_avanza(self) -> None:
@@ -403,7 +391,6 @@ class TestHandleEgresoRecMonto:
         assert result == ConversationHandler.END
         assert "rec_monto" not in ctx.user_data
 
-
 class TestHandleEgresoRecFecha:
     @pytest.mark.asyncio
     async def test_hoy_boton_avanza(self) -> None:
@@ -433,7 +420,6 @@ class TestHandleEgresoRecFecha:
         update = _make_update(text="noesuna")
         result = await handle_egreso_rec_fecha(update, ctx)
         assert result == EGRESO_REC_FECHA
-
 
 class TestHandleEgresoRecConfirmacion:
     @pytest.mark.asyncio
@@ -476,7 +462,6 @@ class TestHandleEgresoRecConfirmacion:
         assert result == ConversationHandler.END
         service = ctx.bot_data["egreso_service"]
         service.registrar.assert_not_called()
-
 
 class TestPaidIndicator:
     """Feature A: paid-this-month indicator on selection buttons."""
@@ -601,7 +586,6 @@ class TestPaidIndicator:
         ]
         assert len(rec_callbacks) == 1
 
-
 class TestEditarOtro:
     """Feature B: edit flow for 'Otro' branch."""
 
@@ -712,7 +696,6 @@ class TestEditarOtro:
         service = ctx.bot_data["egreso_service"]
         call_kwargs = service.registrar.call_args
         assert call_kwargs.kwargs.get("monto") == Decimal("600000")
-
 
 class TestEditarRecurrente:
     """Feature B: edit flow for recurring branch."""
@@ -828,8 +811,6 @@ class TestEditarRecurrente:
         call_kwargs = service.registrar.call_args
         assert call_kwargs.kwargs.get("monto") == Decimal("900000")
         assert call_kwargs.kwargs.get("gasto_recurrente_id") == rec_id
-
-
 
 def test_resumen_egreso_escapa_descripcion_html() -> None:
     """Slice 3: la descripción (dato del usuario) debe escaparse en HTML."""

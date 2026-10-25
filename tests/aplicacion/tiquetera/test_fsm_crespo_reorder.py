@@ -37,16 +37,13 @@ FREELANCERS_TEST: list[tuple[uuid.UUID, str, bool]] = [
     (F2_ID, "Luis", True),
 ]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
 
-
 @pytest.fixture()
 def ctx() -> ContextoVenta:
     return ContextoVenta()
-
 
 # ── MODALIDAD_VENTA state ────────────────────────────────────────────────────
 
@@ -91,7 +88,6 @@ class TestModalidadVentaEstado:
         salida = fsm.procesar(EstadoFSM.MODALIDAD_VENTA, "DIGITAL", ctx)
         assert salida.nuevo_estado == EstadoFSM.MODALIDAD_VENTA
 
-
 # ── T7: Crespo suppression ───────────────────────────────────────────────────
 
 class TestCrespoSuppression:
@@ -120,7 +116,6 @@ class TestCrespoSuppression:
     ) -> None:
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Crespo", ctx)
         assert salida.contexto.punto_de_venta_nombre == "Crespo"
-
 
 # ── T8: Non-Crespo routes to TIPO_RESERVA ────────────────────────────────────
 
@@ -156,7 +151,6 @@ class TestNonCrespoRoutesToTipoReserva:
         s2 = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", s.contexto)
         assert s2.nuevo_estado == EstadoFSM.FAMILIA
 
-
 # ── Validation guard ─────────────────────────────────────────────────────────
 
 class TestValidacionCrespo:
@@ -180,7 +174,6 @@ class TestValidacionCrespo:
         # Call the private method directly — public behavior test
         faltantes = fsm._validar_datos_confirmacion(ctx)
         assert "Tipo de reserva" not in faltantes
-
 
 # ── Editable options guard ────────────────────────────────────────────────────
 
@@ -216,7 +209,6 @@ class TestOpcionesEditablesCrespo:
         opciones = fsm._opciones_editables(ctx)
         assert "Tipo reserva" in opciones
 
-
 # ── EDITAR_SELECTOR bounce guard ──────────────────────────────────────────────
 
 class TestEditarSelectorCrespoGuard:
@@ -242,7 +234,6 @@ class TestEditarSelectorCrespoGuard:
         salida = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Modalidad", ctx)
         assert salida.nuevo_estado == EstadoFSM.MODALIDAD_VENTA
 
-
 # ── _opciones_para_estado guard ───────────────────────────────────────────────
 
 class TestOpcionesParaEstadoTipoReserva:
@@ -263,7 +254,6 @@ class TestOpcionesParaEstadoTipoReserva:
         assert "Presencial" in opciones
         assert "Digital" in opciones
 
-
 # ── Photo entry ───────────────────────────────────────────────────────────────
 
 class TestFotoEntryModalidad:
@@ -282,7 +272,6 @@ class TestFotoEntryModalidad:
         """TIPO_RESERVA is presencial-only and depends on punto — not auto-advanceable."""
         from garay.aplicacion.tiquetera.fsm import _ESTADOS_FOTO_AVANZAR
         assert EstadoFSM.TIPO_RESERVA not in _ESTADOS_FOTO_AVANZAR
-
 
 # ── Catalog keys ─────────────────────────────────────────────────────────────
 
@@ -310,19 +299,16 @@ class TestCatalogoModalidadVenta:
         # Must mention the valid options
         assert "Presencial" in msg or "Digital" in msg
 
-
 # ── Review-fix tests (rows 1-10 + hardening) ─────────────────────────────────
 #
 # These tests cover the invariant: NO path may reach CONFIRMACION (or
 # PARTICIPANTE_ROL in foto mode) with tipo_cliente is None.
-
 
 @pytest.fixture()
 def fsm_with_fl() -> FSMTiquetera:
     return FSMTiquetera(
         servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST, freelancers=FREELANCERS_TEST
     )
-
 
 def _ctx_presencial_crespo_digital() -> ContextoVenta:
     """Starting context simulating a completed Digital sale (canal set, no punto)."""
@@ -332,7 +318,6 @@ def _ctx_presencial_crespo_digital() -> ContextoVenta:
     ctx.punto_de_venta_nombre = None
     return ctx
 
-
 def _ctx_presencial_non_crespo() -> ContextoVenta:
     """Starting context simulating a completed Presencial non-Crespo sale."""
     ctx = ContextoVenta()
@@ -341,7 +326,6 @@ def _ctx_presencial_non_crespo() -> ContextoVenta:
     ctx.canal_origen = None
     return ctx
 
-
 def _ctx_presencial_crespo() -> ContextoVenta:
     """Starting context simulating a completed Presencial Crespo sale."""
     ctx = ContextoVenta()
@@ -349,7 +333,6 @@ def _ctx_presencial_crespo() -> ContextoVenta:
     ctx.punto_de_venta_nombre = "Crespo"
     ctx.canal_origen = None
     return ctx
-
 
 class TestEditModeCascade:
     """Edit-mode cascade: rows 1-7 — tipo_cliente must never be None at CONFIRMACION."""
@@ -478,7 +461,6 @@ class TestEditModeCascade:
         assert salida.contexto.tipo_cliente == TipoCliente.INTERNO  # kept
         assert salida.contexto.punto_de_venta_nombre == "Mama Waldi"
 
-
 class TestPhotoFlow:
     """Photo flow: rows 8-10 — tipo_cliente must be set before PARTICIPANTE_ROL."""
 
@@ -534,7 +516,6 @@ class TestPhotoFlow:
         assert salida.contexto.tipo_cliente == TipoCliente.DIGITAL
         assert not salida.contexto.foto_modo
 
-
 # ── Hardening tests ───────────────────────────────────────────────────────────
 
 class TestHardeningT7Stronger:
@@ -549,7 +530,6 @@ class TestHardeningT7Stronger:
         salida = fsm.procesar(EstadoFSM.PUNTO_DE_VENTA, "Crespo", ctx)
         assert salida.contexto.tipo_cliente == TipoCliente.EXTERNO
         assert salida.nuevo_estado == EstadoFSM.FAMILIA
-
 
 class TestHardeningE2EDigital:
     """End-to-end digital path via new MODALIDAD_VENTA entry."""
@@ -566,7 +546,6 @@ class TestHardeningE2EDigital:
         assert s3.contexto.tipo_cliente == TipoCliente.DIGITAL
         assert s3.contexto.canal_origen == "WhatsApp"
         assert s3.contexto.punto_de_venta_nombre is None
-
 
 class TestHardeningModalidadVentaInvalidInput:
     """Invalid/blank input at MODALIDAD_VENTA stays in MODALIDAD_VENTA."""

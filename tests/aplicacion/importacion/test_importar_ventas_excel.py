@@ -57,7 +57,6 @@ def _fila(
         cerrador_nombre="Mairele",
     )
 
-
 def _build(
     filas: list[FilaVentaImportada],
     *,
@@ -102,7 +101,6 @@ def _build(
     )
     return svc, ventas, clientes, comisiones, freelancers
 
-
 def test_importa_venta_y_comision() -> None:
     svc, ventas, _clientes, comisiones, _ = _build([_fila()])
     r = svc.ejecutar("x.xlsx", 7, 2026)
@@ -117,7 +115,6 @@ def test_importa_venta_y_comision() -> None:
     comision = comisiones.guardar.call_args.args[0]
     assert comision.desglose.agencia == Dinero(48000)
 
-
 def test_filtra_por_mes() -> None:
     filas = [_fila(), _fila(fecha=datetime.date(2026, 8, 1), cliente="Otro")]
     svc, ventas, _, _, _ = _build(filas)
@@ -125,13 +122,11 @@ def test_filtra_por_mes() -> None:
     assert r.ventas_creadas == 1
     ventas.guardar.assert_called_once()
 
-
 def test_crea_cliente_si_no_existe() -> None:
     svc, _, clientes, _, _ = _build([_fila()], cliente_existente=None)
     r = svc.ejecutar("x.xlsx", 7, 2026)
     assert r.clientes_creados == 1
     clientes.guardar.assert_called_once()
-
 
 def test_usa_cliente_existente() -> None:
     existente = Cliente(id=uuid.uuid4(), nombre="Stefan Ponce", tipo=TipoCliente.EXTERNO)
@@ -140,7 +135,6 @@ def test_usa_cliente_existente() -> None:
     assert r.clientes_creados == 0
     clientes.guardar.assert_not_called()
     assert ventas.guardar.call_args.args[0].cliente_id == existente.id
-
 
 def test_crespo_asigna_punto_y_capa_motor() -> None:
     # ganancia = valor - neto = 560000 - 380000 = 180000
@@ -164,12 +158,10 @@ def test_crespo_asigna_punto_y_capa_motor() -> None:
     # FIX-D: lock the buscar_regla call contract
     reglas_repo.buscar_regla.assert_called_once_with(TipoCliente.EXTERNO, "Crespo", 1)
 
-
 def test_descripcion_sin_mapeo_falla() -> None:
     svc, _, _, _, _ = _build([_fila(desc="Tour desconocido")], alias={})
     with pytest.raises(DescripcionSinMapeo):
         svc.ejecutar("x.xlsx", 7, 2026)
-
 
 def test_idempotente_mismo_venta_id() -> None:
     svc1, ventas1, _, _, _ = _build([_fila()])
@@ -178,11 +170,9 @@ def test_idempotente_mismo_venta_id() -> None:
     svc2.ejecutar("x.xlsx", 7, 2026)
     assert ventas1.guardar.call_args.args[0].id == ventas2.guardar.call_args.args[0].id
 
-
 # ---------------------------------------------------------------------------
 # New tests: freelancer resolution (SC-01 to SC-08)
 # ---------------------------------------------------------------------------
-
 
 def _fila_con_participantes(
     *,
@@ -204,7 +194,6 @@ def _fila_con_participantes(
         vendedor_nombre=vendedor_nombre,
         cerrador_nombre=cerrador_nombre,
     )
-
 
 def test_asigna_ids_cuando_hay_match_unico() -> None:
     """SC-01: Both names resolve to 1 freelancer -> ids set, snapshots kept."""
@@ -229,7 +218,6 @@ def test_asigna_ids_cuando_hay_match_unico() -> None:
     assert participantes.vendedor_nombre == "Eduardo"
     assert participantes.cerrador_nombre == "Bryan"
 
-
 def test_aborta_cuando_nombre_no_existe() -> None:
     """SC-02: 0 matches -> ImportacionConNombresNoResueltos, nothing persisted."""
     uuid_b = uuid.uuid4()
@@ -252,7 +240,6 @@ def test_aborta_cuando_nombre_no_existe() -> None:
     nombres_no_encontrados = [nombre for _, nombre in exc_info.value.no_encontrados]
     assert "Mairele" in nombres_no_encontrados
     assert exc_info.value.ambiguos == []
-
 
 def test_aborta_cuando_nombre_ambiguo() -> None:
     """SC-03: >=2 matches -> ImportacionConNombresNoResueltos, nothing persisted."""
@@ -278,7 +265,6 @@ def test_aborta_cuando_nombre_ambiguo() -> None:
     assert "Kike" in nombres_ambiguos
     assert exc_info.value.no_encontrados == []
 
-
 def test_nombre_en_blanco_no_es_error() -> None:
     """SC-04: Blank cerrador_nombre -> no error, vendedor_id set, cerrador_id None."""
     uuid_e = uuid.uuid4()
@@ -296,7 +282,6 @@ def test_nombre_en_blanco_no_es_error() -> None:
     assert participantes.cerrador_id is None
     # listar_por_nombre only called for vendedor (cerrador is None -> skipped)
     freelancers.listar_por_nombre.assert_called_once_with("Eduardo")
-
 
 def test_aborta_agrega_todos_los_nombres_fallidos() -> None:
     """SC-05/SC-06: Mixed sheet — abort-all, nothing persisted, all failures collected."""
@@ -324,7 +309,6 @@ def test_aborta_agrega_todos_los_nombres_fallidos() -> None:
     nombres_no_encontrados = [nombre for _, nombre in exc_info.value.no_encontrados]
     assert "Mairele" in nombres_no_encontrados
 
-
 def test_normalizado_delega_al_repo() -> None:
     """SC-07: Raw name with spaces passed to repo; normalization is repo's job."""
     uuid_e = uuid.uuid4()
@@ -341,7 +325,6 @@ def test_normalizado_delega_al_repo() -> None:
     assert participantes.vendedor_id == uuid_e
     assert participantes.vendedor_nombre == "  eduardo  "
     freelancers.listar_por_nombre.assert_called_once_with("  eduardo  ")
-
 
 def test_filas_omitidas_no_resuelven() -> None:
     """SC-08: Rows skipped by valor/neto guard do not trigger resolution."""
@@ -375,7 +358,6 @@ def test_filas_omitidas_no_resuelven() -> None:
     # listar_por_nombre called exactly once (omitted row skipped)
     freelancers.listar_por_nombre.assert_called_once_with("Eduardo")
 
-
 # ---------------------------------------------------------------------------
 # T10 / T11 — Crespo Excel parity (REQ-07)
 # ---------------------------------------------------------------------------
@@ -401,7 +383,6 @@ _CRESPO_REGLA_1P = ReglasComision(
     tipo_cliente=TipoCliente.EXTERNO,
     porcentaje_vendedor=Decimal("50"),
     porcentaje_cerrador=Decimal("0"),
-    porcentaje_referido_maximo=Decimal("10"),
     punto_de_venta_nombre="Crespo",
     numero_personas=1,
 )
@@ -411,7 +392,6 @@ _CRESPO_REGLA_2P = ReglasComision(
     tipo_cliente=TipoCliente.EXTERNO,
     porcentaje_vendedor=Decimal("30"),
     porcentaje_cerrador=Decimal("30"),
-    porcentaje_referido_maximo=Decimal("10"),
     punto_de_venta_nombre="Crespo",
     numero_personas=2,
 )
@@ -419,17 +399,14 @@ _CRESPO_REGLA_2P = ReglasComision(
 _UUID_A = uuid.uuid4()
 _UUID_B = uuid.uuid4()
 
-
 def _freelancer_resolver_ab(nombre: str) -> list[Freelancer]:
     """Resolver: 'Ana' -> _UUID_A, 'Luis' -> _UUID_B."""
     if nombre == "Ana":
         return [Freelancer(id=_UUID_A, nombre="Ana")]
     return [Freelancer(id=_UUID_B, nombre="Luis")]
 
-
 def _crespo_punto_obj() -> PuntoDeVenta:
     return PuntoDeVenta(id=uuid.uuid4(), nombre="Crespo", porcentaje_capa=Decimal("20"))
-
 
 class TestT10CrespoExcel1Persona:
     """T10: Crespo Excel row, 1 persona (same vendedor+cerrador) — parity with live flow."""
@@ -519,7 +496,6 @@ class TestT10CrespoExcel1Persona:
         )
         svc.ejecutar("x.xlsx", 7, 2026)
         reglas_repo.buscar_regla.assert_called_once_with(TipoCliente.EXTERNO, "Crespo", 1)
-
 
 class TestT11CrespoExcel2Personas:
     """T11: Crespo Excel row, 2 personas (different vendedor+cerrador) — parity with live flow."""
@@ -613,11 +589,9 @@ class TestT11CrespoExcel2Personas:
         svc.ejecutar("x.xlsx", 7, 2026)
         reglas_repo.buscar_regla.assert_called_once_with(TipoCliente.EXTERNO, "Crespo", 2)
 
-
 # ---------------------------------------------------------------------------
 # Fix A — Atomicity: desglose must be computed BEFORE persisting venta
 # ---------------------------------------------------------------------------
-
 
 class TestFixAAtomicidad:
     """FIX-A: If buscar_regla returns None (desglose raises), venta must NOT be persisted."""
@@ -658,11 +632,9 @@ class TestFixAAtomicidad:
         ventas.guardar.assert_not_called()
         comisiones.guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Fix B — Blank participant on Crespo row: abort the whole import in PASS 1
 # ---------------------------------------------------------------------------
-
 
 class TestFixBCrespoSinParticipantes:
     """FIX-B: Crespo row with blank cerrador_nombre raises VentaCrespoSinParticipantes
@@ -813,11 +785,9 @@ class TestFixBCrespoSinParticipantes:
         ventas.guardar.assert_not_called()
         comisiones.guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Fix C — Missing Crespo punto: fail loudly instead of silently zeroing capa
 # ---------------------------------------------------------------------------
-
 
 class TestFixCPuntoCrespoNoConfigurado:
     """FIX-C: When the batch has Crespo rows and puntos.buscar_por_nombre('Crespo')
@@ -870,11 +840,9 @@ class TestFixCPuntoCrespoNoConfigurado:
         assert r.ventas_creadas == 1
         ventas.guardar.assert_called_once()
 
-
 # ---------------------------------------------------------------------------
 # Fix D — Parity test: live RegistrarVentaService vs Excel ImportarVentasExcelService
 # ---------------------------------------------------------------------------
-
 
 class TestDParidadLiveVsExcel:
     """FIX-D: Side-by-side parity — same financials, same rules, field-by-field equal desglose.

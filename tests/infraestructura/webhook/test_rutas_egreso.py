@@ -97,11 +97,9 @@ _PAYLOAD_FALSE_POSITIVE = {
     ),
 }
 
-
 # ---------------------------------------------------------------------------
 # Existing egreso tests (unchanged behavior)
 # ---------------------------------------------------------------------------
-
 
 def test_email_egreso_bancolombia_llama_egreso_repo(
     client: TestClient, mock_egreso_repo: MagicMock, mock_ingreso_repo: MagicMock
@@ -115,7 +113,6 @@ def test_email_egreso_bancolombia_llama_egreso_repo(
     mock_egreso_repo.guardar.assert_called_once()
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 def test_email_egreso_nequi_llama_egreso_repo(
     client: TestClient, mock_egreso_repo: MagicMock, mock_ingreso_repo: MagicMock
 ) -> None:
@@ -126,7 +123,6 @@ def test_email_egreso_nequi_llama_egreso_repo(
     assert response.status_code == 200
     mock_egreso_repo.guardar.assert_called_once()
     mock_ingreso_repo.guardar.assert_not_called()
-
 
 def test_banco_desconocido_no_guarda_nada(
     client: TestClient, mock_egreso_repo: MagicMock, mock_ingreso_repo: MagicMock
@@ -139,11 +135,9 @@ def test_banco_desconocido_no_guarda_nada(
     mock_egreso_repo.guardar.assert_not_called()
     mock_ingreso_repo.guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # PR-B: Real parsing — transport bypass (converts the PR-A silent drop)
 # ---------------------------------------------------------------------------
-
 
 class TestTransporteBypass:
     """PR-B: Uber/DiDi receipt emails are NOW parsed and persisted as egresos.
@@ -315,7 +309,6 @@ class TestTransporteBypass:
 
         assert egreso_guardado.monto.monto == Decimal("12800.00")
 
-
 # ---------------------------------------------------------------------------
 # FIX 3 — Quarantine integration: malformed transport body -> correo_repo fires
 # ---------------------------------------------------------------------------
@@ -342,7 +335,6 @@ _PAYLOAD_DIDI_MALFORMADO = {
     "cuerpo_html": "",
     "cuerpo_texto": "Gracias por tu viaje. Valor del viaje $12.800. Sin linea Total.",
 }
-
 
 class TestCuarentenaTransporte:
     """FIX 3: A transport bank email with an unparseable body must be quarantined."""
@@ -381,7 +373,6 @@ class TestCuarentenaTransporte:
         mock_egreso_repo.guardar.assert_not_called()
         mock_ingreso_repo.guardar.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # Promotional transport emails: dropped silently (no quarantine, no alert)
 # ---------------------------------------------------------------------------
@@ -414,7 +405,6 @@ _PAYLOAD_DIDI_PROMO = {
         "Pide tu viaje ahora y ahorra en tus traslados."
     ),
 }
-
 
 class TestTransportePromoDescartada:
     """A transport-bank promotional email (no charged amount) must be dropped

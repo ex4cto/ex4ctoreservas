@@ -22,7 +22,6 @@ def _egreso(**kwargs: object) -> Egreso:
     defaults.update(kwargs)
     return Egreso(**defaults)  # type: ignore[arg-type]
 
-
 class TestEgreso:
     def test_creacion_valida(self) -> None:
         eid = uuid.uuid4()
@@ -71,7 +70,6 @@ class TestEgreso:
     def test_reenviado_se_puede_asignar(self) -> None:
         e = _egreso(reenviado=True)
         assert e.reenviado is True
-
 
 class TestEgresoDestinatario:
     """Tests for destinatario field (REQ-2, REQ-5)."""

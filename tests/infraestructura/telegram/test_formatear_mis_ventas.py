@@ -31,7 +31,6 @@ def _mv(
         proximos=proximos,
     )
 
-
 def _linea(
     fecha: datetime.date,
     valor: int,
@@ -43,11 +42,9 @@ def _linea(
         fecha=fecha, valor=Dinero(valor), varias_fechas=varias, canal_origen=canal
     )
 
-
 def test_vacio_muestra_mensaje() -> None:
     txt = _formatear_mis_ventas(_mv())
     assert "ventas" in txt.lower()
-
 
 def test_incluye_totales_en_formato_cop() -> None:
     mv = _mv(
@@ -60,7 +57,6 @@ def test_incluye_totales_en_formato_cop() -> None:
     assert "$1.500.000" in txt
     assert "$30.000" in txt
 
-
 def test_seccion_proximos_con_etiqueta_y_fecha() -> None:
     mv = _mv(
         total=1,
@@ -71,7 +67,6 @@ def test_seccion_proximos_con_etiqueta_y_fecha() -> None:
     txt = _formatear_mis_ventas(mv)
     assert "Próximos" in txt
     assert "20/09" in txt
-
 
 def test_realizados_y_proximos_en_secciones_separadas() -> None:
     mv = _mv(
@@ -86,7 +81,6 @@ def test_realizados_y_proximos_en_secciones_separadas() -> None:
     assert "Próximos" in txt
     assert "10/09" in txt
     assert "20/09" in txt
-
 
 def test_canal_con_html_se_escapa() -> None:
     """Slice 2: canal_origen (user/AI data) must be HTML-escaped in the output."""

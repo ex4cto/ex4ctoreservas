@@ -29,7 +29,6 @@ from garay.infraestructura.telegram.bot import (
 
 _HOY = datetime.date(2026, 8, 16)
 
-
 class _FakeNotificador:
     """Captures (mensaje, grupo_id) calls; can be configured to raise on demand."""
 
@@ -42,7 +41,6 @@ class _FakeNotificador:
         if grupo_id in self._raise_for:
             raise RuntimeError(f"Fake notifier failure for {grupo_id}")
 
-
 class _FakeMonitorRailwayService:
     """Stub for MonitorCostoRailwayService that returns predefined avisos."""
 
@@ -52,13 +50,11 @@ class _FakeMonitorRailwayService:
     def avisos_para(self, hoy: datetime.date) -> list[Any]:
         return list(self._avisos)
 
-
 class _RaisingRailwayService:
     """Stub that raises on avisos_para — simulates HTTP failure."""
 
     def avisos_para(self, hoy: datetime.date) -> list[Any]:
         raise RuntimeError("Railway API down")
-
 
 def _make_ctx(
     *,
@@ -87,11 +83,9 @@ def _make_ctx(
     ctx.bot_data = bot_data
     return ctx, fake_notif
 
-
 # ---------------------------------------------------------------------------
 # Railway alert delivered to each owner
 # ---------------------------------------------------------------------------
-
 
 async def test_railway_alerta_entrega_a_cada_propietario(monkeypatch: Any) -> None:
     """Railway aviso → notificador called once per owner with cost in the message."""
@@ -114,11 +108,9 @@ async def test_railway_alerta_entrega_a_cada_propietario(monkeypatch: Any) -> No
         f"Expected both owner ids to receive railway alert, got: {sent_ids}"
     )
 
-
 # ---------------------------------------------------------------------------
 # No alerts → notificador not called for railway
 # ---------------------------------------------------------------------------
-
 
 async def test_sin_avisos_railway_no_notifica(monkeypatch: Any) -> None:
     """No railway avisos → notificador is not called for railway."""
@@ -133,11 +125,9 @@ async def test_sin_avisos_railway_no_notifica(monkeypatch: Any) -> None:
 
     assert fake_notif.calls == []
 
-
 # ---------------------------------------------------------------------------
 # Service key absent → no crash
 # ---------------------------------------------------------------------------
-
 
 async def test_railway_service_ausente_no_falla(monkeypatch: Any) -> None:
     """Missing monitor_costo_railway_service key in bot_data → job runs without crashing."""
@@ -151,11 +141,9 @@ async def test_railway_service_ausente_no_falla(monkeypatch: Any) -> None:
 
     assert fake_notif.calls == []
 
-
 # ---------------------------------------------------------------------------
 # HTTP / service error → caught + logged + no crash
 # ---------------------------------------------------------------------------
-
 
 async def test_railway_error_de_api_no_rompe_ni_notifica(
     monkeypatch: Any, caplog: Any
@@ -178,11 +166,9 @@ async def test_railway_error_de_api_no_rompe_ni_notifica(
         "railway" in r.getMessage().lower() for r in caplog.records
     ), f"Expected railway error in logs, got: {[r.getMessage() for r in caplog.records]}"
 
-
 # ---------------------------------------------------------------------------
 # Domain and quota unaffected when railway errors
 # ---------------------------------------------------------------------------
-
 
 async def test_railway_error_no_afecta_otras_alertas(monkeypatch: Any) -> None:
     """Railway error must not abort quota or domain alert delivery."""
@@ -209,11 +195,9 @@ async def test_railway_error_no_afecta_otras_alertas(monkeypatch: Any) -> None:
     ]
     assert len(quota_calls) == 1, f"Expected 1 quota call, got: {quota_calls}"
 
-
 # ---------------------------------------------------------------------------
 # Per-recipient failure is isolated
 # ---------------------------------------------------------------------------
-
 
 async def test_railway_excepcion_por_destinatario_continua(
     monkeypatch: Any, caplog: Any
@@ -237,11 +221,9 @@ async def test_railway_excepcion_por_destinatario_continua(
     attempted_ids = {g for _, g in raising_notif.calls}
     assert "222" in attempted_ids
 
-
 # ---------------------------------------------------------------------------
 # _post_init: railway-only config → job IS registered
 # ---------------------------------------------------------------------------
-
 
 def _make_app_spy(propietario_ids: str = "111") -> tuple[MagicMock, MagicMock]:
     """Build a fake PTB Application with a spy job_queue."""
@@ -260,7 +242,6 @@ def _make_app_spy(propietario_ids: str = "111") -> tuple[MagicMock, MagicMock]:
     app.job_queue = job_queue
 
     return app, job_queue
-
 
 async def test_post_init_registra_job_con_solo_railway(monkeypatch: Any) -> None:
     """AC: railway-only config (no domain, no quota) → daily job IS registered."""

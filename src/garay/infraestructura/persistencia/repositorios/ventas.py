@@ -30,7 +30,7 @@ def to_orm(v: Venta) -> VentaModel:
         vendedor_nombre=v.participantes.vendedor_nombre,
         cerrador_nombre=v.participantes.cerrador_nombre,
         punto_de_venta_id=v.participantes.punto_de_venta_id,
-        referido_nombre=v.participantes.referido_nombre,
+        referido_nombre=v.participantes.referido_alias,
         canal_origen=v.canal_origen,
         fechas_por_servicio=(
             {str(k): val.isoformat() for k, val in v.fechas_por_servicio.items()}
@@ -83,7 +83,7 @@ def to_domain(m: VentaModel) -> Venta:
             vendedor_nombre=m.vendedor_nombre,
             cerrador_nombre=m.cerrador_nombre,
             punto_de_venta_id=m.punto_de_venta_id,
-            referido_nombre=m.referido_nombre,
+            referido_alias=m.referido_nombre,
             vendedor_id=m.vendedor_id,
             cerrador_id=m.cerrador_id,
         ),

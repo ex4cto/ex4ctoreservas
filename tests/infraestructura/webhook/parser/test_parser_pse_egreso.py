@@ -44,23 +44,19 @@ _TEXTO_PSE_NBSP = (
     "Gracias\xa0por\xa0utilizar\xa0nuestro\xa0servicio.\n"
 )
 
-
 # --- parser: happy path (clean text) ---
 
 def test_parsea_monto_pse() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE)
     assert resultado.monto == Decimal("124200.00")
 
-
 def test_parsea_descripcion_contiene_empresa() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE)
     assert "WOMPI S.A.S" in resultado.descripcion
 
-
 def test_parsea_banco_origen_pse() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE)
     assert resultado.banco_origen == "PSE"
-
 
 def test_parsea_fecha_egreso_date() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE)
@@ -68,12 +64,10 @@ def test_parsea_fecha_egreso_date() -> None:
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.day == 6
 
-
 def test_parsea_fecha_egreso_hora_cero() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE)
     assert resultado.fecha_egreso.hour == 0
     assert resultado.fecha_egreso.minute == 0
-
 
 # --- parser: NBSP variant ---
 
@@ -81,11 +75,9 @@ def test_parsea_monto_pse_nbsp() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE_NBSP)
     assert resultado.monto == Decimal("124200.00")
 
-
 def test_parsea_empresa_nbsp() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE_NBSP)
     assert "WOMPI S.A.S" in resultado.descripcion
-
 
 def test_parsea_fecha_nbsp() -> None:
     resultado = _PARSER.parsear("", _TEXTO_PSE_NBSP)
@@ -93,13 +85,11 @@ def test_parsea_fecha_nbsp() -> None:
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.year == 2026
 
-
 # --- parser: error path ---
 
 def test_sin_patron_lanza_error() -> None:
     with pytest.raises(ErrorParseoBanco, match="No se encontro patron"):
         _PARSER.parsear("", "Notificacion irrelevante sin datos PSE")
-
 
 def test_parsea_fecha_dia_mes_un_digito() -> None:
     texto = _TEXTO_PSE.replace(
@@ -111,18 +101,15 @@ def test_parsea_fecha_dia_mes_un_digito() -> None:
     assert resultado.fecha_egreso.month == 7
     assert resultado.fecha_egreso.year == 2026
 
-
 # --- detectar_banco ---
 
 def test_detectar_banco_cuerpo_pse_retorna_pse() -> None:
     assert detectar_banco("agenciagaraytour1@gmail.com", _TEXTO_PSE) == "PSE"
 
-
 def test_detectar_banco_cuerpo_pse_con_nequi_retorna_pse() -> None:
     """PSE takes precedence even when body also mentions Nequi."""
     cuerpo_con_nequi = _TEXTO_PSE + "\nNequi cobró una comisión."
     assert detectar_banco("agenciagaraytour1@gmail.com", cuerpo_con_nequi) == "PSE"
-
 
 def test_detectar_banco_no_confunde_substrings_cus_pse() -> None:
     """A Bancolombia email that merely mentions 'PSE' (payment method) and a
@@ -130,17 +117,14 @@ def test_detectar_banco_no_confunde_substrings_cus_pse() -> None:
     cuerpo = "Bancolombia te informa: pagaste por PSE, sin excusa alguna."
     assert detectar_banco("x@gmail.com", cuerpo) == "Bancolombia"
 
-
 def test_detectar_direccion_pse_retorna_egreso() -> None:
     assert detectar_direccion(_TEXTO_PSE) == "egreso"
-
 
 # --- fabrica ---
 
 def test_obtener_parser_egreso_pse_retorna_instancia() -> None:
     parser = obtener_parser_egreso("PSE")
     assert isinstance(parser, ParserPSEEgreso)
-
 
 # --- destinatario wiring (REQ-1) ---
 
@@ -159,7 +143,6 @@ class TestPSEDestinatario:
         texto = _TEXTO_PSE.replace("Empresa: WOMPI S.A.S", "Empresa: Empresas Publicas de Medellin")
         resultado = _PARSER.parsear("", texto)
         assert resultado.destinatario == "Empresas Publicas de Medellin"
-
 
 # --- parser-layer empty-recipient guard — structural analysis (REQ-1, REQ-5) ---
 #

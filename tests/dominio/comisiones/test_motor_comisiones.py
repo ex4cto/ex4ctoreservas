@@ -4,9 +4,6 @@ import datetime
 import uuid
 from decimal import Decimal
 
-import pytest
-
-from garay.dominio.comisiones.errores import PorcentajeReferidoSuperaTecho
 from garay.dominio.comisiones.motor import MotorComisiones
 from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.dinero import Dinero
@@ -37,10 +34,9 @@ def _venta(
             vendedor_nombre=vendedor,
             cerrador_nombre=cerrador,
             punto_de_venta_id=punto_id,
-            referido_nombre=referido,
+            referido_alias=referido,
         ),
     )
-
 
 def _punto(porcentaje_capa: Decimal = Decimal("20")) -> PuntoDeVenta:
     return PuntoDeVenta(
@@ -49,29 +45,23 @@ def _punto(porcentaje_capa: Decimal = Decimal("20")) -> PuntoDeVenta:
         porcentaje_capa=porcentaje_capa,
     )
 
-
 def _reglas(
     tipo_cliente: TipoCliente = TipoCliente.EXTERNO,
     porcentaje_vendedor: Decimal = Decimal("50"),
     porcentaje_cerrador: Decimal = Decimal("0"),
-    porcentaje_referido_maximo: Decimal = Decimal("10"),
 ) -> ReglasComision:
     return ReglasComision(
         id=uuid.uuid4(),
         tipo_cliente=tipo_cliente,
         porcentaje_vendedor=porcentaje_vendedor,
         porcentaje_cerrador=porcentaje_cerrador,
-        porcentaje_referido_maximo=porcentaje_referido_maximo,
     )
-
 
 motor = MotorComisiones()
 
-
 class TestCasoBase:
     def test_kike_solo_en_punto4(self) -> None:
-        # Garay example: valor_venta=1_000_000, neto=900_000 → ganancia=100_000
-        # capa=20% → punto=20_000; vendedor=50% → 50_000; cerrador=0%; agencia=30_000
+        # ganancia=100_000; capa=20% -> punto=20_000; vendedor=50% -> 50_000; agencia=30_000
         punto = _punto(Decimal("20"))
         venta = _venta(
             valor_venta=1_000_000,
@@ -92,7 +82,6 @@ class TestCasoBase:
         assert total == venta.ganancia
 
     def test_sin_punto_sin_referido(self) -> None:
-        # Standard case: vendedor=20%, cerrador=20%, agencia=60%
         venta = _venta(valor_venta=1_000_000, neto=900_000)
         reglas = _reglas(porcentaje_vendedor=Decimal("20"), porcentaje_cerrador=Decimal("20"))
 
@@ -105,7 +94,6 @@ class TestCasoBase:
         assert result.referido == Dinero(0)
 
     def test_digital_80_20(self) -> None:
-        # DIGITAL: vendedor=20%, cerrador=0 (one person handles digital), agencia=80%
         venta = _venta(
             valor_venta=1_000_000,
             neto=900_000,
@@ -124,7 +112,6 @@ class TestCasoBase:
         assert result.cerrador == Dinero(0)
         assert result.agencia == Dinero(80_000)
 
-
 class TestParticipacion:
     def test_sin_vendedor_agencia_absorbe(self) -> None:
         venta = _venta(vendedor=None, cerrador="cerrador")
@@ -134,7 +121,6 @@ class TestParticipacion:
 
         assert result.vendedor == Dinero(0)
         assert result.cerrador == Dinero(20_000)
-        # agencia absorbs vendedor's share: 60 + 20 = 80%
         assert result.agencia == Dinero(80_000)
 
     def test_sin_cerrador_agencia_absorbe(self) -> None:
@@ -145,7 +131,6 @@ class TestParticipacion:
 
         assert result.cerrador == Dinero(0)
         assert result.vendedor == Dinero(20_000)
-        # agencia absorbs cerrador's share: 60 + 20 = 80%
         assert result.agencia == Dinero(80_000)
 
     def test_sin_participantes_agencia_100(self) -> None:
@@ -159,38 +144,72 @@ class TestParticipacion:
         assert result.punto_de_venta == Dinero(0)
         assert result.agencia == venta.ganancia
 
-
 class TestReferido:
-    def test_referido_sobre_bruto(self) -> None:
-        # referido % is applied to valor_venta (bruto), NOT ganancia
+    """Task 1.5: New referido math -- 10% of each bruto; neto = bruto * 0.90."""
+
+    def test_vendedor_distinto_cerrador_con_referido(self) -> None:
+        # ganancia=600_000 (valor=1_000_000, neto=400_000)
+        # vendedor_bruto = 600_000 * 0.15 = 90_000
+        # cerrador_bruto = 600_000 * 0.15 = 90_000
+        # referido = 90_000*0.10 + 90_000*0.10 = 18_000
+        # neto_vendedor = neto_cerrador = 81_000
         venta = _venta(
             valor_venta=1_000_000,
-            neto=900_000,
-            referido="taxista",
+            neto=400_000,
+            vendedor="Ana",
+            cerrador="Bob",
+            referido="taxi",
         )
-        reglas = _reglas(porcentaje_referido_maximo=Decimal("10"))
+        reglas = _reglas(
+            porcentaje_vendedor=Decimal("15"),
+            porcentaje_cerrador=Decimal("15"),
+        )
 
-        result = motor.calcular(venta, reglas, None, porcentaje_referido=Decimal("5"))
+        result = motor.calcular(venta, reglas, None)
 
-        # 5% of 1_000_000 = 50_000, NOT 5% of 100_000 ganancia
-        assert result.referido == Dinero(50_000)
+        assert result.referido == Dinero(18_000)
+        assert result.neto_vendedor == Dinero(81_000)
+        assert result.neto_cerrador == Dinero(81_000)
+        assert result.vendedor == Dinero(90_000)
+        assert result.cerrador == Dinero(90_000)
 
-    def test_referido_supera_techo_levanta_error(self) -> None:
-        venta = _venta(referido="taxista")
-        reglas = _reglas(porcentaje_referido_maximo=Decimal("10"))
+    def test_vendedor_igual_cerrador_con_referido(self) -> None:
+        venta = _venta(
+            valor_venta=1_000_000,
+            neto=400_000,
+            vendedor="Ana",
+            cerrador="Ana",
+            referido="taxi",
+        )
+        reglas = _reglas(
+            porcentaje_vendedor=Decimal("15"),
+            porcentaje_cerrador=Decimal("15"),
+        )
 
-        with pytest.raises(PorcentajeReferidoSuperaTecho):
-            motor.calcular(venta, reglas, None, porcentaje_referido=Decimal("11"))
+        result = motor.calcular(venta, reglas, None)
 
-    def test_sin_referido_nombre_comision_cero(self) -> None:
-        # No referido_nombre → comision_referido = 0 even if porcentaje > 0
-        venta = _venta(referido=None)
-        reglas = _reglas(porcentaje_referido_maximo=Decimal("10"))
+        assert result.referido == Dinero(18_000)
+        assert result.neto_vendedor == Dinero(81_000)
+        assert result.neto_cerrador == Dinero(81_000)
 
-        result = motor.calcular(venta, reglas, None, porcentaje_referido=Decimal("5"))
+    def test_sin_referido_neto_igual_bruto(self) -> None:
+        venta = _venta(
+            valor_venta=1_000_000,
+            neto=400_000,
+            vendedor="Ana",
+            cerrador="Bob",
+            referido=None,
+        )
+        reglas = _reglas(
+            porcentaje_vendedor=Decimal("15"),
+            porcentaje_cerrador=Decimal("15"),
+        )
+
+        result = motor.calcular(venta, reglas, None)
 
         assert result.referido == Dinero(0)
-
+        assert result.neto_vendedor == result.vendedor
+        assert result.neto_cerrador == result.cerrador
 
 class TestInvariante:
     def test_suma_comisiones_ganancia_exacta(self) -> None:
@@ -209,9 +228,26 @@ class TestInvariante:
         total = result.punto_de_venta + result.vendedor + result.cerrador + result.agencia
         assert total == venta.ganancia
 
+    def test_invariante_con_referido(self) -> None:
+        # Referido does NOT affect punto+vendedor+cerrador+agencia==ganancia invariant
+        venta = _venta(
+            valor_venta=1_000_000,
+            neto=400_000,
+            vendedor="Ana",
+            cerrador="Bob",
+            referido="taxi",
+        )
+        reglas = _reglas(
+            porcentaje_vendedor=Decimal("15"),
+            porcentaje_cerrador=Decimal("15"),
+        )
+
+        result = motor.calcular(venta, reglas, None)
+
+        total = result.punto_de_venta + result.vendedor + result.cerrador + result.agencia
+        assert total == venta.ganancia
+
     def test_residuo_redondeo_va_a_agencia(self) -> None:
-        # ganancia = 100_001 with 3-way split causes rounding
-        # Use a value that doesn't divide evenly by 3
         venta = _venta(valor_venta=1_000_001, neto=900_000)
         reglas = _reglas(porcentaje_vendedor=Decimal("33"), porcentaje_cerrador=Decimal("33"))
 
@@ -219,7 +255,6 @@ class TestInvariante:
 
         total = result.punto_de_venta + result.vendedor + result.cerrador + result.agencia
         assert total == venta.ganancia
-
 
 class TestSnapshot:
     def test_calculo_incluye_snapshot(self) -> None:

@@ -11,10 +11,7 @@ TDD RED: written before the trigger code is added to scripts.
 
 from __future__ import annotations
 
-import sys
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 
 class TestActualizarPreciosServicios:
@@ -79,7 +76,6 @@ class TestActualizarPreciosServicios:
             main()
 
         mock_asyncio_run.assert_not_called()
-
 
 class TestSincronizarCatalogo:
     """Trigger in sincronizar_catalogo.main()."""

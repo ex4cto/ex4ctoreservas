@@ -7,11 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_context(
     *,
@@ -44,18 +42,15 @@ def _make_context(
 
     return context
 
-
 def _make_venta(mensaje_grupo_id: int | None = None) -> MagicMock:
     venta = MagicMock()
     venta.id = uuid.uuid4()
     venta.mensaje_grupo_id = mensaje_grupo_id
     return venta
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestNotificarEdicion:
     @pytest.mark.asyncio

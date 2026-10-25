@@ -58,7 +58,6 @@ class TestParseNeto:
     def test_parse_neto_no_pagan(self) -> None:
         assert _parse_neto("(0-12 AÑOS) No pagan") == Decimal("0")
 
-
 class TestNetoSemilla:
     def test_plain_int_string_miles(self) -> None:
         assert _neto_semilla("180") == Decimal("180000")

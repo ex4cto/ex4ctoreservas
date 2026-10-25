@@ -28,7 +28,6 @@ def _venta(adultos: int = 2, ninos: int = 1) -> Venta:
         ninos=ninos,
     )
 
-
 class TestCambiarPax:
     def test_happy_path_actualiza_adultos_y_ninos(self) -> None:
         v = _venta(adultos=2, ninos=1)

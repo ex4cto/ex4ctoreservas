@@ -14,7 +14,6 @@ import pytest
 # Fakes / helpers
 # ---------------------------------------------------------------------------
 
-
 class FakeCambiosRepo:
     """In-memory fake for CambiosPendientesRepository."""
 
@@ -37,7 +36,6 @@ class FakeCambiosRepo:
     def limpiar(self) -> None:
         self._registros.clear()
 
-
 class FakeNotificador:
     """Async fake for NotificadorTextoPort."""
 
@@ -46,7 +44,6 @@ class FakeNotificador:
 
     async def enviar(self, chat_id: int, texto: str) -> None:
         self.enviados.append((chat_id, texto))
-
 
 def _make_svc(
     repo: object | None = None,
@@ -72,11 +69,9 @@ def _make_svc(
         grupo_id=grupo_id,
     )
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 class TestNotificarCambioCatalogoServicio:
     @pytest.mark.asyncio

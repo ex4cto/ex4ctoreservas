@@ -5,8 +5,6 @@ from __future__ import annotations
 import datetime
 import uuid
 
-import pytest
-
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
 
@@ -20,7 +18,7 @@ class TestPagoFreelancer:
             monto=Dinero(100_000),
             desde=datetime.date(2026, 10, 1),
             hasta=datetime.date(2026, 10, 7),
-            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.timezone.utc),
+            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.UTC),
             registrado_por_telegram_id=5870211102,
             registrado_por_nombre="Ryan",
         )
@@ -39,7 +37,7 @@ class TestPagoFreelancer:
             monto=Dinero(50_000),
             desde=datetime.date(2026, 10, 1),
             hasta=datetime.date(2026, 10, 7),
-            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.timezone.utc),
+            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.UTC),
             registrado_por_telegram_id=5870211102,
             registrado_por_nombre=None,
         )
@@ -60,7 +58,7 @@ class TestPagoFreelancer:
             monto=Dinero(100_000),
             desde=datetime.date(2026, 10, 1),
             hasta=datetime.date(2026, 10, 7),
-            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.timezone.utc),
+            fecha_pago=datetime.datetime(2026, 10, 8, 12, 0, 0, tzinfo=datetime.UTC),
             registrado_por_telegram_id=5870211102,
             registrado_por_nombre=None,
         )

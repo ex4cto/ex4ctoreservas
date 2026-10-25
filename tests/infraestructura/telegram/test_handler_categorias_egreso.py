@@ -52,10 +52,8 @@ def _make_update(text: str | None = None, callback_data: str | None = None) -> M
         update.callback_query = None
     return update
 
-
 def _cat(nombre: str, activo: bool = True, orden: int = 1) -> CategoriaEgreso:
     return CategoriaEgreso(nombre=nombre, descripcion="", activo=activo, orden=orden)
-
 
 def _make_admin_repo() -> MagicMock:
     repo = MagicMock()
@@ -63,7 +61,6 @@ def _make_admin_repo() -> MagicMock:
     freelancer.es_admin = True
     repo.buscar_por_telegram_id.return_value = freelancer
     return repo
-
 
 def _make_context(categorias: list[CategoriaEgreso] | None = None) -> MagicMock:
     ctx = MagicMock()
@@ -80,7 +77,6 @@ def _make_context(categorias: list[CategoriaEgreso] | None = None) -> MagicMock:
         "freelancer_repo": _make_admin_repo(),
     }
     return ctx
-
 
 class TestCmdCategorias:
     @pytest.mark.asyncio
@@ -101,7 +97,6 @@ class TestCmdCategorias:
         ctx.bot_data["freelancer_repo"].buscar_por_telegram_id.return_value.es_admin = False
         result = await cmd_categorias_egreso(update, ctx)
         assert result == ConversationHandler.END
-
 
 class TestMenu:
     @pytest.mark.asyncio
@@ -139,7 +134,6 @@ class TestMenu:
         result = await handle_cat_menu(update, ctx)
         assert result == CAT_ACCIONES
         assert ctx.user_data["cat_sel_nombre"] == "comisiones"
-
 
 class TestNuevaCategoria:
     @pytest.mark.asyncio
@@ -203,7 +197,6 @@ class TestNuevaCategoria:
         assert result == CAT_MENU
         ctx.bot_data["categoria_service"].crear.assert_not_called()
 
-
 class TestAcciones:
     @pytest.mark.asyncio
     async def test_desactivar_llama_servicio(self) -> None:
@@ -254,7 +247,6 @@ class TestAcciones:
         ctx.user_data["cat_sel_nombre"] = "marketing"
         result = await handle_cat_acciones(update, ctx)
         assert result == CAT_EDIT_DESC
-
 
 class TestEditarDescripcion:
     @pytest.mark.asyncio

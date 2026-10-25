@@ -21,11 +21,9 @@ SERVICIOS_TEST: list[tuple[int, str, Decimal | None, Decimal | None, str, list[s
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_TEST, puntos_venta=PUNTOS_TEST)
-
 
 class TestIdentificacionRuteoPorTipo:
     def test_interno_salta_hotel_va_a_habitacion(self, fsm: FSMTiquetera) -> None:
@@ -48,7 +46,6 @@ class TestIdentificacionRuteoPorTipo:
         salida = fsm.procesar(EstadoFSM.CLIENTE_HOTEL, "sin hotel", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
         assert salida.contexto.sin_hotel is True
-
 
 class TestOpcionesEditables:
     def test_interno_oculta_hotel_muestra_habitacion(self, fsm: FSMTiquetera) -> None:

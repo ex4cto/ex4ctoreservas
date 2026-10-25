@@ -14,7 +14,6 @@ def _conciliacion(**kwargs: object) -> Conciliacion:
     defaults.update(kwargs)
     return Conciliacion(**defaults)  # type: ignore[arg-type]
 
-
 class TestConciliacion:
     def test_creacion_valida(self) -> None:
         cid = uuid.uuid4()

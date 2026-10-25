@@ -22,7 +22,6 @@ from garay.infraestructura.webhook.parser.base import es_transaccion
 def test_es_transaccion_retorna_true_para_verbos_transaccionales(cuerpo: str) -> None:
     assert es_transaccion(cuerpo) is True
 
-
 def test_es_transaccion_retorna_true_para_cuerpo_pse() -> None:
     """PSE marker 'CUS:' must be recognized via the existing _es_pse helper."""
     cuerpo = (
@@ -30,7 +29,6 @@ def test_es_transaccion_retorna_true_para_cuerpo_pse() -> None:
         "CUS: 455692497 Valor: $120,000 Comercio: GARAY TOURS"
     )
     assert es_transaccion(cuerpo) is True
-
 
 # ---------------------------------------------------------------------------
 # FALSE cases — non-transaction emails must be rejected
@@ -43,7 +41,6 @@ def test_es_transaccion_retorna_false_para_marketing() -> None:
     )
     assert es_transaccion(cuerpo) is False
 
-
 def test_es_transaccion_retorna_false_para_aviso_factura() -> None:
     cuerpo = (
         "Tu factura de Tigo con referencia 3012853555 está lista para pagar. "
@@ -51,10 +48,8 @@ def test_es_transaccion_retorna_false_para_aviso_factura() -> None:
     )
     assert es_transaccion(cuerpo) is False
 
-
 def test_es_transaccion_retorna_false_para_cuerpo_vacio() -> None:
     assert es_transaccion("") is False
-
 
 def test_es_transaccion_retorna_false_para_boletin_seguridad() -> None:
     cuerpo = (

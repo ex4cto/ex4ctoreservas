@@ -19,7 +19,6 @@ def _servicio(**kwargs: object) -> Servicio:
     defaults.update(kwargs)
     return Servicio(**defaults)  # type: ignore[arg-type]
 
-
 class TestPrecioSugeridoAdulto:
     def test_valor_positivo_aceptado(self) -> None:
         """A positive Decimal for precio_sugerido_adulto must not raise."""
@@ -46,7 +45,6 @@ class TestPrecioSugeridoAdulto:
         s = _servicio()
         assert s.precio_sugerido_adulto is None
 
-
 class TestPrecioSugeridoNino:
     def test_valor_positivo_aceptado(self) -> None:
         """A positive Decimal for precio_sugerido_nino must not raise."""
@@ -72,7 +70,6 @@ class TestPrecioSugeridoNino:
         """precio_sugerido_nino defaults to None when not provided."""
         s = _servicio()
         assert s.precio_sugerido_nino is None
-
 
 class TestAmbosFieldsIndependientes:
     def test_ambos_positivos(self) -> None:

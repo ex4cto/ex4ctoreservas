@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from decimal import Decimal
 
 from garay.aplicacion.tiquetera.errores import ReglasComisionNoEncontradas
 from garay.aplicacion.tiquetera.servicio import _derivar_numero_personas
@@ -88,7 +87,7 @@ class EditarParticipantesVentaService:
                 f"punto={lookup_punto!r}, personas={lookup_personas!r}"
             )
 
-        desglose = self._motor.calcular(venta, reglas, punto, Decimal("0"))
+        desglose = self._motor.calcular(venta, reglas, punto)
 
         registro = AuditoriaVenta(
             id=uuid.uuid4(),

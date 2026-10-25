@@ -55,7 +55,6 @@ class TestVentaRepository:
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
 
-
 class TestIngresoRepository:
     def test_implementacion_cumple_interfaz(self) -> None:
         from garay.dominio.conciliacion.entidades import Ingreso
@@ -87,7 +86,6 @@ class TestIngresoRepository:
 
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
-
 
 class TestFreelancerRepository:
     """Verify that FreelancerRepository ABC exposes the A1 contract.
@@ -160,7 +158,6 @@ class TestFreelancerRepository:
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
 
-
 class TestServicioRepository:
     """Verify that ServicioRepository ABC exposes the siguiente_numero contract."""
 
@@ -199,7 +196,6 @@ class TestServicioRepository:
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
 
-
 class TestExtractorIA:
     def test_implementacion_cumple_interfaz(self) -> None:
         from decimal import Decimal
@@ -217,11 +213,9 @@ class TestExtractorIA:
         with pytest.raises(TypeError):
             _Incompleto()  # type: ignore[abstract]
 
-
 # ---------------------------------------------------------------------------
 # T2.3 RED — TipoImagen, GeneradorListaPreciosPort, EnviadorFotoPort
 # ---------------------------------------------------------------------------
-
 
 class TestTipoImagen:
     def test_interna_resuelve_sin_import_error(self) -> None:
@@ -250,7 +244,6 @@ class TestTipoImagen:
         assert isinstance(TipoImagen.INTERNA, str)
         assert isinstance(TipoImagen.TURISTA, str)
 
-
 class TestGeneradorListaPreciosPort:
     def test_instanciar_sin_implementacion_lanza_type_error(self) -> None:
         from garay.dominio.puertos.generador_lista_precios import (
@@ -277,7 +270,6 @@ class TestGeneradorListaPreciosPort:
 
         instance = Implementado()
         assert instance is not None
-
 
 class TestEnviadorFotoPort:
     def test_instanciar_sin_implementacion_lanza_type_error(self) -> None:

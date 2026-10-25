@@ -15,7 +15,6 @@ from garay.infraestructura.persistencia.tipos import TipoDinero
 
 _DIALECT = _dialect_sqlite()
 
-
 class TestConversion:
     def test_bind_devuelve_el_monto_decimal(self) -> None:
         assert TipoDinero().process_bind_param(Dinero("1000.50"), _DIALECT) == Decimal("1000.50")
@@ -32,17 +31,14 @@ class TestConversion:
         reconstruido = TipoDinero("USD").process_result_value(Decimal("10"), _DIALECT)
         assert reconstruido == Dinero("10", "USD")
 
-
 class _BasePrueba(DeclarativeBase):
     """Base aislada para no contaminar el metadata de la app."""
-
 
 class _FilaConDinero(_BasePrueba):
     __tablename__ = "prueba_dinero"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     importe: Mapped[Dinero] = mapped_column(TipoDinero())
-
 
 class TestPersistenciaReal:
     @pytest.fixture

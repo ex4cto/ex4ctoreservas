@@ -18,7 +18,6 @@ from garay.dominio.ventas.errores import (
     NetoIgualOSuperaValorVenta,
     ValorVentaMenorQueAbono,
     VentaNoEncontrada,
-    VentaYaAnulada,
 )
 
 
@@ -42,7 +41,6 @@ def _make_venta_mock(
     v.participantes = participantes
     return v
 
-
 def _make_repos(
     venta: MagicMock | None = None,
     auditoria_records: list[object] | None = None,
@@ -64,12 +62,10 @@ def _make_repos(
 
     return ventas_repo, auditoria_repo, reglas_repo, puntos_repo, comisiones_repo
 
-
 def _make_motor() -> MagicMock:
     motor = MagicMock()
     motor.calcular.return_value = MagicMock()
     return motor
-
 
 def _make_cmd(
     motivo: str = "ajuste precio",
@@ -84,7 +80,6 @@ def _make_cmd(
         realizada_por_telegram_id=123,
         realizada_por_nombre="Admin",
     )
-
 
 def _make_service(
     ventas: MagicMock,
@@ -104,7 +99,6 @@ def _make_service(
         comisiones_repo=comisiones,
         motor=motor,
     )
-
 
 class TestEditarValorVentaService:
     def test_importable(self) -> None:
@@ -214,7 +208,6 @@ class TestEditarValorVentaService:
             service.ejecutar(cmd)  # type: ignore[union-attr]
 
     def test_motor_calcular_referido_zero(self) -> None:
-        from decimal import Decimal
 
         venta = _make_venta_mock()
         ventas, auditoria, reglas, puntos, comisiones = _make_repos(venta=venta)
@@ -223,4 +216,4 @@ class TestEditarValorVentaService:
         cmd = _make_cmd()
         service.ejecutar(cmd)  # type: ignore[union-attr]
         args = motor.calcular.call_args[0]
-        assert args[3] == Decimal("0")
+        assert len(args) == 3  # (venta, reglas, punto) — no porcentaje_referido

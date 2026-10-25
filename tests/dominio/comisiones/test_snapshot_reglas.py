@@ -18,11 +18,9 @@ def _reglas(**kwargs: object) -> ReglasComision:
         "tipo_cliente": TipoCliente.EXTERNO,
         "porcentaje_vendedor": Decimal("20"),
         "porcentaje_cerrador": Decimal("20"),
-        "porcentaje_referido_maximo": Decimal("10"),
     }
     defaults.update(kwargs)
     return ReglasComision(**defaults)  # type: ignore[arg-type]
-
 
 def _punto(porcentaje_capa: Decimal = Decimal("20")) -> PuntoDeVenta:
     return PuntoDeVenta(
@@ -30,7 +28,6 @@ def _punto(porcentaje_capa: Decimal = Decimal("20")) -> PuntoDeVenta:
         nombre="Punto Test",
         porcentaje_capa=porcentaje_capa,
     )
-
 
 class TestSnapshotReglas:
     def test_desde_reglas_sin_punto(self) -> None:
@@ -40,7 +37,14 @@ class TestSnapshotReglas:
         assert snap.tipo_cliente == TipoCliente.EXTERNO
         assert snap.porcentaje_vendedor == Decimal("20")
         assert snap.porcentaje_cerrador == Decimal("20")
-        assert snap.porcentaje_referido_maximo == Decimal("10")
+
+    def test_sin_campo_porcentaje_referido_maximo(self) -> None:
+        """Task 1.3: porcentaje_referido_maximo must NOT exist on SnapshotReglas."""
+        reglas = _reglas()
+        snap = SnapshotReglas.desde_reglas(reglas, None)
+        assert not hasattr(snap, "porcentaje_referido_maximo"), (
+            "porcentaje_referido_maximo debe haber sido eliminado de SnapshotReglas"
+        )
 
     def test_desde_reglas_con_punto(self) -> None:
         reglas = _reglas()
@@ -54,9 +58,8 @@ class TestSnapshotReglas:
         with pytest.raises(FrozenInstanceError):
             snap.porcentaje_vendedor = Decimal("99")  # type: ignore[misc]
 
-
 class TestSnapshotReglasCamposNuevos:
-    """WU-2: numero_personas and punto_de_venta_nombre fields + backward compat (REQ-08c / B4)."""
+    """WU-2: numero_personas and punto_de_venta_nombre fields + backward compat."""
 
     def test_campos_nuevos_defaultean_none(self) -> None:
         reglas = _reglas()
@@ -111,7 +114,25 @@ class TestSnapshotReglasCamposNuevos:
         assert snap2.punto_de_venta_nombre is None
 
     def test_dict_to_snapshot_backward_compat_old_dict(self) -> None:
-        """Old snapshot dict without new keys deserializes without error (REQ-08c / T13)."""
+        """Task 1.3: old snapshot dict missing porcentaje_referido_maximo loads without error."""
+        from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
+            _dict_to_snapshot,
+        )
+
+        old_dict: dict[str, object] = {
+            "tipo_cliente": "EXTERNO",
+            "porcentaje_vendedor": "20",
+            "porcentaje_cerrador": "20",
+            # porcentaje_referido_maximo intentionally absent
+            "porcentaje_capa_punto": "0",
+        }
+        snap = _dict_to_snapshot(old_dict)
+        assert snap.porcentaje_vendedor == Decimal("20")
+        assert snap.numero_personas is None
+        assert snap.punto_de_venta_nombre is None
+
+    def test_dict_to_snapshot_backward_compat_with_old_maximo_key(self) -> None:
+        """Task 1.3: old dict WITH porcentaje_referido_maximo key deserializes without error."""
         from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
             _dict_to_snapshot,
         )
@@ -122,9 +143,7 @@ class TestSnapshotReglasCamposNuevos:
             "porcentaje_cerrador": "20",
             "porcentaje_referido_maximo": "10",
             "porcentaje_capa_punto": "0",
-            # numero_personas and punto_de_venta_nombre intentionally absent
         }
+        # Must load without error even though the snapshot field no longer exists
         snap = _dict_to_snapshot(old_dict)
-        assert snap.numero_personas is None
-        assert snap.punto_de_venta_nombre is None
         assert snap.porcentaje_vendedor == Decimal("20")

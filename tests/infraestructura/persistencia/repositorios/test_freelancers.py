@@ -18,11 +18,9 @@ def test_guardar_y_buscar_por_id(sf: sessionmaker[Session]) -> None:
     assert resultado.nombre == f.nombre
     assert resultado.activo is True
 
-
 def test_buscar_inexistente_devuelve_none(sf: sessionmaker[Session]) -> None:
     repo = SQLAFreelancerRepository(sf)
     assert repo.buscar_por_id(uuid.uuid4()) is None
-
 
 def test_listar_activos(sf: sessionmaker[Session]) -> None:
     repo = SQLAFreelancerRepository(sf)
@@ -34,7 +32,6 @@ def test_listar_activos(sf: sessionmaker[Session]) -> None:
     assert len(activos) == 1
     assert activos[0].nombre == "Ana"
 
-
 def test_buscar_por_telegram_id(sf: sessionmaker[Session]) -> None:
     repo = SQLAFreelancerRepository(sf)
     f = Freelancer(id=uuid.uuid4(), nombre="Carlos", activo=True, telegram_user_id=99991234)
@@ -43,7 +40,6 @@ def test_buscar_por_telegram_id(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.nombre == "Carlos"
     assert repo.buscar_por_telegram_id(0) is None
-
 
 def test_guardar_y_buscar_es_admin(sf: sessionmaker[Session]) -> None:
     """Freelancer with es_admin=True round-trips correctly."""
@@ -56,7 +52,6 @@ def test_guardar_y_buscar_es_admin(sf: sessionmaker[Session]) -> None:
     assert resultado is not None
     assert resultado.es_admin is True
 
-
 def test_es_admin_default_false(sf: sessionmaker[Session]) -> None:
     """Freelancer created without es_admin defaults to False."""
     repo = SQLAFreelancerRepository(sf)
@@ -65,8 +60,6 @@ def test_es_admin_default_false(sf: sessionmaker[Session]) -> None:
     resultado = repo.buscar_por_id(f.id)
     assert resultado is not None
     assert resultado.es_admin is False
-
-
 
 def test_listar_todos_activos_e_inactivos(sf: sessionmaker[Session]) -> None:
     """listar_todos returns both active and inactive freelancers ordered by name."""
@@ -81,7 +74,6 @@ def test_listar_todos_activos_e_inactivos(sf: sessionmaker[Session]) -> None:
     assert "Inactivo" in nombres
     assert len(todos) == 2
 
-
 def test_buscar_por_telegram_id_no_devuelve_inactivos(sf: sessionmaker[Session]) -> None:
     """buscar_por_telegram_id must NOT return inactive freelancers."""
     repo = SQLAFreelancerRepository(sf)
@@ -92,9 +84,7 @@ def test_buscar_por_telegram_id_no_devuelve_inactivos(sf: sessionmaker[Session])
     resultado = repo.buscar_por_telegram_id(77770000)
     assert resultado is None
 
-
 # --- A1: new repository methods ---
-
 
 def test_buscar_por_cedula_encontrado(sf: sessionmaker[Session]) -> None:
     """buscar_por_cedula returns the freelancer when cedula matches."""
@@ -108,18 +98,15 @@ def test_buscar_por_cedula_encontrado(sf: sessionmaker[Session]) -> None:
     assert resultado.cedula == "12345678"
     assert resultado.nombre == "Ana"
 
-
 def test_buscar_por_cedula_no_encontrado(sf: sessionmaker[Session]) -> None:
     """buscar_por_cedula returns None when cedula is not found."""
     repo = SQLAFreelancerRepository(sf)
     assert repo.buscar_por_cedula("99999999") is None
 
-
 def test_listar_por_nombre_lista_vacia(sf: sessionmaker[Session]) -> None:
     """listar_por_nombre returns empty list when no match."""
     repo = SQLAFreelancerRepository(sf)
     assert repo.listar_por_nombre("Nadie") == []
-
 
 def test_listar_por_nombre_coincidencia_exacta(sf: sessionmaker[Session]) -> None:
     """listar_por_nombre returns the matching freelancer (exact name)."""
@@ -130,7 +117,6 @@ def test_listar_por_nombre_coincidencia_exacta(sf: sessionmaker[Session]) -> Non
     assert len(resultado) == 1
     assert resultado[0].nombre == "Kike"
 
-
 def test_listar_por_nombre_case_insensitive(sf: sessionmaker[Session]) -> None:
     """listar_por_nombre matches with lowercase query."""
     repo = SQLAFreelancerRepository(sf)
@@ -139,7 +125,6 @@ def test_listar_por_nombre_case_insensitive(sf: sessionmaker[Session]) -> None:
     resultado = repo.listar_por_nombre("kike")
     assert len(resultado) == 1
 
-
 def test_listar_por_nombre_espacios_en_query(sf: sessionmaker[Session]) -> None:
     """listar_por_nombre matches even when query has surrounding spaces."""
     repo = SQLAFreelancerRepository(sf)
@@ -147,7 +132,6 @@ def test_listar_por_nombre_espacios_en_query(sf: sessionmaker[Session]) -> None:
     repo.guardar(f)
     resultado = repo.listar_por_nombre(" Kike ")
     assert len(resultado) == 1
-
 
 def test_listar_por_nombre_multiples_coincidencias(sf: sessionmaker[Session]) -> None:
     """listar_por_nombre returns all rows when multiple names match."""
@@ -158,7 +142,6 @@ def test_listar_por_nombre_multiples_coincidencias(sf: sessionmaker[Session]) ->
     repo.guardar(f2)
     resultado = repo.listar_por_nombre("Kike")
     assert len(resultado) == 2
-
 
 def test_buscar_por_telegram_id_cualquier_estado_devuelve_inactivo(
     sf: sessionmaker[Session],
@@ -173,7 +156,6 @@ def test_buscar_por_telegram_id_cualquier_estado_devuelve_inactivo(
     assert resultado is not None
     assert resultado.activo is False
 
-
 def test_buscar_por_telegram_id_cualquier_estado_devuelve_activo(
     sf: sessionmaker[Session],
 ) -> None:
@@ -187,14 +169,12 @@ def test_buscar_por_telegram_id_cualquier_estado_devuelve_activo(
     assert resultado is not None
     assert resultado.activo is True
 
-
 def test_buscar_por_telegram_id_cualquier_estado_no_encontrado(
     sf: sessionmaker[Session],
 ) -> None:
     """buscar_por_telegram_id_cualquier_estado returns None when not found."""
     repo = SQLAFreelancerRepository(sf)
     assert repo.buscar_por_telegram_id_cualquier_estado(77700000) is None
-
 
 def test_editar_nombre_completo_persiste(sf: sessionmaker[Session]) -> None:
     """Editing nombre_completo on an existing freelancer must persist on re-read.

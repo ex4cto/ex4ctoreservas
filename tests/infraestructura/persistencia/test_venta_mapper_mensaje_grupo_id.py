@@ -31,11 +31,10 @@ def _participantes() -> Participantes:
         vendedor_nombre="Test",
         cerrador_nombre=None,
         punto_de_venta_id=None,
-        referido_nombre=None,
+        referido_alias=None,
         vendedor_id=None,
         cerrador_id=None,
     )
-
 
 def _venta(mensaje_grupo_id: int | None = None) -> Venta:
     return Venta(
@@ -52,13 +51,11 @@ def _venta(mensaje_grupo_id: int | None = None) -> Venta:
         mensaje_grupo_id=mensaje_grupo_id,
     )
 
-
 @pytest.fixture()
 def sf():  # type: ignore[no-untyped-def]
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
-
 
 class TestVentaEntidadMensajeGrupoId:
     """Venta dataclass carries mensaje_grupo_id."""
@@ -73,7 +70,6 @@ class TestVentaEntidadMensajeGrupoId:
         venta = _venta(mensaje_grupo_id=999_001)
         assert venta.mensaje_grupo_id == 999_001
 
-
 class TestVentaModelColumnaMensajeGrupoId:
     """VentaModel has mensaje_grupo_id column."""
 
@@ -82,7 +78,6 @@ class TestVentaModelColumnaMensajeGrupoId:
         inspector = sa.inspect(engine)
         cols = {c["name"] for c in inspector.get_columns("ventas")}
         assert "mensaje_grupo_id" in cols
-
 
 class TestMapperRoundtripMensajeGrupoId:
     """to_orm / to_domain preserves mensaje_grupo_id."""
@@ -117,7 +112,6 @@ class TestMapperRoundtripMensajeGrupoId:
             resultado = to_domain(modelo_leido)
 
         assert resultado.mensaje_grupo_id is None
-
 
 class TestRepoRoundtripMensajeGrupoId:
     """SQLAVentaRepository.guardar + buscar_por_id preserves mensaje_grupo_id."""

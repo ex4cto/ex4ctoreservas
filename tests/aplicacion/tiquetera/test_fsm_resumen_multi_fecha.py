@@ -21,11 +21,9 @@ SERVICIOS: list[tuple[int, str, Decimal | None, Decimal | None, str, list[str]]]
 ]
 PUNTOS: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS, puntos_venta=PUNTOS)
-
 
 class TestResumenSingleTourParity:
     def test_single_tour_renders_date_only(self, fsm: FSMTiquetera) -> None:
@@ -53,7 +51,6 @@ class TestResumenSingleTourParity:
         )
         resumen = fsm._construir_resumen(ctx)
         assert "12/08/2025" in resumen
-
 
 class TestResumenMultiTourCompact:
     def test_two_tours_compact_string(self, fsm: FSMTiquetera) -> None:

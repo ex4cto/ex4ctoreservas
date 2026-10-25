@@ -44,14 +44,11 @@ from garay.infraestructura.telegram.handlers_propuestas import (
 
 _AV = Documento.PROPUESTA_AUDIOVISUAL.value
 
-
 # --- pure helpers -----------------------------------------------------------
-
 
 def test_alternar_agrega_y_quita() -> None:
     assert alternar_seleccion(set(), _AV) == {_AV}
     assert alternar_seleccion({_AV}, _AV) == set()
-
 
 def test_teclado_marca_seleccionados() -> None:
     kb = construir_teclado({_AV})
@@ -62,15 +59,12 @@ def test_teclado_marca_seleccionados() -> None:
     # los 4 documentos + Continuar
     assert len(textos) == 5
 
-
 def test_teclado_sin_seleccion_no_tiene_check() -> None:
     kb = construir_teclado(set())
     textos = [b.text for fila in kb.inline_keyboard for b in fila]
     assert not any("✅" in t for t in textos)
 
-
 # --- entry point ------------------------------------------------------------
-
 
 async def test_cmd_abre_menu_seleccion() -> None:
     update = MagicMock()
@@ -85,7 +79,6 @@ async def test_cmd_abre_menu_seleccion() -> None:
     # menu shown with an inline keyboard
     assert "reply_markup" in update.effective_message.reply_text.call_args.kwargs
 
-
 async def test_cmd_no_dev_termina() -> None:
     update = MagicMock()
     update.effective_user = MagicMock(id=999)
@@ -94,9 +87,7 @@ async def test_cmd_no_dev_termina() -> None:
         result = await cmd_generar_documento(update, MagicMock())
     assert result == ConversationHandler.END
 
-
 # --- toggle -----------------------------------------------------------------
-
 
 async def test_toggle_documento_implementado_selecciona() -> None:
     query = AsyncMock()
@@ -111,7 +102,6 @@ async def test_toggle_documento_implementado_selecciona() -> None:
     assert context.user_data["gen_docs"] == {_AV}
     query.edit_message_reply_markup.assert_called_once()
     assert result == GEN_SELECCION
-
 
 async def test_toggle_documento_desconocido_avisa_proximamente() -> None:
     query = AsyncMock()
@@ -128,9 +118,7 @@ async def test_toggle_documento_desconocido_avisa_proximamente() -> None:
     query.answer.assert_called_once()
     assert result == GEN_SELECCION
 
-
 # --- continuar --------------------------------------------------------------
-
 
 async def test_continuar_sin_seleccion_se_queda() -> None:
     query = AsyncMock()
@@ -143,7 +131,6 @@ async def test_continuar_sin_seleccion_se_queda() -> None:
 
     assert result == GEN_SELECCION
     query.answer.assert_called_once()
-
 
 async def test_continuar_con_seleccion_pide_empresa() -> None:
     query = AsyncMock()
@@ -160,9 +147,7 @@ async def test_continuar_con_seleccion_pide_empresa() -> None:
     # The document menu buttons must be dropped so they don't linger.
     query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
 
-
 # --- empresa → genera -------------------------------------------------------
-
 
 async def test_empresa_pide_precios() -> None:
     update = MagicMock()
@@ -177,7 +162,6 @@ async def test_empresa_pide_precios() -> None:
     assert context.user_data["gen_empresa"] == "Acme S.A.S."
     assert "reply_markup" in update.effective_message.reply_text.call_args.kwargs
 
-
 async def test_empresa_vacia_repregunta() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -189,20 +173,16 @@ async def test_empresa_vacia_repregunta() -> None:
 
     assert result == GEN_EMPRESA
 
-
 # --- precios ---------------------------------------------------------------
-
 
 def test_parsear_precio_acepta_formatos() -> None:
     assert parsear_precio("3.000.000") == Dinero(3_000_000)
     assert parsear_precio("$1.800.000") == Dinero(1_800_000)
     assert parsear_precio("4500000") == Dinero(4_500_000)
 
-
 def test_parsear_precio_rechaza_invalido() -> None:
     assert parsear_precio("abc") is None
     assert parsear_precio("") is None
-
 
 async def test_precios_default_genera_con_defaults() -> None:
     service = MagicMock()
@@ -222,7 +202,6 @@ async def test_precios_default_genera_con_defaults() -> None:
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
 
-
 async def test_precios_editar_pide_primer_precio() -> None:
     query = AsyncMock()
     query.data = "gen_precios:editar"
@@ -238,7 +217,6 @@ async def test_precios_editar_pide_primer_precio() -> None:
     update.effective_message.reply_text.assert_called_once()
     query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
 
-
 async def test_precio_completo_valido_avanza() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -251,7 +229,6 @@ async def test_precio_completo_valido_avanza() -> None:
     assert context.user_data["gen_precio_completo"] == Dinero(4_000_000)
     assert result == GEN_PRECIO_MEDIO
 
-
 async def test_precio_invalido_repregunta() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -263,7 +240,6 @@ async def test_precio_invalido_repregunta() -> None:
 
     assert "gen_precio_completo" not in context.user_data
     assert result == GEN_PRECIO_COMPLETO
-
 
 async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
     service = MagicMock()
@@ -296,11 +272,9 @@ async def test_precio_trafficker_construye_precios_custom_y_genera() -> None:
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
 
-
 # --- software (Slice 4a) ----------------------------------------------------
 
 _SW = Documento.PROPUESTA_SOFTWARE.value
-
 
 async def test_empresa_con_software_pide_ejemplos() -> None:
     update = MagicMock()
@@ -314,7 +288,6 @@ async def test_empresa_con_software_pide_ejemplos() -> None:
     assert result == GEN_EJEMPLOS
     update.effective_message.reply_text.assert_called_once()
 
-
 async def test_ejemplos_guarda_y_pide_precios_sw() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -326,7 +299,6 @@ async def test_ejemplos_guarda_y_pide_precios_sw() -> None:
 
     assert context.user_data["gen_ejemplos"] == "citas y consultas"
     assert result == GEN_PRECIOS_SW
-
 
 async def test_av_default_con_ambos_pasa_a_precios_sw() -> None:
     query = AsyncMock()
@@ -340,7 +312,6 @@ async def test_av_default_con_ambos_pasa_a_precios_sw() -> None:
     result = await handle_gen_precios(update, context)
 
     assert result == GEN_PRECIOS_SW
-
 
 async def test_precios_sw_default_genera() -> None:
     sw = MagicMock()
@@ -360,7 +331,6 @@ async def test_precios_sw_default_genera() -> None:
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
     query.edit_message_reply_markup.assert_called_once_with(reply_markup=None)
-
 
 async def test_sw_anual_construye_precios_custom_y_genera() -> None:
     sw = MagicMock()
@@ -392,7 +362,6 @@ async def test_sw_anual_construye_precios_custom_y_genera() -> None:
     sw.generar.assert_called_once_with(esperado)
     assert result == ConversationHandler.END
 
-
 # --- contratos (Slice 5b) ---------------------------------------------------
 
 _CAV = Documento.CONTRATO_AUDIOVISUAL.value
@@ -407,7 +376,6 @@ _LEGAL = {
     "gen_ciudad": "Medellin",
 }
 
-
 async def test_razon_social_avanza_a_nit() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -420,7 +388,6 @@ async def test_razon_social_avanza_a_nit() -> None:
     assert context.user_data["gen_razon_social"] == "Clinica Sonrisa SAS"
     assert result == GEN_NIT
 
-
 async def test_ciudad_con_contrato_av_pide_plan() -> None:
     update = MagicMock()
     update.effective_message = AsyncMock()
@@ -431,7 +398,6 @@ async def test_ciudad_con_contrato_av_pide_plan() -> None:
     result = await handle_ciudad(update, context)
 
     assert result == GEN_PLAN_CONTRATO
-
 
 async def test_ciudad_solo_contrato_software_genera() -> None:
     svc = MagicMock()
@@ -451,7 +417,6 @@ async def test_ciudad_solo_contrato_software_genera() -> None:
     assert ctx.datos_cliente.nit == "900123456-7"
     update.effective_message.reply_document.assert_called_once()
     assert result == ConversationHandler.END
-
 
 async def test_plan_contrato_genera_contrato_audiovisual_con_plan() -> None:
     from garay.dominio.propuestas.contexto import PlanAudiovisual

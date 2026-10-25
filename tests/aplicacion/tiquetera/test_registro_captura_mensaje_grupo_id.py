@@ -9,9 +9,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
-from unittest.mock import MagicMock, call
-
-import pytest
+from unittest.mock import MagicMock
 
 from garay.aplicacion.tiquetera.comandos import RegistrarVentaComando
 from garay.aplicacion.tiquetera.servicio import RegistrarVentaService
@@ -21,7 +19,6 @@ from garay.dominio.ventas.valor_objetos import Participantes
 
 _GRUPO_ID = "grupo-captura-test"
 _MSG_ID = 999_888
-
 
 def _build_service(
     *,
@@ -41,7 +38,6 @@ def _build_service(
         freelancers=MagicMock(),
         servicios=MagicMock(),
     )
-
 
 def _cmd() -> RegistrarVentaComando:
     return RegistrarVentaComando(
@@ -68,7 +64,6 @@ def _cmd() -> RegistrarVentaComando:
         hotel=None,
         habitacion=None,
     )
-
 
 class TestRegistroCapturaMensajeGrupoId:
     def test_mensaje_grupo_id_persisted_when_notificador_returns_id(self) -> None:

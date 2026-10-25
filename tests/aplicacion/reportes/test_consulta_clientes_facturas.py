@@ -35,12 +35,10 @@ def test_consulta_clientes_aplana() -> None:
     assert filas[0].tipo == "EXTERNO"
     assert filas[0].email == "juan@example.com"
 
-
 def test_consulta_clientes_sin_datos() -> None:
     clientes = MagicMock()
     clientes.listar.return_value = []
     assert ConsultaClientesService(clientes=clientes).ejecutar() == []
-
 
 def test_consulta_facturas_aplana() -> None:
     factura = Factura(
@@ -69,7 +67,6 @@ def test_consulta_facturas_aplana() -> None:
     facturas.listar_por_periodo.assert_called_once_with(
         datetime.date(2026, 7, 1), datetime.date(2026, 7, 31)
     )
-
 
 def test_consulta_facturas_sin_datos() -> None:
     facturas = MagicMock()

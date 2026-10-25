@@ -14,7 +14,6 @@ from garay.dominio.comun.dinero import Dinero
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_resumen_split(
     *,
     por_socio: tuple[ResumenSocio, ...] | None = None,
@@ -45,7 +44,6 @@ def _make_resumen_split(
         )
     return ResumenSplitSocios(por_socio=por_socio, total_agencia=Dinero(2_000_000))
 
-
 def _make_resumen_ventas_service() -> MagicMock:
     from garay.aplicacion.reportes.resumen_ventas import ResumenVentas
 
@@ -61,12 +59,10 @@ def _make_resumen_ventas_service() -> MagicMock:
     svc.ejecutar.return_value = resumen
     return svc
 
-
 def _make_split_service(resumen: ResumenSplitSocios | None = None) -> MagicMock:
     svc = MagicMock()
     svc.calcular_acumulado.return_value = resumen if resumen is not None else _make_resumen_split()
     return svc
-
 
 def _make_update(user_id: int = 123) -> MagicMock:
     update = MagicMock()
@@ -76,17 +72,14 @@ def _make_update(user_id: int = 123) -> MagicMock:
     update.callback_query = None
     return update
 
-
 def _make_context(**bot_data: object) -> MagicMock:
     ctx = MagicMock()
     ctx.bot_data = dict(bot_data)
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
 
 def _fake_settings(*, dashboard_url: str = "http://example.com") -> MagicMock:
     import datetime
@@ -97,7 +90,6 @@ def _fake_settings(*, dashboard_url: str = "http://example.com") -> MagicMock:
     s.dev_telegram_ids = ""
     s.socios_desde = datetime.date(2026, 9, 1)
     return s
-
 
 @pytest.mark.asyncio
 async def test_propietario_ve_seccion_split() -> None:
@@ -119,7 +111,6 @@ async def test_propietario_ve_seccion_split() -> None:
 
     sent_text = update.effective_message.reply_text.call_args[0][0]
     assert "Divisiones de socios" in sent_text
-
 
 @pytest.mark.asyncio
 async def test_admin_no_propietario_no_ve_split() -> None:
@@ -145,7 +136,6 @@ async def test_admin_no_propietario_no_ve_split() -> None:
     sent_text = update.effective_message.reply_text.call_args[0][0]
     assert "Divisiones de socios" not in sent_text
 
-
 @pytest.mark.asyncio
 async def test_sin_socios_no_aparece_seccion() -> None:
     """When calcular_acumulado() returns empty por_socio, the section is not shown."""
@@ -167,7 +157,6 @@ async def test_sin_socios_no_aparece_seccion() -> None:
 
     sent_text = update.effective_message.reply_text.call_args[0][0]
     assert "Divisiones de socios" not in sent_text
-
 
 @pytest.mark.asyncio
 async def test_formato_split_montos() -> None:
@@ -193,7 +182,6 @@ async def test_formato_split_montos() -> None:
     # Verify at least one partner's acumulado appears ($1.000.000)
     assert "$1.000.000" in sent_text
 
-
 def test_formatear_split_socios_estructura() -> None:
     """_formatear_split_socios returns expected header and partner lines."""
     from garay.infraestructura.telegram.handlers_reportes import _formatear_split_socios
@@ -211,7 +199,6 @@ def test_formatear_split_socios_estructura() -> None:
     assert "acum." in resultado
     assert "pagado" in resultado
     assert "pendiente" in resultado
-
 
 @pytest.mark.asyncio
 async def test_calcular_acumulado_filtra_desde_sep_2026() -> None:
@@ -234,7 +221,6 @@ async def test_calcular_acumulado_filtra_desde_sep_2026() -> None:
         await cmd_dashboard_ventas.__wrapped__(update, context)  # type: ignore[attr-defined]
 
     split_service.calcular_acumulado.assert_called_once_with(desde=datetime.date(2026, 9, 1))
-
 
 @pytest.mark.asyncio
 async def test_cb_dashboard_filtra_desde_sep_2026() -> None:

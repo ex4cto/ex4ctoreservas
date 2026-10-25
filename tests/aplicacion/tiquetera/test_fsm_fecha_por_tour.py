@@ -32,11 +32,9 @@ SERVICIOS_2TOURS: list[tuple[int, str, Decimal | None, Decimal | None, str, list
 ]
 PUNTOS_TEST: list[str] = ["Marie Real"]
 
-
 @pytest.fixture()
 def fsm() -> FSMTiquetera:
     return FSMTiquetera(servicios=SERVICIOS_2TOURS, puntos_venta=PUNTOS_TEST)
-
 
 @pytest.fixture()
 def fsm_multi() -> FSMTiquetera:
@@ -47,7 +45,6 @@ def fsm_multi() -> FSMTiquetera:
         multi_tour_habilitado=True,
     )
 
-
 def _ctx_single_tour(**overrides: object) -> ContextoVenta:
     """ContextoVenta ready to enter FECHA_SALIDA with one tour selected."""
     defaults: dict[str, object] = {
@@ -56,7 +53,6 @@ def _ctx_single_tour(**overrides: object) -> ContextoVenta:
     }
     defaults.update(overrides)
     return ContextoVenta(**defaults)  # type: ignore[arg-type]
-
 
 def _ctx_two_tours(**overrides: object) -> ContextoVenta:
     """ContextoVenta ready to enter FECHA_SALIDA with two tours selected."""
@@ -67,11 +63,9 @@ def _ctx_two_tours(**overrides: object) -> ContextoVenta:
     defaults.update(overrides)
     return ContextoVenta(**defaults)  # type: ignore[arg-type]
 
-
 # ---------------------------------------------------------------------------
 # T-S1: Single-tour — prompt text is the EXACT existing catalog text
 # ---------------------------------------------------------------------------
-
 
 class TestSingleTourDateCapture:
     def test_single_tour_prompt_text_is_existing_catalog_key(self, fsm: FSMTiquetera) -> None:
@@ -110,11 +104,9 @@ class TestSingleTourDateCapture:
         assert salida.contexto.fechas_por_servicio[1] == expected
         assert salida.contexto.fecha_salida == expected
 
-
 # ---------------------------------------------------------------------------
 # T-M1: Multi-tour — loop stays in FECHA_SALIDA until all tours dated
 # ---------------------------------------------------------------------------
-
 
 class TestMultiTourDateLoop:
     def test_first_fecha_stays_in_fecha_salida(self, fsm: FSMTiquetera) -> None:
@@ -182,11 +174,9 @@ class TestMultiTourDateLoop:
         salida = fsm.procesar(EstadoFSM.FECHA_SALIDA, "not-a-date", ctx)
         assert salida.nuevo_estado == EstadoFSM.FECHA_SALIDA
 
-
 # ---------------------------------------------------------------------------
 # T-P1: Photo auto-advance — FECHA_SALIDA behavior
 # ---------------------------------------------------------------------------
-
 
 class TestPhotoAutoAdvanceFechaSalida:
     def test_photo_stops_at_fecha_salida_when_no_date_prefilled(
@@ -220,11 +210,9 @@ class TestPhotoAutoAdvanceFechaSalida:
         # Should advance THROUGH FECHA_SALIDA (fecha_salida already set) and stop at PAX_ADULTOS
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-
 # ---------------------------------------------------------------------------
 # T-E1: Edit flow — Fecha edit clears fechas_por_servicio and re-runs loop
 # ---------------------------------------------------------------------------
-
 
 class TestEditFechaPerTour:
     def test_single_tour_edit_returns_to_confirmacion(self, fsm: FSMTiquetera) -> None:
@@ -308,11 +296,9 @@ class TestEditFechaPerTour:
         assert salida.contexto.fechas_por_servicio == {}
         assert salida.contexto.modo_edicion is True
 
-
 # ---------------------------------------------------------------------------
 # T-MIN1: Min proof — last-entered date is minimum (cross-month and cross-year)
 # ---------------------------------------------------------------------------
-
 
 class TestMultiTourMinProof:
     def test_last_entered_is_minimum_across_months(self, fsm: FSMTiquetera) -> None:
@@ -336,11 +322,9 @@ class TestMultiTourMinProof:
         assert s2.contexto.fechas_por_servicio[1] == datetime.datetime(2027, 3, 15)
         assert s2.contexto.fechas_por_servicio[2] == datetime.datetime(2026, 11, 20)
 
-
 # ---------------------------------------------------------------------------
 # T-3T1: Three-tour loop
 # ---------------------------------------------------------------------------
-
 
 def _ctx_three_tours(**overrides: object) -> ContextoVenta:
     """ContextoVenta ready to enter FECHA_SALIDA with three tours selected."""
@@ -350,7 +334,6 @@ def _ctx_three_tours(**overrides: object) -> ContextoVenta:
     }
     defaults.update(overrides)
     return ContextoVenta(**defaults)  # type: ignore[arg-type]
-
 
 class TestThreeTourDateLoop:
     def test_first_date_stays_in_fecha_salida(self, fsm: FSMTiquetera) -> None:
@@ -407,11 +390,9 @@ class TestThreeTourDateLoop:
         # 05/12/2026 is the earliest
         assert s3.contexto.fecha_salida == datetime.datetime(2026, 12, 5)
 
-
 # ---------------------------------------------------------------------------
 # T-SD1: Same-date two-tour — both keys present, no short-circuit
 # ---------------------------------------------------------------------------
-
 
 class TestSameDateTwoTour:
     def test_same_date_both_keys_present(self, fsm: FSMTiquetera) -> None:
@@ -439,11 +420,9 @@ class TestSameDateTwoTour:
         s2 = fsm.procesar(EstadoFSM.FECHA_SALIDA, "25/12/2026", s1.contexto)
         assert s2.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-
 # ---------------------------------------------------------------------------
 # T-PH2: Photo full multi-tour map — auto-advance past FECHA_SALIDA
 # ---------------------------------------------------------------------------
-
 
 class TestPhotoMultiTourFullMap:
     def test_photo_advances_past_fecha_salida_when_fully_filled(
@@ -467,7 +446,6 @@ class TestPhotoMultiTourFullMap:
         assert salida.nuevo_estado != EstadoFSM.FECHA_SALIDA
         assert salida.nuevo_estado == EstadoFSM.PAX_ADULTOS
 
-
 # ---------------------------------------------------------------------------
 # T-ED1: Edit Destinos — prune stale dates and re-capture missing ones (Slice 4)
 # ---------------------------------------------------------------------------
@@ -478,7 +456,6 @@ class TestPhotoMultiTourFullMap:
 #   service 3 → "ISLAS"  (fam index 1)
 _CATEGORIA_POR_SERVICIO: dict[int, str] = {1: "BARÚ", 2: "ISLAS", 3: "ISLAS"}
 
-
 def _indice_familia(fsm: FSMTiquetera, categoria: str) -> int:
     """Return the fam-index for *categoria* in the current FSM instance."""
     s = fsm.procesar(EstadoFSM.TIPO_RESERVA, "INTERNO", ContextoVenta())
@@ -487,7 +464,6 @@ def _indice_familia(fsm: FSMTiquetera, categoria: str) -> int:
         if label == categoria:
             return idx
     raise AssertionError(f"categoria {categoria!r} not found in picker")
-
 
 def _add_tour_via_picker(
     fsm: FSMTiquetera, ctx: ContextoVenta, numero: int
@@ -501,13 +477,11 @@ def _add_tour_via_picker(
     s2 = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, f"srv:{numero}", s1.contexto)
     return s2.contexto
 
-
 def _reach_familia_edit(fsm: FSMTiquetera, ctx: ContextoVenta) -> ContextoVenta:
     """Press EDITAR_SELECTOR 'Destinos' and return the resulting context (now at FAMILIA)."""
     s = fsm.procesar(EstadoFSM.EDITAR_SELECTOR, "Destinos", ctx)
     assert s.nuevo_estado == EstadoFSM.FAMILIA
     return s.contexto
-
 
 class TestEditarDestinosPruneAndRecapture:
     """Slice 4: confirm-in-edit on DESTINO prunes stale dates and routes to FECHA_SALIDA
