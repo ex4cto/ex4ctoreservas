@@ -468,3 +468,17 @@ class PagoReferidoRepository(ABC):
     @abstractmethod
     def listar_por_referido(self, referido_alias: str) -> list[PagoReferido]:
         """Return all referido payments for a given alias."""
+    @abstractmethod
+    def buscar_solapados(
+        self, referido_alias: str, desde: date, hasta: date
+    ) -> list[PagoReferido]:
+        """Return pagos for alias whose period overlaps [desde, hasta].
+
+        SQL condition: WHERE referido_alias = :alias AND desde <= :hasta AND hasta >= :desde
+        """
+        ...
+
+    @abstractmethod
+    def eliminar(self, pago_id: uuid.UUID) -> None:
+        """Delete a payment record by id."""
+
