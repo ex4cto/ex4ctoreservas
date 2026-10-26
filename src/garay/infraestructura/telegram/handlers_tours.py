@@ -76,8 +76,12 @@ async def cmd_actualizar_imagenes(
             )
         return
     if update.effective_message is not None:
+        items = "\n".join(c.descripcion for c in cambios)
         await update.effective_message.reply_text(
-            obtener_mensaje("catalogo.cambios.generando")
+            obtener_mensaje("catalogo.cambios.generando").format(
+                n=len(cambios), items=items
+            ),
+            parse_mode="HTML",
         )
     context.application.create_task(_svc_notificaciones.generar_y_confirmar())
 

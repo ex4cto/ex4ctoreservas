@@ -1681,7 +1681,9 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
     "auditoria.col_valor_anterior": {Idioma.ES: "Valor anterior"},
     "auditoria.col_valor_nuevo": {Idioma.ES: "Valor nuevo"},
     # --- Cambios de catálogo (notificaciones) ---
-    "catalogo.cambios.generando": {Idioma.ES: "⏳ Generando imágenes de lista de precios..."},
+    "catalogo.cambios.generando": {
+        Idioma.ES: "⏳ Generando imágenes ({n} cambio(s) pendiente(s)):\n{items}"
+    },
     "catalogo.cambios.sin_pendientes": {
         Idioma.ES: "ℹ️ No hay cambios pendientes en el catálogo."
     },
