@@ -1302,12 +1302,18 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
         key = f.punto_de_venta or "Sin punto de venta"
         grupos.setdefault(key, []).append(f)
 
+    def _ganancia_agencia(vfs: list[FilaVentaConsulta]) -> Decimal:
+        return sum(
+            f.comision_agencia.monto if f.comision_agencia else Decimal("0")
+            for f in vfs
+        )
+
     resumen = [
         {
             "nombre": nombre,
             "ventas": len(vfs),
             "valor": sum(f.valor.monto for f in vfs),
-            "ganancia": sum(f.ganancia.monto for f in vfs),
+            "ganancia": _ganancia_agencia(vfs),
             "com_vendedor": sum(
                 f.comision_vendedor.monto for f in vfs if f.comision_vendedor
             ),
@@ -1390,13 +1396,9 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
     st.subheader("Detalle por punto de venta")
 
     for nombre, vfs in sorted(grupos.items()):
-        total_ganancia = sum(
-            f.comision_agencia.monto if f.comision_agencia else Decimal("0")
-            for f in vfs
-        )
         label = (
             f"🏨 {nombre}  —  {len(vfs)} venta(s)  |  "
-            f"Ganancia agencia: {_cop(total_ganancia)}"
+            f"Ganancia agencia: {_cop(_ganancia_agencia(vfs))}"
         )
         with st.expander(label):
             vfs_ord = sorted(vfs, key=lambda f: f.fecha)
