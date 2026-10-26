@@ -6,6 +6,7 @@ Run with:
 
 from __future__ import annotations
 
+import calendar
 import csv
 import io
 from datetime import date
@@ -134,7 +135,7 @@ mes_sel = st.sidebar.selectbox(
 
 pagina = st.sidebar.radio(
     "Vista",
-    options=["Ventas", "Tours", "Flujo de caja", "Consultas", "Auditoría"],
+    options=["Ventas", "Tours", "Puntos de venta", "Flujo de caja", "Consultas", "Auditoría"],
     index=0,
 )
 
@@ -1284,12 +1285,149 @@ def pagina_auditoria() -> None:
     )
 
 
+def pagina_puntos_de_venta(mes: int, año: int) -> None:
+    st.title(f"🏨 Puntos de venta — {MESES[mes]} {año}")
+
+    primer_dia = date(año, mes, 1)
+    ultimo_dia = date(año, mes, calendar.monthrange(año, mes)[1])
+    todas = cargar_consulta_ventas(primer_dia, ultimo_dia)
+    filas = [f for f in todas if not f.anulada]
+
+    if not filas:
+        st.info("No hay ventas registradas para este período.")
+        return
+
+    grupos: dict[str, list[FilaVentaConsulta]] = {}
+    for f in filas:
+        key = f.punto_de_venta or "Sin punto de venta"
+        grupos.setdefault(key, []).append(f)
+
+    resumen = [
+        {
+            "nombre": nombre,
+            "ventas": len(vfs),
+            "valor": sum(f.valor.monto for f in vfs),
+            "ganancia": sum(f.ganancia.monto for f in vfs),
+            "com_vendedor": sum(
+                f.comision_vendedor.monto for f in vfs if f.comision_vendedor
+            ),
+            "com_cerrador": sum(
+                f.comision_cerrador.monto for f in vfs if f.comision_cerrador
+            ),
+        }
+        for nombre, vfs in sorted(grupos.items())
+    ]
+
+    # KPIs
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total ventas", sum(r["ventas"] for r in resumen))
+    c2.metric("Valor vendido", _cop(sum(r["valor"] for r in resumen)))
+    c3.metric("Ganancia agencia", _cop(sum(r["ganancia"] for r in resumen)))
+
+    st.markdown("---")
+
+    nombres = [r["nombre"] for r in resumen]
+    col_izq, col_der = st.columns(2)
+
+    with col_izq:
+        st.subheader("Ganancia por punto")
+        fig = go.Figure(go.Bar(
+            x=nombres,
+            y=[float(r["ganancia"]) for r in resumen],
+            marker_color="#27AE60",
+            text=[_cop_k(r["ganancia"]) for r in resumen],
+            textposition="outside",
+        ))
+        fig.update_layout(
+            yaxis_title="COP",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(t=20, b=20),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_der:
+        st.subheader("Ventas por punto")
+        fig2 = go.Figure(go.Bar(
+            x=nombres,
+            y=[r["ventas"] for r in resumen],
+            marker_color="#4C9BE8",
+            text=[r["ventas"] for r in resumen],
+            textposition="outside",
+        ))
+        fig2.update_layout(
+            yaxis_title="Cantidad",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(t=20, b=20),
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Resumen por punto de venta")
+    st.dataframe(
+        {
+            "Punto de venta": [r["nombre"] for r in resumen],
+            "Ventas": [r["ventas"] for r in resumen],
+            "Valor total": [_cop(r["valor"]) for r in resumen],
+            "Ganancia": [_cop(r["ganancia"]) for r in resumen],
+            "Com. vendedor": [_cop(r["com_vendedor"]) for r in resumen],
+            "Com. cerrador": [_cop(r["com_cerrador"]) for r in resumen],
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+    _descargas(
+        f"puntos_de_venta_{año}_{mes:02d}",
+        ["Punto de venta", "Ventas", "Valor total", "Ganancia", "Com. vendedor", "Com. cerrador"],
+        [
+            [r["nombre"], r["ventas"], r["valor"], r["ganancia"], r["com_vendedor"], r["com_cerrador"]]
+            for r in resumen
+        ],
+    )
+
+    st.markdown("---")
+    st.subheader("Detalle por freelancer")
+
+    for nombre, vfs in sorted(grupos.items()):
+        with st.expander(f"🏨 {nombre}  —  {len(vfs)} venta(s)"):
+            por_vendedor: dict[str, dict[str, object]] = {}
+            for f in vfs:
+                v = f.vendedor or "Sin vendedor"
+                if v not in por_vendedor:
+                    por_vendedor[v] = {
+                        "ventas": 0,
+                        "valor": Decimal("0"),
+                        "comision": Decimal("0"),
+                    }
+                por_vendedor[v]["ventas"] = int(por_vendedor[v]["ventas"]) + 1  # type: ignore[arg-type]
+                por_vendedor[v]["valor"] = Decimal(str(por_vendedor[v]["valor"])) + f.valor.monto
+                por_vendedor[v]["comision"] = (
+                    Decimal(str(por_vendedor[v]["comision"]))
+                    + (f.comision_vendedor.monto if f.comision_vendedor else Decimal("0"))
+                )
+
+            filas_v = sorted(por_vendedor.items(), key=lambda x: -int(x[1]["ventas"]))  # type: ignore[arg-type]
+            st.dataframe(
+                {
+                    "Vendedor": [v for v, _ in filas_v],
+                    "Ventas": [d["ventas"] for _, d in filas_v],
+                    "Valor": [_cop(Decimal(str(d["valor"]))) for _, d in filas_v],
+                    "Comisión": [_cop(Decimal(str(d["comision"]))) for _, d in filas_v],
+                },
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 if pagina == "Ventas":
     pagina_ventas(mes_sel, año_sel)
 elif pagina == "Tours":
     pagina_tours(mes_sel, año_sel)
+elif pagina == "Puntos de venta":
+    pagina_puntos_de_venta(mes_sel, año_sel)
 elif pagina == "Consultas":
     pagina_consultas()
 elif pagina == "Auditoría":
