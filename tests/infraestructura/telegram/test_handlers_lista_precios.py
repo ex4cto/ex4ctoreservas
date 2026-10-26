@@ -184,8 +184,8 @@ class TestCmdListaPrecios:
         assert "Tour Sin Neto" not in text
 
     @pytest.mark.asyncio
-    async def test_muestra_nota_nino_adulto(self) -> None:
-        """Shows 'niño = adulto' for tours with permite_ninos=True and precio_neto_nino=None."""
+    async def test_no_muestra_nota_nino(self) -> None:
+        """Child price note is never shown regardless of permite_ninos or precio_neto_nino."""
         from garay.infraestructura.telegram.handlers_lista_precios import cmd_lista_precios
 
         s = _servicio(nombre="Tour Con Nino", permite_ninos=True, precio_neto_nino=None)
@@ -195,21 +195,7 @@ class TestCmdListaPrecios:
         await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
 
         text = update.effective_message.reply_text.call_args[0][0]
-        assert "niño = adulto" in text
-
-    @pytest.mark.asyncio
-    async def test_no_muestra_nota_nino_cuando_no_aplica(self) -> None:
-        """No 'niño = adulto' note when permite_ninos=False or precio_neto_nino is set."""
-        from garay.infraestructura.telegram.handlers_lista_precios import cmd_lista_precios
-
-        s = _servicio(nombre="Tour Sin Nino", permite_ninos=False)
-        ctx = _make_context([s])
-        update = _make_update()
-
-        await cmd_lista_precios.__wrapped__(update, ctx)  # type: ignore[attr-defined]
-
-        text = update.effective_message.reply_text.call_args[0][0]
-        assert "niño = adulto" not in text
+        assert "niño" not in text
 
 # ---------------------------------------------------------------------------
 # Spec: lista-precios-runtime-guard

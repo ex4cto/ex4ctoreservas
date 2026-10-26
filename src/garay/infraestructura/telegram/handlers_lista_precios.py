@@ -67,8 +67,6 @@ async def cmd_lista_precios(
             linea = obtener_mensaje("lista_precios.linea_tour").format(
                 nombre=s.nombre, precio=precio_str
             )
-            if s.permite_ninos and s.precio_neto_nino is None:
-                linea += obtener_mensaje("lista_precios.nota_nino_adulto")
             bloque.append(linea)
         bloques.append(bloque)
 
