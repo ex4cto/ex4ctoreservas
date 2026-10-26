@@ -1387,33 +1387,43 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
     )
 
     st.markdown("---")
-    st.subheader("Detalle por freelancer")
+    st.subheader("Detalle por punto de venta")
 
     for nombre, vfs in sorted(grupos.items()):
-        with st.expander(f"🏨 {nombre}  —  {len(vfs)} venta(s)"):
-            por_vendedor: dict[str, dict[str, object]] = {}
-            for f in vfs:
-                v = f.vendedor or "Sin vendedor"
-                if v not in por_vendedor:
-                    por_vendedor[v] = {
-                        "ventas": 0,
-                        "valor": Decimal("0"),
-                        "comision": Decimal("0"),
-                    }
-                por_vendedor[v]["ventas"] = int(por_vendedor[v]["ventas"]) + 1  # type: ignore[arg-type]
-                por_vendedor[v]["valor"] = Decimal(str(por_vendedor[v]["valor"])) + f.valor.monto
-                por_vendedor[v]["comision"] = (
-                    Decimal(str(por_vendedor[v]["comision"]))
-                    + (f.comision_vendedor.monto if f.comision_vendedor else Decimal("0"))
-                )
-
-            filas_v = sorted(por_vendedor.items(), key=lambda x: -int(x[1]["ventas"]))  # type: ignore[arg-type]
+        total_ganancia = sum(
+            f.comision_agencia.monto if f.comision_agencia else Decimal("0")
+            for f in vfs
+        )
+        label = (
+            f"🏨 {nombre}  —  {len(vfs)} venta(s)  |  "
+            f"Ganancia agencia: {_cop(total_ganancia)}"
+        )
+        with st.expander(label):
+            vfs_ord = sorted(vfs, key=lambda f: f.fecha)
             st.dataframe(
                 {
-                    "Vendedor": [v for v, _ in filas_v],
-                    "Ventas": [d["ventas"] for _, d in filas_v],
-                    "Valor": [_cop(Decimal(str(d["valor"]))) for _, d in filas_v],
-                    "Comisión": [_cop(Decimal(str(d["comision"]))) for _, d in filas_v],
+                    "Fecha": [f.fecha.strftime("%d/%m/%Y") for f in vfs_ord],
+                    "Cliente": [f.cliente_nombre for f in vfs_ord],
+                    "Tour": [f.servicios for f in vfs_ord],
+                    "Vendedor": [f.vendedor or "—" for f in vfs_ord],
+                    "Cerrador": [f.cerrador or "—" for f in vfs_ord],
+                    "Valor": [_cop(f.valor.monto) for f in vfs_ord],
+                    "Com. vendedor": [
+                        _cop(f.comision_vendedor.monto) if f.comision_vendedor else "—"
+                        for f in vfs_ord
+                    ],
+                    "Com. cerrador": [
+                        _cop(f.comision_cerrador.monto) if f.comision_cerrador else "—"
+                        for f in vfs_ord
+                    ],
+                    "Com. punto": [
+                        _cop(f.comision_punto_de_venta.monto) if f.comision_punto_de_venta else "—"
+                        for f in vfs_ord
+                    ],
+                    "Ganancia agencia": [
+                        _cop(f.comision_agencia.monto) if f.comision_agencia else "—"
+                        for f in vfs_ord
+                    ],
                 },
                 use_container_width=True,
                 hide_index=True,
