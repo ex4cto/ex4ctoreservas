@@ -1402,30 +1402,35 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
         )
         with st.expander(label):
             vfs_ord = sorted(vfs, key=lambda f: f.fecha)
+            tot_valor      = sum(f.valor.monto for f in vfs_ord)
+            tot_com_v      = sum(f.comision_vendedor.monto      if f.comision_vendedor      else Decimal("0") for f in vfs_ord)
+            tot_com_c      = sum(f.comision_cerrador.monto      if f.comision_cerrador      else Decimal("0") for f in vfs_ord)
+            tot_com_p      = sum(f.comision_punto_de_venta.monto if f.comision_punto_de_venta else Decimal("0") for f in vfs_ord)
+            tot_ganancia   = _ganancia_agencia(vfs_ord)
             st.dataframe(
                 {
-                    "Fecha": [f.fecha.strftime("%d/%m/%Y") for f in vfs_ord],
-                    "Cliente": [f.cliente_nombre for f in vfs_ord],
-                    "Tour": [f.servicios for f in vfs_ord],
-                    "Vendedor": [f.vendedor or "—" for f in vfs_ord],
-                    "Cerrador": [f.cerrador or "—" for f in vfs_ord],
-                    "Valor": [_cop(f.valor.monto) for f in vfs_ord],
+                    "Fecha": [f.fecha.strftime("%d/%m/%Y") for f in vfs_ord] + ["TOTAL"],
+                    "Cliente": [f.cliente_nombre for f in vfs_ord] + [""],
+                    "Tour": [f.servicios for f in vfs_ord] + [""],
+                    "Vendedor": [f.vendedor or "—" for f in vfs_ord] + [""],
+                    "Cerrador": [f.cerrador or "—" for f in vfs_ord] + [""],
+                    "Valor": [_cop(f.valor.monto) for f in vfs_ord] + [_cop(tot_valor)],
                     "Com. vendedor": [
                         _cop(f.comision_vendedor.monto) if f.comision_vendedor else "—"
                         for f in vfs_ord
-                    ],
+                    ] + [_cop(tot_com_v)],
                     "Com. cerrador": [
                         _cop(f.comision_cerrador.monto) if f.comision_cerrador else "—"
                         for f in vfs_ord
-                    ],
+                    ] + [_cop(tot_com_c)],
                     "Com. punto": [
                         _cop(f.comision_punto_de_venta.monto) if f.comision_punto_de_venta else "—"
                         for f in vfs_ord
-                    ],
+                    ] + [_cop(tot_com_p)],
                     "Ganancia agencia": [
                         _cop(f.comision_agencia.monto) if f.comision_agencia else "—"
                         for f in vfs_ord
-                    ],
+                    ] + [_cop(tot_ganancia)],
                 },
                 use_container_width=True,
                 hide_index=True,
