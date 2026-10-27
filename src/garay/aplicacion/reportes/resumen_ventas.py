@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from garay.dominio.comun.dinero import Dinero
-from garay.dominio.comun.tipos import MetodoPago
+from garay.dominio.comun.tipos import MetodoPago, TipoCliente
 from garay.dominio.puertos.repositorios import (
     ComisionRegistradaRepository,
     FreelancerRepository,
@@ -164,9 +164,13 @@ class ResumenVentasService:
         valor_canal: dict[str, Dinero] = {}
         for venta in ventas:
             if venta.canal_origen is not None:
-                canal = venta.canal_origen
-                conteo_canal[canal] = conteo_canal.get(canal, 0) + 1
-                valor_canal[canal] = valor_canal.get(canal, Dinero(0)) + venta.valor_venta
+                canal: str = venta.canal_origen
+            elif venta.tipo_cliente != TipoCliente.INTERNO:
+                canal = "Presencial"
+            else:
+                continue
+            conteo_canal[canal] = conteo_canal.get(canal, 0) + 1
+            valor_canal[canal] = valor_canal.get(canal, Dinero(0)) + venta.valor_venta
 
         por_canal = tuple(
             ResumenCanal(canal=c, cantidad=conteo_canal[c], valor_total=valor_canal[c])

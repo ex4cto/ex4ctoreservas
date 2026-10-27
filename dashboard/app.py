@@ -53,6 +53,9 @@ from garay.aplicacion.socios.servicio_split import SplitSociosService
 from garay.aplicacion.socios.split import ResumenSplitSocios
 from garay.config.settings import obtener_settings
 from garay.infraestructura.persistencia.motor import crear_engine, crear_fabrica_sesiones
+from garay.infraestructura.persistencia.repositorios.auditoria_entidades import (
+    SQLAAuditoriaEntidadesRepository,
+)
 from garay.infraestructura.persistencia.repositorios.clientes import SQLAClienteRepository
 from garay.infraestructura.persistencia.repositorios.comisiones_registradas import (
     SQLAComisionRegistradaRepository,
@@ -68,9 +71,6 @@ from garay.infraestructura.persistencia.repositorios.puntos_de_venta import (
     SQLAPuntoDeVentaRepository,
 )
 from garay.infraestructura.persistencia.repositorios.servicios import SQLAServicioRepository
-from garay.infraestructura.persistencia.repositorios.auditoria_entidades import (
-    SQLAAuditoriaEntidadesRepository,
-)
 from garay.infraestructura.persistencia.repositorios.socios import (
     SQLAPagoSocioRepository,
     SQLASocioConfigRepository,
@@ -414,7 +414,7 @@ def pagina_ventas(mes: int, año: int) -> None:
 
     if resumen.por_canal:
         st.markdown("---")
-        st.subheader("Ventas por canal (DIGITAL)")
+        st.subheader("Canal de origen")
         canales_nombres = [c.canal for c in resumen.por_canal]
         canales_conteos = [c.cantidad for c in resumen.por_canal]
         canales_valores = [float(c.valor_total.monto) for c in resumen.por_canal]
@@ -610,7 +610,7 @@ def pagina_tours(mes: int, año: int) -> None:
     st.subheader("Cascada del mes")
     c1, c2, c3 = st.columns(3)
     c1.metric("Valor bruto vendido", _cop(wf.valor_bruto.monto))
-    c2.metric("Margen de ganancia", _cop(wf.margen.monto))
+    c2.metric("Margen bruto", _cop(wf.margen.monto))
     c3.metric("Ganancia agencia (Garay)", _cop(wf.ganancia_agencia.monto))
 
     fig_wf = go.Figure(go.Waterfall(
@@ -1320,14 +1320,22 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
             "com_cerrador": sum(
                 f.comision_cerrador.monto for f in vfs if f.comision_cerrador
             ),
+            "com_referido": sum(
+                f.comision_referido.monto for f in vfs if f.comision_referido
+            ),
         }
         for nombre, vfs in sorted(grupos.items())
     ]
 
     # KPIs
+    _total_v = sum(r["ventas"] for r in resumen)
+    _total_val = sum(r["valor"] for r in resumen)
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total ventas", sum(r["ventas"] for r in resumen))
-    c2.metric("Valor vendido", _cop(sum(r["valor"] for r in resumen)))
+    c1.metric("Total ventas", _total_v)
+    c2.metric(
+        "Ticket promedio",
+        _cop(_total_val / Decimal(str(_total_v))) if _total_v else "$0",
+    )
     c3.metric("Ganancia agencia", _cop(sum(r["ganancia"] for r in resumen)))
 
     st.markdown("---")
@@ -1375,19 +1383,30 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
         {
             "Punto de venta": [r["nombre"] for r in resumen],
             "Ventas": [r["ventas"] for r in resumen],
-            "Valor total": [_cop(r["valor"]) for r in resumen],
+            "Ticket prom.": [
+                _cop(r["valor"] / Decimal(str(r["ventas"])) if r["ventas"] else Decimal("0"))
+                for r in resumen
+            ],
             "Ganancia": [_cop(r["ganancia"]) for r in resumen],
             "Com. vendedor": [_cop(r["com_vendedor"]) for r in resumen],
             "Com. cerrador": [_cop(r["com_cerrador"]) for r in resumen],
+            "Com. referido": [_cop(r["com_referido"]) for r in resumen],
         },
         use_container_width=True,
         hide_index=True,
     )
     _descargas(
         f"puntos_de_venta_{año}_{mes:02d}",
-        ["Punto de venta", "Ventas", "Valor total", "Ganancia", "Com. vendedor", "Com. cerrador"],
         [
-            [r["nombre"], r["ventas"], r["valor"], r["ganancia"], r["com_vendedor"], r["com_cerrador"]]
+            "Punto de venta", "Ventas", "Ticket prom.", "Ganancia",
+            "Com. vendedor", "Com. cerrador", "Com. referido",
+        ],
+        [
+            [
+                r["nombre"], r["ventas"],
+                r["valor"] / Decimal(str(r["ventas"])) if r["ventas"] else Decimal("0"),
+                r["ganancia"], r["com_vendedor"], r["com_cerrador"], r["com_referido"],
+            ]
             for r in resumen
         ],
     )
@@ -1406,6 +1425,10 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
             tot_com_v      = sum(f.comision_vendedor.monto      if f.comision_vendedor      else Decimal("0") for f in vfs_ord)
             tot_com_c      = sum(f.comision_cerrador.monto      if f.comision_cerrador      else Decimal("0") for f in vfs_ord)
             tot_com_p      = sum(f.comision_punto_de_venta.monto if f.comision_punto_de_venta else Decimal("0") for f in vfs_ord)
+            tot_com_ref = sum(
+                f.comision_referido.monto if f.comision_referido else Decimal("0")
+                for f in vfs_ord
+            )
             tot_ganancia   = _ganancia_agencia(vfs_ord)
             st.dataframe(
                 {
@@ -1427,6 +1450,10 @@ def pagina_puntos_de_venta(mes: int, año: int) -> None:
                         _cop(f.comision_punto_de_venta.monto) if f.comision_punto_de_venta else "—"
                         for f in vfs_ord
                     ] + [_cop(tot_com_p)],
+                    "Com. referido": [
+                        _cop(f.comision_referido.monto) if f.comision_referido else "—"
+                        for f in vfs_ord
+                    ] + [_cop(tot_com_ref)],
                     "Ganancia agencia": [
                         _cop(f.comision_agencia.monto) if f.comision_agencia else "—"
                         for f in vfs_ord
