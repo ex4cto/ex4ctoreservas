@@ -11,6 +11,7 @@ import re
 import uuid
 from decimal import Decimal
 from html import escape
+from zoneinfo import ZoneInfo
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -303,6 +304,8 @@ _CAMPOS_CLIENTE: tuple[tuple[str, CampoCliente], ...] = (
     ("gestion_ventas.campo_habitacion", CampoCliente.NUMERO_HABITACION),
 )
 
+_TZ_BOGOTA = ZoneInfo("America/Bogota")
+
 # Window for /gestionar_ventas: how many days back to look, by REGISTRATION date
 # (registrado_en), so recently-registered sales surface even if their tour date is
 # in the future. Kept as a named constant — it is a UI window, not a business
@@ -344,7 +347,11 @@ def _construir_teclado_ventas(ventas: list[Venta]) -> InlineKeyboardMarkup:
                 obtener_mensaje("gestion_ventas.boton_venta").format(
                     vendedor=v.participantes.vendedor_nombre or "—",
                     cerrador=v.participantes.cerrador_nombre or "—",
-                    fecha=f"{(v.registrado_en.date() if v.registrado_en else v.fecha):%d/%m}",
+                    fecha=(
+                        f"{v.registrado_en.astimezone(_TZ_BOGOTA):%d/%m %H:%M}"
+                        if v.registrado_en
+                        else f"{v.fecha:%d/%m}"
+                    ),
                     monto=v.valor_venta.monto,
                 ),
                 callback_data=f"gv_sel:{v.id}",
@@ -760,7 +767,8 @@ async def _render_detalle(
     # --- Fecha de registro ---
     registrado_en_line = ""
     if venta.registrado_en is not None:
-        registrado_en_line = f"🕐 Registrado: {venta.registrado_en:%d/%m/%Y %H:%M}\n"
+        ts = venta.registrado_en.astimezone(_TZ_BOGOTA)
+        registrado_en_line = f"🕐 Registrado: {ts:%d/%m/%Y %H:%M}\n"
 
     # --- Financiero ---
     abono = venta.abono

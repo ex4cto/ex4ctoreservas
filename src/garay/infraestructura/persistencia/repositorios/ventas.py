@@ -4,7 +4,7 @@ import datetime
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, nullslast, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from garay.dominio.comun.tipos import EstadoVenta, MetodoPago, TipoCliente
@@ -154,7 +154,7 @@ class SQLAVentaRepository(VentaRepository):
                 .where(VentaModel.anulada == False)
                 .where(VentaModel.fecha >= desde)
                 .where(VentaModel.fecha <= hasta)
-                .order_by(orden.desc())
+                .order_by(orden.desc(), nullslast(VentaModel.registrado_en.desc()))
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]
@@ -171,7 +171,7 @@ class SQLAVentaRepository(VentaRepository):
                 select(VentaModel)
                 .where(VentaModel.anulada == False)
                 .where(VentaModel.fecha >= desde)
-                .order_by(orden.desc())
+                .order_by(orden.desc(), nullslast(VentaModel.registrado_en.desc()))
             )
             rows = session.execute(stmt).scalars().all()
             return [to_domain(r) for r in rows]

@@ -95,6 +95,7 @@ from garay.infraestructura.telegram.handlers import (
     handle_punto_de_venta,
     handle_servicio_en_familia,
     handle_tipo_reserva,
+    handle_tiquetera_timeout,
 )
 from garay.infraestructura.telegram.handlers_cotizacion import cotizacion_conv_handler
 from garay.infraestructura.telegram.handlers_divisiones import build_divisiones_conv_handler
@@ -890,6 +891,10 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
                 CallbackQueryHandler(handle_editar_cerrador, pattern="^fl:"),
                 MessageHandler(_TEXT, handle_editar_cerrador),
             ],
+            ConversationHandler.TIMEOUT: [
+                MessageHandler(filters.ALL, handle_tiquetera_timeout),
+                CallbackQueryHandler(handle_tiquetera_timeout),
+            ],
         },
         fallbacks=[
             CommandHandler("cancelar", cmd_cancelar),
@@ -897,6 +902,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             MessageHandler(filters.PHOTO | filters.Document.IMAGE, _foto_en_conversacion),
         ],
         allow_reentry=True,
+        conversation_timeout=3600,
     )
 
     # /nuevo_egreso conversation handler
@@ -949,6 +955,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     # /gastos_fijos — unified conversation handler (list, detail, edit, liquidar, create)
@@ -974,6 +981,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     # categorias_egreso — accessible via /egresos hub only (no standalone command)
@@ -995,6 +1003,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     gestionar_egresos_conv_handler = ConversationHandler(
@@ -1011,6 +1020,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     nuevo_freelancer_conv_handler = ConversationHandler(
@@ -1030,6 +1040,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     eliminar_freelancer_conv_handler = ConversationHandler(
@@ -1042,6 +1053,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     editar_freelancer_conv_handler = ConversationHandler(
@@ -1065,6 +1077,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     gestionar_ventas_conv_handler = ConversationHandler(
@@ -1122,6 +1135,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     editar_tour_conv_handler = ConversationHandler(
@@ -1172,6 +1186,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     eliminar_tour_conv_handler = ConversationHandler(
@@ -1188,6 +1203,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     nuevo_tour_conv_handler = ConversationHandler(
@@ -1236,6 +1252,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     # Hotel payment ConversationHandler (states 200-219)
@@ -1280,6 +1297,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     # /generar_documento (dev-only) — multi-select proposal/contract generator
@@ -1314,6 +1332,7 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             CommandHandler("cancelar", cmd_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
     # Broadcast-only: drop EVERY update (incl. callback queries from inline

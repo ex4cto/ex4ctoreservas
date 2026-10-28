@@ -475,6 +475,7 @@ def registrar_handlers(app: object) -> None:
         ],
         name="config_socios",
         persistent=False,
+        conversation_timeout=3600,
     )
 
     app.add_handler(conv, group=11)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,6 +9,7 @@ from garay.dominio.comisiones.reglas import ReglasComision
 from garay.dominio.comun.tipos import TipoCliente
 from garay.dominio.puertos.repositorios import ReglasComisionRepository
 from garay.infraestructura.persistencia.modelos import ReglasComisionModel
+
 
 def to_orm(r: ReglasComision) -> ReglasComisionModel:
     return ReglasComisionModel(

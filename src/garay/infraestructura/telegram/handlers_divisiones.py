@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import calendar
 import datetime
+import html
 import logging
 import uuid as _uuid_mod
-
-import html
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -33,15 +32,14 @@ from garay.aplicacion.liquidaciones.servicio import (
     _dias_solapados,
 )
 from garay.aplicacion.socios.split import (
-    ResumenSocio,
     ResumenSplitPeriodo,
     ResumenSplitSocios,
     ResumenVentaDetalle,
 )
+from garay.config.settings import obtener_settings
 from garay.dominio.comun.dinero import Dinero
 from garay.dominio.liquidaciones.entidades import PagoFreelancer
 from garay.dominio.socios.entidades import PagoSocio
-from garay.config.settings import obtener_settings
 from garay.infraestructura.telegram.auth import requiere_admin_o_propietario_conv
 from garay.infraestructura.telegram.handlers import cmd_start
 from garay.mensajes.catalogo import obtener_mensaje
@@ -1613,6 +1611,7 @@ def build_divisiones_conv_handler() -> ConversationHandler:  # type: ignore[type
             CommandHandler("cancelar", _fallback_cancelar),
             CommandHandler("start", cmd_start),
         ],
+        conversation_timeout=3600,
     )
 
 

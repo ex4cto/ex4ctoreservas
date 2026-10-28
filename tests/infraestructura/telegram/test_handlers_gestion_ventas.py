@@ -2769,3 +2769,24 @@ class TestAnteriorNombreCapturedBeforeReload:
             f"OLD participant name 'Ana' not found in notification texts.\n"
             f"Texts sent: {all_texts!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Fix 2: registrado_en shown in Bogotá timezone (UTC-5), not UTC
+# ---------------------------------------------------------------------------
+
+class TestRegistradoEnBogotaTimezone:
+    """Button label must show registrado_en in America/Bogota time, not UTC."""
+
+    def test_boton_fecha_usa_zona_bogota(self) -> None:
+        from datetime import timezone
+        from garay.infraestructura.telegram.handlers_gestion_ventas import _construir_teclado_ventas
+
+        # 2026-10-27 18:42 UTC  →  2026-10-27 13:42 Bogotá (UTC-5)
+        venta = _make_venta()
+        venta.registrado_en = datetime.datetime(2026, 10, 27, 18, 42, tzinfo=timezone.utc)
+        markup = _construir_teclado_ventas([venta])
+        (button,) = markup.inline_keyboard[0]
+        assert "27/10 13:42" in button.text, (
+            f"Expected Bogotá-local time '27/10 13:42' in button text, got: {button.text!r}"
+        )

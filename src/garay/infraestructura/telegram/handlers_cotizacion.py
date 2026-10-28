@@ -673,6 +673,7 @@ cotizacion_conv_handler = ConversationHandler(
         CommandHandler("cancelar", cmd_cancelar_cotizacion),
         CommandHandler("start", cmd_start),
     ],
+    conversation_timeout=3600,
 )
 
 __all__ = ["cotizacion_conv_handler"]

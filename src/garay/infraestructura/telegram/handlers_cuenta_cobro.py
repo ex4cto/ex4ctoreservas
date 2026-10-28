@@ -259,5 +259,6 @@ def registrar_handlers(app: object) -> None:
             CommandHandler("start", cmd_start),
         ],
         per_message=False,
+        conversation_timeout=3600,
     )
     app.add_handler(conv, group=5)  # type: ignore[attr-defined]

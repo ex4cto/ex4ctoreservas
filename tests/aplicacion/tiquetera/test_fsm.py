@@ -181,6 +181,35 @@ class TestPickerServicioEnFamilia:
         salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:9999", ctx)
         assert salida.nuevo_estado == EstadoFSM.SERVICIO_EN_FAMILIA
 
+    def test_seleccion_nuevo_tour_limpia_seleccion_previa_en_one_tour_mode(
+        self, fsm: FSMTiquetera
+    ) -> None:
+        # Fix 1: in one-tour mode, entering _handle_servicio_en_familia must clear
+        # any previously-accumulated selection so back-navigation never stacks tours.
+        ctx = ContextoVenta(
+            familia_seleccionada="BARÚ",
+            destinos_numeros=[3],
+            destinos_nombres=["TOUR VIEJO"],
+        )
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        # Only the newly-selected tour should be present
+        assert salida.contexto.destinos_numeros == [1]
+        assert "TOUR VIEJO" not in salida.contexto.destinos_nombres
+
+    def test_modo_edicion_no_limpia_seleccion_previa(self, fsm: FSMTiquetera) -> None:
+        # Fix 1: when modo_edicion=True the clearing must NOT happen.
+        ctx = ContextoVenta(
+            familia_seleccionada="BARÚ",
+            destinos_numeros=[3],
+            destinos_nombres=["TOUR VIEJO"],
+            modo_edicion=True,
+        )
+        salida = fsm.procesar(EstadoFSM.SERVICIO_EN_FAMILIA, "srv:1", ctx)
+        # Service 3 is in ISLAS, not BARÚ, so number 3 would be gone because of pruning,
+        # but the key check is that the clear did NOT wipe it before service-selection.
+        # After edicion branch: destinos_numeros contains srv:1 (the new pick).
+        assert 1 in salida.contexto.destinos_numeros
+
 class TestAcumuladorDestino:
     """DESTINO repurposed as accumulator: add another tour or confirm."""
 

@@ -882,6 +882,11 @@ class FSMTiquetera:
 
     def _handle_servicio_en_familia(self, entrada: str, contexto: ContextoVenta) -> SalidaFSM:
         ctx = _clonar(contexto)
+        # In one-tour mode, entering this handler always means the user is selecting
+        # a new tour. Clear any previous selection so back-navigation never accumulates.
+        if not self._multi_tour_habilitado and not ctx.modo_edicion:
+            ctx.destinos_numeros = []
+            ctx.destinos_nombres = []
         # Defensive: stale state (e.g. bot restart mid-flow) can leave the family
         # unset. Route back to FAMILIA so the user can re-pick instead of showing
         # an empty grid with no escape.

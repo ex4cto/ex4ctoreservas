@@ -789,3 +789,39 @@ def test_referido_alias_roundtrip(sf: sessionmaker[Session]) -> None:
     loaded = repo.buscar_por_id(venta.id)
     assert loaded is not None
     assert loaded.participantes.referido_alias == "taxi"
+
+
+# ---------------------------------------------------------------------------
+# Fix 4: secondary sort — same-date sales ordered by registrado_en DESC
+# ---------------------------------------------------------------------------
+
+def test_listar_para_gestion_ordena_por_registrado_en_cuando_fecha_igual(
+    sf: sessionmaker[Session],
+) -> None:
+    """When two sales share the same tour date, the one registered later must come first."""
+    repo = SQLAVentaRepository(sf)
+    cliente_id = _make_cliente(sf)
+    hoy = datetime.date.today()
+    ahora = datetime.datetime.now(datetime.UTC)
+
+    # primero: registered 1 hour ago (older)
+    primero = _venta_gestion(
+        cliente_id,
+        fecha=hoy,
+        registrado_en=ahora - datetime.timedelta(hours=1),
+    )
+    # segundo: registered just now (newer — should sort first)
+    segundo = _venta_gestion(
+        cliente_id,
+        fecha=hoy,
+        registrado_en=ahora,
+    )
+    repo.guardar(primero)
+    repo.guardar(segundo)
+
+    results = repo.listar_para_gestion(hoy - datetime.timedelta(days=1))
+    ids = [r.id for r in results]
+    # The sale registered later (segundo) must appear before primero
+    assert ids.index(segundo.id) < ids.index(primero.id), (
+        f"Expected segundo ({segundo.id}) before primero ({primero.id}), got order: {ids}"
+    )

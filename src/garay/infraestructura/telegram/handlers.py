@@ -583,6 +583,16 @@ async def cmd_cancelar_sin_conv(update: Update, context: ContextTypes.DEFAULT_TY
         await update.effective_message.reply_text(obtener_mensaje("cancelar_sin_operacion"))
 
 
+async def handle_tiquetera_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Called when the tiquetera ConversationHandler times out after 3600 s of inactivity."""
+    if context.user_data is not None:
+        context.user_data.pop("contexto", None)
+    if update.effective_message is not None:
+        await update.effective_message.reply_text(
+            "⏱ Tu sesión expiró. Usa /nueva_venta para comenzar de nuevo."
+        )
+    return ConversationHandler.END
+
 
 def _formatear_comision(desglose: DesgloseComision) -> str:
     """Commission text for the 'sale registered' message.
