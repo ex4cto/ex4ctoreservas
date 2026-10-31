@@ -351,6 +351,9 @@ from garay.infraestructura.telegram.handlers_propuestas import (
     handle_sw_mensual,
 )
 from garay.infraestructura.telegram.handlers_tours import (
+    EDC_AGREGAR_NOMBRE,
+    EDC_AGREGAR_NUMERO,
+    EDC_LISTA,
     EDF_CAMPO,
     EDF_CONFIRMA,
     EDF_FAMILIA,
@@ -379,6 +382,9 @@ from garay.infraestructura.telegram.handlers_tours import (
     cmd_eliminar_tour,
     cmd_nuevo_tour,
     handle_cat_generar_forzado,
+    handle_edc_agregar_nombre,
+    handle_edc_agregar_numero,
+    handle_edc_lista,
     handle_edh_agregar_texto,
     handle_edh_lista,
     handle_edh_neto_hor_ingresar,
@@ -1180,6 +1186,18 @@ def crear_aplicacion(token: str) -> Application:  # type: ignore[type-arg]
             ],
             EDH_NETO_HOR_INGRESAR: [
                 MessageHandler(_TEXT, handle_edh_neto_hor_ingresar),
+            ],
+            EDC_LISTA: [
+                _CB(handle_edc_lista, pattern="^edc_agregar$"),
+                _CB(handle_edc_lista, pattern="^edc_quitar:"),
+                _CB(handle_edc_lista, pattern="^edc_atras$"),
+                _CB(handle_edc_lista, pattern="^edc_cancelar$"),
+            ],
+            EDC_AGREGAR_NOMBRE: [
+                MessageHandler(_TEXT, handle_edc_agregar_nombre),
+            ],
+            EDC_AGREGAR_NUMERO: [
+                MessageHandler(_TEXT, handle_edc_agregar_numero),
             ],
         },
         fallbacks=[

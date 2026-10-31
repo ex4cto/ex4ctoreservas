@@ -18,7 +18,7 @@ from garay.aplicacion.comun.montos import parsear_monto
 from garay.aplicacion.servicios.editar_servicio import EditarServicioService
 from garay.aplicacion.servicios.notificaciones_catalogo import NotificarCambioCatalogoServicio
 from garay.dominio.puertos.repositorios import ServicioRepository
-from garay.dominio.servicios.entidades import Servicio
+from garay.dominio.servicios.entidades import ContactoReserva, Servicio
 from garay.dominio.servicios.errores import HorarioDuplicado, HorarioInvalido
 from garay.dominio.servicios.horarios import agregar_horario, formato_display, quitar_horario
 from garay.infraestructura.telegram.auth import requiere_admin, requiere_admin_conv
@@ -179,6 +179,14 @@ NVT_HOR_AGREGAR: int = 241    # NVT dedicated text state for horario input
 NVT_SUGERIDO_ADULTO: int = 244  # text or skip: suggested adult price
 
 # ---------------------------------------------------------------------------
+# State constants — contacts editor (EDC) range 245-247
+# ---------------------------------------------------------------------------
+
+EDC_LISTA          : int = 245
+EDC_AGREGAR_NOMBRE : int = 246
+EDC_AGREGAR_NUMERO : int = 247
+
+# ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
@@ -191,6 +199,7 @@ _CAMPOS_EDITABLES: list[tuple[str, str]] = [
     ("permite_ninos", "Permite niños"),
     ("familia", "Familia"),
     ("horarios", "Horarios"),
+    ("contactos_reserva", "Contactos operador"),
     ("activo", "Activar / Desactivar"),
 ]
 
@@ -202,6 +211,10 @@ def _render_ficha(s: Servicio) -> str:
     horarios_str = (
         ", ".join(formato_display(h) for h in s.horarios) if s.horarios else "—"
     )
+    contactos_str = (
+        ", ".join(f"{c.nombre} ({c.numero})" for c in s.contactos_reserva)
+        if s.contactos_reserva else "—"
+    )
     return obtener_mensaje("tour_ficha").format(
         nombre=s.nombre,
         familia=s.categoria or "—",
@@ -211,6 +224,7 @@ def _render_ficha(s: Servicio) -> str:
         permite_ninos=permite_ninos,
         estado=estado,
         horarios=horarios_str,
+        contactos=contactos_str,
     )
 
 
@@ -285,6 +299,21 @@ def _teclado_neto_horarios(s: Servicio) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(botones)
 
 
+def _teclado_contactos(contactos: list[ContactoReserva]) -> InlineKeyboardMarkup:
+    """Build the contacts editor keyboard."""
+    botones: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(
+            f"✕ {c.nombre} ({c.numero})",
+            callback_data=f"edc_quitar:{i}",
+        )]
+        for i, c in enumerate(contactos)
+    ]
+    botones.append([InlineKeyboardButton("➕ Agregar", callback_data="edc_agregar")])
+    botones.append([InlineKeyboardButton("⬅️ Atrás", callback_data="edc_atras")])
+    botones.append([InlineKeyboardButton("❌ Cancelar", callback_data="edc_cancelar")])
+    return InlineKeyboardMarkup(botones)
+
+
 def _teclado_tours(
     servicios: list[Servicio],
     familia: str,
@@ -339,7 +368,7 @@ def _refrescar_fsm(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def _limpiar_edt(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Pop all edt_* keys from user_data."""
+    """Pop all edt_* and edc_* keys from user_data."""
     if context.user_data is not None:
         for key in (
             "edt_servicios",
@@ -350,6 +379,7 @@ def _limpiar_edt(context: ContextTypes.DEFAULT_TYPE) -> None:
             "edt_activo_nuevo",
             "edt_permite_ninos_nuevo",
             "edt_neto_hor_horario",
+            "edc_nombre_pendiente",
         ):
             context.user_data.pop(key, None)
 
@@ -648,6 +678,25 @@ async def handle_edt_ficha(
             parse_mode="HTML",
         )
         return EDH_NETO_HOR_SELECCIONAR
+
+    if campo == "contactos_reserva":
+        ud_c = context.user_data if context.user_data is not None else {}
+        target_id_c = str(ud_c.get("edt_target_id", ""))
+        repo_c: ServicioRepository | None = context.bot_data.get("servicio_repo")
+        s_c: Servicio | None = None
+        with contextlib.suppress(ValueError, AttributeError):
+            s_c = repo_c.buscar_por_id(uuid.UUID(target_id_c)) if repo_c else None
+        contactos_c = s_c.contactos_reserva if s_c is not None else []
+        contactos_texto = (
+            ", ".join(f"{c.nombre} ({c.numero})" for c in contactos_c)
+            if contactos_c else "ninguno"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_contactos_lista").format(contactos=contactos_texto),
+            reply_markup=_teclado_contactos(contactos_c),
+            parse_mode="HTML",
+        )
+        return EDC_LISTA
 
     # Text field prompts
     prompts: dict[str, str] = {
@@ -1330,6 +1379,146 @@ async def handle_elt_confirma(
         obtener_mensaje("tour_eliminado_ok").format(nombre=nombre),
         GrupoComando.TOURS,
     )
+
+
+# ---------------------------------------------------------------------------
+# /editar_tour — contacts editor (EDC states 245-247)
+# ---------------------------------------------------------------------------
+
+
+def _es_numero_valido(texto: str) -> bool:
+    limpio = texto.strip().lstrip("+").replace(" ", "").replace("-", "")
+    return limpio.isdigit() and len(limpio) >= 7
+
+
+async def handle_edc_lista(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Route EDC_LISTA callbacks: edc_agregar / edc_quitar:{index} / edc_atras / edc_cancelar."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await _limpiar_botones(query)
+    if update.effective_message is None or query is None or query.data is None:
+        return EDC_LISTA
+
+    data: str = query.data
+    ud = context.user_data if context.user_data is not None else {}
+    target_id_str = str(ud.get("edt_target_id", ""))
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if data == "edc_agregar":
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_contacto_pide_nombre")
+        )
+        return EDC_AGREGAR_NOMBRE
+
+    if data == "edc_atras":
+        if s is not None:
+            await update.effective_message.reply_text(_render_ficha(s), parse_mode="HTML")
+        return await _menu_campos(update, context)
+
+    if data == "edc_cancelar":
+        _limpiar_edt(context)
+        return await finalizar_flujo(
+            update, context, obtener_mensaje("tour_cancelado"), GrupoComando.TOURS
+        )
+
+    if data.startswith("edc_quitar:"):
+        idx_str = data.removeprefix("edc_quitar:")
+        if s is not None:
+            with contextlib.suppress(ValueError, IndexError):
+                idx = int(idx_str)
+                s.contactos_reserva = [
+                    c for i, c in enumerate(s.contactos_reserva) if i != idx
+                ]
+                if repo:
+                    repo.guardar(s)
+                await update.effective_message.reply_text(
+                    obtener_mensaje("tour_contacto_eliminado")
+                )
+        contactos = s.contactos_reserva if s is not None else []
+        contactos_texto = (
+            ", ".join(f"{c.nombre} ({c.numero})" for c in contactos)
+            if contactos else "ninguno"
+        )
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_contactos_lista").format(contactos=contactos_texto),
+            reply_markup=_teclado_contactos(contactos),
+            parse_mode="HTML",
+        )
+        return EDC_LISTA
+
+    return EDC_LISTA
+
+
+async def handle_edc_agregar_nombre(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Capture operator contact name. Empty → stay; valid → advance to number step."""
+    if update.effective_message is None:
+        return EDC_AGREGAR_NOMBRE
+
+    texto = (update.effective_message.text or "").strip()
+    if not texto:
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_contacto_pide_nombre")
+        )
+        return EDC_AGREGAR_NOMBRE
+
+    if context.user_data is not None:
+        context.user_data["edc_nombre_pendiente"] = texto
+
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_contacto_pide_numero")
+    )
+    return EDC_AGREGAR_NUMERO
+
+
+async def handle_edc_agregar_numero(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Capture operator contact number, validate, persist, re-render list."""
+    if update.effective_message is None:
+        return EDC_AGREGAR_NUMERO
+
+    texto = (update.effective_message.text or "").strip()
+    if not _es_numero_valido(texto):
+        await update.effective_message.reply_text(
+            obtener_mensaje("tour_contacto_numero_invalido")
+        )
+        return EDC_AGREGAR_NUMERO
+
+    ud = context.user_data if context.user_data is not None else {}
+    nombre = str(ud.get("edc_nombre_pendiente", ""))
+    target_id_str = str(ud.get("edt_target_id", ""))
+    repo: ServicioRepository | None = context.bot_data.get("servicio_repo")
+    s: Servicio | None = None
+    with contextlib.suppress(ValueError, AttributeError):
+        s = repo.buscar_por_id(uuid.UUID(target_id_str)) if repo else None
+
+    if s is not None:
+        s.contactos_reserva = [*s.contactos_reserva, ContactoReserva(nombre=nombre, numero=texto)]
+        if repo:
+            repo.guardar(s)
+
+    if context.user_data is not None:
+        context.user_data.pop("edc_nombre_pendiente", None)
+
+    contactos = s.contactos_reserva if s is not None else []
+    contactos_texto = (
+        ", ".join(f"{c.nombre} ({c.numero})" for c in contactos)
+        if contactos else "ninguno"
+    )
+    await update.effective_message.reply_text(
+        obtener_mensaje("tour_contactos_lista").format(contactos=contactos_texto),
+        reply_markup=_teclado_contactos(contactos),
+        parse_mode="HTML",
+    )
+    return EDC_LISTA
 
 
 # ---------------------------------------------------------------------------

@@ -36,6 +36,12 @@ _TOUR_KEYS = [
     # imagen-precios (PR1)
     "tour_pide_precio_sugerido_adulto",
     "tour_sugerido_invalido",
+    # contacts editor
+    "tour_contactos_lista",
+    "tour_contacto_pide_nombre",
+    "tour_contacto_pide_numero",
+    "tour_contacto_numero_invalido",
+    "tour_contacto_eliminado",
 ]
 
 class TestClavesTours:
@@ -80,8 +86,13 @@ class TestClavesNuevoTourFormato:
             permite_ninos="Sí",
             estado="Activo",
             horarios="7:00 AM",
+            contactos="—",
         )
         assert "City Tour" in msg
+
+    def test_tour_contactos_lista_acepta_contactos(self) -> None:
+        msg = obtener_mensaje("tour_contactos_lista").format(contactos="MARINATOUR (3043752759)")
+        assert "MARINATOUR" in msg
 
     def test_tour_horarios_lista_acepta_horarios(self) -> None:
         msg = obtener_mensaje("tour_horarios_lista").format(horarios="7:00 AM, 7:00 PM")

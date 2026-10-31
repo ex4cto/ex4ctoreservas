@@ -1204,6 +1204,7 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
             "• Sugerido adulto: {precio_sugerido_adulto}\n"
             "• Permite niños: {permite_ninos}\n"
             "• Horarios: {horarios}\n"
+            "• Contactos: {contactos}\n"
             "• Estado: {estado}"
         )
     },
@@ -1309,6 +1310,22 @@ _CATALOGO: dict[str, dict[Idioma, str]] = {
         Idioma.ES: (
             "Ese horario ya existe en la lista. Ingresa uno diferente:"
         )
+    },
+    # --- Contacts editor ---
+    "tour_contactos_lista": {
+        Idioma.ES: "📞 <b>Contactos del operador</b>\nActuales: {contactos}"
+    },
+    "tour_contacto_pide_nombre": {
+        Idioma.ES: "¿Cuál es el nombre del contacto? (ej. MARINATOUR CARTAGENA)"
+    },
+    "tour_contacto_pide_numero": {
+        Idioma.ES: "¿Cuál es el número de WhatsApp? (ej. 3001234567)"
+    },
+    "tour_contacto_numero_invalido": {
+        Idioma.ES: "Número no válido. Ingresa solo dígitos, mínimo 7 (ej. 3001234567):"
+    },
+    "tour_contacto_eliminado": {
+        Idioma.ES: "✓ Contacto eliminado."
     },
     "solo_desarrolladores": {
         Idioma.ES: "Este comando es solo para desarrolladores."
